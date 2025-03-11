@@ -1,0 +1,9 @@
+services:
+  landing:
+    container_name: landing
+    ports: 
+      - "80:80"
+    build:
+      context: ./landing
+    volumes:
+      - ./landing:/app
