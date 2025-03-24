@@ -9,7 +9,7 @@ let isRefreshing = false
 let refreshPromise: Promise<string | null> | null = null
 
 const api = ky.create({
-  prefixUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  prefixUrl: import.meta.env.SERVER_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

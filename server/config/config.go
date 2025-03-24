@@ -13,10 +13,9 @@ type DatabaseConfig struct {
 }
 
 type Config struct {
-	Database   DatabaseConfig
-	Serverport string
-	JwtSecret  []byte
-	CorsUrls   string
+	Database  DatabaseConfig
+	JwtSecret []byte
+	CorsUrls  string
 }
 
 var CFG *Config
@@ -34,8 +33,7 @@ func LoadConfig() {
 			Password: viper.GetString("DB_PASSWORD"),
 			Name:     viper.GetString("DB_NAME"),
 		},
-		JwtSecret:  []byte("jwt_secret"),
-		CorsUrls:   viper.GetString("CORS_URLS"),
-		Serverport: viper.GetString("SERVER_PORT"),
+		JwtSecret: []byte("jwt_secret"),
+		CorsUrls:  viper.GetString("CORS_URLS"),
 	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"ithozyeva/config"
 	"ithozyeva/database"
 	"ithozyeva/routes"
@@ -26,5 +25,5 @@ func main() {
 
 	routes.SetupRoutes(app)
 
-	log.Fatal(app.Listen(fmt.Sprintf(":%s", config.CFG.Serverport)))
+	log.Fatal(app.Listen(":3000"))
 }

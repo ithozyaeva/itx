@@ -105,4 +105,4 @@ ON UPDATE NO ACTION ON DELETE CASCADE;
 
 -- Добавляем супер-пользователя
 -- login: lyaguf, password: 3_lgWfY0yI
-insert into users (login, password, email, role) values ('lyaguf', '03414ef2e347d2d4691c41de6f8dd7dda414fbb26840eaac27fadd27affe4dcd97bdc79616d2f6e66af7fd988fea6341ab6e103c33b7562adfb1d1a779a6fde7', 'kovtunov_10@mail.ru', 0);
+insert into users (login, password, email, role) values ('admin', '03414ef2e347d2d4691c41de6f8dd7dda414fbb26840eaac27fadd27affe4dcd97bdc79616d2f6e66af7fd988fea6341ab6e103c33b7562adfb1d1a779a6fde7', 'admin@admin', 0);

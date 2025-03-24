@@ -9,17 +9,21 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
-    env_file:
-      - ./db/.env
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Схема
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   server: 
     build:
       context: ./server
     container_name: server
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     env_file: ./server/.env
     ports:
       - "3000:3000"

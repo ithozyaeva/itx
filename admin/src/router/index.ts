@@ -12,6 +12,13 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/',
+      redirect: to => {
+        checkAuth()
+        return isAuthenticated.value ? { name: 'dashboard' } : { name: 'login' }
+      }
+    },
+    {
       path: '/login',
       name: 'login',
       component: LoginView,
