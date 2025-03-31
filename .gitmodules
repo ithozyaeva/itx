@@ -1,0 +1,3 @@
+[submodule "landing-frontend"]
+	path = landing-frontend
+	url = https://github.com/ithozyaeva/itx-landing-frontend.git
