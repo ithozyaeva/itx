@@ -4,3 +4,6 @@
 [submodule "admin-frontend"]
 	path = admin-frontend
 	url = https://github.com/ithozyaeva/itx-admin-frontend.git
+[submodule "backend"]
+	path = backend
+	url = https://github.com/ithozyaeva/itx-backend.git
