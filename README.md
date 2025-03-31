@@ -10,7 +10,11 @@
 ### Подготовка к запуску
 
 #### Для клонирования с сабмодулями есть два варианта:
-1) Используйте `--recurse-submodules`, например `git clone --recurse-submodules git@github.com:ithozyaeva/itx.git`
+1) Используйте `--recurse-submodules`, например 
+```
+git clone --recurse-submodules git@github.com:ithozyaeva/itx.git
+```
+
 2) Либо клонируйте как обычно, а затем вызовите `git submodule update --init --recursive`
 
 #### После клонирования:
@@ -31,3 +35,7 @@
 - Базе данных: localhost:5432
 
 >Креды админки admin/3_lgWfY0yI
+
+### Обновление репозитория
+
+После пулла изменений также необходимо вызвать  `git submodule update --init --recursive`
