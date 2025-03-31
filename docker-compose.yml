@@ -10,40 +10,39 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Схема
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-  server: 
+  backend: 
     build:
-      context: ./server
-    container_name: server
+      context: ./backend
+    container_name: backend
     depends_on:
       database:
         condition: service_healthy
-    env_file: ./server/.env
+    env_file: ./backend/.env
     ports:
       - "3000:3000"
-  landing:
-    container_name: landing
+  landing-frontend:
+    container_name: landing-frontend
     ports: 
       - "80:80"
     build:
-      context: ./landing
+      context: ./landing-frontend
     volumes:
-      - ./landing:/app
-  admin:
-    container_name: admin
+      - ./landing-frontend:/app
+  admin-frontend:
+    container_name: admin-frontend
     ports:
       - "8080:80"
     build:
-      context: ./admin
+      context: ./admin-frontend
     depends_on:
-      - server
-    env_file: ./admin/.env
+      - backend
+    env_file: ./admin-frontend/.env
   
 volumes:
   pgdata:
