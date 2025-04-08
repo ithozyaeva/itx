@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Архитектурная документация</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #333;
+      margin-bottom: 0;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      background-color: #1e1e1e;
+      color: #ccc;
+      cursor: pointer;
+      margin-right: 2px;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+    }
+    
+    .tab.active {
+      background-color: #2e2e2e;
+      color: #fff;
+      border-bottom: 2px solid #88c0d0;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 0;
+      height: calc(100vh - 40px);
+      margin: 0;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .tab-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      background-color: #1e1e1e;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    
+    .readme {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .readme h2, .readme h3 {
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+    
+    code {
+      background-color: #2e2e2e;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Архитектурная документация</h1>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" onclick="openTab('readme')">README</div>
+    <div class="tab" onclick="openTab('c1')">C1 - Контекст</div>
+    <div class="tab" onclick="openTab('c2')">C2 - Контейнеры</div>
+    <div class="tab" onclick="openTab('sequence')">Sequence диаграмма</div>
+  </div>
+  
+  <div id="readme" class="tab-content active readme">
+    <h2>Архитектурная документация проекта</h2>
+    
+    <h3>Обзор</h3>
+    <p>Данный проект представляет собой платформу с авторизацией через Telegram. Архитектура документирована на разных уровнях абстракции согласно модели C4.</p>
+    
+    <h3>Диаграммы</h3>
+    <ul>
+      <li><strong>C1 (Контекст)</strong> - показывает систему в целом и ее взаимодействие с пользователями и внешними системами</li>
+      <li><strong>C2 (Контейнеры)</strong> - детализирует основные компоненты системы и их взаимодействие</li>
+      <li><strong>Sequence диаграмма</strong> - демонстрирует последовательность взаимодействия пользователя с системой</li>
+    </ul>
+    
+    <h3>Технологии</h3>
+    <p>Для визуализации архитектуры используется библиотека Mermaid.js.</p>
+    
+    <h3>Навигация</h3>
+    <p>Используйте табы вверху страницы для переключения между диаграммами.</p>
+  </div>
+  
+  <div id="c1" class="tab-content">
+    <iframe src="c1diagram.html"></iframe>
+  </div>
+  
+  <div id="c2" class="tab-content">
+    <iframe src="c2diagram.html"></iframe>
+  </div>
+  
+  <div id="sequence" class="tab-content">
+    <iframe src="sequence.html"></iframe>
+  </div>
+  
+  <script>
+    function openTab(tabId) {
+      // Скрыть все табы и убрать активные классы
+      const tabContents = document.getElementsByClassName('tab-content');
+      for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove('active');
+      }
+      
+      const tabs = document.getElementsByClassName('tab');
+      for (let i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove('active');
+      }
+      
+      // Активировать выбранный таб
+      document.getElementById(tabId).classList.add('active');
+      
+      // Найти и активировать соответствующую кнопку таба
+      const tabButtons = document.getElementsByClassName('tab');
+      for (let i = 0; i < tabButtons.length; i++) {
+        if (tabButtons[i].getAttribute('onclick').includes(tabId)) {
+          tabButtons[i].classList.add('active');
+        }
+      }
+
+        const activeIframe = document.querySelector(`#${tabId} iframe`);
+        if (activeIframe && activeIframe.contentWindow) {
+        activeIframe.contentWindow.postMessage("renderMermaid", "*");
+        }
+    }
+  </script>
+</body>
+</html> 

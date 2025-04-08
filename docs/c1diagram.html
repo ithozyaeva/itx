@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        edgeLabelBackground: 'transparent'
+      }
+    });
+
+    let hasRendered = false;
+
+    window.addEventListener('message', (event) => {
+      if (event.data === "renderMermaid" && !hasRendered) {
+        mermaid.run();
+        hasRendered = true;
+      }
+    });
+  </script>
+  <style>
+    .mermaid .labelBkg {
+      background-color: transparent !important;
+    }
+  </style>
+</head>
+<body bgcolor="black">
+  <div class="mermaid">
+    flowchart TB
+        %% Пользователи
+        user((Пользователь))
+
+        %% Внешние системы
+        tg[Telegram API]
+
+        %% Основная система
+        system[Платформа]
+
+        %% Взаимосвязи
+        user -->|использует| tg
+        tg -->|авторизует| system
+        user -->|взаимодействует| system
+
+        %% Описания
+        classDef user fill:#333,stroke:#999,color:white
+        classDef external fill:#444,stroke:#999,color:white
+        classDef system fill:#222,stroke:#999,color:white
+
+        class user user
+        class tg external
+        class system system
+  </div>
+</body>
+</html> 

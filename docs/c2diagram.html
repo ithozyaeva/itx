@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        edgeLabelBackground: 'transparent'
+      }
+    });
+
+    let hasRendered = false;
+
+    window.addEventListener("message", (event) => {
+        if (event.data === "renderMermaid" && !hasRendered) {
+       
+
+        mermaid.run(); 
+        hasRendered = true;
+    }
+    });
+  </script>
+  <style>
+    .mermaid .labelBkg {
+      background-color: transparent !important;
+    }
+  </style>
+</head>
+<body bgcolor="black">
+  <div class="mermaid">
+    flowchart TB
+      %% Определение узлов
+      user((Пользователь))
+      tg[tg авторизация]
+      
+      subgraph frontends["Фронтенд"]
+        platform["Платформа"]
+        admin["Админка"]
+        landing["Лендинг"]
+      end
+      
+      backend["Backend"]
+      db[(БД)]
+      
+      %% Связи
+      user -->|использует| tg
+      tg -->|авторизует| platform
+      tg --> backend
+      
+      platform -->|взаимодействует| backend
+      admin -->|взаимодействует| backend
+      landing -->|взаимодействует| backend
+      
+      backend -->|хранит данные| db
+  </div>
+</body>
+</html> 

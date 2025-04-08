@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        edgeLabelBackground: 'transparent'
+      }
+    });
+
+    let hasRendered = false;
+
+    window.addEventListener('message', (event) => {
+      if (event.data === "renderMermaid" && !hasRendered) {
+        mermaid.run(); 
+        hasRendered = true;
+      }
+    });
+  </script>
+</head>
+<body bgcolor="black">
+  <div class="mermaid">
+    %%{init: {'theme': 'dark'}}%%
+    sequenceDiagram
+        participant Пользователь
+        participant Веб-Браузер
+        participant Платформа
+        participant БД_Пользователей
+        participant БД_Задач
+        participant БД_Менторов
+        participant Telegram
+
+        Пользователь->>Веб-Браузер: Заходит на платформу
+        Веб-Браузер->>Платформа: GET /
+        Платформа->>Веб-Браузер: Отображает страницу входа
+
+        Пользователь->>Веб-Браузер: Жмёт "Войти через Telegram"
+        Веб-Браузер->>Telegram: Запрос авторизации
+        Telegram-->>Веб-Браузер: Возвращает токен/профиль
+        Веб-Браузер->>Платформа: Отправляет токен Telegram
+        Платформа->>Telegram: Проверка подлинности токена
+        Telegram-->>Платформа: OK
+        Платформа->>БД_Пользователей: Поиск пользователя по Telegram ID
+        БД_Пользователей-->>Платформа: Инфо или ошибка, если не найден
+        Платформа->>Веб-Браузер: Авторизация успешна / отказ
+
+        Пользователь->>Веб-Браузер: Переходит к задачам
+        Веб-Браузер->>Платформа: GET /tasks
+        Платформа->>БД_Задач: Получить задачи
+        БД_Задач-->>Платформа: Список задач
+        Платформа->>Веб-Браузер: Показывает задачи
+
+        Пользователь->>Веб-Браузер: Переходит к менторам
+        Веб-Браузер->>Платформа: GET /mentors
+        Платформа->>БД_Менторов: Получить список менторов
+        БД_Менторов-->>Платформа: Данные менторов
+        Платформа->>Веб-Браузер: Показывает менторов
+
+  </div>
+</body>
+</html>
