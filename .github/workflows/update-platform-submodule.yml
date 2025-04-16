@@ -24,7 +24,6 @@ jobs:
         run: |
           cd platform-frontend
           git fetch
-          git checkout master
           git pull
           cd ..
           git add platform-frontend

@@ -24,7 +24,6 @@ jobs:
         run: |
           cd landing-frontend
           git fetch
-          git checkout master
           git pull
           cd ..
           git add landing-frontend

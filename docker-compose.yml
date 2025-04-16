@@ -11,8 +11,8 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./static:/static
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
+    #     condition: service_healthy
     networks:
       - itx-network
 
@@ -54,12 +54,12 @@ services:
       database:
         condition: service_healthy
     env_file: ./backend/.env
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
     networks:
       - itx-network
 
