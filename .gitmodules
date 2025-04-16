@@ -7,3 +7,6 @@
 [submodule "backend"]
 	path = backend
 	url = https://github.com/ithozyaeva/itx-backend.git
+[submodule "platform-frontend"]
+	path = platform-frontend
+	url = https://github.com/ithozyaeva/itx-platform-frontend.git
