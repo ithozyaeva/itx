@@ -1,8 +1,8 @@
-name: Update Backend Submodule
+name: Update platform Frontend Submodule
 
 on:
   repository_dispatch:
-    types: [backend-update]
+    types: [platform-frontend-update]
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -22,17 +22,17 @@ jobs:
       
       - name: Update submodule
         run: |
-          cd backend
+          cd platform-frontend
           git fetch
           git pull
           cd ..
-          git add backend
+          git add platform-frontend
       
       - name: Commit and push if there are changes
         run: |
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update backend submodule to latest commit"
+            git commit -m "chore: update platform-frontend submodule to latest commit"
             git push
           fi 

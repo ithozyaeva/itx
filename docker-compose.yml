@@ -1,4 +1,31 @@
 services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./_nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./_nginx/conf.d/${BUILD_TYPE}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/webroot:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+      - ./static:/static
+    depends_on:
+      - backend
+    #     condition: service_healthy
+    networks:
+      - itx-network
+
+  certbot:
+    image: certbot/certbot
+    profiles: ["prod"]
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - itx-network
+
   database: 
     image: postgres:15
     container_name: database
@@ -16,6 +43,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - itx-network
+
   backend: 
     build:
       context: ./backend
@@ -24,25 +54,50 @@ services:
       database:
         condition: service_healthy
     env_file: ./backend/.env
-    ports:
-      - "3000:3000"
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+    networks:
+      - itx-network
+
   landing-frontend:
     container_name: landing-frontend
-    ports: 
-      - "80:80"
     build:
       context: ./landing-frontend
     volumes:
-      - ./landing-frontend:/app
+      - ./static/landing-frontend:/static/landing-frontend
+    networks:
+      - itx-network
+
+  platform-frontend:
+    container_name: platform-frontend
+    build:
+      context: ./platform-frontend
+    volumes:
+      - ./static/platform-frontend:/static/platform-frontend
+    networks:
+      - itx-network
+
   admin-frontend:
     container_name: admin-frontend
-    ports:
-      - "8080:80"
     build:
       context: ./admin-frontend
+    volumes:
+      - ./static/admin-frontend:/static/admin-frontend
     depends_on:
       - backend
     env_file: ./admin-frontend/.env
+    networks:
+      - itx-network
   
 volumes:
   pgdata:
+  certbot_conf:
+  certbot_www:
+
+networks:
+  itx-network:
+  
