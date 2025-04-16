@@ -12,6 +12,7 @@ services:
     depends_on:
       - landing-frontend
       - admin-frontend
+      - platform-frontend
       - backend
     networks:
       - itx-network
@@ -51,7 +52,7 @@ services:
       context: ./backend
     container_name: backend
     ports:
-      - "3000:3000"
+      - "3000"
     depends_on:
       database:
         condition: service_healthy
@@ -68,6 +69,17 @@ services:
       context: ./landing-frontend
     volumes:
       - ./landing-frontend:/app
+    networks:
+      - itx-network
+
+  platform-frontend:
+    container_name: platform-frontend
+    ports:
+      - "81"
+    build:
+      context: ./platform-frontend
+    volumes:
+      - ./platform-frontend:/app
     networks:
       - itx-network
 
