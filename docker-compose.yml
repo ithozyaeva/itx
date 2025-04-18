@@ -10,6 +10,7 @@ services:
       - ./certbot/webroot:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
       - ./static:/static
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
     #     condition: service_healthy
@@ -22,6 +23,7 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - itx-network
@@ -100,4 +102,3 @@ volumes:
 
 networks:
   itx-network:
-  
