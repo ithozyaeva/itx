@@ -1,12 +1,9 @@
 name: Update submodules & deploy
 
 on:
-  # 1) автодеплой при любом push в ветку master
   push:
-    branches:
-      - master               # замените на main, если нужно
+    branches: [ master ]                  
 
-  # 2) хук от внешних сервисов для обновления конкретного сабмодуля
   repository_dispatch:
     types:
       - platform-frontend-update
@@ -15,28 +12,25 @@ on:
       - admin-frontend-update
 
 jobs:
-  # ---------- A. Подтянуть один сабмодуль (только для repository_dispatch) ----------
+  # ---------- A. Подтянуть конкретный сабмодуль ----------
   update-submodule:
     if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo (with submodules)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token:     ${{ secrets.REPO_ACCESS_TOKEN }}
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
 
-      - name: Configure Git author
-        run: |
+      - run: |
           git config --global user.name  "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Detect target submodule
-        id: vars
+      - id: vars
+        name: Detect target submodule
         run: |
-          target="${{ github.event.action }}"   # строка вида "<path>-update"
-          target="${target%-update}"            # обрезаем суффикс
+          target="${{ github.event.action }}"
+          target="${target%-update}"
           echo "target=$target" >> "$GITHUB_OUTPUT"
 
       - name: Update ${{ steps.vars.outputs.target }}
@@ -58,9 +52,8 @@ jobs:
     if: github.event_name == 'repository_dispatch'
     needs: update-submodule
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy over SSH (after submodule update)
+      - name: SSH — Pull latest
         uses: appleboy/ssh-action@v1.0.0
         with:
           host:     ${{ secrets.SSH_HOST }}
@@ -68,27 +61,39 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            set -e
-            cd ${{ secrets.PROJECT_PATH }}
-
-            echo "== Pull =="
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             git fetch --all
-            git reset --hard origin/master      # или origin/main
+            git reset --hard origin/master        # или origin/main
 
-            echo "== Update all submodules =="
+      - name: SSH — Update submodules
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             git submodule update --init --recursive --remote --depth 1
 
-            echo "== Restart containers =="
+      - name: SSH — Restart containers
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
             docker compose up -d --build
 
-  # ---------- B2. Деплой при обычном push ----------
+  # ---------- B2. Деплой при push в master ----------
   deploy_push:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy over SSH (after push)
+      - name: SSH — Pull latest
         uses: appleboy/ssh-action@v1.0.0
         with:
           host:     ${{ secrets.SSH_HOST }}
@@ -96,16 +101,29 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            set -e
-            cd ${{ secrets.PROJECT_PATH }}
-
-            echo "== Pull =="
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             git fetch --all
             git reset --hard origin/master
 
-            echo "== Update all submodules =="
+      - name: SSH — Update submodules
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             git submodule update --init --recursive --remote --depth 1
 
-            echo "== Restart containers =="
+      - name: SSH — Restart containers
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
             docker compose up -d --build
