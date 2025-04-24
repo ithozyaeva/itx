@@ -2,11 +2,11 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "3999:3999"
-      - "4000:4000"
+      - "3999:80"
+      - "4000:443"
     volumes:
       - ./_nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./_nginx/conf.d/${BUILD_TYPE}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./_nginx/conf.d/dev.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/webroot:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
       - ./static:/static
