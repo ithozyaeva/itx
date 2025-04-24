@@ -63,7 +63,7 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
             git fetch --all
-            git reset --hard origin/master        # или origin/main
+            git reset --hard origin/master       
 
       - name: SSH — Update submodules
         uses: appleboy/ssh-action@v1.0.0
@@ -86,7 +86,7 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
-            docker compose up -d --build
+            docker compose up -d --build --remove-orphans
 
   # ---------- B2. Деплой при push в master ----------
   deploy_push:
@@ -126,4 +126,4 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
-            docker compose up -d --build
+            docker compose up -d --build --remove-orphans
