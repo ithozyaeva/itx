@@ -86,7 +86,7 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
-            docker compose up -d --build --remove-orphans
+            docker compose up -f docker-compose.dev.yaml -d --build --remove-orphans
 
   # ---------- B2. Деплой при push в master ----------
   deploy_push:
@@ -126,4 +126,4 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
             docker compose pull
-            docker compose up -d --build --remove-orphans
+            docker compose up -f docker-compose.dev.yaml -d --build --remove-orphans
