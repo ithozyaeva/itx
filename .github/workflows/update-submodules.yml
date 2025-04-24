@@ -1,11 +1,12 @@
 name: Update submodules & deploy
 
 on:
-  # ⬅️ 1. Автодеплой при любых пушах в master
+  # 1) автодеплой при любом push в ветку master
   push:
-    branches: [ master ]          
+    branches:
+      - master               # замените на main, если нужно
 
-  # ⬅️ 2. Обновление конкретных сабмодулей по веб-хукам
+  # 2) хук от внешних сервисов для обновления конкретного сабмодуля
   repository_dispatch:
     types:
       - platform-frontend-update
@@ -14,27 +15,28 @@ on:
       - admin-frontend-update
 
 jobs:
-  # ========== JOB 1. подтягиваем сабмодуль (только для repository_dispatch) ==========
+  # ---------- A. Подтянуть один сабмодуль (только для repository_dispatch) ----------
   update-submodule:
     if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo (with submodules)
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          token:     ${{ secrets.REPO_ACCESS_TOKEN }}
 
       - name: Configure Git author
         run: |
-          git config --global user.name  'GitHub Actions'
-          git config --global user.email 'actions@github.com'
+          git config --global user.name  "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
       - name: Detect target submodule
         id: vars
         run: |
-          target="${{ github.event.action }}"
-          target="${target%-update}"
+          target="${{ github.event.action }}"   # строка вида "<path>-update"
+          target="${target%-update}"            # обрезаем суффикс
           echo "target=$target" >> "$GITHUB_OUTPUT"
 
       - name: Update ${{ steps.vars.outputs.target }}
@@ -42,23 +44,23 @@ jobs:
           git submodule update --remote --depth 1 "${{ steps.vars.outputs.target }}"
           git add "${{ steps.vars.outputs.target }}"
 
-      - name: Commit and push if there are changes
+      - name: Commit & push if changed
         run: |
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes"
           else
             git commit -m "chore: update ${{ steps.vars.outputs.target }} submodule to latest commit [skip ci]"
             git push
           fi
 
-  # ========== JOB 2. деплой (срабатывает и после push, и после repository_dispatch) ==========
-  deploy:
-    needs: [ update-submodule ]           # если первой джобы не было → считается успешной
-    if: github.event_name == 'push' || github.event_name == 'repository_dispatch'
+  # ---------- B1. Деплой после repository_dispatch ----------
+  deploy_repo_dispatch:
+    if: github.event_name == 'repository_dispatch'
+    needs: update-submodule
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy over SSH
+      - name: Deploy over SSH (after submodule update)
         uses: appleboy/ssh-action@v1.0.0
         with:
           host:     ${{ secrets.SSH_HOST }}
@@ -67,17 +69,43 @@ jobs:
           port:     ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ${{ secrets.PROJECT_DEV_PATH }}
+            cd ${{ secrets.PROJECT_PATH }}
 
-            echo "=== Pull latest commit ==="
+            echo "== Pull =="
             git fetch --all
-            git reset --hard origin/master
+            git reset --hard origin/master      # или origin/main
 
-            echo "=== Update ALL submodules ==="
+            echo "== Update all submodules =="
             git submodule update --init --recursive --remote --depth 1
 
-            echo "=== Restart containers ==="
+            echo "== Restart containers =="
             docker compose pull
             docker compose up -d --build
 
-            echo "Deployment finished"
+  # ---------- B2. Деплой при обычном push ----------
+  deploy_push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH (after push)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}
+
+            echo "== Pull =="
+            git fetch --all
+            git reset --hard origin/master
+
+            echo "== Update all submodules =="
+            git submodule update --init --recursive --remote --depth 1
+
+            echo "== Restart containers =="
+            docker compose pull
+            docker compose up -d --build
