@@ -2,7 +2,7 @@ name: Update submodules & deploy
 
 on:
   push:
-    branches: [ master ]                  
+    branches: [ master ]
 
   repository_dispatch:
     types:
@@ -12,7 +12,7 @@ on:
       - admin-frontend-update
 
 jobs:
-  # ---------- A. Подтянуть конкретный сабмодуль ----------
+#──────────────────────── A. подтягиваем конкретный сабмодуль (repo-dispatch) ────────────────────────
   update-submodule:
     if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
             git push
           fi
 
-  # ---------- B1. Деплой после repository_dispatch ----------
+#──────────────────────── B1. деплой (repository_dispatch → dev-стек) ───────────────────────────────
   deploy_repo_dispatch:
     if: github.event_name == 'repository_dispatch'
     needs: update-submodule
@@ -85,8 +85,8 @@ jobs:
           port:     ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
-            docker compose pull
-            docker compose up -f docker-compose.dev.yaml -d --build --remove-orphans
+            docker compose -f docker-compose.dev.yml down -v --remove-orphans
+            docker compose -f docker-compose.dev.yml up -d --build
 
   # ---------- B2. Деплой при push в master ----------
   deploy_push:
@@ -125,5 +125,5 @@ jobs:
           port:     ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.PROJECT_DEV_PATH }}
-            docker compose pull
-            docker compose up -f docker-compose.dev.yaml -d --build --remove-orphans
+            docker compose -f docker-compose.dev.yml down -v --remove-orphans
+            docker compose -f docker-compose.dev.yml up -d --build

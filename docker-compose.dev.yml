@@ -30,7 +30,7 @@ services:
 
   database: 
     image: postgres:15
-    container_name: database
+    container_name: dev-database
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -51,7 +51,7 @@ services:
   backend: 
     build:
       context: ./backend
-    container_name: backend
+    container_name: dev-backend
     depends_on:
       database:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
       - itx-network
 
   landing-frontend:
-    container_name: landing-frontend
+    container_name: dev-landing-frontend
     build:
       context: ./landing-frontend
     volumes:
@@ -75,7 +75,7 @@ services:
       - itx-network
 
   platform-frontend:
-    container_name: platform-frontend
+    container_name: dev-platform-frontend
     build:
       context: ./platform-frontend
     volumes:
@@ -84,7 +84,7 @@ services:
       - itx-network
 
   admin-frontend:
-    container_name: admin-frontend
+    container_name: dev-admin-frontend
     build:
       context: ./admin-frontend
     volumes:
