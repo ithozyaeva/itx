@@ -1,6 +1,11 @@
-name: Update Git submodules
+name: Update submodules & deploy
 
 on:
+  # ⬅️ 1. Автодеплой при любых пушах в master
+  push:
+    branches: [ master ]          
+
+  # ⬅️ 2. Обновление конкретных сабмодулей по веб-хукам
   repository_dispatch:
     types:
       - platform-frontend-update
@@ -9,43 +14,70 @@ on:
       - admin-frontend-update
 
 jobs:
+  # ========== JOB 1. подтягиваем сабмодуль (только для repository_dispatch) ==========
   update-submodule:
+    if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
 
     steps:
-      # Клонируем репозиторий вместе с субмодулями
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
 
-      # Настраиваем автора-коммиттера
-      - name: Configure Git
+      - name: Configure Git author
         run: |
           git config --global user.name  'GitHub Actions'
           git config --global user.email 'actions@github.com'
 
-      # Определяем, какой субмодуль нужно подтянуть
       - name: Detect target submodule
         id: vars
         run: |
-          # github.event.action равен строке вида "<path>-update"
           target="${{ github.event.action }}"
-          target="${target%-update}"          # убираем суффикс "-update"
+          target="${target%-update}"
           echo "target=$target" >> "$GITHUB_OUTPUT"
 
-      # Подтягиваем свежий коммит указанного субмодуля
       - name: Update ${{ steps.vars.outputs.target }}
         run: |
           git submodule update --remote --depth 1 "${{ steps.vars.outputs.target }}"
           git add "${{ steps.vars.outputs.target }}"
 
-      # Коммитим и пушим изменения (если они есть)
       - name: Commit and push if there are changes
         run: |
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update ${{ steps.vars.outputs.target }} submodule to latest commit"
+            git commit -m "chore: update ${{ steps.vars.outputs.target }} submodule to latest commit [skip ci]"
             git push
           fi
+
+  # ========== JOB 2. деплой (срабатывает и после push, и после repository_dispatch) ==========
+  deploy:
+    needs: [ update-submodule ]           # если первой джобы не было → считается успешной
+    if: github.event_name == 'push' || github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.PROJECT_DEV_PATH }}
+
+            echo "=== Pull latest commit ==="
+            git fetch --all
+            git reset --hard origin/master
+
+            echo "=== Update ALL submodules ==="
+            git submodule update --init --recursive --remote --depth 1
+
+            echo "=== Restart containers ==="
+            docker compose pull
+            docker compose up -d --build
+
+            echo "Deployment finished"
