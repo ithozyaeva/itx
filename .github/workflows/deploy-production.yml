@@ -1,0 +1,57 @@
+name: Deploy Production Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm production deployment'
+        required: true
+        default: 'no'
+
+jobs:
+  deploy_production:
+    if: github.event.inputs.confirm == 'yes'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Confirmation
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "yes" ]]; then
+            echo "Deployment not confirmed. Exiting."
+            exit 1
+          fi
+          echo "Deploying to production environment..."
+
+      - name: SSH — Pull latest
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            git fetch --all
+            git reset --hard origin/master
+
+      - name: SSH — Update submodules
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            git submodule update --init --recursive --remote --depth 1
+
+      - name: SSH — Restart containers
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            docker compose down -v --remove-orphans
+            docker compose up -d --build 
