@@ -29,7 +29,7 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            cd ${{ secrets.PROJECT_PATH }}
+            cd ${{ secrets.PROJECT_PROD_PATH }}
             git fetch --all
             git reset --hard origin/master
 
@@ -41,7 +41,7 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            cd ${{ secrets.PROJECT_PATH }}
+            cd ${{ secrets.PROJECT_PROD_PATH }}
             git submodule update --init --recursive --remote --depth 1
 
       - name: SSH — Restart containers
@@ -52,6 +52,6 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            cd ${{ secrets.PROJECT_PATH }}
+            cd ${{ secrets.PROJECT_PROD_PATH }}
             docker compose down -v --remove-orphans
             docker compose up -d --build 
