@@ -30,3 +30,5 @@ static/
 *.tsbuildinfo
 
 .env
+
+pgdata
