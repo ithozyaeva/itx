@@ -1,9 +1,10 @@
 services:
   nginx:
+    container_name: dev-nginx
     image: nginx:latest
-    ports:
-      - "3999:80"
-      - "4000:443"
+    expose:
+      - "80"
+      - "443"
     volumes:
       - ./_nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./_nginx/conf.d/dev.conf:/etc/nginx/conf.d/default.conf:ro
@@ -102,3 +103,4 @@ volumes:
 
 networks:
   itx-network:
+    external: true
