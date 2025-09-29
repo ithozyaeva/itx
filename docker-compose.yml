@@ -91,7 +91,6 @@ services:
       - ./static/admin-frontend:/static/admin-frontend
     depends_on:
       - backend
-    env_file: ./admin-frontend/.env
     networks:
       - itx-network
   
@@ -99,7 +98,7 @@ volumes:
   pgdata:
   certbot_conf:
   certbot_www:
-
+  
 networks:
   itx-network:
-    external: true
+    name: itx-network

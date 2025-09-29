@@ -92,7 +92,6 @@ services:
       - ./static/admin-frontend:/static/admin-frontend
     depends_on:
       - backend
-    env_file: ./admin-frontend/.env
     networks:
       - itx-network
   
@@ -103,4 +102,4 @@ volumes:
 
 networks:
   itx-network:
-    external: true
+    name: itx-network
