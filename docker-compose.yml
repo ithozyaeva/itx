@@ -1,43 +1,121 @@
 services:
+  # SSL Certificate initialization (only for dev environment)
+  certbot-init-selfsigned:
+    image: alpine:latest
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/webroot:/var/www/certbot
+      - ./docker/scripts:/scripts:ro
+    entrypoint: "/bin/sh"
+    command: ["/scripts/certbot-init-selfsigned.sh"]
+    networks:
+      - itx-network
+    restart: "no"
+    profiles:
+      - dev
+
+  # Nginx configuration generator (for both dev and prod environments)
+  nginx-init:
+    image: alpine:latest
+    environment:
+      - DOMAIN=${DOMAIN}
+      - HTTPS_PORT=${HTTPS_PORT:-}
+      - BACKEND_CONTAINER=${CONTAINER_PREFIX:-}backend
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+    volumes:
+      - ./_nginx/conf.d/nginx.conf.template:/tmp/nginx.conf.template:ro
+      - ./_nginx/conf.d:/etc/nginx/conf.d:rw
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./docker/scripts:/scripts:ro
+    entrypoint: "/bin/sh"
+    command: ["/scripts/nginx-init.sh"]
+    depends_on:
+      - certbot-init-selfsigned
+    networks:
+      - itx-network
+    restart: "no"
+
   nginx:
+    container_name: ${CONTAINER_PREFIX:-}nginx
     image: nginx:latest
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
       - ./_nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./_nginx/conf.d/${BUILD_TYPE}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./_nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/webroot:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
       - ./static:/static
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./docker/scripts:/scripts:ro
+    entrypoint: >
+      ${NGINX_ENTRYPOINT:-/docker-entrypoint.sh}
+    command: >
+      ${NGINX_COMMAND:-nginx -g 'daemon off;'}
     depends_on:
       - backend
-    #     condition: service_healthy
+      - certbot-init-selfsigned
+      - nginx-init
     networks:
       - itx-network
+    restart: unless-stopped
 
-  certbot:
+  # Let's Encrypt certificate initialization (for dev and prod environments)
+  certbot-init:
     image: certbot/certbot
-    profiles: ["prod"]
+    environment:
+      - DOMAIN=${DOMAIN}
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/webroot:/var/www/certbot
-      - /etc/letsencrypt:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+      - ./docker/scripts:/scripts:ro
+    entrypoint: "/bin/sh"
+    command: ["/scripts/certbot-init.sh"]
+    depends_on:
+      - nginx
     networks:
       - itx-network
+    restart: "no"
+
+  # Certificate renewal service (for both dev and prod)
+  certbot:
+    image: certbot/certbot
+    environment:
+      - NGINX_CONTAINER=${CONTAINER_PREFIX:-}nginx
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/webroot:/var/www/certbot
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/scripts:/scripts:ro
+    entrypoint: "/bin/sh"
+    command: ["/scripts/certbot-renew.sh"]
+    depends_on:
+      - certbot-init
+      - nginx
+    networks:
+      - itx-network
+    restart: unless-stopped
 
   database: 
     image: postgres:15
-    container_name: database
+    container_name: ${CONTAINER_PREFIX:-}database
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -51,22 +129,16 @@ services:
   backend: 
     build:
       context: ./backend
-    container_name: backend
+    container_name: ${CONTAINER_PREFIX:-}backend
     depends_on:
       database:
         condition: service_healthy
     env_file: ./backend/.env
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
     networks:
       - itx-network
 
   landing-frontend:
-    container_name: landing-frontend
+    container_name: ${CONTAINER_PREFIX:-}landing-frontend
     build:
       context: ./landing-frontend
     volumes:
@@ -75,7 +147,7 @@ services:
       - itx-network
 
   platform-frontend:
-    container_name: platform-frontend
+    container_name: ${CONTAINER_PREFIX:-}platform-frontend
     build:
       context: ./platform-frontend
     volumes:
@@ -84,7 +156,7 @@ services:
       - itx-network
 
   admin-frontend:
-    container_name: admin-frontend
+    container_name: ${CONTAINER_PREFIX:-}admin-frontend
     build:
       context: ./admin-frontend
     volumes:
@@ -98,7 +170,7 @@ volumes:
   pgdata:
   certbot_conf:
   certbot_www:
-  
+
 networks:
   itx-network:
     name: itx-network
