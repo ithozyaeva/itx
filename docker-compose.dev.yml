@@ -70,6 +70,10 @@ services:
     container_name: dev-landing-frontend
     build:
       context: ./landing-frontend
+      args:
+        - VITE_YANDEX_METRIKA_ID=${VITE_YANDEX_METRIKA_ID}
+        - VITE_YANDEX_METRIKA_ENABLED=${VITE_YANDEX_METRIKA_ENABLED}
+    env_file: ./landing-frontend/.env
     volumes:
       - ./static/landing-frontend:/static/landing-frontend
     networks:
