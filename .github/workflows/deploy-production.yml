@@ -46,16 +46,16 @@ jobs:
 
       - name: SSH — Restart containers
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          VITE_YANDEX_METRIKA_ID: ${{ secrets.VITE_YANDEX_METRIKA_ID }}
+          VITE_YANDEX_METRIKA_ENABLED: ${{ secrets.VITE_YANDEX_METRIKA_ENABLED }}
         with:
           host:     ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           envs: VITE_YANDEX_METRIKA_ID,VITE_YANDEX_METRIKA_ENABLED
-        env:
-          VITE_YANDEX_METRIKA_ID: ${{ secrets.VITE_YANDEX_METRIKA_ID }}
-          VITE_YANDEX_METRIKA_ENABLED: ${{ secrets.VITE_YANDEX_METRIKA_ENABLED }}
-        script: |
-          cd ${{ secrets.PROJECT_PROD_PATH }}
-          docker compose down -v --remove-orphans
-          docker compose up -d --build 
+          script: |
+            cd ${{ secrets.PROJECT_PROD_PATH }}
+            docker compose down -v --remove-orphans
+            docker compose up -d --build 
