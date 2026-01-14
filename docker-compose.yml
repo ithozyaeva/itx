@@ -1,47 +1,36 @@
+# Локальная конфигурация для разработки без SSL
+# Использование: docker compose -f docker-compose.local.yml up -d
+
 services:
   nginx:
+    container_name: nginx
     image: nginx:latest
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./_nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./_nginx/conf.d/${BUILD_TYPE}.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certbot/webroot:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
+      - ./_nginx/conf.d/localhost.conf:/etc/nginx/conf.d/default.conf:ro
       - ./static:/static
-      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
-    #     condition: service_healthy
     networks:
       - itx-network
-
-  certbot:
-    image: certbot/certbot
-    profiles: ["prod"]
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/webroot:/var/www/certbot
-      - /etc/letsencrypt:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - itx-network
+    restart: unless-stopped
 
   database: 
     image: postgres:15
     container_name: database
     restart: always
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-itx_db}
     ports:
       - "5432:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-itx_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -56,12 +45,6 @@ services:
       database:
         condition: service_healthy
     env_file: ./backend/.env
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
     networks:
       - itx-network
 
@@ -69,9 +52,6 @@ services:
     container_name: landing-frontend
     build:
       context: ./landing-frontend
-      args:
-        - VITE_YANDEX_METRIKA_ID=${VITE_YANDEX_METRIKA_ID}
-        - VITE_YANDEX_METRIKA_ENABLED=${VITE_YANDEX_METRIKA_ENABLED}
     volumes:
       - ./static/landing-frontend:/static/landing-frontend
     networks:
@@ -99,9 +79,8 @@ services:
   
 volumes:
   pgdata:
-  certbot_conf:
-  certbot_www:
-  
+
 networks:
   itx-network:
     name: itx-network
+
