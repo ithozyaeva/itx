@@ -29,7 +29,8 @@ services:
     entrypoint: "/bin/sh"
     command: ["/scripts/nginx-init.sh"]
     depends_on:
-      - certbot-init-selfsigned
+      certbot-init-selfsigned:
+        condition: service_completed_successfully
     networks:
       - itx-network
     restart: "no"
@@ -56,9 +57,12 @@ services:
     command: >
       ${NGINX_COMMAND:-nginx -g 'daemon off;'}
     depends_on:
-      - backend
-      - certbot-init-selfsigned
-      - nginx-init
+      backend:
+        condition: service_started
+      certbot-init-selfsigned:
+        condition: service_completed_successfully
+      nginx-init:
+        condition: service_completed_successfully
     networks:
       - itx-network
     restart: unless-stopped

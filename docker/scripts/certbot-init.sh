@@ -44,7 +44,22 @@ else
       echo 'Let'\''s Encrypt certificate obtained successfully' || \
       echo 'Let'\''s Encrypt certificate request failed'
   else
-    echo "Certificate already exists for domain: ${DOMAIN}"
+    # Проверяем, является ли существующий сертификат самоподписанным
+    CERT_ISSUER=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null)
+    CERT_SUBJECT=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -subject 2>/dev/null)
+    
+    if [ "${CERT_ISSUER}" = "${CERT_SUBJECT}" ]; then
+      echo 'Self-signed certificate detected in production. Replacing with Let'\''s Encrypt certificate...'
+      certbot certonly --webroot --webroot-path=/var/www/certbot \
+        --email "${CERTBOT_EMAIL}" \
+        --agree-tos --no-eff-email \
+        -d "${DOMAIN}" \
+        --non-interactive --force-renewal && \
+        echo 'Let'\''s Encrypt certificate obtained successfully' || \
+        echo 'Let'\''s Encrypt certificate request failed, keeping temporary certificate'
+    else
+      echo "Valid Let's Encrypt certificate already exists for domain: ${DOMAIN}"
+    fi
   fi
 fi
 
