@@ -50,7 +50,6 @@ services:
       - ./certbot/webroot:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
       - ./static:/static
-      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./docker/scripts:/scripts:ro
     entrypoint: >
       ${NGINX_ENTRYPOINT:-/docker-entrypoint.sh}
