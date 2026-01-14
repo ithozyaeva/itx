@@ -8,6 +8,13 @@ HTTPS_PORT="${HTTPS_PORT:-}"
 BACKEND_CONTAINER="${BACKEND_CONTAINER:-backend}"
 ENVIRONMENT="${ENVIRONMENT:-prod}"
 
+# Формируем строку для редиректа с портом (если порт указан)
+if [ -n "${HTTPS_PORT}" ]; then
+  REDIRECT_PORT=":${HTTPS_PORT}"
+else
+  REDIRECT_PORT=""
+fi
+
 if [ "${ENVIRONMENT}" = "dev" ]; then
   echo 'Waiting for certificate to be created...'
   MAX_WAIT=30
@@ -30,7 +37,7 @@ else
 fi
 
 echo 'Generating nginx configuration...'
-export DOMAIN HTTPS_PORT BACKEND_CONTAINER
-envsubst '${DOMAIN} ${HTTPS_PORT} ${BACKEND_CONTAINER}' < /tmp/nginx.conf.template > /etc/nginx/conf.d/default.conf
+export DOMAIN REDIRECT_PORT BACKEND_CONTAINER
+envsubst '${DOMAIN} ${REDIRECT_PORT} ${BACKEND_CONTAINER}' < /tmp/nginx.conf.template > /etc/nginx/conf.d/default.conf
 echo "Nginx configuration updated with domain: ${DOMAIN}"
 

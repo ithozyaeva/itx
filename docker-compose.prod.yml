@@ -13,8 +13,6 @@ services:
     networks:
       - itx-network
     restart: "no"
-    profiles:
-      - dev
 
   nginx-init:
     image: alpine:latest
