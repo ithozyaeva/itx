@@ -72,10 +72,12 @@ services:
       - DOMAIN=${DOMAIN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
       - ENVIRONMENT=${ENVIRONMENT:-prod}
+      - NGINX_CONTAINER=${CONTAINER_PREFIX:-}nginx
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/webroot:/var/www/certbot
       - ./docker/scripts:/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     entrypoint: "/bin/sh"
     command: ["/scripts/certbot-init.sh"]
     depends_on:
