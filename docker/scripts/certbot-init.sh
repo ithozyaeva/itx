@@ -35,6 +35,7 @@ if [ "${ENVIRONMENT}" = "dev" ]; then
         --email "${CERTBOT_EMAIL}" \
         --agree-tos --no-eff-email \
         -d "${DOMAIN}" \
+        -d "www.${DOMAIN}" \
         --non-interactive --force-renewal; then
         echo 'Let'\''s Encrypt certificate obtained successfully'
         reload_nginx
@@ -50,6 +51,7 @@ if [ "${ENVIRONMENT}" = "dev" ]; then
       --email "${CERTBOT_EMAIL}" \
       --agree-tos --no-eff-email \
       -d "${DOMAIN}" \
+      -d "www.${DOMAIN}" \
       --non-interactive; then
       echo 'Let'\''s Encrypt certificate obtained successfully'
       reload_nginx
@@ -64,6 +66,7 @@ else
       --email "${CERTBOT_EMAIL}" \
       --agree-tos --no-eff-email \
       -d "${DOMAIN}" \
+      -d "www.${DOMAIN}" \
       --non-interactive; then
       echo 'Let'\''s Encrypt certificate obtained successfully'
       reload_nginx
@@ -81,6 +84,7 @@ else
         --email "${CERTBOT_EMAIL}" \
         --agree-tos --no-eff-email \
         -d "${DOMAIN}" \
+        -d "www.${DOMAIN}" \
         --non-interactive --force-renewal; then
         echo 'Let'\''s Encrypt certificate obtained successfully'
         reload_nginx
@@ -94,4 +98,3 @@ else
 fi
 
 echo 'Certificate initialization complete'
-
