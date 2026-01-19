@@ -19,6 +19,7 @@ if [ "${ENVIRONMENT}" = "dev" ]; then
         --email "${CERTBOT_EMAIL}" \
         --agree-tos --no-eff-email \
         -d "${DOMAIN}" \
+        -d "www.${DOMAIN}" \
         --non-interactive --force-renewal && \
         echo 'Let'\''s Encrypt certificate obtained successfully' || \
         echo 'Let'\''s Encrypt certificate request failed, using self-signed'
@@ -31,6 +32,7 @@ if [ "${ENVIRONMENT}" = "dev" ]; then
       --email "${CERTBOT_EMAIL}" \
       --agree-tos --no-eff-email \
       -d "${DOMAIN}" \
+      -d "www.${DOMAIN}" \
       --non-interactive || echo 'Let'\''s Encrypt certificate request failed'
   fi
 else
@@ -40,6 +42,7 @@ else
       --email "${CERTBOT_EMAIL}" \
       --agree-tos --no-eff-email \
       -d "${DOMAIN}" \
+      -d "www.${DOMAIN}" \
       --non-interactive && \
       echo 'Let'\''s Encrypt certificate obtained successfully' || \
       echo 'Let'\''s Encrypt certificate request failed'
@@ -54,6 +57,7 @@ else
         --email "${CERTBOT_EMAIL}" \
         --agree-tos --no-eff-email \
         -d "${DOMAIN}" \
+        -d "www.${DOMAIN}" \
         --non-interactive --force-renewal && \
         echo 'Let'\''s Encrypt certificate obtained successfully' || \
         echo 'Let'\''s Encrypt certificate request failed, keeping temporary certificate'
