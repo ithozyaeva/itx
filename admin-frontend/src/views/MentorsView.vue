@@ -4,6 +4,8 @@ import { Tag, Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Trash from '~icons/lucide/trash'
+import BulkActionBar from '@/components/BulkActionBar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import MentorModal from '@/components/modals/MentorModal.vue'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { bulkService } from '@/services/bulkService'
 import { mentorService } from '@/services/mentorService'
 
 const isModalOpen = ref(false)
@@ -24,6 +28,14 @@ const selectedMentor = ref<Mentor | null>(null)
 function handleEditMentor(mentor: Mentor) {
   selectedMentor.value = mentor
   isModalOpen.value = true
+}
+
+const bulk = useBulkSelection()
+
+async function handleBulkDelete() {
+  await bulkService.deleteMentors(bulk.ids.value)
+  bulk.clearSelection()
+  mentorService.search()
 }
 
 onMounted(mentorService.search)
@@ -43,6 +55,9 @@ onUnmounted(mentorService.clearPagination)
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead class="w-10">
+                  <input type="checkbox" :checked="bulk.count.value === mentorService.items.value.items.length && bulk.count.value > 0" @change="bulk.toggleAll(mentorService.items.value.items.map(m => m.id))">
+                </TableHead>
                 <TableHead>Имя</TableHead>
                 <TableHead>Telegram</TableHead>
                 <TableHead>Должность</TableHead>
@@ -58,6 +73,9 @@ onUnmounted(mentorService.clearPagination)
                 </TableCell>
               </TableRow>
               <TableRow v-for="mentor in mentorService.items.value.items" :key="mentor.id">
+                <TableCell>
+                  <input type="checkbox" :checked="bulk.isSelected(mentor.id)" @change="bulk.toggleItem(mentor.id)">
+                </TableCell>
                 <TableCell>{{ mentor.firstName ?? "" }} {{ mentor.lastName ?? "" }}</TableCell>
                 <TableCell>{{ mentor.tg }}</TableCell>
                 <TableCell>{{ mentor.occupation }}</TableCell>
@@ -81,16 +99,24 @@ onUnmounted(mentorService.clearPagination)
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button
-                    v-permission="'can_edit_admin_mentors'"
-                    variant="ghost"
-                    size="sm"
-                    class="text-destructive"
-                    :disabled="mentorService.isLoading.value"
-                    @click="mentorService.delete(mentor.id)"
+                  <ConfirmDialog
+                    title="Удалить ментора?"
+                    description="Ментор будет удалён без возможности восстановления."
+                    confirm-label="Удалить"
+                    @confirm="mentorService.delete(mentor.id)"
                   >
-                    <Trash class="h-4 w-4" />
-                  </Button>
+                    <template #trigger>
+                      <Button
+                        v-permission="'can_edit_admin_mentors'"
+                        variant="ghost"
+                        size="sm"
+                        class="text-destructive"
+                        :disabled="mentorService.isLoading.value"
+                      >
+                        <Trash class="h-4 w-4" />
+                      </Button>
+                    </template>
+                  </ConfirmDialog>
                 </TableCell>
               </TableRow>
             </TableBody>
@@ -126,5 +152,10 @@ onUnmounted(mentorService.clearPagination)
         @saved="mentorService.search"
       />
     </div>
+    <BulkActionBar
+      :count="bulk.count.value"
+      :actions="[{ label: 'Удалить', handler: handleBulkDelete }]"
+      @clear="bulk.clearSelection"
+    />
   </AdminLayout>
 </template>

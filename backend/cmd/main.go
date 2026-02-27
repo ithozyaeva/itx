@@ -4,8 +4,10 @@ import (
 	"ithozyeva/config"
 	"ithozyeva/database"
 	"ithozyeva/internal/bot"
+	"ithozyeva/internal/service"
 	"ithozyeva/routes"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -34,6 +36,28 @@ func main() {
 
 	// Настраиваем маршруты
 	routes.SetupRoutes(app, database.DB)
+
+	// Запускаем фоновую задачу для автозамораживания реферальных ссылок
+	go func() {
+		referalSvc := service.NewReferalLinkService()
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+
+		// Выполняем сразу при старте
+		if count, err := referalSvc.ExpireLinks(); err != nil {
+			log.Printf("Error expiring referral links: %v", err)
+		} else if count > 0 {
+			log.Printf("Expired %d referral links", count)
+		}
+
+		for range ticker.C {
+			if count, err := referalSvc.ExpireLinks(); err != nil {
+				log.Printf("Error expiring referral links: %v", err)
+			} else if count > 0 {
+				log.Printf("Expired %d referral links", count)
+			}
+		}
+	}()
 
 	// Запускаем Telegram бота в отдельной горутине
 	go func() {

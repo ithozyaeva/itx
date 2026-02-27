@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Resume, WorkFormat } from '@/models/resume'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -202,9 +203,18 @@ function formatWorkFormat(format?: WorkFormat) {
               <Button variant="secondary" size="sm" class="gap-2" @click="startEdit(resume)">
                 <Pencil class="h-4 w-4" />
               </Button>
-              <Button variant="destructive" size="sm" class="gap-2" @click="deleteResume(resume)">
-                <Trash2 class="h-4 w-4" />
-              </Button>
+              <ConfirmDialog
+                title="Удалить резюме?"
+                description="Резюме будет удалено без возможности восстановления."
+                confirm-label="Удалить"
+                @confirm="deleteResume(resume)"
+              >
+                <template #trigger>
+                  <Button variant="destructive" size="sm" class="gap-2">
+                    <Trash2 class="h-4 w-4" />
+                  </Button>
+                </template>
+              </ConfirmDialog>
             </div>
           </div>
 

@@ -16,12 +16,14 @@ import (
 const maxResumeSize = 10 * 1024 * 1024 // 10 MB
 
 type ResumeHandler struct {
-	svc *service.ResumeService
+	svc      *service.ResumeService
+	auditSvc *service.AuditService
 }
 
 func NewResumeHandler() *ResumeHandler {
 	return &ResumeHandler{
-		svc: service.NewResumeService(),
+		svc:      service.NewResumeService(),
+		auditSvc: service.NewAuditService(),
 	}
 }
 
@@ -75,6 +77,8 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "resume", resume.Id, fileHeader.Filename)
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"resume": resume,
@@ -138,9 +142,13 @@ func (h *ResumeHandler) DeleteMy(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Некорректный идентификатор"})
 	}
 
-	if err := h.svc.DeleteResume(id, member.TelegramID); err != nil {
+	resume, err := h.svc.DeleteResume(id, member.TelegramID)
+	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "resume", id, resume.FileName)
+
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

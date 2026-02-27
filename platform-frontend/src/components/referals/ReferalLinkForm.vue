@@ -14,6 +14,8 @@ const props = defineProps<{ link?: Partial<ReferalLink>, title?: string, isSavin
 
 const emit = defineEmits(['save', 'cancel'])
 
+const expiresAtDate = ref(props.link?.expiresAt ? props.link.expiresAt.slice(0, 10) : '')
+
 const formData = ref<Partial<ReferalLink>>({
   company: props.link?.company || '',
   grade: props.link?.grade || 'junior',
@@ -22,7 +24,11 @@ const formData = ref<Partial<ReferalLink>>({
 })
 
 function handleSave() {
-  emit('save', formData.value)
+  const data = { ...formData.value }
+  if (expiresAtDate.value) {
+    data.expiresAt = new Date(expiresAtDate.value).toISOString()
+  }
+  emit('save', data)
 }
 
 function handleCancel() {
@@ -62,6 +68,10 @@ const { grades } = useDictionary<Grade>(['grades'])
       <div>
         <Label for="vacations" class="block text-sm font-medium text-muted-foreground">Количество вакансий</Label>
         <Input id="vacations" v-model.number="formData.vacationsCount" type="number" min="1" class="mt-1 block w-full rounded-md border-input shadow-sm" />
+      </div>
+      <div>
+        <Label for="expiresAt" class="block text-sm font-medium text-muted-foreground">Срок действия</Label>
+        <Input id="expiresAt" v-model="expiresAtDate" type="date" class="mt-1 block w-full rounded-md border-input shadow-sm" />
       </div>
     </div>
     <div class="flex justify-end gap-2 mt-4">

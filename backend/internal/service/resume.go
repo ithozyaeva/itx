@@ -107,22 +107,22 @@ func (s *ResumeService) UpdateResume(id, tgID int64, payload *models.UpdateResum
 	return s.repo.Update(resume)
 }
 
-func (s *ResumeService) DeleteResume(id, tgID int64) error {
+func (s *ResumeService) DeleteResume(id, tgID int64) (*models.Resume, error) {
 	resume, err := s.repo.GetByIDAndTelegram(id, tgID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	client, err := utils.NewS3Client()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := client.Delete(context.Background(), resume.FilePath); err != nil {
-		return err
+		return nil, err
 	}
 
-	return s.repo.Delete(resume)
+	return resume, s.repo.Delete(resume)
 }
 
 func (s *ResumeService) SearchForAdmin(limit *int, offset *int, filter *models.ResumeFilter) (*models.RegistrySearch[models.Resume], error) {

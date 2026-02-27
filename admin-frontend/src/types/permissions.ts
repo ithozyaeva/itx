@@ -18,6 +18,7 @@ export type Permission
     | 'can_edit_admin_mentors_review'
     | 'can_approve_admin_mentors_review'
     | 'can_view_admin_resumes'
+    | 'can_view_admin_audit_logs'
 
 /**
  * Type guard for checking if a string is a valid permission
@@ -38,6 +39,7 @@ export function isPermission(value: string): value is Permission {
     'can_edit_admin_mentors_review',
     'can_approve_admin_mentors_review',
     'can_view_admin_resumes',
+    'can_view_admin_audit_logs',
   ]
 
   return permissions.includes(value as Permission)

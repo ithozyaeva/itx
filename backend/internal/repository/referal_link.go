@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"time"
 )
 
 type ReferalLinkRepository struct {
@@ -75,4 +76,12 @@ func (r *ReferalLinkRepository) GetById(id int64) (*models.ReferalLink, error) {
 		return nil, err
 	}
 	return &event, nil
+}
+
+// ExpireLinks замораживает ссылки с истёкшим сроком действия
+func (r *ReferalLinkRepository) ExpireLinks() (int64, error) {
+	result := database.DB.Model(&models.ReferalLink{}).
+		Where("expires_at IS NOT NULL AND expires_at < ? AND status = ?", time.Now(), models.ReferalLinkActive).
+		Update("status", models.ReferalLinkFreezed)
+	return result.RowsAffected, result.Error
 }

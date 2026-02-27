@@ -1,30 +1,37 @@
 <script setup lang="ts">
+import type { DashboardStats } from '@/services/statsService'
 import { Typography } from 'itx-ui-kit'
-import { ref, watchEffect } from 'vue'
+import { Calendar, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
+import { onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCardReveal } from '@/composables/useCardReveal'
-import { usePermissions } from '@/composables/usePermissions'
-import { memberService } from '@/services/memberService'
-import { mentorService } from '@/services/mentorService'
+import { statsService } from '@/services/statsService'
 
 const containerRef = ref<HTMLElement | null>(null)
 useCardReveal(containerRef)
 
-const mentorsCount = ref(0)
-const membersCount = ref(0)
+const stats = ref<DashboardStats | null>(null)
 
-const { hasPermission, isLoading } = usePermissions()
-
-watchEffect(async () => {
-  if (!isLoading.value && hasPermission.value('can_view_admin_mentors')) {
-    mentorsCount.value = (await mentorService.getAll()).total
+onMounted(async () => {
+  try {
+    stats.value = await statsService.getStats()
   }
-
-  if (!isLoading.value) {
-    membersCount.value = (await memberService.getAll()).total
+  catch (error) {
+    console.error('Ошибка загрузки статистики:', error)
   }
 })
+
+const statCards = [
+  { key: 'totalMembers', label: 'Участники', icon: Users },
+  { key: 'totalMentors', label: 'Менторы', icon: Users },
+  { key: 'upcomingEvents', label: 'Предстоящие события', icon: Calendar },
+  { key: 'pastEvents', label: 'Прошедшие события', icon: Calendar },
+  { key: 'pendingReviews', label: 'Ожидают публикации', icon: MessageSquare },
+  { key: 'approvedReviews', label: 'Опубликованные отзывы', icon: MessageSquare },
+  { key: 'referralLinks', label: 'Реферальные ссылки', icon: Folder },
+  { key: 'resumes', label: 'Резюме', icon: FileText },
+] as const
 </script>
 
 <template>
@@ -34,27 +41,17 @@ watchEffect(async () => {
         Дашборд
       </Typography>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card v-permission="'can_view_admin_mentors'" data-reveal>
-          <CardHeader>
-            <CardTitle>Менторы</CardTitle>
-            <CardDescription>Общее количество менторов в системе</CardDescription>
+      <div v-if="stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card v-for="card in statCards" :key="card.key" data-reveal>
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle class="text-sm font-medium">
+              {{ card.label }}
+            </CardTitle>
+            <component :is="card.icon" class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p class="text-4xl font-bold">
-              {{ mentorsCount }}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card data-reveal>
-          <CardHeader>
-            <CardTitle>Участники</CardTitle>
-            <CardDescription>Общее количество участников сообщества</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p class="text-4xl font-bold">
-              {{ membersCount }}
+            <p class="text-3xl font-bold">
+              {{ stats[card.key] }}
             </p>
           </CardContent>
         </Card>
