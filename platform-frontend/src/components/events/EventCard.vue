@@ -19,8 +19,8 @@ const isMembersExpanded = ref(false)
 
 const formattedDate = computed(() => dateFormatter.format(new Date(props.event.date)))
 
-const isHost = computed(() => event.value.hosts.map(item => item.id).includes(user.value.id))
-const isMember = computed(() => event.value.members.map(item => item.id).includes(user.value.id))
+const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
+const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
 const isPassedEvent = computed(() => new Date(props.event.date) < new Date())
 
 // Форматирование информации о повторениях

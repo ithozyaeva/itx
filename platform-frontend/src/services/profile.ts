@@ -5,7 +5,7 @@ import { apiClient } from './api'
 
 const localStorageUser = useUser<TelegramUser | Mentor>()
 
-export const profileSiervice = {
+export const profileService = {
   async getMe() {
     try {
       const response = await apiClient.get('members/me')

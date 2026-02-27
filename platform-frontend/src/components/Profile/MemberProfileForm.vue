@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
 import { Edit } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
@@ -16,7 +16,7 @@ const editedUser = reactive({
 })
 
 function handleSubmit() {
-  profileSiervice.updateMe(editedUser)
+  profileService.updateMe(editedUser)
   isEdit.value = false
 }
 </script>

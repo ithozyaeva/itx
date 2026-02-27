@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
 import { Edit } from 'lucide-vue-next'
 import { computed, onMounted, ref, watchEffect } from 'vue'
@@ -68,7 +68,7 @@ function removeTag(index: number) {
 // Загрузка всех профессиональных тегов
 async function loadProfTags() {
   try {
-    const response = await profileSiervice.getAllProfTags()
+    const response = await profileService.getAllProfTags()
     allProfTags.value = response
   }
   catch (error) {
@@ -88,7 +88,7 @@ function convertValue(text: string) {
 onMounted(loadProfTags)
 
 async function handleSubmit() {
-  await profileSiervice.updateTags(localProfTags.value)
+  await profileService.updateTags(localProfTags.value)
   isEdit.value = false
 }
 function toggleEdit() {
@@ -123,7 +123,6 @@ function toggleEdit() {
                   v-for="profTag in filteredProfTags" :key="profTag.title" :value="profTag"
                   @select.prevent="(ev: any) => {
                     searchProfTag = ''
-                    console.log(ev.detail)
                     pushTag(ev.detail.value)
 
                     if (filteredProfTags.length === 0) {

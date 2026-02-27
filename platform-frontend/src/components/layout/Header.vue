@@ -35,7 +35,7 @@ function logout() {
       <div class="flex-1" />
       <div v-if="user" class="flex items-center gap-3">
         <span class="mr-3">
-          {{ `${user.firstName} ${user.lastName[0] ?? ""}` }}
+          {{ `${user.firstName} ${user.lastName?.[0] ?? ""}` }}
         </span>
         <LogOut class="h-6 w-6 cursor-pointer" @click="logout" />
       </div>

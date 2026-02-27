@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
 import { Edit, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
@@ -32,7 +32,7 @@ function removeService(index: number) {
 }
 
 async function handleSubmit() {
-  await profileSiervice.updateServices(services.value)
+  await profileService.updateServices(services.value)
   isEdit.value = false
 }
 

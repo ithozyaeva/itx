@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { Edit } from 'lucide-vue-next'
 import { reactive, ref, watchEffect } from 'vue'
 
@@ -23,7 +23,7 @@ watchEffect(() => {
 })
 
 function handleSubmit() {
-  profileSiervice.updateMentorInfo(editedUser)
+  profileService.updateMentorInfo(editedUser)
   isEdit.value = false
 }
 </script>

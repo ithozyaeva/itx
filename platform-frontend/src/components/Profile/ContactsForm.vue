@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
 import { Edit, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
@@ -33,7 +33,7 @@ function toggleEdit() {
   isEdit.value = !isEdit.value
 }
 async function handleSubmit() {
-  await profileSiervice.updateContacts(contacts.value)
+  await profileService.updateContacts(contacts.value)
   isEdit.value = false
 }
 </script>
@@ -60,7 +60,7 @@ async function handleSubmit() {
         <TableBody>
           <TableRow v-for="(contact, index) in contacts" :key="index">
             <TableCell>
-              <Select v-model="contact.type" :readonly="!isEdit">
+              <Select v-model="contact.type" :disabled="!isEdit">
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
