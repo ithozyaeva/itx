@@ -70,7 +70,7 @@ func (h *ReviewOnServiceHandler) CreateReview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_service", result.Id, result.Author)
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_service", int64(result.Id), result.Author)
 
 	return c.Status(fiber.StatusCreated).JSON(result)
 }
