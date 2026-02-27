@@ -27,6 +27,7 @@ func (s *ReferalLinkService) AddLink(req *models.AddLinkRequest, member *models.
 		ProfTags:       req.ProfTags,
 		Status:         models.ReferalLinkActive,
 		VacationsCount: req.VacationsCount,
+		ExpiresAt:      req.ExpiresAt,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -43,8 +44,14 @@ func (s *ReferalLinkService) UpdateLink(req *models.UpdateLinkRequest, member *m
 		ProfTags:       req.ProfTags,
 		Status:         req.Status,
 		VacationsCount: req.VacationsCount,
+		ExpiresAt:      req.ExpiresAt,
 		UpdatedAt:      time.Now(),
 	}
 
 	return s.repo.Update(updatedEntity)
+}
+
+// ExpireLinks замораживает реферальные ссылки с истёкшим сроком действия
+func (s *ReferalLinkService) ExpireLinks() (int64, error) {
+	return s.repo.ExpireLinks()
 }

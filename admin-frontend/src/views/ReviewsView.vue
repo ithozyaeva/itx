@@ -5,6 +5,8 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
+import BulkActionBar from '@/components/BulkActionBar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import RevievOnCommunityModal from '@/components/modals/RevievOnCommunityModal.vue'
 import { Button } from '@/components/ui/button'
@@ -12,8 +14,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useDictionary } from '@/composables/useDictionary'
 import { useModal } from '@/composables/useModal'
+import { bulkService } from '@/services/bulkService'
 import { reviewOnCommunityService } from '@/services/reviewOnCommunityService'
 
 onMounted(reviewOnCommunityService.search)
@@ -33,6 +37,19 @@ function selectReview(reviewId: number) {
 }
 
 const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
+const bulk = useBulkSelection()
+
+async function handleBulkDelete() {
+  await bulkService.deleteReviews(bulk.ids.value)
+  bulk.clearSelection()
+  reviewOnCommunityService.search()
+}
+
+async function handleBulkApprove() {
+  await bulkService.approveReviews(bulk.ids.value)
+  bulk.clearSelection()
+  reviewOnCommunityService.search()
+}
 </script>
 
 <template>
@@ -53,6 +70,9 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead class="w-10">
+                  <input type="checkbox" :checked="bulk.count.value === reviewOnCommunityService.items.value.items.length && bulk.count.value > 0" @change="bulk.toggleAll(reviewOnCommunityService.items.value.items.map(r => r.id))">
+                </TableHead>
                 <TableHead>Автор</TableHead>
                 <TableHead>Текст отзыва</TableHead>
                 <TableHead>Дата</TableHead>
@@ -68,6 +88,9 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
               </TableRow>
               <TableRow v-for="review in reviewOnCommunityService.items.value.items" :key="review.id">
                 <TableCell>
+                  <input type="checkbox" :checked="bulk.isSelected(review.id)" @change="bulk.toggleItem(review.id)">
+                </TableCell>
+                <TableCell>
                   Имя: {{ review.author.firstName ?? "" }} {{ review.author.lastName ?? "" }} <br> Telegram: {{
                     review.author.tg }}
                 </TableCell>
@@ -76,15 +99,35 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
                 <TableCell>{{ reviewStatuses.find((status) => status.value === review.status)?.label }}</TableCell>
                 <TableCell>
                   <div class="flex items-center justify-end">
-                    <Button v-if="review.status !== 'APPROVED'" :disabled="reviewOnCommunityService.isLoading.value" @click="reviewOnCommunityService.approve(review.id)">
-                      Опубликовать
-                    </Button>
+                    <ConfirmDialog
+                      v-if="review.status !== 'APPROVED'"
+                      title="Опубликовать отзыв?"
+                      description="Отзыв станет виден на сайте."
+                      confirm-label="Опубликовать"
+                      variant="default"
+                      @confirm="reviewOnCommunityService.approve(review.id)"
+                    >
+                      <template #trigger>
+                        <Button :disabled="reviewOnCommunityService.isLoading.value">
+                          Опубликовать
+                        </Button>
+                      </template>
+                    </ConfirmDialog>
                     <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                       <Pencil class="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" :disabled="reviewOnCommunityService.isLoading.value" @click="reviewOnCommunityService.delete(review.id)">
-                      <Trash class="h-4 w-4" />
-                    </Button>
+                    <ConfirmDialog
+                      title="Удалить отзыв?"
+                      description="Отзыв будет удалён без возможности восстановления."
+                      confirm-label="Удалить"
+                      @confirm="reviewOnCommunityService.delete(review.id)"
+                    >
+                      <template #trigger>
+                        <Button variant="ghost" size="sm" :disabled="reviewOnCommunityService.isLoading.value">
+                          <Trash class="h-4 w-4" />
+                        </Button>
+                      </template>
+                    </ConfirmDialog>
                   </div>
                 </TableCell>
               </TableRow>
@@ -122,6 +165,14 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
     <RevievOnCommunityModal
       v-model:is-open="isOpen" :review-id="selectedReviewId"
       @saved="reviewOnCommunityService.search"
+    />
+    <BulkActionBar
+      :count="bulk.count.value"
+      :actions="[
+        { label: 'Опубликовать', variant: 'default', handler: handleBulkApprove },
+        { label: 'Удалить', handler: handleBulkDelete },
+      ]"
+      @clear="bulk.clearSelection"
     />
   </AdminLayout>
 </template>

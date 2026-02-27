@@ -4,13 +4,17 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
+import BulkActionBar from '@/components/BulkActionBar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import EventsModal from '@/components/modals/EventsModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useModal } from '@/composables/useModal'
+import { bulkService } from '@/services/bulkService'
 import { eventsService } from '@/services/eventsService'
 
 onMounted(eventsService.search)
@@ -18,6 +22,13 @@ onUnmounted(eventsService.clearPagination)
 
 const selectedEventId = ref<number>()
 const { open, isOpen } = useModal()
+const bulk = useBulkSelection()
+
+async function handleBulkDelete() {
+  await bulkService.deleteEvents(bulk.ids.value)
+  bulk.clearSelection()
+  eventsService.search()
+}
 
 /**
  * Выбор сущности для редактирования.
@@ -48,6 +59,13 @@ function selectEvent(entityId: number) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead class="w-10">
+                  <input
+                    type="checkbox"
+                    :checked="bulk.count.value === eventsService.items.value.items.length && bulk.count.value > 0"
+                    @change="bulk.toggleAll(eventsService.items.value.items.map(e => e.id))"
+                  >
+                </TableHead>
                 <TableHead>Дата</TableHead>
                 <TableHead>Название</TableHead>
                 <TableHead>Темы</TableHead>
@@ -64,6 +82,9 @@ function selectEvent(entityId: number) {
                 </TableCell>
               </TableRow>
               <TableRow v-for="event in eventsService.items.value.items" :key="event.id">
+                <TableCell>
+                  <input type="checkbox" :checked="bulk.isSelected(event.id)" @change="bulk.toggleItem(event.id)">
+                </TableCell>
                 <TableCell>
                   <div class="flex flex-col">
                     <span>{{ new Date(event.date).toLocaleString() }} ({{ event.timezone || 'UTC' }})</span>
@@ -85,9 +106,18 @@ function selectEvent(entityId: number) {
                   <Button variant="ghost" size="sm" @click="selectEvent(event.id)">
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" :disabled="eventsService.isLoading.value" @click="eventsService.delete(event.id)">
-                    <Trash class="h-4 w-4" />
-                  </Button>
+                  <ConfirmDialog
+                    title="Удалить событие?"
+                    description="Событие будет удалено без возможности восстановления."
+                    confirm-label="Удалить"
+                    @confirm="eventsService.delete(event.id)"
+                  >
+                    <template #trigger>
+                      <Button variant="ghost" size="sm" :disabled="eventsService.isLoading.value">
+                        <Trash class="h-4 w-4" />
+                      </Button>
+                    </template>
+                  </ConfirmDialog>
                 </TableCell>
               </TableRow>
             </TableBody>
@@ -116,5 +146,10 @@ function selectEvent(entityId: number) {
       </div>
     </div>
     <EventsModal v-model:is-open="isOpen" :event-id="selectedEventId" @saved="eventsService.search" />
+    <BulkActionBar
+      :count="bulk.count.value"
+      :actions="[{ label: 'Удалить', handler: handleBulkDelete }]"
+      @clear="bulk.clearSelection"
+    />
   </AdminLayout>
 </template>

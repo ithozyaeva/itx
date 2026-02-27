@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { ReferalLink } from '@/models/referals'
 import type { PropType } from 'vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
+import { Badge } from '@/components/ui/badge'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
@@ -64,7 +66,7 @@ async function handleDelete() {
   }
 }
 
-const { gradesObject } = useDictionary(['grades'])
+const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 'referalLinkStatuses'])
 </script>
 
 <template>
@@ -75,17 +77,32 @@ const { gradesObject } = useDictionary(['grades'])
     <!-- Режим просмотра -->
     <div v-if="!isEditing">
       <div class="flex justify-between items-start mb-3">
-        <Typography variant="h4" as="h3">
-          {{ link.company }}
-        </Typography>
+        <div class="flex items-center gap-2">
+          <Typography variant="h4" as="h3">
+            {{ link.company }}
+          </Typography>
+          <Badge :variant="link.status === 'active' ? 'default' : 'secondary'">
+            {{ referalLinkStatusesObject[link.status] }}
+          </Badge>
+        </div>
         <div class="space-x-2">
           <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isSaving" @click="startEditing">
             <Pencil :size="16" />
           </button>
-          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isDeleting" @click="handleDelete">
-            <Loader2 v-if="isDeleting" :size="16" class="animate-spin" />
-            <Trash v-else :size="16" />
-          </button>
+          <ConfirmDialog
+            v-if="isOwner"
+            title="Удалить ссылку?"
+            description="Реферальная ссылка будет удалена без возможности восстановления."
+            confirm-label="Удалить"
+            @confirm="handleDelete"
+          >
+            <template #trigger>
+              <button class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isDeleting">
+                <Loader2 v-if="isDeleting" :size="16" class="animate-spin" />
+                <Trash v-else :size="16" />
+              </button>
+            </template>
+          </ConfirmDialog>
         </div>
       </div>
       <p class="text-sm text-muted-foreground">
@@ -103,6 +120,10 @@ const { gradesObject } = useDictionary(['grades'])
         <div class="space-x-2">
           <span class="font-bold">Количество вакансий:</span>
           <span> {{ link.vacationsCount }}</span>
+        </div>
+        <div v-if="link.expiresAt" class="space-x-2">
+          <span class="font-bold">Срок действия до:</span>
+          <span> {{ dateFormatter.format(new Date(link.expiresAt)) }}</span>
         </div>
         <div class="space-x-2">
           <span class="font-bold">Обновлено:</span>

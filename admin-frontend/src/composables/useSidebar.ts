@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type { Permission } from '@/types/permissions'
 import { computed, ref } from 'vue'
+import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
 import Home from '~icons/lucide/home'
 import MessageSquare from '~icons/lucide/message-square'
@@ -61,6 +62,12 @@ export function useSidebar() {
       path: '/resumes',
       icon: FileText,
       requiredPermission: 'can_view_admin_resumes',
+    },
+    {
+      title: 'Журнал действий',
+      path: '/audit-logs',
+      icon: ClipboardList,
+      requiredPermission: 'can_view_admin_audit_logs',
     },
   ])
 

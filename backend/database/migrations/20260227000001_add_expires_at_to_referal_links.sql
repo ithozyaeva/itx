@@ -1,0 +1,1 @@
+ALTER TABLE referal_links ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;

@@ -10,7 +10,8 @@ import (
 
 type ReviewOnCommunityHandler struct {
 	BaseHandler[models.ReviewOnCommunity]
-	svc *service.ReviewOnCommunityService
+	svc      *service.ReviewOnCommunityService
+	auditSvc *service.AuditService
 }
 
 func NewReviewOnCommunityHandler() *ReviewOnCommunityHandler {
@@ -18,6 +19,7 @@ func NewReviewOnCommunityHandler() *ReviewOnCommunityHandler {
 	return &ReviewOnCommunityHandler{
 		BaseHandler: *NewBaseHandler(svc),
 		svc:         svc,
+		auditSvc:    service.NewAuditService(),
 	}
 }
 
@@ -66,6 +68,8 @@ func (h *ReviewOnCommunityHandler) CreateReview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_community", 0, review.AuthorTg)
+
 	return c.SendStatus(fiber.StatusOK)
 
 }
@@ -90,5 +94,28 @@ func (h *ReviewOnCommunityHandler) Approve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionApprove, "review_on_community", int64(id), result.Text)
+
 	return c.JSON(result)
+}
+
+// Delete переопределяет базовый метод Delete для добавления аудит-лога
+func (h *ReviewOnCommunityHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	entity, err := h.service.GetById(int64(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Отзыв не найден"})
+	}
+
+	if err := h.service.Delete(entity); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "review_on_community", int64(id), entity.Text)
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

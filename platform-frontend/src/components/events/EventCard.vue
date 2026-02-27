@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useDictionary } from '@/composables/useDictionary'
+import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter, wrapLinks } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
@@ -109,6 +111,7 @@ function getICS() {
 }
 
 const { placeTypesObject } = useDictionary(['placeTypes'])
+const { openInGoogleCalendar } = useGoogleCalendar()
 </script>
 
 <template>
@@ -126,9 +129,14 @@ const { placeTypesObject } = useDictionary(['placeTypes'])
         >
           {{ event.customPlaceType }}
         </Tag>
-        <Button v-if="!isPassedEvent" class="cursor-pointer" size="sm" variant="outline" @click="getICS">
-          + Добавить в календарь
-        </Button>
+        <div v-if="!isPassedEvent" class="flex gap-1">
+          <Button class="cursor-pointer" size="sm" variant="outline" @click="getICS">
+            + ICS
+          </Button>
+          <Button class="cursor-pointer" size="sm" variant="outline" @click="openInGoogleCalendar(event)">
+            + Google Calendar
+          </Button>
+        </div>
       </div>
     </div>
     <p class="text-muted-foreground mb-4">
@@ -188,10 +196,20 @@ const { placeTypesObject } = useDictionary(['placeTypes'])
       </div>
     </div>
     <div v-if="!isPassedEvent" class="self-end">
-      <Button v-if="isMember" :disabled="isDeclining" @click="declineEvent(event.id)">
-        <Loader2 v-if="isDeclining" class="h-4 w-4 animate-spin mr-1" />
-        Отменить участие
-      </Button>
+      <ConfirmDialog
+        v-if="isMember"
+        title="Отменить участие?"
+        description="Вы будете исключены из списка участников события."
+        confirm-label="Отменить участие"
+        @confirm="declineEvent(event.id)"
+      >
+        <template #trigger>
+          <Button :disabled="isDeclining">
+            <Loader2 v-if="isDeclining" class="h-4 w-4 animate-spin mr-1" />
+            Отменить участие
+          </Button>
+        </template>
+      </ConfirmDialog>
       <Button v-if="!isMember && !isHost" :disabled="isApplying" @click="applyEvent(event.id)">
         <Loader2 v-if="isApplying" class="h-4 w-4 animate-spin mr-1" />
         Участвую!

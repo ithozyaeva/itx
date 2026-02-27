@@ -26,12 +26,6 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	auth.Post("/telegram", telegramAuthHandler.Authenticate)
 	auth.Post("/telegram-from-bot", telegramAuthHandler.HandleBotMessage)
 
-	userHandler := handler.NewUserHandler()
-	// Маршруты для аутентификации в админ панели
-	// TODO: Рассмотреть вариант авторизации в админке через тг + роль admin у member (подумать о его переименование в user, или же оставить тотальное разделение между public и admin зонами)
-	auth.Post("/login", userHandler.Login)
-	auth.Post("/refresh", userHandler.RefreshToken)
-
 	mentorHandler := handler.NewMentorHandler()
 	api.Get("/mentors", mentorHandler.GetAllWithRelations)
 
@@ -66,6 +60,10 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 
 	// Защищенные маршруты
 	protected := app.Group("/api/admin", authMiddleware.RequireAuth)
+
+	// Маршруты для статистики
+	statsHandler := handler.NewStatsHandler()
+	protected.Get("/stats", statsHandler.GetStats)
 
 	// Маршруты для менторов
 	mentorHandler := handler.NewMentorHandler()
@@ -132,6 +130,20 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	resumes.Get("/download", resumeHandler.AdminDownload)
 	resumes.Get("/:id", resumeHandler.AdminGet)
 
+	// Маршруты для массовых операций
+	bulkHandler := handler.NewBulkHandler()
+	bulk := protected.Group("/bulk")
+	bulk.Post("/events/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminEvents), bulkHandler.BulkDeleteEvents)
+	bulk.Post("/mentors/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentors), bulkHandler.BulkDeleteMentors)
+	bulk.Post("/members/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminMembers), bulkHandler.BulkDeleteMembers)
+	bulk.Post("/reviews/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminReviews), bulkHandler.BulkDeleteReviews)
+	bulk.Post("/reviews/approve", authMiddleware.RequirePermission(models.PermissionCanApprovedAdminReviews), bulkHandler.BulkApproveReviews)
+	bulk.Post("/mentors-reviews/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), bulkHandler.BulkDeleteMentorsReviews)
+
+	// Маршруты для журнала действий
+	auditLogHandler := handler.NewAuditLogHandler()
+	protected.Get("/audit-logs", authMiddleware.RequirePermission(models.PermissionCanViewAdminAuditLogs), auditLogHandler.Search)
+
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
 	eventTags := protected.Group("/eventTags")
@@ -159,8 +171,12 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	members.Get("/me", memberHandler.Me)
 	members.Patch("/me", memberHandler.UpdateProfile)
 
-	// Маршруты для ментора
+	// Маршруты для менторов
 	mentorsHandler := handler.NewMentorHandler()
+	mentors := protected.Group("/mentors")
+	mentors.Get("/:id", mentorsHandler.GetById)
+	mentors.Post("/:id/reviews", mentorsHandler.AddReviewFromPlatform)
+
 	mentorsMe := protected.Group("/mentors/me")
 	mentorsMe.Post("/update-info", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateInfo)
 	mentorsMe.Post("/update-prof-tags", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateProfTags)

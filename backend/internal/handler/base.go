@@ -5,9 +5,34 @@ import (
 	"ithozyeva/internal/service"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// getActorId извлекает ID актора из контекста запроса
+func getActorId(c *fiber.Ctx) int64 {
+	if member, ok := c.Locals("member").(*models.Member); ok && member != nil {
+		return member.Id
+	}
+	return 0
+}
+
+// getActorName извлекает имя актора из контекста запроса
+func getActorName(c *fiber.Ctx) string {
+	if member, ok := c.Locals("member").(*models.Member); ok && member != nil {
+		return member.FirstName + " " + member.LastName
+	}
+	return "admin"
+}
+
+// getActorType определяет тип актора из контекста запроса
+func getActorType(c *fiber.Ctx) models.ActorType {
+	if strings.HasPrefix(c.Path(), "/api/platform") {
+		return models.ActorTypePlatform
+	}
+	return models.ActorTypeAdmin
+}
 
 // Identifiable интерфейс для сущностей с ID
 type Identifiable interface {

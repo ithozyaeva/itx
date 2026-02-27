@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
@@ -11,7 +12,8 @@ import (
 // MentorHandler обработчик для работы с менторами
 type MentorHandler struct {
 	BaseHandler[models.MentorDbShortModel]
-	svc *service.MentorService
+	svc      *service.MentorService
+	auditSvc *service.AuditService
 }
 
 // NewMentorHandler создает новый экземпляр обработчика менторов
@@ -20,6 +22,7 @@ func NewMentorHandler() *MentorHandler {
 	return &MentorHandler{
 		BaseHandler: *NewBaseHandler[models.MentorDbShortModel](svc),
 		svc:         svc,
+		auditSvc:    service.NewAuditService(),
 	}
 }
 
@@ -53,6 +56,36 @@ func (h *MentorHandler) AddReviewToService(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+// AddReviewFromPlatform добавляет отзыв от авторизованного пользователя платформы
+func (h *MentorHandler) AddReviewFromPlatform(c *fiber.Ctx) error {
+	type Request struct {
+		ServiceId int    `json:"serviceId"`
+		Text      string `json:"text"`
+	}
+
+	req := new(Request)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	member := c.Locals("member").(*models.Member)
+	author := member.FirstName + " " + member.LastName
+
+	review := &models.ReviewOnService{
+		ServiceId: req.ServiceId,
+		Author:    author,
+		Text:      req.Text,
+		Date:      c.Context().Time().Format("2006-01-02"),
+	}
+
+	result, err := h.svc.AddReviewToService(review)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(result)
+}
+
 // Create создает нового ментора со всеми связанными сущностями
 func (h *MentorHandler) Create(c *fiber.Ctx) error {
 	request := new(models.MentorDbModel)
@@ -64,6 +97,8 @@ func (h *MentorHandler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "mentor", result.Id, fmt.Sprintf("%s %s", result.FirstName, result.LastName))
 
 	return c.Status(fiber.StatusCreated).JSON(result)
 }
@@ -85,7 +120,37 @@ func (h *MentorHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "mentor", result.Id, fmt.Sprintf("%s %s", result.FirstName, result.LastName))
+
 	return c.JSON(result)
+}
+
+// Delete переопределяет базовый метод Delete для добавления аудит-лога
+func (h *MentorHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	fullEntity, err := h.svc.GetByIdFull(int64(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Ментор не найден"})
+	}
+
+	entity, err := h.service.GetById(int64(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Ментор не найден"})
+	}
+
+	entityName := fmt.Sprintf("%s %s", fullEntity.FirstName, fullEntity.LastName)
+
+	if err := h.service.Delete(entity); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "mentor", int64(id), entityName)
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *MentorHandler) GetServices(c *fiber.Ctx) error {

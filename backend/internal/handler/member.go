@@ -1,28 +1,27 @@
 package handler
 
 import (
-	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // MembersHandler обработчик для работы с участниками
 type MembersHandler struct {
-	svc *service.MemberService
+	svc      *service.MemberService
+	auditSvc *service.AuditService
 }
 
 // NewMembersHandler создает новый экземпляр обработчика участников
 func NewMembersHandler() *MembersHandler {
 	svc := service.NewMemberService()
 	return &MembersHandler{
-		svc: svc,
+		svc:      svc,
+		auditSvc: service.NewAuditService(),
 	}
 }
 
@@ -94,6 +93,8 @@ func (h *MembersHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "member", result.Id, result.FirstName+" "+result.LastName)
+
 	return c.JSON(result)
 }
 
@@ -136,6 +137,8 @@ func (h *MembersHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "member", result.Id, result.FirstName+" "+result.LastName)
+
 	return c.JSON(result)
 }
 
@@ -145,13 +148,18 @@ func (h *MembersHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 
-	entity := new(models.Member)
+	entity, err := h.svc.GetById(int64(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
+	}
 
-	entity.Id = int64(id)
+	entityName := entity.FirstName + " " + entity.LastName
 
 	if err := h.svc.Delete(entity); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "member", int64(id), entityName)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -201,42 +209,13 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	return c.JSON(mentor)
 }
 
-// TODO: удалить возможность авторизировать через JWT через время
 func (h *MembersHandler) GetPermissions(c *fiber.Ctx) error {
-	// First, try to get member from local context (Telegram authentication)
 	member, ok := c.Locals("member").(*models.Member)
-	if ok && member != nil {
-		// User is authenticated via Telegram, get their actual permissions
-		permissions, err := h.svc.GetPermissions(member.Id)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(permissions)
-	}
-
-	// If no member in context, check for JWT authentication
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
+	if !ok || member == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	// Validate JWT token
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenStr == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
-
-	// Parse and validate JWT token
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		return []byte(config.CFG.JwtSecret), nil
-	})
-
-	if err != nil || !token.Valid {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
-	}
-
-	// If JWT is valid, user is a superadmin - return all permissions
-	permissions, err := h.svc.GetAllPermissions()
+	permissions, err := h.svc.GetPermissions(member.Id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

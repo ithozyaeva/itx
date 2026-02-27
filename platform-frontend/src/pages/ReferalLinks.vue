@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { ReferalLink } from '@/models/referals'
+import type { ReferalSearchFilters } from '@/services/referals'
+import ReferalFilters from '@/components/referals/ReferalFilters.vue'
 import ReferalLinkCard from '@/components/referals/ReferalLinkCard.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { useCardReveal } from '@/composables/useCardReveal'
@@ -17,10 +19,15 @@ const isSaving = ref(false)
 const totalLinks = ref(0)
 const currentOffset = ref(0)
 const ITEMS_PER_PAGE = 10
+const currentFilters = ref<ReferalSearchFilters>({})
 
-async function fetchReferalLinks() {
+async function fetchReferalLinks(filters?: ReferalSearchFilters) {
+  if (filters) {
+    currentFilters.value = filters
+    currentOffset.value = 0
+  }
   try {
-    const response = await referalLinkService.search(ITEMS_PER_PAGE, currentOffset.value)
+    const response = await referalLinkService.search(ITEMS_PER_PAGE, currentOffset.value, currentFilters.value)
     if (currentOffset.value === 0) {
       referalLinks.value = response.items
     }
@@ -83,9 +90,11 @@ function handleLinkDeleted(deletedLinkId: number) {
 
 <template>
   <div ref="containerRef" class="container mx-auto p-4">
-    <Typography variant="h2" as="h1" class="mb-6">
+    <Typography variant="h2" as="h1" class="mb-4">
       Реферальные ссылки
     </Typography>
+
+    <ReferalFilters class="mb-6" @change="fetchReferalLinks" />
 
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <div class="bg-card rounded-3xl border p-4 shadow-md ">

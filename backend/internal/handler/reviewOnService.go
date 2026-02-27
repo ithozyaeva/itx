@@ -10,7 +10,8 @@ import (
 
 type ReviewOnServiceHandler struct {
 	BaseHandler[models.ReviewOnService]
-	svc *service.ReviewOnServiceService
+	svc      *service.ReviewOnServiceService
+	auditSvc *service.AuditService
 }
 
 func NewReviewOnServiceHandler() *ReviewOnServiceHandler {
@@ -18,6 +19,7 @@ func NewReviewOnServiceHandler() *ReviewOnServiceHandler {
 	return &ReviewOnServiceHandler{
 		BaseHandler: *NewBaseHandler[models.ReviewOnService](svc),
 		svc:         svc,
+		auditSvc:    service.NewAuditService(),
 	}
 }
 
@@ -68,7 +70,30 @@ func (h *ReviewOnServiceHandler) CreateReview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_service", result.Id, result.Author)
+
 	return c.Status(fiber.StatusCreated).JSON(result)
+}
+
+// Delete переопределяет базовый метод Delete для добавления аудит-лога
+func (h *ReviewOnServiceHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	entity, err := h.svc.GetById(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Отзыв не найден"})
+	}
+
+	if err := h.svc.Delete(entity); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "review_on_service", id, entity.Author)
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // GetById получает отзыв по ID

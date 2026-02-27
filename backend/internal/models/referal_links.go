@@ -11,6 +11,7 @@ type ReferalLink struct {
 	ProfTags       []ProfTag         `json:"profTags" gorm:"many2many:referal_links_tags"`
 	Status         ReferalLinkStatus `json:"status"`
 	VacationsCount int               `json:"vacationsCount"`
+	ExpiresAt      *time.Time        `json:"expiresAt,omitempty" gorm:"column:expires_at"`
 	CreatedAt      time.Time         `json:"-"`
 	UpdatedAt      time.Time         `json:"updatedAt"`
 }
@@ -31,10 +32,11 @@ const (
 )
 
 type AddLinkRequest struct {
-	Company        string    `json:"company"`
-	Grade          string    `json:"grade"`
-	ProfTags       []ProfTag `json:"profTags"`
-	VacationsCount int       `json:"vacationsCount"`
+	Company        string     `json:"company"`
+	Grade          string     `json:"grade"`
+	ProfTags       []ProfTag  `json:"profTags"`
+	VacationsCount int        `json:"vacationsCount"`
+	ExpiresAt      *time.Time `json:"expiresAt,omitempty"`
 }
 
 type UpdateLinkRequest struct {
@@ -44,6 +46,7 @@ type UpdateLinkRequest struct {
 	ProfTags       []ProfTag         `json:"profTags"`
 	VacationsCount int               `json:"vacationsCount"`
 	Status         ReferalLinkStatus `json:"status"`
+	ExpiresAt      *time.Time        `json:"expiresAt,omitempty"`
 }
 
 type DeleteLinkRequest struct {

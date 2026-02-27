@@ -8,6 +8,7 @@ import (
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
 	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -15,7 +16,8 @@ import (
 
 type EventsHandler struct {
 	BaseHandler[models.Event]
-	svc *service.EventsService
+	svc      *service.EventsService
+	auditSvc *service.AuditService
 }
 
 func NewEventsHandler() *EventsHandler {
@@ -23,6 +25,7 @@ func NewEventsHandler() *EventsHandler {
 	return &EventsHandler{
 		BaseHandler: *NewBaseHandler(svc),
 		svc:         svc,
+		auditSvc:    service.NewAuditService(),
 	}
 }
 
@@ -32,10 +35,12 @@ var EventsSearchFields = map[string]string{
 }
 
 type EventsSearchRequest struct {
-	Limit    *int    `query:"limit"`
-	Offset   *int    `query:"offset"`
-	DateFrom *string `query:"dateFrom"`
-	DateTo   *string `query:"dateTo"`
+	Limit     *int    `query:"limit"`
+	Offset    *int    `query:"offset"`
+	DateFrom  *string `query:"dateFrom"`
+	DateTo    *string `query:"dateTo"`
+	Title     *string `query:"title"`
+	PlaceType *string `query:"placeType"`
 }
 
 func (h *EventsHandler) Search(c *fiber.Ctx) error {
@@ -52,6 +57,12 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 	}
 	if req.DateTo != nil {
 		filter[EventsSearchFields["dateTo"]] = *req.DateTo
+	}
+	if req.Title != nil && *req.Title != "" {
+		filter["title ILIKE ?"] = "%" + *req.Title + "%"
+	}
+	if req.PlaceType != nil && *req.PlaceType != "" {
+		filter["place_type = ?"] = *req.PlaceType
 	}
 
 	result, err := h.service.Search(req.Limit, req.Offset, &filter, nil)
@@ -135,7 +146,7 @@ func (h *EventsHandler) GetICSFile(c *fiber.Ctx) error {
 
 	event, err := h.svc.GetById(int64(req.EventId))
 	if err != nil {
-
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Событие не найдено"})
 	}
 
 	ics := utils.GenerateICS(event)
@@ -169,6 +180,8 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 		}
 	}()
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "event", result.Id, result.Title)
+
 	return c.Status(fiber.StatusCreated).JSON(result)
 }
 
@@ -198,5 +211,28 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 		}
 	}()
 
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "event", result.Id, result.Title)
+
 	return c.JSON(result)
+}
+
+// Delete переопределяет базовый метод Delete для добавления аудит-лога
+func (h *EventsHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	entity, err := h.service.GetById(int64(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Событие не найдено"})
+	}
+
+	if err := h.service.Delete(entity); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "event", int64(id), entity.Title)
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

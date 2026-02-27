@@ -4,6 +4,8 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
+import BulkActionBar from '@/components/BulkActionBar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import MemberSearchFilters from '@/components/MemberSearchFilters.vue'
 import MemberModal from '@/components/modals/MemberModal.vue'
@@ -13,7 +15,9 @@ import { Card, CardContent } from '@/components/ui/card'
 
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useDictionary } from '@/composables/useDictionary'
+import { bulkService } from '@/services/bulkService'
 import { memberService } from '@/services/memberService'
 
 const isModalOpen = ref(false)
@@ -51,6 +55,13 @@ function handleMakeMentor(memberId: number) {
 }
 
 const { memberRolesObject } = useDictionary(['memberRoles'])
+const bulk = useBulkSelection()
+
+async function handleBulkDelete() {
+  await bulkService.deleteMembers(bulk.ids.value)
+  bulk.clearSelection()
+  memberService.search()
+}
 
 onMounted(memberService.search)
 onUnmounted(memberService.clearPagination)
@@ -77,6 +88,9 @@ onUnmounted(memberService.clearPagination)
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead class="w-10">
+                  <input type="checkbox" :checked="bulk.count.value === memberService.items.value.items.length && bulk.count.value > 0" @change="bulk.toggleAll(memberService.items.value.items.map(m => m.id))">
+                </TableHead>
                 <TableHead>Имя</TableHead>
                 <TableHead>Telegram</TableHead>
                 <TableHead>Роли</TableHead>
@@ -90,6 +104,9 @@ onUnmounted(memberService.clearPagination)
                 </TableCell>
               </TableRow>
               <TableRow v-for="member in memberService.items.value.items" :key="member.id">
+                <TableCell>
+                  <input type="checkbox" :checked="bulk.isSelected(member.id)" @change="bulk.toggleItem(member.id)">
+                </TableCell>
                 <TableCell>{{ member.firstName ?? "" }} {{ member.lastName ?? "" }}</TableCell>
                 <TableCell>{{ member.tg }}</TableCell>
                 <TableCell>{{ member.roles.map(item => memberRolesObject[item])?.join(', ') || '' }}</TableCell>
@@ -102,16 +119,24 @@ onUnmounted(memberService.clearPagination)
                   >
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button
-                    v-permission="'can_edit_admin_members'"
-                    variant="ghost"
-                    size="sm"
-                    class="text-destructive"
-                    :disabled="memberService.isLoading.value"
-                    @click="memberService.delete(member.id)"
+                  <ConfirmDialog
+                    title="Удалить участника?"
+                    description="Участник будет удалён без возможности восстановления."
+                    confirm-label="Удалить"
+                    @confirm="memberService.delete(member.id)"
                   >
-                    <Trash class="h-4 w-4" />
-                  </Button>
+                    <template #trigger>
+                      <Button
+                        v-permission="'can_edit_admin_members'"
+                        variant="ghost"
+                        size="sm"
+                        class="text-destructive"
+                        :disabled="memberService.isLoading.value"
+                      >
+                        <Trash class="h-4 w-4" />
+                      </Button>
+                    </template>
+                  </ConfirmDialog>
                   <Button
                     v-if="!member.roles?.includes('MENTOR')"
                     v-permission="'can_edit_admin_mentors'"
@@ -160,6 +185,11 @@ onUnmounted(memberService.clearPagination)
       v-model:is-open="isMentorModalOpen"
       :member-id="selectedMemberId!"
       @saved="memberService.search"
+    />
+    <BulkActionBar
+      :count="bulk.count.value"
+      :actions="[{ label: 'Удалить', handler: handleBulkDelete }]"
+      @clear="bulk.clearSelection"
     />
   </AdminLayout>
 </template>

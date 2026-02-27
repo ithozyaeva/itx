@@ -4,14 +4,26 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
+import BulkActionBar from '@/components/BulkActionBar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import MentorsReviewModal from '@/components/modals/MentorsReviewModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useModal } from '@/composables/useModal'
+import { bulkService } from '@/services/bulkService'
 import { mentorsReviewService } from '@/services/mentorsReviewService'
+
+const bulk = useBulkSelection()
+
+async function handleBulkDelete() {
+  await bulkService.deleteMentorsReviews(bulk.ids.value)
+  bulk.clearSelection()
+  mentorsReviewService.search()
+}
 
 onMounted(mentorsReviewService.search)
 onUnmounted(mentorsReviewService.clearPagination)
@@ -48,6 +60,9 @@ function selectReview(reviewId: number) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead class="w-10">
+                  <input type="checkbox" :checked="bulk.count.value === mentorsReviewService.items.value.items.length && bulk.count.value > 0" @change="bulk.toggleAll(mentorsReviewService.items.value.items.map(r => r.id))">
+                </TableHead>
                 <TableHead>Ментор</TableHead>
                 <TableHead>Услуга</TableHead>
                 <TableHead>Автор</TableHead>
@@ -63,6 +78,9 @@ function selectReview(reviewId: number) {
                 </TableCell>
               </TableRow>
               <TableRow v-for="review in mentorsReviewService.items.value.items" :key="review.id">
+                <TableCell>
+                  <input type="checkbox" :checked="bulk.isSelected(review.id)" @change="bulk.toggleItem(review.id)">
+                </TableCell>
                 <TableCell>{{ review.mentorName }}</TableCell>
                 <TableCell>{{ review.serviceName }}</TableCell>
                 <TableCell>{{ review.author }}</TableCell>
@@ -72,9 +90,18 @@ function selectReview(reviewId: number) {
                   <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" :disabled="mentorsReviewService.isLoading.value" @click="mentorsReviewService.delete(review.id)">
-                    <Trash class="h-4 w-4" />
-                  </Button>
+                  <ConfirmDialog
+                    title="Удалить отзыв?"
+                    description="Отзыв будет удалён без возможности восстановления."
+                    confirm-label="Удалить"
+                    @confirm="mentorsReviewService.delete(review.id)"
+                  >
+                    <template #trigger>
+                      <Button variant="ghost" size="sm" :disabled="mentorsReviewService.isLoading.value">
+                        <Trash class="h-4 w-4" />
+                      </Button>
+                    </template>
+                  </ConfirmDialog>
                 </TableCell>
               </TableRow>
             </TableBody>
@@ -103,5 +130,10 @@ function selectReview(reviewId: number) {
       </div>
     </div>
     <MentorsReviewModal v-model:is-open="isOpen" :review-id="selectedReviewId" @saved="mentorsReviewService.search" />
+    <BulkActionBar
+      :count="bulk.count.value"
+      :actions="[{ label: 'Удалить', handler: handleBulkDelete }]"
+      @clear="bulk.clearSelection"
+    />
   </AdminLayout>
 </template>
