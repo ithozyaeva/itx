@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/composables/useSidebar'
-import { isUserSubscribed } from '@/composables/useUser'
+import { isUserAdmin, isUserSubscribed } from '@/composables/useUser'
 import { reviewService } from '@/services/reviews'
 import { CloseIcon, Typography } from 'itx-ui-kit'
+import { Shield } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ReviewModal from '../ReviewModal.vue'
@@ -19,6 +20,7 @@ function navigateTo(path: string) {
 
 const isModalOpen = ref(false)
 const isSubscribed = isUserSubscribed()
+const isAdmin = isUserAdmin()
 
 async function handleSaveReview(text: string) {
   await reviewService
@@ -65,13 +67,23 @@ async function handleSaveReview(text: string) {
             </ul>
           </div>
         </div>
-        <button
-          v-if="isSubscribed"
-          class="cursor-pointer border border-border/20 rounded-full px-4 py-1 text-primary-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
-          @click="isModalOpen = true"
-        >
-          Добавить отзыв
-        </button>
+        <div class="flex flex-col items-center gap-2">
+          <a
+            v-if="isAdmin"
+            href="/admin"
+            class="flex items-center gap-2 cursor-pointer border border-border/20 rounded-full px-4 py-1 text-primary-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
+          >
+            <Shield class="h-4 w-4" />
+            <span>Админ-панель</span>
+          </a>
+          <button
+            v-if="isSubscribed"
+            class="cursor-pointer border border-border/20 rounded-full px-4 py-1 text-primary-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
+            @click="isModalOpen = true"
+          >
+            Добавить отзыв
+          </button>
+        </div>
       </div>
     </div>
     <ReviewModal :is-open="isModalOpen" @close="isModalOpen = false" @save="handleSaveReview" />
