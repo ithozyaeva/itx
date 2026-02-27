@@ -18,7 +18,7 @@ export const apiClient = ky.create({
         }
       },
     ],
-    afterResponse: [(request, _, response) => {
+    afterResponse: [async (request, _, response) => {
       if (response.ok)
         return response
 
@@ -31,27 +31,27 @@ export const apiClient = ky.create({
           if (!userId) {
             throw new Error('No user id')
           }
-          ky.post('/api/auth/telegram/refresh', {
+          const { token, user } = await ky.post('/api/auth/telegram/refresh', {
             json: {
-              token: btoa(userId?.toString()),
+              token: btoa(userId.toString()),
             },
-          }).json<{ token: string, user: TelegramUser }>().then(({ token, user }) => {
-            localStorageToken.value = token
-            localStorageUser.value = user
+          }).json<{ token: string, user: TelegramUser }>()
 
-            const newRequest = new Request(request.url, {
-              method: request.method,
-              headers: request.headers,
-              body: request.body,
-              credentials: request.credentials,
-              mode: request.mode,
-              cache: request.cache,
-            })
+          localStorageToken.value = token
+          localStorageUser.value = user
 
-            newRequest.headers.set('X-Telegram-User-Token', `${token}`)
-
-            return fetch(newRequest)
+          const newRequest = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+            credentials: request.credentials,
+            mode: request.mode,
+            cache: request.cache,
           })
+
+          newRequest.headers.set('X-Telegram-User-Token', `${token}`)
+
+          return fetch(newRequest)
         }
         catch (e) {
           console.error(e)

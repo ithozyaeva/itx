@@ -5,13 +5,13 @@ import MentorInfoForm from '@/components/Profile/MentorInfoForm.vue'
 import ProfTagsForm from '@/components/Profile/ProfTagsForm.vue'
 import ServicesForm from '@/components/Profile/ServicesForm.vue'
 import { isUserMentor, useUser } from '@/composables/useUser'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { onMounted } from 'vue'
 
 const user = useUser()
 
 onMounted(() => {
-  profileSiervice.getMe()
+  profileService.getMe()
 })
 
 const isMentor = isUserMentor()

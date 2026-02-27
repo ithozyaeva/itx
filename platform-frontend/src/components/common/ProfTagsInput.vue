@@ -3,7 +3,7 @@ import type { ProfTag } from '@/models/profile'
 import type { AcceptableInputValue } from 'reka-ui'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
-import { profileSiervice } from '@/services/profile'
+import { profileService } from '@/services/profile'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
@@ -73,7 +73,7 @@ function removeTagByIndex(index: number) {
 
 async function loadProfTags() {
   try {
-    const response = await profileSiervice.getAllProfTags()
+    const response = await profileService.getAllProfTags()
     allProfTags.value = response
   }
   catch (error) {
