@@ -24,6 +24,11 @@ export function isUserMentor() {
   return computed(() => isMentor(useUser().value))
 }
 
+export function isUserAdmin() {
+  const user = useUser()
+  return computed(() => user.value?.roles?.includes('ADMIN') ?? false)
+}
+
 function isMentor(user: TelegramUser | Mentor): user is Mentor {
   return user?.roles?.includes('MENTOR')
 }

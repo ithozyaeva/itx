@@ -152,6 +152,8 @@ services:
     container_name: ${CONTAINER_PREFIX:-}platform-frontend
     build:
       context: ./platform-frontend
+      args:
+        - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
     volumes:
       - ./static/platform-frontend:/static/platform-frontend
     networks:
@@ -161,6 +163,8 @@ services:
     container_name: ${CONTAINER_PREFIX:-}admin-frontend
     build:
       context: ./admin-frontend
+      args:
+        - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
     volumes:
       - ./static/admin-frontend:/static/admin-frontend
     depends_on:
