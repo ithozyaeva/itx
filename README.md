@@ -2,21 +2,17 @@
 
 ### Структура проекта
 
-Проект состоит из 4 саб-модулей:
-- `backend` - репозиторий с общим бэкендом;
-- `landing-frontend` - репозиторий с лэндингом проекта;
-- `admin` - репозиторий с фронтом админ-панели.
-- `platform-frontend` - репозиторий с фронтом платформы.
+Монорепо из 4 компонентов:
+- `backend` - Go API бэкенд
+- `landing-frontend` - лендинг проекта
+- `admin-frontend` - фронт админ-панели
+- `platform-frontend` - фронт платформы
 
 ### Подготовка к запуску
 
-#### Для клонирования с сабмодулями есть два варианта:
-1) Используйте `--recurse-submodules`, например 
 ```
-git clone --recurse-submodules git@github.com:ithozyaeva/itx.git
+git clone git@github.com:ithozyaeva/itx.git
 ```
-
-2) Либо клонируйте как обычно, а затем вызовите `git submodule update --init --recursive`
 
 #### После клонирования:
 1) Убедитесь, что у Вас установлен Docker и Docker Compose.
@@ -89,4 +85,6 @@ npm run start
 
 ### Обновление репозитория
 
-После пулла изменений также необходимо вызвать  `git submodule update --init --recursive`
+```
+git pull
+```

@@ -33,17 +33,6 @@ jobs:
             git fetch --all
             git reset --hard origin/master
 
-      - name: SSH — Update submodules
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host:     ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key:      ${{ secrets.SSH_KEY }}
-          port:     ${{ secrets.SSH_PORT }}
-          script: |
-            cd ${{ secrets.PROJECT_PROD_PATH }}
-            git submodule update --init --recursive --remote --depth 1
-
       - name: SSH — Restart containers
         uses: appleboy/ssh-action@v1.0.0
         env:
