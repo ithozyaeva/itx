@@ -35,3 +35,10 @@ export interface ProfTag {
   id: number
   title: string
 }
+
+export const CONTACT_TYPES = [
+  { value: 1, label: 'Telegram' },
+  { value: 2, label: 'Email' },
+  { value: 3, label: 'Телефон' },
+  { value: 4, label: 'Другое' },
+] as const

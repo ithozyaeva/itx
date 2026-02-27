@@ -5,9 +5,10 @@ import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
+import { handleError } from '@/services/errorService'
 import { referalLinkService } from '@/services/referals'
 import { Typography } from 'itx-ui-kit'
-import { Pencil, Trash } from 'lucide-vue-next'
+import { Loader2, Pencil, Trash } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
 const props = defineProps({
@@ -21,6 +22,8 @@ const emit = defineEmits(['updated', 'deleted'])
 
 const user = useUser()
 const isEditing = ref(false)
+const isSaving = ref(false)
+const isDeleting = ref(false)
 
 const isOwner = computed(() => user.value?.id === props.link.author.id)
 
@@ -29,13 +32,17 @@ function startEditing() {
 }
 
 async function saveEdit(editedLink: Partial<ReferalLink>) {
+  isSaving.value = true
   try {
     const response = await referalLinkService.updateLink({ ...props.link, ...editedLink })
     emit('updated', response)
     isEditing.value = false
   }
   catch (error) {
-    console.error('Ошибка при сохранении реферальной ссылки:', error)
+    handleError(error)
+  }
+  finally {
+    isSaving.value = false
   }
 }
 
@@ -44,12 +51,16 @@ function cancelEdit() {
 }
 
 async function handleDelete() {
+  isDeleting.value = true
   try {
     await referalLinkService.deleteLink(props.link.id)
     emit('deleted', props.link.id)
   }
   catch (error) {
-    console.error('Ошибка при удалении реферальной ссылки:', error)
+    handleError(error)
+  }
+  finally {
+    isDeleting.value = false
   }
 }
 
@@ -68,11 +79,12 @@ const { gradesObject } = useDictionary(['grades'])
           {{ link.company }}
         </Typography>
         <div class="space-x-2">
-          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" @click="startEditing">
+          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isSaving" @click="startEditing">
             <Pencil :size="16" />
           </button>
-          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" @click="handleDelete">
-            <Trash :size="16" />
+          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isDeleting" @click="handleDelete">
+            <Loader2 v-if="isDeleting" :size="16" class="animate-spin" />
+            <Trash v-else :size="16" />
           </button>
         </div>
       </div>
@@ -102,6 +114,7 @@ const { gradesObject } = useDictionary(['grades'])
     <ReferalLinkForm
       v-if="isEditing"
       :link="link"
+      :is-saving="isSaving"
       title="Редактировать ссылку"
       @save="saveEdit"
       @cancel="cancelEdit"

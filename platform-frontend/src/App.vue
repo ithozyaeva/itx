@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { Toaster } from '@/components/ui/toast'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
+import { handleError } from '@/services/errorService'
 import { onBeforeMount, ref } from 'vue'
 import Layout from './components/layout/Layout.vue'
 
@@ -31,7 +33,7 @@ onBeforeMount(() => {
         window.history.replaceState({}, document.title, window.location.pathname)
       })
       .catch((error) => {
-        console.error('Authentication failed:', error)
+        handleError(error)
       })
       .finally(() => {
         isLoading.value = false
@@ -44,6 +46,7 @@ onBeforeMount(() => {
 </script>
 
 <template>
+  <Toaster />
   <div v-if="!isLoading" class="min-h-screen flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">

@@ -2,6 +2,7 @@ import type { Contacts, Mentor, ProfTag, Service, TelegramUser } from '@/models/
 import { useUser } from '@/composables/useUser'
 import ky from 'ky'
 import { apiClient } from './api'
+import { handleError } from './errorService'
 
 const localStorageUser = useUser<TelegramUser | Mentor>()
 
@@ -17,7 +18,7 @@ export const profileService = {
       }
     }
     catch (err) {
-      console.error('Произошла ошибка', err)
+      handleError(err)
     }
   },
   async updateMe(newUser: { firstName: string, lastName: string, birthday: string }) {

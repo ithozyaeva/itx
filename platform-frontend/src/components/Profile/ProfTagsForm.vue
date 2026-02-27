@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { useUser } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
-import { Edit } from 'lucide-vue-next'
+import { Edit, Loader2 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watchEffect } from 'vue'
 
 const emit = defineEmits(['update:profTags'])
@@ -21,6 +22,7 @@ const allProfTags = ref<ProfTag[]>([])
 const searchProfTag = ref('')
 const openCombobox = ref(false)
 const isEdit = ref<boolean>(false)
+const isLoading = ref(false)
 
 // Фильтрованные профессиональные теги
 const filteredProfTags = computed(() => {
@@ -72,7 +74,7 @@ async function loadProfTags() {
     allProfTags.value = response
   }
   catch (error) {
-    console.error('Ошибка при загрузке профессиональных тегов:', error)
+    handleError(error)
   }
 }
 
@@ -88,8 +90,17 @@ function convertValue(text: string) {
 onMounted(loadProfTags)
 
 async function handleSubmit() {
-  await profileService.updateTags(localProfTags.value)
-  isEdit.value = false
+  isLoading.value = true
+  try {
+    await profileService.updateTags(localProfTags.value)
+    isEdit.value = false
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isLoading.value = false
+  }
 }
 function toggleEdit() {
   localProfTags.value = [...useUser<Mentor>().value?.profTags || []]
@@ -137,7 +148,8 @@ function toggleEdit() {
           </ComboboxAnchor>
         </Combobox>
       </div>
-      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300" @click="handleSubmit">
+      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300 gap-2" :disabled="isLoading" @click="handleSubmit">
+        <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
         Сохранить изменения
       </Button>
     </div>

@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
-import { Edit, Plus, Trash2 } from 'lucide-vue-next'
+import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
 
 const services = ref<Service[]>([])
@@ -17,6 +18,7 @@ watchEffect(() => {
 })
 
 const isEdit = ref<boolean>(false)
+const isLoading = ref(false)
 
 function addService() {
   services.value.push({
@@ -32,8 +34,17 @@ function removeService(index: number) {
 }
 
 async function handleSubmit() {
-  await profileService.updateServices(services.value)
-  isEdit.value = false
+  isLoading.value = true
+  try {
+    await profileService.updateServices(services.value)
+    isEdit.value = false
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isLoading.value = false
+  }
 }
 
 function toggleEdit() {
@@ -87,7 +98,8 @@ function toggleEdit() {
       <div v-if="services.length === 0 && !isEdit">
         Нет услуг :(
       </div>
-      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300" @click="handleSubmit">
+      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300 gap-2" :disabled="isLoading" @click="handleSubmit">
+        <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
         Сохранить изменения
       </Button>
     </div>

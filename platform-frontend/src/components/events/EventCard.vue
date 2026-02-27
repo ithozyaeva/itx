@@ -3,9 +3,10 @@ import type { CommunityEvent } from '@/models/event'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter, wrapLinks } from '@/lib/utils'
+import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
 import { CalendarIcon, Tag, Typography } from 'itx-ui-kit'
-import { ChevronDown, MapPin } from 'lucide-vue-next'
+import { ChevronDown, Loader2, MapPin } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import Button from '../ui/button/Button.vue'
 
@@ -75,11 +76,32 @@ function toggleMembers() {
   isMembersExpanded.value = !isMembersExpanded.value
 }
 
+const isApplying = ref(false)
+const isDeclining = ref(false)
+
 async function applyEvent(eventId: number) {
-  event.value = await eventsService.applyEvent(eventId)
+  isApplying.value = true
+  try {
+    event.value = await eventsService.applyEvent(eventId)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isApplying.value = false
+  }
 }
 async function declineEvent(eventId: number) {
-  event.value = await eventsService.declineEvent(eventId)
+  isDeclining.value = true
+  try {
+    event.value = await eventsService.declineEvent(eventId)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isDeclining.value = false
+  }
 }
 
 function getICS() {
@@ -166,10 +188,12 @@ const { placeTypesObject } = useDictionary(['placeTypes'])
       </div>
     </div>
     <div v-if="!isPassedEvent" class="self-end">
-      <Button v-if="isMember" @click="declineEvent(event.id)">
+      <Button v-if="isMember" :disabled="isDeclining" @click="declineEvent(event.id)">
+        <Loader2 v-if="isDeclining" class="h-4 w-4 animate-spin mr-1" />
         Отменить участие
       </Button>
-      <Button v-if="!isMember && !isHost" @click="applyEvent(event.id)">
+      <Button v-if="!isMember && !isHost" :disabled="isApplying" @click="applyEvent(event.id)">
+        <Loader2 v-if="isApplying" class="h-4 w-4 animate-spin mr-1" />
         Участвую!
       </Button>
     </div>

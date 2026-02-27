@@ -2,6 +2,7 @@ import type { TelegramUser } from '@/models/profile'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import ky from 'ky'
+import { handleError } from './errorService'
 
 const localStorageUser = useUser()
 const localStorageToken = useToken()
@@ -54,7 +55,7 @@ export const apiClient = ky.create({
           return fetch(newRequest)
         }
         catch (e) {
-          console.error(e)
+          handleError(e)
         }
       }
 

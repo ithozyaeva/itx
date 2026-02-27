@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
 import { Typography } from 'itx-ui-kit'
+import { Loader2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 
-const props = defineProps<{ link?: Partial<ReferalLink>, title?: string }>()
+const props = defineProps<{ link?: Partial<ReferalLink>, title?: string, isSaving?: boolean }>()
 
 const emit = defineEmits(['save', 'cancel'])
 
@@ -67,7 +68,8 @@ const { grades } = useDictionary<Grade>(['grades'])
       <Button variant="outline" class="px-4 py-2 text-sm font-medium" @click="handleCancel">
         Отменить
       </Button>
-      <Button class="px-4 py-2 text-sm font-medium" @click="handleSave">
+      <Button class="px-4 py-2 text-sm font-medium gap-2" :disabled="isSaving" @click="handleSave">
+        <Loader2 v-if="isSaving" class="h-4 w-4 animate-spin" />
         Сохранить
       </Button>
     </div>
