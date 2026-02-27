@@ -1,6 +1,7 @@
 import ky from 'ky'
 import { ref } from 'vue'
 import { useToast } from '@/components/ui/toast'
+import { handleError } from '@/services/errorService'
 
 export interface LoginCredentials {
   login: string
@@ -55,7 +56,6 @@ export async function login(credentials: LoginCredentials): Promise<string | nul
       variant: 'destructive',
     })
 
-    console.error('Login error:', error)
     return null
   }
   finally {
@@ -100,7 +100,6 @@ export async function loginWithTelegram(token: string): Promise<TelegramAuthResp
       variant: 'destructive',
     })
 
-    console.error('Telegram login error:', error)
     return null
   }
   finally {
@@ -132,7 +131,7 @@ export async function refreshToken(token: string): Promise<string | null> {
     return response.token
   }
   catch (error) {
-    console.error('Ошибка при обновлении токена:', error)
+    handleError(error)
     return null
   }
 }

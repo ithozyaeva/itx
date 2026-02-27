@@ -76,13 +76,13 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
                 <TableCell>{{ reviewStatuses.find((status) => status.value === review.status)?.label }}</TableCell>
                 <TableCell>
                   <div class="flex items-center justify-end">
-                    <Button v-if="review.status !== 'APPROVED'" @click="reviewOnCommunityService.approve(review.id)">
+                    <Button v-if="review.status !== 'APPROVED'" :disabled="reviewOnCommunityService.isLoading.value" @click="reviewOnCommunityService.approve(review.id)">
                       Опубликовать
                     </Button>
                     <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                       <Pencil class="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" @click="reviewOnCommunityService.delete(review.id)">
+                    <Button variant="ghost" size="sm" :disabled="reviewOnCommunityService.isLoading.value" @click="reviewOnCommunityService.delete(review.id)">
                       <Trash class="h-4 w-4" />
                     </Button>
                   </div>

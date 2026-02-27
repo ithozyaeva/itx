@@ -34,7 +34,7 @@ async function handleSubmit(e: Event) {
   e.preventDefault()
 
   // Валидируем форму перед отправкой
-  if (!validate()) {
+  if (!await validate()) {
     return
   }
 
@@ -44,9 +44,8 @@ async function handleSubmit(e: Event) {
       password: values.value.password,
     })
   }
-  catch (error) {
+  catch {
     // Ошибка уже обрабатывается в composable useAuth
-    console.error('Login error:', error)
   }
 }
 

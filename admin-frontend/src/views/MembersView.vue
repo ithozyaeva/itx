@@ -107,6 +107,7 @@ onUnmounted(memberService.clearPagination)
                     variant="ghost"
                     size="sm"
                     class="text-destructive"
+                    :disabled="memberService.isLoading.value"
                     @click="memberService.delete(member.id)"
                   >
                     <Trash class="h-4 w-4" />

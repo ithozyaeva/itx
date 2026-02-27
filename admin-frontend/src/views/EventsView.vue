@@ -85,7 +85,7 @@ function selectEvent(entityId: number) {
                   <Button variant="ghost" size="sm" @click="selectEvent(event.id)">
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" @click="eventsService.delete(event.id)">
+                  <Button variant="ghost" size="sm" :disabled="eventsService.isLoading.value" @click="eventsService.delete(event.id)">
                     <Trash class="h-4 w-4" />
                   </Button>
                 </TableCell>

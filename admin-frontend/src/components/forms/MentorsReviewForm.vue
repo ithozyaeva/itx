@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { requiredRule, useFormValidation } from '@/composables/useFormValidation'
 import { formatDateToInput } from '@/lib/utils'
+import { handleError } from '@/services/errorService'
 import { mentorService } from '@/services/mentorService'
 import { mentorsReviewService } from '@/services/mentorsReviewService'
-import { toast } from '../ui/toast'
 
 const props = defineProps<{
   reviewId?: number
@@ -87,11 +87,7 @@ async function handleSubmit(e: Event) {
     emit('saved')
   }
   catch (err) {
-    console.error(err)
-    toast({
-      variant: 'destructive',
-      title: 'Не удалось сохранить отзыв.',
-    })
+    handleError(err)
   }
 }
 
