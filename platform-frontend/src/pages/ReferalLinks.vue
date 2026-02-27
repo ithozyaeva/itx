@@ -3,6 +3,7 @@ import type { ReferalLink } from '@/models/referals'
 import ReferalLinkCard from '@/components/referals/ReferalLinkCard.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { useCardReveal } from '@/composables/useCardReveal'
+import { handleError } from '@/services/errorService'
 import { referalLinkService } from '@/services/referals'
 import { Typography } from 'itx-ui-kit'
 import { onMounted, ref } from 'vue'
@@ -12,6 +13,7 @@ useCardReveal(containerRef)
 
 const referalLinks = ref<ReferalLink[]>([])
 const showAddForm = ref(false)
+const isSaving = ref(false)
 const totalLinks = ref(0)
 const currentOffset = ref(0)
 const ITEMS_PER_PAGE = 10
@@ -28,7 +30,7 @@ async function fetchReferalLinks() {
     totalLinks.value = response.total
   }
   catch (error) {
-    console.error('Ошибка при загрузке реферальных ссылок:', error)
+    handleError(error)
   }
 }
 
@@ -46,13 +48,17 @@ function toggleAddForm() {
 }
 
 async function saveNewLink(newLink: Partial<ReferalLink>) {
+  isSaving.value = true
   try {
     const addedLink = await referalLinkService.addLink(newLink)
     referalLinks.value.unshift(addedLink)
     showAddForm.value = false
   }
   catch (error) {
-    console.error('Ошибка при добавлении реферальной ссылки:', error)
+    handleError(error)
+  }
+  finally {
+    isSaving.value = false
   }
 }
 
@@ -94,6 +100,7 @@ function handleLinkDeleted(deletedLinkId: number) {
         </div>
         <ReferalLinkForm
           v-if="showAddForm"
+          :is-saving="isSaving"
           @save="saveNewLink"
           @cancel="cancelAdd"
         />

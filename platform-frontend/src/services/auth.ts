@@ -12,6 +12,6 @@ export const authService = {
   },
 
   getBotUrl(): string {
-    return `https://t.me/itx_welcome_bot?start=from_site`
+    return `https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_NAME}?start=from_site`
   },
 }

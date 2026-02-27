@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useUser } from '@/composables/useUser'
+import { CONTACT_TYPES } from '@/models/profile'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
-import { Edit, Plus, Trash2 } from 'lucide-vue-next'
+import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
 
 const isEdit = ref<boolean>(false)
+const isLoading = ref(false)
 const contacts = ref<Contacts[]>([])
 
 watchEffect(() => {
@@ -18,7 +21,7 @@ watchEffect(() => {
 })
 function addContact() {
   contacts.value.push({
-    type: 1, // Тип по умолчанию, TODO: в базе поменять int на varchar
+    type: 1, // Тип по умолчанию
     link: '',
     id: 0,
   })
@@ -33,8 +36,17 @@ function toggleEdit() {
   isEdit.value = !isEdit.value
 }
 async function handleSubmit() {
-  await profileService.updateContacts(contacts.value)
-  isEdit.value = false
+  isLoading.value = true
+  try {
+    await profileService.updateContacts(contacts.value)
+    isEdit.value = false
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -65,17 +77,8 @@ async function handleSubmit() {
                   <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem :value="1">
-                    Telegram
-                  </SelectItem>
-                  <SelectItem :value="2">
-                    Email
-                  </SelectItem>
-                  <SelectItem :value="3">
-                    Телефон
-                  </SelectItem>
-                  <SelectItem :value="4">
-                    Другое
+                  <SelectItem v-for="ct in CONTACT_TYPES" :key="ct.value" :value="ct.value">
+                    {{ ct.label }}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -99,9 +102,11 @@ async function handleSubmit() {
       </div>
       <Button
         v-if="isEdit"
-        class="mt-1 px-4 py-2 cursor-pointer transition duration-300"
+        class="mt-1 px-4 py-2 cursor-pointer transition duration-300 gap-2"
+        :disabled="isLoading"
         @click="handleSubmit"
       >
+        <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
         Сохранить изменения
       </Button>
     </div>

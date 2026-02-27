@@ -2,6 +2,7 @@
 import type { CommunityEvent } from '@/models/event'
 import EventCard from '@/components/events/EventCard.vue'
 import { useCardReveal } from '@/composables/useCardReveal'
+import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
 import { Typography } from 'itx-ui-kit'
 import { onMounted, ref } from 'vue'
@@ -12,8 +13,13 @@ useCardReveal(containerRef)
 const pastEvents = ref<CommunityEvent[]>([])
 const futureEvents = ref<CommunityEvent[]>([])
 async function loadEvents() {
-  pastEvents.value = (await eventsService.searchOld(30, 0)).items
-  futureEvents.value = (await eventsService.searchNext(30, 0)).items
+  try {
+    pastEvents.value = (await eventsService.searchOld(30, 0)).items
+    futureEvents.value = (await eventsService.searchNext(30, 0)).items
+  }
+  catch (error) {
+    handleError(error)
+  }
 }
 
 onMounted(loadEvents)

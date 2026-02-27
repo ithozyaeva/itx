@@ -3,6 +3,7 @@ import type { Resume, WorkFormat } from '@/models/resume'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
 import { Typography } from 'itx-ui-kit'
 import { FileText, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-vue-next'
@@ -43,7 +44,7 @@ async function loadResumes() {
     resumes.value = await resumeService.listMine()
   }
   catch (error) {
-    console.error('Не удалось загрузить резюме', error)
+    handleError(error)
   }
 }
 
@@ -77,7 +78,7 @@ async function handleUpload() {
     resetForm()
   }
   catch (error) {
-    console.error(error)
+    handleError(error)
   }
   finally {
     isUploading.value = false
@@ -107,7 +108,7 @@ async function saveEdit(resume: Resume) {
     editingId.value = null
   }
   catch (error) {
-    console.error(error)
+    handleError(error)
   }
   finally {
     isSavingEdit.value = false
@@ -120,7 +121,7 @@ async function deleteResume(resume: Resume) {
     resumes.value = resumes.value.filter(item => item.id !== resume.id)
   }
   catch (error) {
-    console.error(error)
+    handleError(error)
   }
 }
 

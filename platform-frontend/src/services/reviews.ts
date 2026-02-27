@@ -1,4 +1,5 @@
 import { apiClient } from './api'
+import { handleError } from './errorService'
 
 export const reviewService = {
   async createReview(text: string) {
@@ -6,7 +7,7 @@ export const reviewService = {
       await apiClient.post('reviews/add', { json: { text } })
     }
     catch (err) {
-      console.error('Произошла ошибка', err)
+      handleError(err)
     }
   },
 }

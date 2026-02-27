@@ -3,6 +3,7 @@ import type { ProfTag } from '@/models/profile'
 import type { AcceptableInputValue } from 'reka-ui'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 import { computed, onMounted, ref, watch } from 'vue'
 
@@ -77,8 +78,7 @@ async function loadProfTags() {
     allProfTags.value = response
   }
   catch (error) {
-    console.error('Ошибка при загрузке профессиональных тегов:', error)
-    // TODO: Показать сообщение об ошибке пользователю
+    handleError(error)
   }
 }
 
