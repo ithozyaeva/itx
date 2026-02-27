@@ -79,7 +79,7 @@ const { reviewStatuses } = useDictionary<ReviewStatus>(['reviewStatuses'])
                     <Button v-if="review.status !== 'APPROVED'" @click="reviewOnCommunityService.approve(review.id)">
                       Опубликовать
                     </Button>
-                    <Button variant="ghost" size="sm" @click="selectReview(review.author.id)">
+                    <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                       <Pencil class="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" @click="reviewOnCommunityService.delete(review.id)">
