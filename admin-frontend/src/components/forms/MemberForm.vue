@@ -135,7 +135,7 @@ const userFixedRoles = computed(() => values.value.roles.filter(item => fixedRol
           :class="{ 'border-destructive': touched.lastName && errors.lastName }"
           @blur="handleBlur('lastName')"
         />
-        <p v-if="touched.firstName && errors.lastName" class="text-sm text-destructive">
+        <p v-if="touched.lastName && errors.lastName" class="text-sm text-destructive">
           {{ errors.lastName }}
         </p>
       </div>
@@ -146,10 +146,10 @@ const userFixedRoles = computed(() => values.value.roles.filter(item => fixedRol
           v-model="values.birthday"
           type="date"
           placeholder="Введите ДР"
-          :class="{ 'border-destructive': touched.lastName && errors.birthday }"
+          :class="{ 'border-destructive': touched.birthday && errors.birthday }"
           @blur="handleBlur('birthday')"
         />
-        <p v-if="touched.firstName && errors.birthday" class="text-sm text-destructive">
+        <p v-if="touched.birthday && errors.birthday" class="text-sm text-destructive">
           {{ errors.birthday }}
         </p>
       </div>

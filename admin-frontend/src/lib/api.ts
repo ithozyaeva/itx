@@ -63,7 +63,7 @@ const api = ky.create({
                   cache: request.cache,
                 })
 
-                newRequest.headers.set('Authorization', `${newToken}`)
+                newRequest.headers.set('Authorization', `Bearer ${newToken}`)
 
                 return fetch(newRequest)
               }

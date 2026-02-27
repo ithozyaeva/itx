@@ -102,7 +102,7 @@ function handleCancel() {
           type="date"
           placeholder="Отзыв"
           :class="{ 'border-destructive': touched.date && errors.date }"
-          @blur="handleBlur('text')"
+          @blur="handleBlur('date')"
         />
         <p v-if="touched.date && errors.date" class="text-sm text-destructive">
           {{ errors.date }}
