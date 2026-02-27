@@ -11,6 +11,10 @@ on:
       - backend-update
       - admin-frontend-update
 
+concurrency:
+  group: update-submodules
+  cancel-in-progress: false
+
 jobs:
 #──────────────────────── A. подтягиваем конкретный сабмодуль (repo-dispatch) ────────────────────────
   update-submodule:
@@ -44,7 +48,11 @@ jobs:
             echo "No changes"
           else
             git commit -m "chore: update ${{ steps.vars.outputs.target }} submodule to latest commit [skip ci]"
-            git push
+            for i in 1 2 3; do
+              git push && break
+              echo "Push failed (attempt $i), pulling and retrying..."
+              git pull --rebase
+            done
           fi
 
 #──────────────────────── B1. деплой (repository_dispatch → dev-стек) ───────────────────────────────
