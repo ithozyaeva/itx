@@ -72,7 +72,7 @@ function selectReview(reviewId: number) {
                   <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                     <Pencil class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" @click="mentorsReviewService.delete(review.id)">
+                  <Button variant="ghost" size="sm" :disabled="mentorsReviewService.isLoading.value" @click="mentorsReviewService.delete(review.id)">
                     <Trash class="h-4 w-4" />
                   </Button>
                 </TableCell>

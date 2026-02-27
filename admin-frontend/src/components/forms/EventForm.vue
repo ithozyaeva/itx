@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from '@/components/ui/toast'
 import { useDictionary } from '@/composables/useDictionary'
 import { requiredRule, useFormValidation } from '@/composables/useFormValidation'
 import { toDatetimeLocal } from '@/lib/utils'
+import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/eventsService'
 
 const props = defineProps<{
@@ -176,11 +176,7 @@ async function handleSubmit(e: Event) {
     emit('saved')
   }
   catch (err) {
-    console.error(err)
-    toast({
-      variant: 'destructive',
-      title: 'Не удалось сохранить событие.',
-    })
+    handleError(err)
   }
 }
 

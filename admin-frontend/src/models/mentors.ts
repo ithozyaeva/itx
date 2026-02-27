@@ -84,6 +84,13 @@ export interface ReviewOnService {
   mentorName: string
 }
 
+export const CONTACT_TYPES = [
+  { value: 1, label: 'Telegram' },
+  { value: 2, label: 'Email' },
+  { value: 3, label: 'Телефон' },
+  { value: 4, label: 'Другое' },
+] as const
+
 export interface MentorFormData {
   id?: number
   memberId: number

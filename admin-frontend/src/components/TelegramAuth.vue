@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { loginWithTelegram } from '@/services/authService'
+import { handleError } from '@/services/errorService'
 
 const emit = defineEmits<{
   (e: 'authSuccess'): void
@@ -28,7 +29,7 @@ async function handleTelegramAuth(token: string) {
     }
   }
   catch (error) {
-    console.error('Telegram authentication failed:', error)
+    handleError(error)
   }
   finally {
     isLoading.value = false
@@ -36,7 +37,7 @@ async function handleTelegramAuth(token: string) {
 }
 
 function openTelegramBot() {
-  window.open('https://t.me/itx_welcome_bot?start=from_admin', '_blank')
+  window.open(`https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_NAME}?start=from_admin`, '_blank')
 }
 </script>
 

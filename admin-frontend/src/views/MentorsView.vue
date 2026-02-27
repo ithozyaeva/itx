@@ -86,6 +86,7 @@ onUnmounted(mentorService.clearPagination)
                     variant="ghost"
                     size="sm"
                     class="text-destructive"
+                    :disabled="mentorService.isLoading.value"
                     @click="mentorService.delete(mentor.id)"
                   >
                     <Trash class="h-4 w-4" />

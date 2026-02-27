@@ -4,6 +4,7 @@ import type { EventTag } from '@/models/events.ts'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
+import { handleError } from '@/services/errorService'
 import { eventTagService } from '@/services/eventTagService.ts'
 
 const props = defineProps<{
@@ -70,7 +71,7 @@ async function loadEventTags() {
     allEventTags.value = response.items
   }
   catch (error) {
-    console.error('Ошибка при загрузке профессиональных тегов:', error)
+    handleError(error)
   }
 }
 

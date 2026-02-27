@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
+import { handleError } from '@/services/errorService'
 import { profTagService } from '@/services/profTagService'
 
 const props = defineProps<{
@@ -67,7 +68,7 @@ async function loadProfTags() {
     allProfTags.value = response.items
   }
   catch (error) {
-    console.error('Ошибка при загрузке профессиональных тегов:', error)
+    handleError(error)
   }
 }
 
@@ -107,7 +108,6 @@ onMounted(loadProfTags)
                 v-for="profTag in filteredProfTags" :key="profTag.title" :value="profTag"
                 @select.prevent="(ev: any) => {
                   searchProfTag = ''
-                  console.log(ev.detail)
                   pushTag(ev.detail.value)
 
                   if (filteredProfTags.length === 0) {

@@ -1,7 +1,7 @@
 import ky from 'ky'
-import { useToast } from '@/components/ui/toast'
 import router from '@/router'
 import { isAuthenticated, logout, refreshToken } from '@/services/authService'
+import { handleError } from '@/services/errorService'
 
 // Флаг для отслеживания процесса обновления токена
 let isRefreshing = false
@@ -68,16 +68,9 @@ const api = ky.create({
                 return fetch(newRequest)
               }
               catch (error) {
-                console.error('Не удалось обновить токен:', error)
+                handleError(error)
                 logout()
                 router.push('/login')
-
-                const { toast } = useToast()
-                toast({
-                  title: 'Сессия истекла',
-                  description: 'Пожалуйста, войдите снова',
-                  variant: 'destructive',
-                })
               }
             }
             else {
@@ -85,7 +78,7 @@ const api = ky.create({
             }
           }
           catch (error) {
-            console.error('Ошибка при обработке ответа:', error)
+            handleError(error)
           }
         }
 

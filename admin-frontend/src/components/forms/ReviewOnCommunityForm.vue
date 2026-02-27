@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { requiredRule, useFormValidation } from '@/composables/useFormValidation'
 import { formatDateToInput } from '@/lib/utils'
+import { handleError } from '@/services/errorService'
 import { reviewOnCommunityService } from '@/services/reviewOnCommunityService'
-import { toast } from '../ui/toast'
 
 const props = defineProps<{
   reviewId?: number
@@ -64,11 +64,7 @@ async function handleSubmit(e: Event) {
     emit('saved')
   }
   catch (err) {
-    console.error(err)
-    toast({
-      variant: 'destructive',
-      title: 'Не удалось сохранить отзыв.',
-    })
+    handleError(err)
   }
 }
 

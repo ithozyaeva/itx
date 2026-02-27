@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { CONTACT_TYPES } from '@/models/mentors'
 
 const props = defineProps<{
   contacts: ContactFormData[]
@@ -17,7 +18,7 @@ const emit = defineEmits(['update:contacts'])
 function addContact() {
   const newContacts = [...props.contacts]
   newContacts.push({
-    type: 1, // Тип по умолчанию, TODO: в базе поменять int на varchar
+    type: 1, // Тип по умолчанию
     link: '',
   })
   emit('update:contacts', newContacts)
@@ -60,17 +61,8 @@ function removeContact(index: number) {
                   <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem :value="1">
-                    Telegram
-                  </SelectItem>
-                  <SelectItem :value="2">
-                    Email
-                  </SelectItem>
-                  <SelectItem :value="3">
-                    Телефон
-                  </SelectItem>
-                  <SelectItem :value="4">
-                    Другое
+                  <SelectItem v-for="ct in CONTACT_TYPES" :key="ct.value" :value="ct.value">
+                    {{ ct.label }}
                   </SelectItem>
                 </SelectContent>
               </Select>
