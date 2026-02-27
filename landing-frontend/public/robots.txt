@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ithozyaeva.ru/sitemap.xml

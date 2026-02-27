@@ -1,0 +1,33 @@
+name: Deploy Dev Environment
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy_dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH — Pull latest
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_DEV_HOST }}
+          username: ${{ secrets.SSH_DEV_USER }}
+          key:      ${{ secrets.SSH_DEV_KEY }}
+          port:     ${{ secrets.SSH_DEV_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PROD_PATH }}
+            git fetch --all
+            git reset --hard origin/master
+
+      - name: SSH — Restart containers
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host:     ${{ secrets.SSH_DEV_HOST }}
+          username: ${{ secrets.SSH_DEV_USER }}
+          key:      ${{ secrets.SSH_DEV_KEY }}
+          port:     ${{ secrets.SSH_DEV_PORT }}
+          script: |
+            cd ${{ secrets.PROJECT_PROD_PATH }}
+            docker compose down -v --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --build

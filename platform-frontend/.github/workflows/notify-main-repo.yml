@@ -1,0 +1,17 @@
+name: Notify Main Repository
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch event to main repository
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: ithozyaeva/itx
+          event-type: platform-frontend-update

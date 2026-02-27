@@ -1,0 +1,8 @@
+export { default as GradesMobileIcon } from './grades-mobile.svg?component'
+export { default as GradesIcon } from './grades.svg?component'
+export { default as MeetingsMobileIcon } from './meetings-mobile.svg?component'
+export { default as MeetingsIcon } from './meetings.svg?component'
+export { default as TopicsMobileIcon } from './topics-mobile.svg?component'
+export { default as TopicsIcon } from './topics.svg?component'
+export { default as VacanciesMobileIcon } from './vacancies-mobile.svg?component'
+export { default as VacanciesIcon } from './vacancies.svg?component'

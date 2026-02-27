@@ -1,0 +1,50 @@
+{
+  "name": "it-x-platform",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "npm run lint",
+    "build": "npm run type-check  && npm run build-only",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build --noEmit",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@tanstack/vue-query": "^5.87.1",
+    "@vueuse/core": "^13.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "itx-ui-kit": "^0.2.1",
+    "ky": "^1.8.1",
+    "lucide-vue-next": "^0.488.0",
+    "pinia": "^3.0.2",
+    "reka-ui": "^2.2.0",
+    "tailwind-merge": "^3.2.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^4.12.0",
+    "@types/node": "^22.14.1",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/eslint-config-typescript": "^14.5.0",
+    "@vue/tsconfig": "^0.7.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.24.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "husky": "^8.0.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vite-plugin-vue-devtools": "^7.7.2",
+    "vue-tsc": "^2.2.8"
+  }
+}
