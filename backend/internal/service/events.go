@@ -1,10 +1,13 @@
 package service
 
 import (
+	"errors"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"time"
 )
+
+var ErrParticipantLimitReached = errors.New("достигнут лимит участников")
 
 type EventsService struct {
 	BaseService[models.Event]
@@ -20,6 +23,15 @@ func NewEventsService() *EventsService {
 }
 
 func (s *EventsService) AddMember(eventId int, memberId int) (*models.Event, error) {
+	event, err := s.repo.GetById(int64(eventId))
+	if err != nil {
+		return nil, err
+	}
+
+	if event.MaxParticipants > 0 && len(event.Members) >= event.MaxParticipants {
+		return nil, ErrParticipantLimitReached
+	}
+
 	return s.repo.AddMember(eventId, memberId)
 }
 

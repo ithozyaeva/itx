@@ -16,6 +16,7 @@ export interface CommunityEvent {
   repeatPeriod?: string
   repeatInterval?: number
   repeatEndDate?: string
+  maxParticipants: number
   hosts: TelegramUser[]
   members: TelegramUser[]
 }

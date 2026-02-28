@@ -96,6 +96,7 @@ const { values, errors, touched, validate, isValid } = useFormValidation<Communi
   customPlaceType: '',
   videoLink: '',
   eventTags: [],
+  maxParticipants: 0,
   isRepeating: false,
   repeatPeriod: undefined,
   repeatInterval: 1,
@@ -274,6 +275,16 @@ const { placeTypes } = useDictionary(['placeTypes'])
         <Input
           id="videoLink" v-model="values.videoLink" type="text"
           placeholder="Ссылка на ютуб/облако"
+        />
+      </div>
+      <div class="space-y-2">
+        <Label for="maxParticipants">Лимит участников (0 = без лимита)</Label>
+        <Input
+          id="maxParticipants"
+          v-model.number="values.maxParticipants"
+          type="number"
+          min="0"
+          placeholder="0"
         />
       </div>
       <div class="space-y-2">
