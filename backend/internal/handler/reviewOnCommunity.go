@@ -104,6 +104,7 @@ func (h *ReviewOnCommunityHandler) UpdateMyReview(c *fiber.Ctx) error {
 	}
 
 	review.Text = req.Text
+	review.Status = models.ReviewOnCommunityStatusDraft
 	result, err := h.svc.Update(review)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
