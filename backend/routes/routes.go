@@ -204,4 +204,12 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	resumes.Get("/me", resumeHandler.ListMy)
 	resumes.Patch("/:id", resumeHandler.UpdateMy)
 	resumes.Delete("/:id", resumeHandler.DeleteMy)
+
+	// Маршруты для уведомлений
+	notificationHandler := handler.NewNotificationHandler()
+	notifications := protected.Group("/notifications")
+	notifications.Get("/", notificationHandler.GetMy)
+	notifications.Get("/unread-count", notificationHandler.GetUnreadCount)
+	notifications.Patch("/:id/read", notificationHandler.MarkAsRead)
+	notifications.Post("/read-all", notificationHandler.MarkAllAsRead)
 }

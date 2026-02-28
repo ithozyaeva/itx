@@ -216,7 +216,7 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-// Delete переопределяет базовый метод Delete для добавления аудит-лога
+// Delete переопределяет базовый метод Delete для добавления аудит-лога и уведомлений об отмене
 func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -227,6 +227,20 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Событие не найдено"})
 	}
+
+	// Send cancel alerts before deleting (need event data for notifications)
+	go func() {
+		telegramBot := bot.GetGlobalBot()
+		if telegramBot == nil {
+			log.Printf("Telegram bot is not initialized, skipping cancel alerts for event %d", entity.Id)
+			return
+		}
+		if err := telegramBot.SendEventCancelAlert(entity); err != nil {
+			log.Printf("Error sending event cancel alerts: %v", err)
+		}
+	}()
+
+	go CreateNotificationsForEventMembers(int64(id), "event_cancel", "Событие отменено", fmt.Sprintf("Событие \"%s\" было отменено.", entity.Title))
 
 	if err := h.service.Delete(entity); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
