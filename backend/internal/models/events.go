@@ -35,6 +35,7 @@ type Event struct {
 	RepeatPeriod             *string    `json:"repeatPeriod" gorm:"column:repeat_period"`
 	RepeatInterval           *int       `json:"repeatInterval" gorm:"column:repeat_interval;default:1"`
 	RepeatEndDate            *time.Time `json:"repeatEndDate" gorm:"column:repeat_end_date"`
+	MaxParticipants          int        `json:"maxParticipants" gorm:"column:max_participants;default:0"`
 	EventTags                []EventTag `json:"eventTags" gorm:"many2many:event_event_tags;foreignKey:id;joinForeignKey:event_id;References:id;joinReferences:event_tag_id;replace:true"`
 	Hosts                    []Member   `json:"hosts" gorm:"many2many:event_hosts;foreignKey:id;joinForeignKey:event_id;References:id;joinReferences:member_id;replace:true"`
 	Members                  []Member   `json:"members" gorm:"many2many:event_members;foreignKey:id;joinForeignKey:event_id;References:id;joinReferences:member_id;replace:true"`

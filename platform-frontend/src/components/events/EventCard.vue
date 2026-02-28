@@ -25,6 +25,7 @@ const formattedDate = computed(() => dateFormatter.format(new Date(props.event.d
 const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
 const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
 const isPassedEvent = computed(() => new Date(props.event.date) < new Date())
+const isFull = computed(() => event.value.maxParticipants > 0 && event.value.members.length >= event.value.maxParticipants)
 
 // Форматирование информации о повторениях
 const repeatInfo = computed(() => {
@@ -174,7 +175,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         class="flex items-center gap-2 text-left hover:text-primary transition-colors"
         @click="toggleMembers"
       >
-        <span class="text-sm text-bold">Участники ({{ event.members.length }})</span>
+        <span class="text-sm text-bold">Участники ({{ event.members.length }}{{ event.maxParticipants > 0 ? `/${event.maxParticipants}` : '' }})</span>
         <ChevronDown
           class="w-4 h-4 transition-transform duration-200"
           :class="{ 'rotate-180': isMembersExpanded }"
@@ -210,9 +211,9 @@ const { openInGoogleCalendar } = useGoogleCalendar()
           </Button>
         </template>
       </ConfirmDialog>
-      <Button v-if="!isMember && !isHost" :disabled="isApplying" @click="applyEvent(event.id)">
+      <Button v-if="!isMember && !isHost" :disabled="isApplying || isFull" @click="applyEvent(event.id)">
         <Loader2 v-if="isApplying" class="h-4 w-4 animate-spin mr-1" />
-        Участвую!
+        {{ isFull ? 'Мест нет' : 'Участвую!' }}
       </Button>
     </div>
   </div>
