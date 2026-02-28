@@ -60,8 +60,8 @@ onMounted(loadMentor)
           Контакты
         </Typography>
         <div class="space-y-2">
-          <div v-for="contact in mentor.contacts" :key="contact.id" class="flex items-center gap-2 text-sm">
-            <a :href="contact.link" target="_blank" class="text-primary underline">
+          <div v-for="contact in mentor.contacts" :key="contact.id" class="flex items-center gap-2 text-sm min-w-0">
+            <a :href="contact.link" target="_blank" class="text-primary underline break-all">
               {{ contact.link }}
             </a>
           </div>

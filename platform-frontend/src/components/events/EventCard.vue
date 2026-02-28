@@ -144,7 +144,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
       </div>
     </div>
 
-    <p class="text-muted-foreground">
+    <p class="text-muted-foreground break-words">
       {{ event.description }}
     </p>
 

@@ -89,7 +89,7 @@ function handleLinkDeleted(deletedLinkId: number) {
 </script>
 
 <template>
-  <div ref="containerRef" class="container mx-auto p-4">
+  <div ref="containerRef" class="container mx-auto px-4 py-6 md:py-8">
     <Typography variant="h2" as="h1" class="mb-4">
       Реферальные ссылки
     </Typography>

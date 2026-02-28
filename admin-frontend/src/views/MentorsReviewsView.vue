@@ -81,10 +81,18 @@ function selectReview(reviewId: number) {
                 <TableCell>
                   <input type="checkbox" :checked="bulk.isSelected(review.id)" @change="bulk.toggleItem(review.id)">
                 </TableCell>
-                <TableCell>{{ review.mentorName }}</TableCell>
-                <TableCell>{{ review.serviceName }}</TableCell>
-                <TableCell>{{ review.author }}</TableCell>
-                <TableCell>{{ review.text }}</TableCell>
+                <TableCell class="max-w-[150px] truncate">
+                  {{ review.mentorName }}
+                </TableCell>
+                <TableCell class="max-w-[150px] truncate">
+                  {{ review.serviceName }}
+                </TableCell>
+                <TableCell class="max-w-[120px] truncate">
+                  {{ review.author }}
+                </TableCell>
+                <TableCell class="max-w-[300px] truncate">
+                  {{ review.text }}
+                </TableCell>
                 <TableCell>{{ new Date(review.date).toLocaleDateString() }}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" @click="selectReview(review.id)">

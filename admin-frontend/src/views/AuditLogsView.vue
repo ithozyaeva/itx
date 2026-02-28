@@ -56,9 +56,9 @@ onUnmounted(auditLogService.clearPagination)
 
       <Card>
         <CardContent>
-          <div class="flex items-center gap-4 mb-4">
+          <div class="flex flex-wrap items-center gap-3 mb-4">
             <Select v-model="filters.actorType" @update:model-value="applyFilters">
-              <SelectTrigger class="w-[180px]">
+              <SelectTrigger class="w-full sm:w-[180px]">
                 <SelectValue placeholder="Тип актора" />
               </SelectTrigger>
               <SelectContent>
@@ -72,7 +72,7 @@ onUnmounted(auditLogService.clearPagination)
             </Select>
 
             <Select v-model="filters.action" @update:model-value="applyFilters">
-              <SelectTrigger class="w-[180px]">
+              <SelectTrigger class="w-full sm:w-[180px]">
                 <SelectValue placeholder="Действие" />
               </SelectTrigger>
               <SelectContent>
@@ -92,7 +92,7 @@ onUnmounted(auditLogService.clearPagination)
             </Select>
 
             <Select v-model="filters.entityType" @update:model-value="applyFilters">
-              <SelectTrigger class="w-[180px]">
+              <SelectTrigger class="w-full sm:w-[180px]">
                 <SelectValue placeholder="Тип сущности" />
               </SelectTrigger>
               <SelectContent>

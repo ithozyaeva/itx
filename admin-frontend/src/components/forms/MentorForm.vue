@@ -120,7 +120,7 @@ function handleCancel() {
 <template>
   <form class="space-y-6" @submit="handleSubmit" @keydown.enter.prevent>
     <Tabs v-model="activeTab" class="w-full">
-      <TabsList class="grid grid-cols-4 mb-4">
+      <TabsList class="grid grid-cols-2 sm:grid-cols-4 mb-4">
         <TabsTrigger value="general">
           Основная информация
         </TabsTrigger>

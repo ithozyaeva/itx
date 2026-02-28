@@ -10,7 +10,7 @@ const menuItems = [
 </script>
 
 <template>
-  <nav class="flex gap-2 lg:gap-10">
+  <nav class="flex gap-2 md:gap-6 lg:gap-10">
     <MenuItem
       v-for="item in menuItems"
       :key="item.href"

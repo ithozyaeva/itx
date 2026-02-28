@@ -70,10 +70,10 @@ function getLink(contact: Contact) {
 
 <template>
   <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 p-4 md:p-6 h-fit">
-    <div class="flex items-start md:items-center gap-10 flex-col md:flex-row">
+    <div class="flex items-start md:items-center gap-6 md:gap-10 flex-col md:flex-row">
       <TgImage
         :username="mentor.tg"
-        class="rounded-full self-center"
+        class="rounded-full self-center w-32 h-32 md:w-40 md:h-40"
         width="160"
         height="160"
       />

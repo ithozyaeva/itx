@@ -60,7 +60,7 @@ async function handleSubmit() {
       <Table v-if="contacts.length > 0">
         <TableHeader>
           <TableRow>
-            <TableHead class="w-[250px]">
+            <TableHead class="w-[120px] sm:w-[250px]">
               Тип
             </TableHead>
             <TableHead>Значение</TableHead>

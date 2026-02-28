@@ -64,10 +64,10 @@ function toggleEdit() {
         <TableHeader>
           <TableRow>
             <TableHead>Описание</TableHead>
-            <TableHead class="w-[150px]">
+            <TableHead class="w-[100px] sm:w-[150px]">
               Цена
             </TableHead>
-            <TableHead class="w-[5px]">
+            <TableHead class="w-[50px]">
               Действия
             </TableHead>
           </TableRow>
