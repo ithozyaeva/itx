@@ -141,6 +141,13 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	bulk.Post("/reviews/approve", authMiddleware.RequirePermission(models.PermissionCanApprovedAdminReviews), bulkHandler.BulkApproveReviews)
 	bulk.Post("/mentors-reviews/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), bulkHandler.BulkDeleteMentorsReviews)
 
+	// Маршруты для баллов (админ)
+	pointsHandler := handler.NewPointsHandler()
+	points := protected.Group("/points", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	points.Get("/", pointsHandler.AdminSearch)
+	points.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), pointsHandler.AdminAward)
+	points.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), pointsHandler.AdminDelete)
+
 	// Маршруты для журнала действий
 	auditLogHandler := handler.NewAuditLogHandler()
 	protected.Get("/audit-logs", authMiddleware.RequirePermission(models.PermissionCanViewAdminAuditLogs), auditLogHandler.Search)
