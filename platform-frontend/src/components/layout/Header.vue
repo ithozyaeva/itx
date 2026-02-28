@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useUser } from '@/composables/useUser'
@@ -35,6 +36,7 @@ function logout() {
       </a>
       <div class="flex-1" />
       <div v-if="user" class="flex items-center gap-3">
+        <NotificationDropdown />
         <ThemeToggle />
         <span class="mr-3">
           {{ `${user.firstName} ${user.lastName?.[0] ?? ""}` }}

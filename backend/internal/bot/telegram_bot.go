@@ -543,6 +543,35 @@ func (b *TelegramBot) SendEventUpdateAlert(event *models.Event) error {
 	return nil
 }
 
+// SendEventCancelAlert отправляет уведомление об отмене события всем подписанным пользователям
+func (b *TelegramBot) SendEventCancelAlert(event *models.Event) error {
+	members, err := b.eventAlertSubscription.GetSubscribedMembersForEvent(event.Id)
+	if err != nil {
+		return fmt.Errorf("error getting subscribed members for event: %v", err)
+	}
+
+	for _, member := range members {
+		if member.TelegramID == 0 {
+			continue
+		}
+
+		messageText := fmt.Sprintf("❌ <b>Событие отменено!</b>\n\n<b>%s</b>\n\nСобытие было отменено организаторами.", event.Title)
+		msg := tgbotapi.NewMessage(member.TelegramID, messageText)
+		msg.ParseMode = "HTML"
+
+		_, err = b.bot.Send(msg)
+		if err != nil {
+			if strings.Contains(err.Error(), "chat not found") {
+				continue
+			}
+			log.Printf("Error sending event cancel alert to user %d: %v", member.TelegramID, err)
+			continue
+		}
+	}
+
+	return nil
+}
+
 // formatEventUpdateAlert форматирует сообщение об изменении события
 func (b *TelegramBot) formatEventUpdateAlert(event *models.Event) string {
 	var builder strings.Builder

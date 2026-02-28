@@ -220,7 +220,7 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-// Delete переопределяет базовый метод Delete для добавления аудит-лога
+// Delete переопределяет базовый метод Delete для добавления аудит-лога и уведомлений об отмене
 func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -232,9 +232,27 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Событие не найдено"})
 	}
 
+	// Snapshot member IDs before cascade delete removes event_members
+	memberIds := GetEventMemberIds(int64(id))
+
 	if err := h.service.Delete(entity); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	// Send notifications after delete using pre-snapshotted member IDs
+	go func() {
+		telegramBot := bot.GetGlobalBot()
+		if telegramBot == nil {
+			log.Printf("Telegram bot is not initialized, skipping cancel alerts for event %d", entity.Id)
+			return
+		}
+		if err := telegramBot.SendEventCancelAlert(entity); err != nil {
+			log.Printf("Error sending event cancel alerts: %v", err)
+		}
+	}()
+
+	notifBody := fmt.Sprintf("Событие \"%s\" было отменено.", entity.Title)
+	go CreateNotificationsForMembers(memberIds, "event_cancel", "Событие отменено", notifBody)
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "event", int64(id), entity.Title)
 
