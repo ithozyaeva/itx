@@ -59,6 +59,22 @@ func main() {
 		}
 	}()
 
+	// Запускаем фоновую задачу для начисления баллов за события и бонусов активности
+	go func() {
+		pointsSvc := service.NewPointsService()
+		ticker := time.NewTicker(30 * time.Minute)
+		defer ticker.Stop()
+
+		// Выполняем сразу при старте
+		pointsSvc.AwardPointsForPastEvents()
+		pointsSvc.AwardActivityBonuses()
+
+		for range ticker.C {
+			pointsSvc.AwardPointsForPastEvents()
+			pointsSvc.AwardActivityBonuses()
+		}
+	}()
+
 	// Запускаем Telegram бота в отдельной горутине
 	go func() {
 		telegramBot, err := bot.NewTelegramBot()

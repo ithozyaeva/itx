@@ -218,4 +218,10 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	notifications.Get("/unread-count", notificationHandler.GetUnreadCount)
 	notifications.Patch("/:id/read", notificationHandler.MarkAsRead)
 	notifications.Post("/read-all", notificationHandler.MarkAllAsRead)
+
+	// Маршруты для баллов
+	pointsHandler := handler.NewPointsHandler()
+	points := protected.Group("/points")
+	points.Get("/me", pointsHandler.GetMyPoints)
+	points.Get("/leaderboard", pointsHandler.GetLeaderboard)
 }

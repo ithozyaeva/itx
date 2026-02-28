@@ -1,14 +1,27 @@
 <script setup lang="ts">
 import { Typography } from 'itx-ui-kit'
-import { Camera, Edit, Loader2 } from 'lucide-vue-next'
-import { reactive, ref } from 'vue'
+import { Camera, Edit, Loader2, Star } from 'lucide-vue-next'
+import { onMounted, reactive, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useUser } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
+import { pointsService } from '@/services/points'
 import { profileService } from '@/services/profile'
 
 const user = useUser()
 const isEdit = ref<boolean>(false)
 const isUploadingAvatar = ref(false)
+const pointsBalance = ref<number | null>(null)
+
+onMounted(async () => {
+  try {
+    const summary = await pointsService.getMyPoints()
+    pointsBalance.value = summary.balance
+  }
+  catch (err) {
+    handleError(err)
+  }
+})
 
 const editedUser = reactive({
   firstName: user.value?.firstName,
@@ -96,6 +109,13 @@ async function handleAvatarUpload(event: Event) {
         <p class="text-muted-foreground mb-4 mt-2">
           {{ user?.tg }}
         </p>
+        <div
+          v-if="pointsBalance !== null"
+          class="flex items-center justify-center gap-1.5 mb-4"
+        >
+          <Star class="h-4 w-4 text-yellow-500" />
+          <span class="font-medium text-yellow-500">{{ pointsBalance }} баллов</span>
+        </div>
         <p v-if="!isEdit && !!user?.bio" class="text-sm text-muted-foreground mb-4">
           {{ user?.bio }}
         </p>

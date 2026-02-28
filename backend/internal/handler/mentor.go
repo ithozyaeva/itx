@@ -12,8 +12,9 @@ import (
 // MentorHandler обработчик для работы с менторами
 type MentorHandler struct {
 	BaseHandler[models.MentorDbShortModel]
-	svc      *service.MentorService
-	auditSvc *service.AuditService
+	svc       *service.MentorService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 // NewMentorHandler создает новый экземпляр обработчика менторов
@@ -23,6 +24,7 @@ func NewMentorHandler() *MentorHandler {
 		BaseHandler: *NewBaseHandler[models.MentorDbShortModel](svc),
 		svc:         svc,
 		auditSvc:    service.NewAuditService(),
+		pointsSvc:   service.NewPointsService(),
 	}
 }
 
@@ -82,6 +84,9 @@ func (h *MentorHandler) AddReviewFromPlatform(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonReviewService, "review_service", int64(result.Id),
+		"Отзыв на услугу ментора")
 
 	return c.JSON(result)
 }

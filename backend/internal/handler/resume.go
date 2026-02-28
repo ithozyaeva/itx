@@ -16,14 +16,16 @@ import (
 const maxResumeSize = 10 * 1024 * 1024 // 10 MB
 
 type ResumeHandler struct {
-	svc      *service.ResumeService
-	auditSvc *service.AuditService
+	svc       *service.ResumeService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 func NewResumeHandler() *ResumeHandler {
 	return &ResumeHandler{
-		svc:      service.NewResumeService(),
-		auditSvc: service.NewAuditService(),
+		svc:       service.NewResumeService(),
+		auditSvc:  service.NewAuditService(),
+		pointsSvc: service.NewPointsService(),
 	}
 }
 
@@ -79,6 +81,8 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "resume", resume.Id, fileHeader.Filename)
+	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonResumeUpload, "resume", resume.Id,
+		"Загрузка резюме")
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"resume": resume,

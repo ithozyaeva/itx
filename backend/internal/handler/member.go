@@ -20,16 +20,18 @@ import (
 
 // MembersHandler обработчик для работы с участниками
 type MembersHandler struct {
-	svc      *service.MemberService
-	auditSvc *service.AuditService
+	svc       *service.MemberService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 // NewMembersHandler создает новый экземпляр обработчика участников
 func NewMembersHandler() *MembersHandler {
 	svc := service.NewMemberService()
 	return &MembersHandler{
-		svc:      svc,
-		auditSvc: service.NewAuditService(),
+		svc:       svc,
+		auditSvc:  service.NewAuditService(),
+		pointsSvc: service.NewPointsService(),
 	}
 }
 
@@ -210,6 +212,8 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	go h.pointsSvc.CheckProfileComplete(result)
+
 	mentor, err := h.svc.GetMentor(member.Id)
 
 	if err != nil {
@@ -277,6 +281,8 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	go h.pointsSvc.CheckProfileComplete(result)
 
 	mentor, err := h.svc.GetMentor(member.Id)
 	if err != nil {

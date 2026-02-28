@@ -12,8 +12,9 @@ import (
 
 type ReferalLinkHandler struct {
 	BaseHandler[models.ReferalLink]
-	svc      *service.ReferalLinkService
-	auditSvc *service.AuditService
+	svc       *service.ReferalLinkService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 func NewReferalLinkHandler() *ReferalLinkHandler {
@@ -22,6 +23,7 @@ func NewReferalLinkHandler() *ReferalLinkHandler {
 		BaseHandler: *NewBaseHandler(svc),
 		svc:         svc,
 		auditSvc:    service.NewAuditService(),
+		pointsSvc:   service.NewPointsService(),
 	}
 }
 
@@ -77,6 +79,8 @@ func (h *ReferalLinkHandler) AddLink(c *fiber.Ctx) error {
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "referal_link", result.Id, result.Company)
+	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonReferalCreate, "referal_link", result.Id,
+		"Создание реферальной ссылки")
 
 	return c.JSON(result)
 }
@@ -128,6 +132,15 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	// Начисляем баллы автору реферальной ссылки за конверсию
+	go func() {
+		link, err := h.service.GetById(req.ReferralLinkId)
+		if err == nil && link.AuthorId != 0 {
+			h.pointsSvc.AwardIdempotent(link.AuthorId, models.PointReasonReferalConversion, "referal_conversion", req.ReferralLinkId,
+				"Конверсия по реферальной ссылке")
+		}
+	}()
 
 	return c.SendStatus(fiber.StatusOK)
 }
