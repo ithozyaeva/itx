@@ -4,14 +4,16 @@ import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type ReviewOnCommunityHandler struct {
 	BaseHandler[models.ReviewOnCommunity]
-	svc      *service.ReviewOnCommunityService
-	auditSvc *service.AuditService
+	svc       *service.ReviewOnCommunityService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 func NewReviewOnCommunityHandler() *ReviewOnCommunityHandler {
@@ -20,6 +22,7 @@ func NewReviewOnCommunityHandler() *ReviewOnCommunityHandler {
 		BaseHandler: *NewBaseHandler(svc),
 		svc:         svc,
 		auditSvc:    service.NewAuditService(),
+		pointsSvc:   service.NewPointsService(),
 	}
 }
 
@@ -53,6 +56,9 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	go h.pointsSvc.GiveForAction(author.Id, models.PointReasonReviewCommunity, "review_community", time.Now().UnixNano(),
+		"Отзыв о сообществе")
 
 	return c.SendStatus(fiber.StatusOK)
 }
