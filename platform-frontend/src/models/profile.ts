@@ -38,6 +38,32 @@ export interface ProfTag {
   title: string
 }
 
+export const SUBSCRIPTION_LEVELS = [
+  'Новичок',
+  'Бригадир',
+  'Хозяин',
+  'Меценат',
+  'King',
+  'Бизнесмен',
+] as const
+
+export type SubscriptionLevel = typeof SUBSCRIPTION_LEVELS[number]
+
+export function getSubscriptionLevel(roles: UserRole[]): SubscriptionLevel {
+  if (roles.includes('ADMIN'))
+    return 'Бизнесмен'
+  if (roles.includes('MENTOR'))
+    return 'Хозяин'
+  if (roles.includes('SUBSCRIBER'))
+    return 'Бригадир'
+  return 'Новичок'
+}
+
+export function getSubscriptionLevelIndex(roles: UserRole[]): number {
+  const level = getSubscriptionLevel(roles)
+  return SUBSCRIPTION_LEVELS.indexOf(level)
+}
+
 export const CONTACT_TYPES = [
   { value: 1, label: 'Telegram' },
   { value: 2, label: 'Email' },

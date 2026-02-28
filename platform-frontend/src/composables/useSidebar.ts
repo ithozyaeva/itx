@@ -1,11 +1,12 @@
 import type { Component } from 'vue'
-import { Calendar, FileText, Folder, MessageSquare, Star, Trophy, User, Users } from 'lucide-vue-next'
+import { BookOpen, Calendar, FileText, Folder, Home, MessageSquare, Star, Trophy, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
   title: string
   path: string
   icon: Component
+  indicator?: boolean
 }
 
 // Создаем синглтон с состоянием
@@ -13,22 +14,28 @@ const state = {
   isOpen: ref(false),
   sidebarItems: ref<SidebarItem[]>([
     {
-      title: 'Профиль',
-      path: '/me',
-      icon: User,
+      title: 'Дом',
+      path: '/',
+      icon: Home,
     },
     {
-      title: 'Календарь событий',
+      title: 'События',
       path: '/events',
       icon: Calendar,
+      indicator: true,
     },
     {
-      title: 'Менторы',
+      title: 'Контент',
+      path: '/content',
+      icon: BookOpen,
+    },
+    {
+      title: 'Участники',
       path: '/mentors',
       icon: Users,
     },
     {
-      title: 'Таблица рефералов',
+      title: 'Рефералки',
       path: '/referals',
       icon: Folder,
     },
