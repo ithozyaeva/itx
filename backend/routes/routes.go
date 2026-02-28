@@ -64,6 +64,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	// Маршруты для статистики
 	statsHandler := handler.NewStatsHandler()
 	protected.Get("/stats", statsHandler.GetStats)
+	protected.Get("/stats/charts", statsHandler.GetChartStats)
 
 	// Маршруты для менторов
 	mentorHandler := handler.NewMentorHandler()

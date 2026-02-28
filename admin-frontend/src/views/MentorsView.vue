@@ -1,12 +1,14 @@
 <script setup lang="ts">
+import type { MentorSearchFilters } from '@/components/MentorSearchFilters.vue'
 import type { Mentor } from '@/models/mentors'
 import { Tag, Typography } from 'itx-ui-kit'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Trash from '~icons/lucide/trash'
 import BulkActionBar from '@/components/BulkActionBar.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import MentorSearchFiltersComponent from '@/components/MentorSearchFilters.vue'
 import MentorModal from '@/components/modals/MentorModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -19,6 +21,22 @@ import { mentorService } from '@/services/mentorService'
 
 const isModalOpen = ref(false)
 const selectedMentor = ref<Mentor | null>(null)
+const activeFilters = ref<MentorSearchFilters>({ name: '', tag: '' })
+
+const filteredMentors = computed(() => {
+  const items = mentorService.items.value.items
+  return items.filter((mentor) => {
+    const nameMatch = !activeFilters.value.name
+      || `${mentor.firstName} ${mentor.lastName} ${mentor.tg}`.toLowerCase().includes(activeFilters.value.name.toLowerCase())
+    const tagMatch = !activeFilters.value.tag
+      || mentor.profTags?.some(t => t.title.toLowerCase().includes(activeFilters.value.tag.toLowerCase()))
+    return nameMatch && tagMatch
+  })
+})
+
+function handleFilter(filters: MentorSearchFilters) {
+  activeFilters.value = filters
+}
 
 /**
  * Обработчик изменения ментора.
@@ -50,13 +68,16 @@ onUnmounted(mentorService.clearPagination)
           Менторы
         </Typography>
       </div>
+
+      <MentorSearchFiltersComponent @apply="handleFilter" />
+
       <Card>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead class="w-10">
-                  <input type="checkbox" :checked="bulk.count.value === mentorService.items.value.items.length && bulk.count.value > 0" @change="bulk.toggleAll(mentorService.items.value.items.map(m => m.id))">
+                  <input type="checkbox" :checked="bulk.count.value === filteredMentors.length && bulk.count.value > 0" @change="bulk.toggleAll(filteredMentors.map(m => m.id))">
                 </TableHead>
                 <TableHead>Имя</TableHead>
                 <TableHead>Telegram</TableHead>
@@ -67,12 +88,12 @@ onUnmounted(mentorService.clearPagination)
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-if="mentorService.items.value.total === 0" class="h-24">
+              <TableRow v-if="filteredMentors.length === 0" class="h-24">
                 <TableCell colspan="7" class="text-center">
                   Менторы не найдены
                 </TableCell>
               </TableRow>
-              <TableRow v-for="mentor in mentorService.items.value.items" :key="mentor.id">
+              <TableRow v-for="mentor in filteredMentors" :key="mentor.id">
                 <TableCell>
                   <input type="checkbox" :checked="bulk.isSelected(mentor.id)" @change="bulk.toggleItem(mentor.id)">
                 </TableCell>

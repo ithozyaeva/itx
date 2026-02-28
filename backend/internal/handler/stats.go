@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 
@@ -37,4 +39,47 @@ func (h *StatsHandler) GetStats(c *fiber.Ctx) error {
 	database.DB.Model(&models.Resume{}).Count(&stats.Resumes)
 
 	return c.JSON(stats)
+}
+
+type MonthlyStats struct {
+	Month string `json:"month"`
+	Count int64  `json:"count"`
+}
+
+type ChartStats struct {
+	MemberGrowth    []MonthlyStats `json:"memberGrowth"`
+	EventAttendance []MonthlyStats `json:"eventAttendance"`
+}
+
+func (h *StatsHandler) GetChartStats(c *fiber.Ctx) error {
+	var chartStats ChartStats
+
+	// Event attendance by month (last 12 months)
+	database.DB.Raw(`
+		SELECT TO_CHAR(date_trunc('month', e.date), 'YYYY-MM') as month,
+		       COUNT(DISTINCT em.member_id) as count
+		FROM events e
+		JOIN event_members em ON em.event_id = e.id
+		WHERE e.date >= NOW() - INTERVAL '12 months'
+		GROUP BY date_trunc('month', e.date)
+		ORDER BY date_trunc('month', e.date)
+	`).Scan(&chartStats.EventAttendance)
+
+	// Total members count (cumulative snapshot is not possible without created_at,
+	// so we return the total count per month as a flat line for now)
+	var totalMembers int64
+	database.DB.Model(&models.Member{}).Count(&totalMembers)
+
+	// Generate last 12 months with total count
+	database.DB.Raw(fmt.Sprintf(`
+		SELECT TO_CHAR(d.month, 'YYYY-MM') as month, %d as count
+		FROM generate_series(
+		  date_trunc('month', NOW() - INTERVAL '11 months'),
+		  date_trunc('month', NOW()),
+		  '1 month'::interval
+		) d(month)
+		ORDER BY d.month
+	`, totalMembers)).Scan(&chartStats.MemberGrowth)
+
+	return c.JSON(chartStats)
 }
