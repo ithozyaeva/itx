@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strings"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
@@ -120,6 +122,10 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 
 	err := h.svc.TrackConversion(req.ReferralLinkId, member.Id)
 	if err != nil {
+		// Handle unique constraint violation (duplicate conversion) as idempotent success
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "referral_conversions_unique") {
+			return c.SendStatus(fiber.StatusOK)
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

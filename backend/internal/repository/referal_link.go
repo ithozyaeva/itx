@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"log"
 	"time"
 )
 
@@ -95,9 +96,37 @@ func (r *ReferalLinkRepository) GetConversionsCount(linkId int64) (int64, error)
 }
 
 func (r *ReferalLinkRepository) LoadConversionsCounts(links []models.ReferalLink) {
+	if len(links) == 0 {
+		return
+	}
+
+	ids := make([]int64, len(links))
+	for i, link := range links {
+		ids[i] = link.Id
+	}
+
+	type countResult struct {
+		ReferralLinkId int64 `gorm:"column:referral_link_id"`
+		Count          int64 `gorm:"column:count"`
+	}
+
+	var counts []countResult
+	if err := database.DB.Model(&models.ReferralConversion{}).
+		Select("referral_link_id, COUNT(*) as count").
+		Where("referral_link_id IN ?", ids).
+		Group("referral_link_id").
+		Scan(&counts).Error; err != nil {
+		log.Printf("Error loading conversion counts: %v", err)
+		return
+	}
+
+	countMap := make(map[int64]int64, len(counts))
+	for _, c := range counts {
+		countMap[c.ReferralLinkId] = c.Count
+	}
+
 	for i := range links {
-		count, _ := r.GetConversionsCount(links[i].Id)
-		links[i].ConversionsCount = count
+		links[i].ConversionsCount = countMap[links[i].Id]
 	}
 }
 
