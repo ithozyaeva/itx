@@ -1,21 +1,41 @@
 <script setup lang="ts">
-import type { DashboardStats } from '@/services/statsService'
+import type { ChartStats, DashboardStats } from '@/services/statsService'
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+} from 'chart.js'
 import { Typography } from 'itx-ui-kit'
 import { Calendar, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { Bar, Line } from 'vue-chartjs'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { statsService } from '@/services/statsService'
 
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend)
+
 const containerRef = ref<HTMLElement | null>(null)
 useCardReveal(containerRef)
 
 const stats = ref<DashboardStats | null>(null)
+const chartStats = ref<ChartStats | null>(null)
 
 onMounted(async () => {
   try {
-    stats.value = await statsService.getStats()
+    const [s, c] = await Promise.all([
+      statsService.getStats(),
+      statsService.getChartStats(),
+    ])
+    stats.value = s
+    chartStats.value = c
   }
   catch (error) {
     console.error('Ошибка загрузки статистики:', error)
@@ -32,6 +52,39 @@ const statCards = [
   { key: 'referralLinks', label: 'Реферальные ссылки', icon: Folder },
   { key: 'resumes', label: 'Резюме', icon: FileText },
 ] as const
+
+const memberGrowthData = computed(() => ({
+  labels: chartStats.value?.memberGrowth.map(m => m.month) ?? [],
+  datasets: [{
+    label: 'Участники',
+    data: chartStats.value?.memberGrowth.map(m => m.count) ?? [],
+    borderColor: 'hsl(var(--primary))',
+    backgroundColor: 'hsl(var(--primary) / 0.1)',
+    fill: true,
+    tension: 0.3,
+  }],
+}))
+
+const eventAttendanceData = computed(() => ({
+  labels: chartStats.value?.eventAttendance.map(m => m.month) ?? [],
+  datasets: [{
+    label: 'Посещаемость',
+    data: chartStats.value?.eventAttendance.map(m => m.count) ?? [],
+    backgroundColor: 'hsl(var(--primary) / 0.7)',
+    borderRadius: 4,
+  }],
+}))
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+  },
+  scales: {
+    y: { beginAtZero: true },
+  },
+}
 </script>
 
 <template>
@@ -53,6 +106,30 @@ const statCards = [
             <p class="text-3xl font-bold">
               {{ stats[card.key] }}
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div v-if="chartStats" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card data-reveal>
+          <CardHeader>
+            <CardTitle>Рост участников</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="h-64">
+              <Line :data="memberGrowthData" :options="chartOptions" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-reveal>
+          <CardHeader>
+            <CardTitle>Посещаемость событий</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="h-64">
+              <Bar :data="eventAttendanceData" :options="chartOptions" />
+            </div>
           </CardContent>
         </Card>
       </div>
