@@ -23,6 +23,10 @@ const isModalOpen = ref(false)
 const selectedMentor = ref<Mentor | null>(null)
 const activeFilters = ref<MentorSearchFilters>({ name: '', tag: '' })
 
+const hasActiveFilters = computed(() => {
+  return activeFilters.value.name !== '' || activeFilters.value.tag !== ''
+})
+
 const filteredMentors = computed(() => {
   const items = mentorService.items.value.items
   return items.filter((mentor) => {
@@ -146,7 +150,7 @@ onUnmounted(mentorService.clearPagination)
       </Card>
 
       <div class="mt-4 flex justify-end">
-        <Pagination v-slot="{ page }" :items-per-page="10" :total="mentorService.items.value.total" :sibling-count="1" show-edges :default-page="1">
+        <Pagination v-slot="{ page }" :items-per-page="10" :total="hasActiveFilters ? filteredMentors.length : mentorService.items.value.total" :sibling-count="1" show-edges :default-page="1">
           <PaginationList v-slot="{ items }" class="flex items-center gap-1">
             <PaginationFirst />
             <PaginationPrev />
