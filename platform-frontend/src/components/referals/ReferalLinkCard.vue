@@ -77,7 +77,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
     <!-- Режим просмотра -->
     <div v-if="!isEditing">
       <div class="flex justify-between items-start mb-3">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 min-w-0">
           <Typography variant="h4" as="h3">
             {{ link.company }}
           </Typography>
@@ -85,21 +85,20 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
             {{ referalLinkStatusesObject[link.status] }}
           </Badge>
         </div>
-        <div class="space-x-2">
-          <button v-if="isOwner" class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isSaving" @click="startEditing">
-            <Pencil :size="16" />
+        <div v-if="isOwner" class="flex items-center gap-1 shrink-0 ml-2">
+          <button class="p-1.5 rounded-lg hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors" :disabled="isSaving" @click="startEditing">
+            <Pencil :size="14" />
           </button>
           <ConfirmDialog
-            v-if="isOwner"
             title="Удалить ссылку?"
             description="Реферальная ссылка будет удалена без возможности восстановления."
             confirm-label="Удалить"
             @confirm="handleDelete"
           >
             <template #trigger>
-              <button class="p-1 -mt-1 rounded hover:bg-secondary cursor-pointer" :disabled="isDeleting">
-                <Loader2 v-if="isDeleting" :size="16" class="animate-spin" />
-                <Trash v-else :size="16" />
+              <button class="p-1.5 rounded-lg hover:bg-destructive/10 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" :disabled="isDeleting">
+                <Loader2 v-if="isDeleting" :size="14" class="animate-spin" />
+                <Trash v-else :size="14" />
               </button>
             </template>
           </ConfirmDialog>
