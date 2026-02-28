@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Calendar, FileText, Folder, User, Users } from 'lucide-vue-next'
+import { Calendar, FileText, Folder, MessageSquare, User, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -36,6 +36,11 @@ const state = {
       title: 'Резюме',
       path: '/resumes',
       icon: FileText,
+    },
+    {
+      title: 'Мои отзывы',
+      path: '/my-reviews',
+      icon: MessageSquare,
     },
   ]),
 }

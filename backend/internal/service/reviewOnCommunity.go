@@ -60,6 +60,10 @@ func (s *ReviewOnCommunityService) CreateReviewOnCommunity(req *models.CreateRev
 	return nil
 }
 
+func (s *ReviewOnCommunityService) GetByAuthorId(authorId int64) ([]models.ReviewOnCommunity, error) {
+	return s.repo.GetByAuthorId(authorId)
+}
+
 func (s *ReviewOnCommunityService) GetApproved() (*[]models.ReviewOnCommunity, error) {
 	reviews, err := s.repo.GetApproved(nil)
 	if err != nil {

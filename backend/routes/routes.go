@@ -164,6 +164,9 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	reviewHandler := handler.NewReviewOnCommunityHandler()
 	reviews := protected.Group("/reviews")
 	reviews.Post("/add", reviewHandler.AddReview)
+	reviews.Get("/my", reviewHandler.GetMyReviews)
+	reviews.Patch("/:id", reviewHandler.UpdateMyReview)
+	reviews.Delete("/:id", reviewHandler.DeleteMyReview)
 
 	// Маршруты для участников
 	memberHandler := handler.NewMembersHandler()

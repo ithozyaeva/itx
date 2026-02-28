@@ -74,6 +74,64 @@ func (h *ReviewOnCommunityHandler) CreateReview(c *fiber.Ctx) error {
 
 }
 
+func (h *ReviewOnCommunityHandler) GetMyReviews(c *fiber.Ctx) error {
+	member := c.Locals("member").(*models.Member)
+	reviews, err := h.svc.GetByAuthorId(member.Id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(reviews)
+}
+
+func (h *ReviewOnCommunityHandler) UpdateMyReview(c *fiber.Ctx) error {
+	member := c.Locals("member").(*models.Member)
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	review, err := h.svc.GetById(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Отзыв не найден"})
+	}
+	if int64(review.AuthorId) != member.Id {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Нет доступа"})
+	}
+
+	req := new(models.AddReviewOnCommunityRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	review.Text = req.Text
+	result, err := h.svc.Update(review)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(result)
+}
+
+func (h *ReviewOnCommunityHandler) DeleteMyReview(c *fiber.Ctx) error {
+	member := c.Locals("member").(*models.Member)
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	review, err := h.svc.GetById(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Отзыв не найден"})
+	}
+	if int64(review.AuthorId) != member.Id {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Нет доступа"})
+	}
+
+	if err := h.svc.Delete(review); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *ReviewOnCommunityHandler) GetApproved(c *fiber.Ctx) error {
 	result, err := h.svc.GetApproved()
 	if err != nil {
