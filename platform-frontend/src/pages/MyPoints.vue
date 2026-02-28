@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { PointsSummary } from '@/models/points'
 import { Typography } from 'itx-ui-kit'
-import { Calendar, FileText, Folder, Loader2, MessageSquare, Star, User } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageSquare, Star, User } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useToast } from '@/components/ui/toast'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 
+const { toast } = useToast()
 const data = ref<PointsSummary | null>(null)
 const isLoading = ref(true)
 
@@ -40,17 +42,62 @@ const rewards = [
 ]
 
 const quests = [
-  { label: 'Запишись на событие', to: '/events', points: 10, icon: Calendar },
-  { label: 'Оставь отзыв на сообщество', to: '/my-reviews', points: 15, icon: MessageSquare },
-  { label: 'Загрузи резюме', to: '/resumes', points: 10, icon: FileText },
-  { label: 'Заполни профиль полностью', to: '/me', points: 20, icon: User },
-  { label: 'Создай реферальную ссылку', to: '/referals', points: 5, icon: Folder },
+  { label: 'Запишись на событие', to: '/events', points: 10, icon: Calendar, reason: 'event_attend' },
+  { label: 'Оставь отзыв на сообщество', to: '/my-reviews', points: 15, icon: MessageSquare, reason: 'review_community' },
+  { label: 'Загрузи резюме', to: '/resumes', points: 10, icon: FileText, reason: 'resume_upload' },
+  { label: 'Заполни профиль полностью', to: '/me', points: 20, icon: User, reason: 'profile_complete' },
+  { label: 'Создай реферальную ссылку', to: '/referals', points: 5, icon: Folder, reason: 'referal_create' },
 ]
+
+const completedReasons = computed(() => {
+  if (!data.value)
+    return new Set<string>()
+  return new Set(data.value.transactions.map(tx => tx.reason))
+})
+
+function isQuestCompleted(reason: string) {
+  return completedReasons.value.has(reason)
+}
+
+const SEEN_KEY = 'points_seen_quests'
+
+function getSeenQuests(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  }
+  catch {
+    return new Set()
+  }
+}
+
+function saveSeenQuests(seen: Set<string>) {
+  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]))
+}
+
+function showNewCompletions() {
+  const seen = getSeenQuests()
+  const newlyCompleted = quests.filter(
+    q => isQuestCompleted(q.reason) && !seen.has(q.reason),
+  )
+
+  if (newlyCompleted.length > 0) {
+    const labels = newlyCompleted.map(q => q.label).join(', ')
+    const totalPoints = newlyCompleted.reduce((sum, q) => sum + q.points, 0)
+    toast({
+      title: `Задание выполнено! +${totalPoints}`,
+      description: labels,
+    })
+    newlyCompleted.forEach(q => seen.add(q.reason))
+    saveSeenQuests(seen)
+  }
+}
 
 async function fetchPoints() {
   isLoading.value = true
   try {
     data.value = await pointsService.getMyPoints()
+    showNewCompletions()
   }
   catch (error) {
     handleError(error)
@@ -111,21 +158,40 @@ onMounted(() => {
           v-for="quest in quests"
           :key="quest.to"
           :to="quest.to"
-          class="flex items-center gap-3 bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors"
+          class="flex items-center gap-3 rounded-2xl p-4 transition-colors"
+          :class="isQuestCompleted(quest.reason)
+            ? 'bg-green-500/5 border border-green-500/30'
+            : 'bg-card border border-border hover:border-primary/50'"
         >
-          <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 shrink-0">
+          <div
+            class="flex items-center justify-center w-10 h-10 rounded-full shrink-0"
+            :class="isQuestCompleted(quest.reason) ? 'bg-green-500/20' : 'bg-primary/10'"
+          >
+            <CheckCircle
+              v-if="isQuestCompleted(quest.reason)"
+              class="h-5 w-5 text-green-500"
+            />
             <component
               :is="quest.icon"
+              v-else
               class="h-5 w-5 text-primary"
             />
           </div>
           <div class="flex-1 min-w-0">
-            <div class="font-medium text-sm">
+            <div
+              class="font-medium text-sm"
+              :class="isQuestCompleted(quest.reason) ? 'line-through text-muted-foreground' : ''"
+            >
               {{ quest.label }}
             </div>
           </div>
-          <div class="shrink-0 text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-full">
-            +{{ quest.points }}
+          <div
+            class="shrink-0 text-xs font-bold px-2 py-1 rounded-full"
+            :class="isQuestCompleted(quest.reason)
+              ? 'text-green-500 bg-green-500/10'
+              : 'text-yellow-500 bg-yellow-500/10'"
+          >
+            {{ isQuestCompleted(quest.reason) ? '' : '+' }}{{ quest.points }}
           </div>
         </RouterLink>
       </div>
