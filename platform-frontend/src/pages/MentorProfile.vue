@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { MentorWithReviews } from '@/services/mentors'
-import ReviewForm from '@/components/mentors/ReviewForm.vue'
-import { mentorsService } from '@/services/mentors'
 import { Tag, Typography } from 'itx-ui-kit'
 import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import ReviewForm from '@/components/mentors/ReviewForm.vue'
+import { mentorsService } from '@/services/mentors'
 
 const route = useRoute()
 const mentor = ref<MentorWithReviews | null>(null)

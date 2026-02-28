@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ProfTag } from '@/models/profile'
 import type { AcceptableInputValue } from 'reka-ui'
+import type { ProfTag } from '@/models/profile'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
-import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {

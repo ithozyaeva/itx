@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
+import { Typography } from 'itx-ui-kit'
+import { Loader2, UserX } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import MentorCard from '@/components/mentors/MentorCard.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { mentorsService } from '@/services/mentors'
-import { Typography } from 'itx-ui-kit'
-import { Loader2, UserX } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
 
 const PAGE_SIZE = 12
 

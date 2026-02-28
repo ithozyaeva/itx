@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Resume, WorkFormat } from '@/models/resume'
+import { Typography } from 'itx-ui-kit'
+import { FileText, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-vue-next'
+import { onMounted, reactive, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
-import { Typography } from 'itx-ui-kit'
-import { FileText, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-vue-next'
-import { onMounted, reactive, ref } from 'vue'
 
 const resumes = ref<Resume[]>([])
 const isUploading = ref(false)

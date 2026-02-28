@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import type { ReferalLink } from '@/models/referals'
 import type { PropType } from 'vue'
+import type { ReferalLink } from '@/models/referals'
+import { Typography } from 'itx-ui-kit'
+import { Loader2, Pencil, Trash } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { Badge } from '@/components/ui/badge'
@@ -9,9 +12,6 @@ import { useUser } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { referalLinkService } from '@/services/referals'
-import { Typography } from 'itx-ui-kit'
-import { Loader2, Pencil, Trash } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
 
 const props = defineProps({
   link: {

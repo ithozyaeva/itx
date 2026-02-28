@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { ReviewOnCommunity } from '@/services/reviews'
-import { Button } from '@/components/ui/button'
-import { handleError } from '@/services/errorService'
-import { reviewService } from '@/services/reviews'
 import { Typography } from 'itx-ui-kit'
 import { Loader2, MessageSquareX, Pencil, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { handleError } from '@/services/errorService'
+import { reviewService } from '@/services/reviews'
 
 const reviews = ref<ReviewOnCommunity[]>([])
 const isLoading = ref(false)

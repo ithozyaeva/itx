@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { useUser } from '@/composables/useUser'
-import { profileService } from '@/services/profile'
 import { Typography } from 'itx-ui-kit'
 import { Camera, Edit, Loader2 } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { useUser } from '@/composables/useUser'
+import { profileService } from '@/services/profile'
 
 const user = useUser()
 const isEdit = ref<boolean>(false)

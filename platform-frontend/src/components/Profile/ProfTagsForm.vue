@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { Mentor, ProfTag } from '@/models/profile'
 import type { AcceptableInputValue } from 'reka-ui'
+import type { Mentor, ProfTag } from '@/models/profile'
+import { Typography } from 'itx-ui-kit'
+import { Edit, Loader2 } from 'lucide-vue-next'
+import { computed, onMounted, ref, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Combobox, ComboboxAnchor, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
-import { Typography } from 'itx-ui-kit'
-import { Edit, Loader2 } from 'lucide-vue-next'
-import { computed, onMounted, ref, watchEffect } from 'vue'
 
 const emit = defineEmits(['update:profTags'])
 const localProfTags = ref<ProfTag[]>([])

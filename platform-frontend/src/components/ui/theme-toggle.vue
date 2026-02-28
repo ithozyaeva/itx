@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useColorMode } from '@vueuse/core'
 import { Laptop, Moon, Sun } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 // Используем useColorMode из @vueuse/core и устанавливаем светлую тему по умолчанию
 const mode = useColorMode({

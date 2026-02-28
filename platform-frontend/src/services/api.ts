@@ -1,7 +1,7 @@
 import type { TelegramUser } from '@/models/profile'
+import ky from 'ky'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
-import ky from 'ky'
 import { handleError } from './errorService'
 
 const localStorageUser = useUser()

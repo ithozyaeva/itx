@@ -1,5 +1,5 @@
-import type { Mentor, TelegramUser } from '@/models/profile'
 import type { RemovableRef } from '@vueuse/core'
+import type { Mentor, TelegramUser } from '@/models/profile'
 import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 

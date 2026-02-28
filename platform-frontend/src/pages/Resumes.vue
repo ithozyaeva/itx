@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ResumeUploadForm from '@/components/Resume/ResumeUploadForm.vue'
 import { Typography } from 'itx-ui-kit'
+import ResumeUploadForm from '@/components/Resume/ResumeUploadForm.vue'
 </script>
 
 <template>

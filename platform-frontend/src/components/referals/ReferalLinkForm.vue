@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Grade, ReferalLink } from '@/models/referals'
+import { Typography } from 'itx-ui-kit'
+import { Loader2 } from 'lucide-vue-next'
+import { ref } from 'vue'
 import ProfTagsInput from '@/components/common/ProfTagsInput.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
-import { Typography } from 'itx-ui-kit'
-import { Loader2 } from 'lucide-vue-next'
-import { ref } from 'vue'
 
 const props = defineProps<{ link?: Partial<ReferalLink>, title?: string, isSaving?: boolean }>()
 
