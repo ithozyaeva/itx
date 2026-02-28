@@ -24,6 +24,8 @@ type Member struct {
 	TelegramID  int64        `json:"telegramID" gorm:"column:telegram_id"`
 	FirstName   string       `json:"firstName" gorm:"column:first_name"`
 	LastName    string       `json:"lastName" gorm:"column:last_name"`
+	Bio         string       `json:"bio" gorm:"column:bio;default:''"`
+	AvatarURL   string       `json:"avatarUrl" gorm:"column:avatar_url;default:''"`
 	MemberRoles []MemberRole `json:"-" gorm:"foreignKey:MemberId;references:Id"`
 	Roles       []Role       `json:"roles" gorm:"-:all"`
 	Birthday    *DateOnly    `json:"birthday" gorm:"column:birthday"`

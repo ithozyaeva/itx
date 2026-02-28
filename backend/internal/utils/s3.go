@@ -211,6 +211,12 @@ func (c *S3Client) Upload(ctx context.Context, key string, content []byte, conte
 	return nil
 }
 
+func (c *S3Client) GetPublicURL(key string) string {
+	cfg := config.CFG.S3
+	endpoint := strings.TrimSpace(cfg.Endpoint)
+	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(endpoint, "/"), c.bucket, key)
+}
+
 func (c *S3Client) Delete(ctx context.Context, key string) error {
 	_, err := c.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(c.bucket),

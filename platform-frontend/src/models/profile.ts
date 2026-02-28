@@ -7,6 +7,8 @@ export interface TelegramUser {
   birthday: string
   firstName: string
   lastName: string
+  bio: string
+  avatarUrl: string
   roles: UserRole[]
 }
 
@@ -41,4 +43,8 @@ export const CONTACT_TYPES = [
   { value: 2, label: 'Email' },
   { value: 3, label: 'Телефон' },
   { value: 4, label: 'Другое' },
+  { value: 5, label: 'LinkedIn' },
+  { value: 6, label: 'GitHub' },
+  { value: 7, label: 'VK' },
+  { value: 8, label: 'Сайт' },
 ] as const
