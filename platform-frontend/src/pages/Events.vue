@@ -95,34 +95,6 @@ onMounted(() => loadEvents())
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div>
         <Typography variant="h3" as="h2" class="mb-4">
-          Архив событий
-        </Typography>
-        <div v-if="pastEvents.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-          <CalendarX class="h-10 w-10" />
-          <p>Нет архивных событий</p>
-        </div>
-        <template v-else>
-          <div class="space-y-4">
-            <EventCard
-              v-for="event in pastEvents"
-              :key="event.id"
-              :event="event"
-            />
-          </div>
-          <div v-if="pastEvents.length < pastTotal" class="mt-4 flex justify-center">
-            <Button
-              variant="outline"
-              :disabled="isLoadingMorePast"
-              @click="loadMorePast"
-            >
-              <Loader2 v-if="isLoadingMorePast" class="mr-2 h-4 w-4 animate-spin" />
-              Показать ещё
-            </Button>
-          </div>
-        </template>
-      </div>
-      <div>
-        <Typography variant="h3" as="h2" class="mb-4">
           Предстоящие события
         </Typography>
         <div v-if="futureEvents.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
@@ -144,6 +116,34 @@ onMounted(() => loadEvents())
               @click="loadMoreFuture"
             >
               <Loader2 v-if="isLoadingMoreFuture" class="mr-2 h-4 w-4 animate-spin" />
+              Показать ещё
+            </Button>
+          </div>
+        </template>
+      </div>
+      <div>
+        <Typography variant="h3" as="h2" class="mb-4">
+          Архив событий
+        </Typography>
+        <div v-if="pastEvents.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+          <CalendarX class="h-10 w-10" />
+          <p>Нет архивных событий</p>
+        </div>
+        <template v-else>
+          <div class="space-y-4">
+            <EventCard
+              v-for="event in pastEvents"
+              :key="event.id"
+              :event="event"
+            />
+          </div>
+          <div v-if="pastEvents.length < pastTotal" class="mt-4 flex justify-center">
+            <Button
+              variant="outline"
+              :disabled="isLoadingMorePast"
+              @click="loadMorePast"
+            >
+              <Loader2 v-if="isLoadingMorePast" class="mr-2 h-4 w-4 animate-spin" />
               Показать ещё
             </Button>
           </div>

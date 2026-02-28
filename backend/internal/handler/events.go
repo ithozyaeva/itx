@@ -66,7 +66,10 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 		filter["place_type = ?"] = *req.PlaceType
 	}
 
-	result, err := h.service.Search(req.Limit, req.Offset, &filter, nil)
+	result, err := h.service.Search(req.Limit, req.Offset, &filter, &repository.Order{
+		ColumnBy: "date",
+		Order:    "DESC",
+	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
