@@ -115,6 +115,26 @@ func (s *PointsService) AwardPointsForPastEvents() {
 	}
 }
 
+func (s *PointsService) SearchTransactions(memberId *int64, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
+	return s.repo.SearchTransactions(memberId, limit, offset)
+}
+
+func (s *PointsService) AdminAwardPoints(memberId int64, amount int, description string) error {
+	tx := &models.PointTransaction{
+		MemberId:    memberId,
+		Amount:      amount,
+		Reason:      models.PointReasonAdminManual,
+		SourceType:  "admin",
+		SourceId:    0,
+		Description: description,
+	}
+	return s.repo.CreateManualTransaction(tx)
+}
+
+func (s *PointsService) DeleteTransaction(id int64) error {
+	return s.repo.DeleteTransaction(id)
+}
+
 // AwardActivityBonuses начисляет бонусы за активность: еженедельная активность, 3+ события в месяц, серия 4 недели.
 func (s *PointsService) AwardActivityBonuses() {
 	now := time.Now()

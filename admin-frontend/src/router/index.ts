@@ -10,6 +10,7 @@ const EventsView = () => import('@/views/EventsView.vue')
 const MentorsReviewsView = () => import('@/views/MentorsReviewsView.vue')
 const ResumesView = () => import('@/views/ResumesView.vue')
 const AuditLogsView = () => import('@/views/AuditLogsView.vue')
+const PointsView = () => import('@/views/PointsView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -72,6 +73,12 @@ const router = createRouter({
       path: '/audit-logs',
       name: 'audit-logs',
       component: AuditLogsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/points',
+      name: 'points',
+      component: PointsView,
       meta: { requiresAuth: true },
     },
   ],

@@ -59,6 +59,46 @@ func (r *PointsRepository) GivePoints(tx *models.PointTransaction) error {
 	return database.DB.Create(tx).Error
 }
 
+func (r *PointsRepository) SearchTransactions(memberId *int64, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
+	var items []models.AdminPointTransaction
+	var total int64
+
+	countQuery := database.DB.Table("point_transactions")
+	if memberId != nil {
+		countQuery = countQuery.Where("member_id = ?", *memberId)
+	}
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	baseQuery := `SELECT pt.id, pt.member_id, m.first_name as member_first_name, m.last_name as member_last_name,
+		        m.username as member_username, pt.amount, pt.reason, pt.source_type, pt.description, pt.created_at
+		 FROM point_transactions pt
+		 JOIN members m ON m.id = pt.member_id`
+
+	var args []interface{}
+	if memberId != nil {
+		baseQuery += ` WHERE pt.member_id = ?`
+		args = append(args, *memberId)
+	}
+	baseQuery += ` ORDER BY pt.created_at DESC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	if err := database.DB.Raw(baseQuery, args...).Scan(&items).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
+func (r *PointsRepository) DeleteTransaction(id int64) error {
+	return database.DB.Delete(&models.PointTransaction{}, id).Error
+}
+
+func (r *PointsRepository) CreateManualTransaction(tx *models.PointTransaction) error {
+	return database.DB.Create(tx).Error
+}
+
 func (r *PointsRepository) GetPastEventsForAward(daysBack int) ([]models.Event, error) {
 	var events []models.Event
 	err := database.DB.

@@ -29,6 +29,8 @@ const (
 	PermissionCanViewAdminResumes          Permission = "can_view_admin_resumes"
 	PermissionCanEditPlatformMentors       Permission = "can_edit_platform_mentor"
 	PermissionCanViewAdminAuditLogs        Permission = "can_view_admin_audit_logs"
+	PermissionCanViewAdminPoints           Permission = "can_view_admin_points"
+	PermissionCanEditAdminPoints           Permission = "can_edit_admin_points"
 )
 
 type PermissionModel struct {

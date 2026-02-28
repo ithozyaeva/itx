@@ -16,6 +16,7 @@ const (
 	PointReasonWeeklyActivity   PointReason = "weekly_activity"
 	PointReasonMonthlyActive    PointReason = "monthly_active"
 	PointReasonStreak4Weeks     PointReason = "streak_4weeks"
+	PointReasonAdminManual      PointReason = "admin_manual"
 )
 
 var PointValues = map[PointReason]int{
@@ -55,4 +56,23 @@ type MemberPointsBalance struct {
 type PointsSummary struct {
 	Balance      int                `json:"balance"`
 	Transactions []PointTransaction `json:"transactions"`
+}
+
+type AdminPointTransaction struct {
+	Id              int64       `json:"id"`
+	MemberId        int64       `json:"memberId"`
+	MemberFirstName string      `json:"memberFirstName"`
+	MemberLastName  string      `json:"memberLastName"`
+	MemberUsername  string      `json:"memberUsername"`
+	Amount          int         `json:"amount"`
+	Reason          PointReason `json:"reason"`
+	SourceType      string      `json:"sourceType"`
+	Description     string      `json:"description"`
+	CreatedAt       time.Time   `json:"createdAt"`
+}
+
+type AdminAwardRequest struct {
+	MemberId    int64  `json:"memberId"`
+	Amount      int    `json:"amount"`
+	Description string `json:"description"`
 }

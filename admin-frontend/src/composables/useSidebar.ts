@@ -5,6 +5,7 @@ import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
 import Home from '~icons/lucide/home'
 import MessageSquare from '~icons/lucide/message-square'
+import Star from '~icons/lucide/star'
 import User from '~icons/lucide/user'
 import Users from '~icons/lucide/users'
 import { usePermissions } from './usePermissions'
@@ -65,6 +66,12 @@ export function useSidebar() {
       path: '/resumes',
       icon: FileText,
       requiredPermission: 'can_view_admin_resumes',
+    },
+    {
+      title: 'Баллы',
+      path: '/points',
+      icon: Star,
+      requiredPermission: 'can_view_admin_points',
     },
     {
       title: 'Журнал действий',
