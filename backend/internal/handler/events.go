@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"ithozyeva/internal/bot"
 	"ithozyeva/internal/models"
@@ -112,7 +113,7 @@ func (h *EventsHandler) AddMember(c *fiber.Ctx) error {
 
 	result, err := h.svc.AddMember(req.EventId, int(member.Id))
 	if err != nil {
-		if err.Error() == "достигнут лимит участников" {
+		if errors.Is(err, service.ErrParticipantLimitReached) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
