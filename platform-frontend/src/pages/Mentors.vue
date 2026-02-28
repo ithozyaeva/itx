@@ -1,22 +1,48 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
 import MentorCard from '@/components/mentors/MentorCard.vue'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { mentorsService } from '@/services/mentors'
 import { Typography } from 'itx-ui-kit'
+import { Loader2, UserX } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+
+const PAGE_SIZE = 12
 
 const containerRef = ref<HTMLElement | null>(null)
 useCardReveal(containerRef)
 
 const mentors = ref<Mentor[]>([])
+const total = ref(0)
+const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const searchQuery = ref('')
 const selectedTag = ref('')
 
 async function loadMentors() {
-  const result = await mentorsService.getAll()
-  mentors.value = result.items
+  isLoading.value = true
+  try {
+    const result = await mentorsService.getAll(PAGE_SIZE, 0)
+    mentors.value = result.items
+    total.value = result.total
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+async function loadMore() {
+  isLoadingMore.value = true
+  try {
+    const result = await mentorsService.getAll(PAGE_SIZE, mentors.value.length)
+    mentors.value.push(...result.items)
+    total.value = result.total
+  }
+  finally {
+    isLoadingMore.value = false
+  }
 }
 
 const allTags = computed(() => {
@@ -67,15 +93,34 @@ onMounted(loadMentors)
       </select>
     </div>
 
-    <div v-if="filteredMentors.length === 0" class="text-muted-foreground">
-      Менторы не найдены
+    <div v-if="isLoading" class="flex justify-center py-12">
+      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <MentorCard
-        v-for="mentor in filteredMentors"
-        :key="mentor.id"
-        :mentor="mentor"
-      />
-    </div>
+
+    <template v-else>
+      <div v-if="filteredMentors.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+        <UserX class="h-10 w-10" />
+        <p>Менторы не найдены</p>
+      </div>
+      <template v-else>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <MentorCard
+            v-for="mentor in filteredMentors"
+            :key="mentor.id"
+            :mentor="mentor"
+          />
+        </div>
+        <div v-if="mentors.length < total" class="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            :disabled="isLoadingMore"
+            @click="loadMore"
+          >
+            <Loader2 v-if="isLoadingMore" class="mr-2 h-4 w-4 animate-spin" />
+            Показать ещё
+          </Button>
+        </div>
+      </template>
+    </template>
   </div>
 </template>
