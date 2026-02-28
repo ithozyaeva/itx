@@ -59,13 +59,13 @@ func (r *PointsRepository) GivePoints(tx *models.PointTransaction) error {
 	return database.DB.Create(tx).Error
 }
 
-func (r *PointsRepository) SearchTransactions(memberId *int64, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
+func (r *PointsRepository) SearchTransactions(username *string, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
 	var items []models.AdminPointTransaction
 	var total int64
 
-	countQuery := database.DB.Table("point_transactions")
-	if memberId != nil {
-		countQuery = countQuery.Where("member_id = ?", *memberId)
+	countQuery := database.DB.Table("point_transactions pt").Joins("JOIN members m ON m.id = pt.member_id")
+	if username != nil {
+		countQuery = countQuery.Where("m.username ILIKE ?", "%"+*username+"%")
 	}
 	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -77,9 +77,9 @@ func (r *PointsRepository) SearchTransactions(memberId *int64, limit, offset int
 		 JOIN members m ON m.id = pt.member_id`
 
 	var args []interface{}
-	if memberId != nil {
-		baseQuery += ` WHERE pt.member_id = ?`
-		args = append(args, *memberId)
+	if username != nil {
+		baseQuery += ` WHERE m.username ILIKE ?`
+		args = append(args, "%"+*username+"%")
 	}
 	baseQuery += ` ORDER BY pt.created_at DESC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)

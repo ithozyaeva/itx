@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { pointsService } from '@/services/pointsService'
 
 const isAwardModalOpen = ref(false)
-const memberIdFilter = ref('')
+const usernameFilter = ref('')
 
 const reasonLabels: Record<string, string> = {
   event_attend: 'Участие в событии',
@@ -32,12 +32,11 @@ const reasonLabels: Record<string, string> = {
 }
 
 function applyMemberFilter() {
-  const id = memberIdFilter.value ? Number(memberIdFilter.value) : undefined
-  pointsService.applyFilters({ memberId: id })
+  pointsService.applyFilters({ username: usernameFilter.value || undefined })
 }
 
 function resetFilters() {
-  memberIdFilter.value = ''
+  usernameFilter.value = ''
   pointsService.applyFilters({})
 }
 
@@ -67,8 +66,8 @@ onUnmounted(pointsService.clearPagination)
       <Card class="p-4 rounded-lg">
         <div class="flex items-center gap-3">
           <Input
-            v-model="memberIdFilter"
-            placeholder="ID участника"
+            v-model="usernameFilter"
+            placeholder="TG username"
             class="w-[200px]"
             @keydown.enter="applyMemberFilter"
           />
