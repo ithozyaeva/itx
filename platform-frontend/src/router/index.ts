@@ -2,6 +2,7 @@ import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } fro
 import Events from '@/pages/Events.vue'
 import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
+import MyReviews from '@/pages/MyReviews.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
 import Home from '@/pages/User.vue'
@@ -15,6 +16,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile' },
   { path: '/referals', component: ReferalLinks, name: 'referals' },
   { path: '/resumes', component: Resumes, name: 'resumes' },
+  { path: '/my-reviews', component: MyReviews, name: 'myReviews' },
   { path: '/', redirect: { name: 'events' } },
 ]
 
