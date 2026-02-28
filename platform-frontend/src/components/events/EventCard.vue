@@ -118,29 +118,27 @@ const { openInGoogleCalendar } = useGoogleCalendar()
 <template>
   <div data-reveal class="bg-card rounded-3xl border p-4 hover:shadow-md transition-shadow flex flex-col gap-2">
     <!-- Header: title + tags -->
-    <div class="flex flex-col gap-2">
-      <div class="flex flex-wrap items-center gap-2">
-        <Typography variant="h4" as="h3" class="flex-1 min-w-0">
-          {{ event.title }}
-        </Typography>
-        <div class="flex flex-wrap gap-1">
-          <Tag>
-            {{ placeTypesObject[event.placeType] }}
-          </Tag>
-          <Tag
-            v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
-          >
-            {{ event.customPlaceType }}
-          </Tag>
-        </div>
-      </div>
-      <div v-if="!isPassedEvent" class="flex flex-wrap gap-1">
-        <Button class="cursor-pointer" size="sm" variant="outline" @click="getICS">
-          + ICS
-        </Button>
-        <Button class="cursor-pointer" size="sm" variant="outline" @click="openInGoogleCalendar(event)">
-          + Google Calendar
-        </Button>
+    <div class="flex flex-col gap-1.5">
+      <Typography variant="h4" as="h3">
+        {{ event.title }}
+      </Typography>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <Tag>
+          {{ placeTypesObject[event.placeType] }}
+        </Tag>
+        <Tag
+          v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
+        >
+          {{ event.customPlaceType }}
+        </Tag>
+        <template v-if="!isPassedEvent">
+          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="getICS">
+            + ICS
+          </button>
+          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="openInGoogleCalendar(event)">
+            + Google Cal
+          </button>
+        </template>
       </div>
     </div>
 
