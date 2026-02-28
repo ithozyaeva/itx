@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useDictionary } from '@/composables/useDictionary'
 import { requiredRule, useFormValidation } from '@/composables/useFormValidation'
-import { toDatetimeLocal } from '@/lib/utils'
+import { datetimeLocalToISO, toDatetimeLocal } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/eventsService'
 
@@ -123,8 +123,8 @@ onMounted(async () => {
     if (event) {
       values.value = {
         ...event,
-        date: toDatetimeLocal(event.date),
-        repeatEndDate: event.repeatEndDate ? toDatetimeLocal(event.repeatEndDate) : undefined,
+        date: toDatetimeLocal(event.date, event.timezone),
+        repeatEndDate: event.repeatEndDate ? toDatetimeLocal(event.repeatEndDate, event.timezone) : undefined,
       }
       // Устанавливаем тип окончания повторений
       if (event.repeatEndDate) {
@@ -146,9 +146,10 @@ async function handleSubmit(e: Event) {
   }
 
   try {
+    const tz = values.value.timezone || 'UTC'
     const eventData: any = {
       ...values.value,
-      date: new Date(values.value.date).toISOString(),
+      date: datetimeLocalToISO(values.value.date, tz),
     }
 
     // Очищаем поля повторений, если событие не повторяющееся
@@ -163,7 +164,7 @@ async function handleSubmit(e: Event) {
         eventData.repeatEndDate = null
       }
       else if (repeatEndType.value === 'date' && values.value.repeatEndDate) {
-        eventData.repeatEndDate = new Date(values.value.repeatEndDate).toISOString()
+        eventData.repeatEndDate = datetimeLocalToISO(values.value.repeatEndDate, tz)
       }
     }
 

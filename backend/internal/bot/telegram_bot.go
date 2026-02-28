@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,51 @@ var (
 	globalBot *TelegramBot
 	botMutex  sync.RWMutex
 )
+
+// getEventLocation возвращает *time.Location для таймзоны события.
+// Поддерживает формат "UTC", "UTC+3", "UTC-5" и т.д.
+func getEventLocation(timezone string) *time.Location {
+	if timezone == "" || timezone == "UTC" {
+		return time.UTC
+	}
+
+	// Парсим "UTC+3" или "UTC-5"
+	if strings.HasPrefix(timezone, "UTC") {
+		offsetStr := timezone[3:] // "+3" или "-5"
+		if offsetStr == "" {
+			return time.UTC
+		}
+		hours, err := strconv.Atoi(offsetStr)
+		if err != nil {
+			log.Printf("Warning: failed to parse timezone %q, falling back to UTC", timezone)
+			return time.UTC
+		}
+		return time.FixedZone(timezone, hours*3600)
+	}
+
+	// Пробуем как IANA таймзону (на будущее)
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		log.Printf("Warning: failed to load timezone %q: %v, falling back to UTC", timezone, err)
+		return time.UTC
+	}
+	return loc
+}
+
+// formatEventDateStr форматирует дату события с учётом его таймзоны
+func formatEventDateStr(eventDate time.Time, timezone string) string {
+	loc := getEventLocation(timezone)
+	dateInTz := eventDate.In(loc)
+	return dateInTz.Format("02.01.2006 в 15:04")
+}
+
+// formatTimezoneLabel возвращает человекочитаемую метку таймзоны
+func formatTimezoneLabel(timezone string) string {
+	if timezone == "" || timezone == "UTC" {
+		return "UTC"
+	}
+	return timezone
+}
 
 // GetGlobalBot возвращает глобальный экземпляр бота
 func GetGlobalBot() *TelegramBot {
@@ -247,19 +293,9 @@ func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, time
 		builder.WriteString(fmt.Sprintf("\n%s\n", event.Description))
 	}
 
-	// Конвертируем время из UTC в МСК
-	moscowLocation, err := time.LoadLocation("Europe/Moscow")
-	var moscowDateStr string
-	if err != nil {
-		log.Printf("Warning: failed to load Moscow location: %v, adding 3 hours manually", err)
-		dateInMoscow := event.Date.UTC().Add(3 * time.Hour)
-		moscowDateStr = dateInMoscow.Format("02.01.2006 в 15:04")
-	} else {
-		dateInMoscow := event.Date.In(moscowLocation)
-		moscowDateStr = dateInMoscow.Format("02.01.2006 в 15:04")
-	}
-
-	builder.WriteString(fmt.Sprintf("\n📆 <b>Дата:</b> %s (МСК)\n", moscowDateStr))
+	dateStr := formatEventDateStr(event.Date, event.Timezone)
+	tzLabel := formatTimezoneLabel(event.Timezone)
+	builder.WriteString(fmt.Sprintf("\n📆 <b>Дата:</b> %s (%s)\n", dateStr, tzLabel))
 
 	if len(event.Hosts) > 0 {
 		builder.WriteString("\n👥 <b>Спикеры:</b>\n")
@@ -314,14 +350,9 @@ func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, time
 		}
 
 		if event.RepeatEndDate != nil {
-			moscowLocation, err := time.LoadLocation("Europe/Moscow")
-			if err != nil {
-				dateInMoscow := event.RepeatEndDate.In(time.UTC).Add(3 * time.Hour)
-				builder.WriteString(fmt.Sprintf(" до %s", dateInMoscow.Format("02.01.2006")))
-			} else {
-				dateInMoscow := event.RepeatEndDate.In(moscowLocation)
-				builder.WriteString(fmt.Sprintf(" до %s", dateInMoscow.Format("02.01.2006")))
-			}
+			loc := getEventLocation(event.Timezone)
+			endDateStr := event.RepeatEndDate.In(loc).Format("02.01.2006")
+			builder.WriteString(fmt.Sprintf(" до %s", endDateStr))
 		}
 		builder.WriteString("\n")
 	}
@@ -583,19 +614,9 @@ func (b *TelegramBot) formatEventUpdateAlert(event *models.Event) string {
 		builder.WriteString(fmt.Sprintf("\n%s\n", event.Description))
 	}
 
-	// Конвертируем время из UTC в МСК
-	moscowLocation, err := time.LoadLocation("Europe/Moscow")
-	var moscowDateStr string
-	if err != nil {
-		log.Printf("Warning: failed to load Moscow location: %v, adding 3 hours manually", err)
-		dateInMoscow := event.Date.UTC().Add(3 * time.Hour)
-		moscowDateStr = dateInMoscow.Format("02.01.2006 в 15:04")
-	} else {
-		dateInMoscow := event.Date.In(moscowLocation)
-		moscowDateStr = dateInMoscow.Format("02.01.2006 в 15:04")
-	}
-
-	builder.WriteString(fmt.Sprintf("\n📆 <b>Дата:</b> %s (МСК)\n", moscowDateStr))
+	dateStr := formatEventDateStr(event.Date, event.Timezone)
+	tzLabel := formatTimezoneLabel(event.Timezone)
+	builder.WriteString(fmt.Sprintf("\n📆 <b>Дата:</b> %s (%s)\n", dateStr, tzLabel))
 
 	if len(event.Hosts) > 0 {
 		builder.WriteString("\n👥 <b>Спикеры:</b>\n")
@@ -650,14 +671,9 @@ func (b *TelegramBot) formatEventUpdateAlert(event *models.Event) string {
 		}
 
 		if event.RepeatEndDate != nil {
-			moscowLocation, err := time.LoadLocation("Europe/Moscow")
-			if err != nil {
-				dateInMoscow := event.RepeatEndDate.In(time.UTC).Add(3 * time.Hour)
-				builder.WriteString(fmt.Sprintf(" до %s", dateInMoscow.Format("02.01.2006")))
-			} else {
-				dateInMoscow := event.RepeatEndDate.In(moscowLocation)
-				builder.WriteString(fmt.Sprintf(" до %s", dateInMoscow.Format("02.01.2006")))
-			}
+			loc := getEventLocation(event.Timezone)
+			endDateStr := event.RepeatEndDate.In(loc).Format("02.01.2006")
+			builder.WriteString(fmt.Sprintf(" до %s", endDateStr))
 		}
 		builder.WriteString("\n")
 	}
@@ -838,12 +854,8 @@ func (b *TelegramBot) checkRepeatingAlerts(event *models.Event, now time.Time) {
 
 	alertFirst, alertSecond, alertThird := b.getAlertIntervals()
 
-	moscowLocation, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		log.Printf("Error loading Moscow location: %v", err)
-		moscowLocation = time.UTC
-	}
-	nowInMoscow := now.In(moscowLocation)
+	eventLocation := getEventLocation(event.Timezone)
+	nowInMoscow := now.In(eventLocation)
 
 	scheduledHour := config.CFG.AlertScheduledHour
 	scheduledMinute := config.CFG.AlertScheduledMinute
