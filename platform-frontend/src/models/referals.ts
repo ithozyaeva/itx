@@ -8,6 +8,7 @@ export interface ReferalLink {
   profTags: ProfTag[]
   status: ReferalLinkStatus
   vacationsCount: number
+  conversionsCount: number
   expiresAt?: string
   updatedAt: string
 }

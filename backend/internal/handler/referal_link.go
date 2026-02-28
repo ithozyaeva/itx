@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strings"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
@@ -104,6 +106,30 @@ func (h *ReferalLinkHandler) UpdateLink(c *fiber.Ctx) error {
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "referal_link", result.Id, result.Company)
 
 	return c.JSON(result)
+}
+
+type TrackConversionRequest struct {
+	ReferralLinkId int64 `json:"referralLinkId"`
+}
+
+func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
+	req := new(TrackConversionRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	member := c.Locals("member").(*models.Member)
+
+	err := h.svc.TrackConversion(req.ReferralLinkId, member.Id)
+	if err != nil {
+		// Handle unique constraint violation (duplicate conversion) as idempotent success
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "referral_conversions_unique") {
+			return c.SendStatus(fiber.StatusOK)
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {

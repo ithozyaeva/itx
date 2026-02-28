@@ -201,6 +201,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	referals.Post("/add-link", referalsHandler.AddLink)
 	referals.Put("/update-link", referalsHandler.UpdateLink)
 	referals.Delete("/delete-link", referalsHandler.DeleteLink)
+	referals.Post("/track-conversion", referalsHandler.TrackConversion)
 
 	resumeHandler := handler.NewResumeHandler()
 	resumes := protected.Group("/resumes")

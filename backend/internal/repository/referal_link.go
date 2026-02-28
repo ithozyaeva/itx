@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"log"
 	"time"
 )
 
@@ -49,6 +50,8 @@ func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFi
 		return nil, 0, err
 	}
 
+	r.LoadConversionsCounts(links)
+
 	return links, count, nil
 }
 
@@ -76,6 +79,55 @@ func (r *ReferalLinkRepository) GetById(id int64) (*models.ReferalLink, error) {
 		return nil, err
 	}
 	return &event, nil
+}
+
+func (r *ReferalLinkRepository) TrackConversion(linkId int64, memberId int64) error {
+	conversion := &models.ReferralConversion{
+		ReferralLinkId: linkId,
+		MemberId:       memberId,
+	}
+	return database.DB.Create(conversion).Error
+}
+
+func (r *ReferalLinkRepository) GetConversionsCount(linkId int64) (int64, error) {
+	var count int64
+	err := database.DB.Model(&models.ReferralConversion{}).Where("referral_link_id = ?", linkId).Count(&count).Error
+	return count, err
+}
+
+func (r *ReferalLinkRepository) LoadConversionsCounts(links []models.ReferalLink) {
+	if len(links) == 0 {
+		return
+	}
+
+	ids := make([]int64, len(links))
+	for i, link := range links {
+		ids[i] = link.Id
+	}
+
+	type countResult struct {
+		ReferralLinkId int64 `gorm:"column:referral_link_id"`
+		Count          int64 `gorm:"column:count"`
+	}
+
+	var counts []countResult
+	if err := database.DB.Model(&models.ReferralConversion{}).
+		Select("referral_link_id, COUNT(*) as count").
+		Where("referral_link_id IN ?", ids).
+		Group("referral_link_id").
+		Scan(&counts).Error; err != nil {
+		log.Printf("Error loading conversion counts: %v", err)
+		return
+	}
+
+	countMap := make(map[int64]int64, len(counts))
+	for _, c := range counts {
+		countMap[c.ReferralLinkId] = c.Count
+	}
+
+	for i := range links {
+		links[i].ConversionsCount = countMap[links[i].Id]
+	}
 }
 
 // ExpireLinks замораживает ссылки с истёкшим сроком действия
