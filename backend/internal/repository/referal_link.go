@@ -50,7 +50,7 @@ func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFi
 		return nil, 0, err
 	}
 
-	r.LoadConversionsCounts(links)
+	e.LoadConversionsCounts(links)
 
 	return links, count, nil
 }
