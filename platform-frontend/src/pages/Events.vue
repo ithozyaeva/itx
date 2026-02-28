@@ -81,18 +81,18 @@ onMounted(() => loadEvents())
 </script>
 
 <template>
-  <div ref="containerRef" class="container mx-auto px-4 py-8">
-    <Typography variant="h2" as="h1" class="mb-6">
+  <div ref="containerRef" class="container mx-auto px-4 py-6 md:py-8">
+    <Typography variant="h2" as="h1" class="mb-4 md:mb-6">
       События сообщества
     </Typography>
 
-    <EventFilters class="mb-6" @change="loadEvents" />
+    <EventFilters class="mb-4 md:mb-6" @change="loadEvents" />
 
     <div v-if="isLoading" class="flex justify-center py-12">
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div v-else class="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-8">
       <div>
         <Typography variant="h3" as="h2" class="mb-4">
           Предстоящие события

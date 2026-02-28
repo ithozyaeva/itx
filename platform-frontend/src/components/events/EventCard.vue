@@ -116,36 +116,41 @@ const { openInGoogleCalendar } = useGoogleCalendar()
 </script>
 
 <template>
-  <div data-reveal class="bg-card rounded-3xl border p-4 hover:shadow-md transition-shadow flex flex-col gap-1">
-    <div class="flex justify-between items-start mb-2">
-      <Typography variant="h4" as="h3">
-        {{ event.title }}
-      </Typography>
-      <div class="space-x-2">
-        <Tag>
-          {{ placeTypesObject[event.placeType] }}
-        </Tag>
-        <Tag
-          v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
-        >
-          {{ event.customPlaceType }}
-        </Tag>
-        <div v-if="!isPassedEvent" class="flex gap-1">
-          <Button class="cursor-pointer" size="sm" variant="outline" @click="getICS">
-            + ICS
-          </Button>
-          <Button class="cursor-pointer" size="sm" variant="outline" @click="openInGoogleCalendar(event)">
-            + Google Calendar
-          </Button>
+  <div data-reveal class="bg-card rounded-3xl border p-4 hover:shadow-md transition-shadow flex flex-col gap-2">
+    <!-- Header: title + tags -->
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <Typography variant="h4" as="h3" class="flex-1 min-w-0">
+          {{ event.title }}
+        </Typography>
+        <div class="flex flex-wrap gap-1">
+          <Tag>
+            {{ placeTypesObject[event.placeType] }}
+          </Tag>
+          <Tag
+            v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
+          >
+            {{ event.customPlaceType }}
+          </Tag>
         </div>
       </div>
+      <div v-if="!isPassedEvent" class="flex flex-wrap gap-1">
+        <Button class="cursor-pointer" size="sm" variant="outline" @click="getICS">
+          + ICS
+        </Button>
+        <Button class="cursor-pointer" size="sm" variant="outline" @click="openInGoogleCalendar(event)">
+          + Google Calendar
+        </Button>
+      </div>
     </div>
-    <p class="text-muted-foreground mb-4">
+
+    <p class="text-muted-foreground">
       {{ event.description }}
     </p>
+
     <div class="space-y-2 text-sm">
       <div class="flex items-center gap-2">
-        <CalendarIcon />
+        <CalendarIcon class="shrink-0" />
         <div class="flex flex-col">
           <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
           <span v-if="repeatInfo" class="text-xs text-muted-foreground italic">
@@ -153,29 +158,30 @@ const { openInGoogleCalendar } = useGoogleCalendar()
           </span>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <MapPin />
-        <span v-if="event.placeType === 'OFFLINE'">{{ event.place }}</span>
-        <a v-if="event.placeType === 'ONLINE'" :href="event.place" target="_blank" class="underline">{{ event.place }}</a>
-        <p v-if="event.placeType === 'HYBRID'" v-html="wrapLinks(event.place)" />
+      <div class="flex items-start gap-2">
+        <MapPin class="shrink-0 mt-0.5" />
+        <span v-if="event.placeType === 'OFFLINE'" class="break-all">{{ event.place }}</span>
+        <a v-if="event.placeType === 'ONLINE'" :href="event.place" target="_blank" class="underline break-all">{{ event.place }}</a>
+        <p v-if="event.placeType === 'HYBRID'" class="break-all" v-html="wrapLinks(event.place)" />
       </div>
-      <div class="flex items-center gap-2">
-        <span class="text-bold">Cспикеры: </span>
+      <div class="flex items-start gap-2">
+        <span class="font-medium shrink-0">Спикеры:</span>
         <span>{{ event.hosts.map(host => `${host.firstName} ${host.lastName}`).join(', ') }}</span>
       </div>
-      <div v-if="event.videoLink">
-        <span>Запись встречи:</span>
-        <a :href="event.videoLink" target="_blank" class="underline">
+      <div v-if="event.videoLink" class="flex items-start gap-2">
+        <span class="shrink-0">Запись:</span>
+        <a :href="event.videoLink" target="_blank" class="underline break-all">
           {{ event.videoLink }}
         </a>
       </div>
     </div>
+
     <div class="flex flex-col">
       <button
         class="flex items-center gap-2 text-left hover:text-primary transition-colors"
         @click="toggleMembers"
       >
-        <span class="text-sm text-bold">Участники ({{ event.members.length }}{{ event.maxParticipants > 0 ? `/${event.maxParticipants}` : '' }})</span>
+        <span class="text-sm font-medium">Участники ({{ event.members.length }}{{ event.maxParticipants > 0 ? `/${event.maxParticipants}` : '' }})</span>
         <ChevronDown
           class="w-4 h-4 transition-transform duration-200"
           :class="{ 'rotate-180': isMembersExpanded }"
@@ -196,6 +202,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         </div>
       </div>
     </div>
+
     <div v-if="!isPassedEvent" class="self-end">
       <ConfirmDialog
         v-if="isMember"
