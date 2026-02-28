@@ -21,15 +21,15 @@ watch(filters, () => {
 </script>
 
 <template>
-  <div class="flex flex-col sm:flex-row gap-4">
+  <div class="flex flex-col sm:flex-row gap-3">
     <Input
       v-model="filters.title"
       placeholder="Поиск по названию..."
-      class="max-w-xs"
+      class="w-full sm:max-w-xs"
     />
     <select
       v-model="filters.placeType"
-      class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-xs"
+      class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring w-full sm:max-w-xs"
     >
       <option value="">
         Все форматы
