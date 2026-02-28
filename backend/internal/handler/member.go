@@ -1,13 +1,21 @@
 package handler
 
 import (
+	"context"
+	"fmt"
+	"io"
+	"mime"
+	"path/filepath"
+	"strings"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
 	"strconv"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 // MembersHandler обработчик для работы с участниками
@@ -102,6 +110,7 @@ type UpdateRequest struct {
 	Id        int64         `json:"id"`
 	FirstName string        `json:"firstName"`
 	LastName  string        `json:"lastName"`
+	Bio       string        `json:"bio"`
 	Birthday  *string       `json:"birthday"`
 	Roles     []models.Role `json:"roles"`
 	Username  string        `json:"tg"`
@@ -186,6 +195,7 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
+	member.Bio = request.Bio
 
 	parsedDate, err := utils.ParseDate(request.Birthday)
 
@@ -206,6 +216,72 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.JSON(result)
 	}
 
+	return c.JSON(mentor)
+}
+
+const maxAvatarSize = 5 * 1024 * 1024 // 5 MB
+
+func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
+	member, ok := c.Locals("member").(*models.Member)
+	if !ok {
+		return fiber.ErrUnauthorized
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Файл обязателен"})
+	}
+	if fileHeader.Size > maxAvatarSize {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Файл превышает 5MB"})
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Допустимые форматы: jpg, png, webp"})
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	contentType := fileHeader.Header.Get("Content-Type")
+	if contentType == "" {
+		if guessed := mime.TypeByExtension(ext); guessed != "" {
+			contentType = guessed
+		} else {
+			contentType = "application/octet-stream"
+		}
+	}
+
+	s3Client, err := utils.NewS3Client()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
+	}
+
+	key := fmt.Sprintf("avatars/%d/%s%s", member.TelegramID, uuid.NewString(), ext)
+	if err := s3Client.Upload(context.Background(), key, data, contentType); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
+	}
+
+	avatarURL := s3Client.GetPublicURL(key)
+	member.AvatarURL = avatarURL
+
+	result, err := h.svc.Update(member)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	mentor, err := h.svc.GetMentor(member.Id)
+	if err != nil {
+		return c.JSON(result)
+	}
 	return c.JSON(mentor)
 }
 

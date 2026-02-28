@@ -170,6 +170,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	members := protected.Group("/members")
 	members.Get("/me", memberHandler.Me)
 	members.Patch("/me", memberHandler.UpdateProfile)
+	members.Post("/me/avatar", memberHandler.UploadAvatar)
 
 	// Маршруты для менторов
 	mentorsHandler := handler.NewMentorHandler()

@@ -21,11 +21,18 @@ export const profileService = {
       handleError(err)
     }
   },
-  async updateMe(newUser: { firstName: string, lastName: string, birthday: string }) {
+  async updateMe(newUser: { firstName: string, lastName: string, birthday: string, bio: string }) {
     const response = await apiClient.patch('members/me', { json: newUser })
     const data = await response.json<TelegramUser>()
     localStorageUser.value = data
 
+    return data
+  },
+
+  async uploadAvatar(formData: FormData) {
+    const response = await apiClient.post('members/me/avatar', { body: formData })
+    const data = await response.json<TelegramUser>()
+    localStorageUser.value = data
     return data
   },
 
