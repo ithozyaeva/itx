@@ -55,6 +55,8 @@ func (r *MemberRepository) GetById(id int64) (*models.Member, error) {
 		FirstName:  member.FirstName,
 		TelegramID: member.TelegramID,
 		LastName:   member.LastName,
+		Bio:        member.Bio,
+		AvatarURL:  member.AvatarURL,
 		Roles:      member.GetRoleStrings(),
 		Birthday:   member.Birthday,
 	}
@@ -86,6 +88,8 @@ func (r *MemberRepository) Update(member *models.Member) (*models.Member, error)
 		Update("birthday", member.Birthday).
 		Update("first_name", member.FirstName).
 		Update("last_name", member.LastName).
+		Update("bio", member.Bio).
+		Update("avatar_url", member.AvatarURL).
 		Update("username", member.Username)
 
 	member.SetRoleStrings(member.Roles, member.Id)
