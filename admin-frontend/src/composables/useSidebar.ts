@@ -16,8 +16,11 @@ export interface SidebarItem {
   requiredPermission?: Permission
 }
 
+// Global state so Header and Sidebar share the same refs
+const isCollapsed = ref(false)
+const isMobileOpen = ref(false)
+
 export function useSidebar() {
-  const isCollapsed = ref(false)
   const { hasPermission } = usePermissions()
 
   const allSidebarItems = ref<SidebarItem[]>([
@@ -84,9 +87,20 @@ export function useSidebar() {
     isCollapsed.value = !isCollapsed.value
   }
 
+  const toggleMobileSidebar = () => {
+    isMobileOpen.value = !isMobileOpen.value
+  }
+
+  const closeMobileSidebar = () => {
+    isMobileOpen.value = false
+  }
+
   return {
     isCollapsed,
+    isMobileOpen,
     sidebarItems,
     toggleSidebar,
+    toggleMobileSidebar,
+    closeMobileSidebar,
   }
 }

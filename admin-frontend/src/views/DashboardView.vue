@@ -94,40 +94,40 @@ const chartOptions = {
         Дашборд
       </Typography>
 
-      <div v-if="stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-if="stats" class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         <Card v-for="card in statCards" :key="card.key" data-reveal>
-          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2 p-3 lg:p-6 lg:pb-2">
+            <CardTitle class="text-xs lg:text-sm font-medium">
               {{ card.label }}
             </CardTitle>
-            <component :is="card.icon" class="h-4 w-4 text-muted-foreground" />
+            <component :is="card.icon" class="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <p class="text-3xl font-bold">
+          <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
+            <p class="text-2xl lg:text-3xl font-bold">
               {{ stats[card.key] }}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div v-if="chartStats" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div v-if="chartStats" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <Card data-reveal>
-          <CardHeader>
-            <CardTitle>Рост участников</CardTitle>
+          <CardHeader class="p-3 lg:p-6">
+            <CardTitle class="text-sm lg:text-base">Рост участников</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div class="h-64">
+          <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
+            <div class="h-48 lg:h-64">
               <Line :data="memberGrowthData" :options="chartOptions" />
             </div>
           </CardContent>
         </Card>
 
         <Card data-reveal>
-          <CardHeader>
-            <CardTitle>Посещаемость событий</CardTitle>
+          <CardHeader class="p-3 lg:p-6">
+            <CardTitle class="text-sm lg:text-base">Посещаемость событий</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div class="h-64">
+          <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
+            <div class="h-48 lg:h-64">
               <Bar :data="eventAttendanceData" :options="chartOptions" />
             </div>
           </CardContent>

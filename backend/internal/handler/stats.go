@@ -72,9 +72,9 @@ func (h *StatsHandler) GetChartStats(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Generate last 12 months with total count (parameterized query)
+	// Generate last 12 months with total count
 	if err := database.DB.Raw(`
-		SELECT TO_CHAR(d.month, 'YYYY-MM') as month, ? as count
+		SELECT TO_CHAR(d.month, 'YYYY-MM') as month, CAST(? AS bigint) as count
 		FROM generate_series(
 		  date_trunc('month', NOW() - INTERVAL '11 months'),
 		  date_trunc('month', NOW()),
