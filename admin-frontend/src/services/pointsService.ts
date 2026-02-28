@@ -7,7 +7,7 @@ import { cleanParams } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 
 export interface PointsFilters {
-  memberId?: number
+  username?: string
 }
 
 class PointsService {

@@ -115,8 +115,8 @@ func (s *PointsService) AwardPointsForPastEvents() {
 	}
 }
 
-func (s *PointsService) SearchTransactions(memberId *int64, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
-	return s.repo.SearchTransactions(memberId, limit, offset)
+func (s *PointsService) SearchTransactions(username *string, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
+	return s.repo.SearchTransactions(username, limit, offset)
 }
 
 func (s *PointsService) AdminAwardPoints(memberId int64, amount int, description string) error {

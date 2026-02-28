@@ -47,7 +47,7 @@ func (h *PointsHandler) GetLeaderboard(c *fiber.Ctx) error {
 func (h *PointsHandler) AdminSearch(c *fiber.Ctx) error {
 	limitStr := c.Query("limit", "20")
 	offsetStr := c.Query("offset", "0")
-	memberIdStr := c.Query("memberId")
+	username := c.Query("username")
 
 	limit, _ := strconv.Atoi(limitStr)
 	offset, _ := strconv.Atoi(offsetStr)
@@ -55,15 +55,12 @@ func (h *PointsHandler) AdminSearch(c *fiber.Ctx) error {
 		limit = 20
 	}
 
-	var memberId *int64
-	if memberIdStr != "" {
-		id, err := strconv.ParseInt(memberIdStr, 10, 64)
-		if err == nil {
-			memberId = &id
-		}
+	var usernamePtr *string
+	if username != "" {
+		usernamePtr = &username
 	}
 
-	items, total, err := h.svc.SearchTransactions(memberId, limit, offset)
+	items, total, err := h.svc.SearchTransactions(usernamePtr, limit, offset)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить транзакции"})
 	}
