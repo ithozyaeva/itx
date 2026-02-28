@@ -30,6 +30,19 @@ export function toDatetimeLocal(isoString: string) {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
+export async function downloadFile(url: string, filename: string) {
+  const tgToken = localStorage.getItem('tg_token')
+  const response = await fetch(`/api/admin/${url}`, {
+    headers: tgToken ? { 'X-Telegram-User-Token': tgToken } : {},
+  })
+  const blob = await response.blob()
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 export function cleanParams(params: Record<string, any>) {
   return Object.fromEntries(
     Object.entries(params).filter(([_, v]) => {

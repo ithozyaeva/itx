@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Label, Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
+import Download from '~icons/lucide/download'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
@@ -14,6 +15,7 @@ import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, Pagina
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useModal } from '@/composables/useModal'
+import { downloadFile } from '@/lib/utils'
 import { bulkService } from '@/services/bulkService'
 import { eventsService } from '@/services/eventsService'
 
@@ -48,10 +50,16 @@ function selectEvent(entityId: number) {
         <Typography variant="h2" as="h1">
           События сообщества
         </Typography>
-        <Button @click="open">
-          <Plus class="mr-2 h-4 w-4" />
-          Добавить событие
-        </Button>
+        <div class="flex gap-2">
+          <Button variant="outline" @click="downloadFile('events/export/csv', 'events.csv')">
+            <Download class="mr-2 h-4 w-4" />
+            Экспорт CSV
+          </Button>
+          <Button @click="open">
+            <Plus class="mr-2 h-4 w-4" />
+            Добавить событие
+          </Button>
+        </div>
       </div>
 
       <Card>

@@ -2,6 +2,7 @@
 import type { Mentor } from '@/models/mentors'
 import { Tag, Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
+import Download from '~icons/lucide/download'
 import Pencil from '~icons/lucide/pencil'
 import Trash from '~icons/lucide/trash'
 import BulkActionBar from '@/components/BulkActionBar.vue'
@@ -14,6 +15,7 @@ import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, Pagina
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+import { downloadFile } from '@/lib/utils'
 import { bulkService } from '@/services/bulkService'
 import { mentorService } from '@/services/mentorService'
 
@@ -49,6 +51,10 @@ onUnmounted(mentorService.clearPagination)
         <Typography variant="h2" as="h1">
           Менторы
         </Typography>
+        <Button variant="outline" @click="downloadFile('mentors/export/csv', 'mentors.csv')">
+          <Download class="mr-2 h-4 w-4" />
+          Экспорт CSV
+        </Button>
       </div>
       <Card>
         <CardContent>

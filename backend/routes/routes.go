@@ -65,6 +65,12 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	statsHandler := handler.NewStatsHandler()
 	protected.Get("/stats", statsHandler.GetStats)
 
+	// Маршруты для экспорта данных
+	exportHandler := handler.NewExportHandler()
+	protected.Get("/members/export/csv", authMiddleware.RequirePermission(models.PermissionCanViewAdminMembers), exportHandler.ExportMembers)
+	protected.Get("/mentors/export/csv", authMiddleware.RequirePermission(models.PermissionCanViewAdminMentors), exportHandler.ExportMentors)
+	protected.Get("/events/export/csv", authMiddleware.RequirePermission(models.PermissionCanViewAdminEvents), exportHandler.ExportEvents)
+
 	// Маршруты для менторов
 	mentorHandler := handler.NewMentorHandler()
 	mentors := protected.Group("/mentors", authMiddleware.RequirePermission(models.PermissionCanViewAdminMentors))
