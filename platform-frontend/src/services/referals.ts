@@ -29,4 +29,8 @@ export const referalLinkService = {
   deleteLink: async (linkId: number) => {
     return apiClient.delete(`referals/delete-link`, { json: { id: linkId } }).json<ReferalLink>()
   },
+
+  trackConversion: async (referralLinkId: number) => {
+    await apiClient.post('referals/track-conversion', { json: { referralLinkId } })
+  },
 }

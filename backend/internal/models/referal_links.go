@@ -11,9 +11,10 @@ type ReferalLink struct {
 	ProfTags       []ProfTag         `json:"profTags" gorm:"many2many:referal_links_tags"`
 	Status         ReferalLinkStatus `json:"status"`
 	VacationsCount int               `json:"vacationsCount"`
-	ExpiresAt      *time.Time        `json:"expiresAt,omitempty" gorm:"column:expires_at"`
-	CreatedAt      time.Time         `json:"-"`
-	UpdatedAt      time.Time         `json:"updatedAt"`
+	ExpiresAt        *time.Time        `json:"expiresAt,omitempty" gorm:"column:expires_at"`
+	ConversionsCount int64             `json:"conversionsCount" gorm:"-"`
+	CreatedAt        time.Time         `json:"-"`
+	UpdatedAt        time.Time         `json:"updatedAt"`
 }
 
 type Grade string
@@ -51,4 +52,15 @@ type UpdateLinkRequest struct {
 
 type DeleteLinkRequest struct {
 	Id int64 `json:"id"`
+}
+
+type ReferralConversion struct {
+	Id             int64     `json:"id" gorm:"primaryKey"`
+	ReferralLinkId int64     `json:"referralLinkId" gorm:"column:referral_link_id"`
+	MemberId       int64     `json:"memberId" gorm:"column:member_id"`
+	ConvertedAt    time.Time `json:"convertedAt" gorm:"column:converted_at;default:CURRENT_TIMESTAMP"`
+}
+
+func (ReferralConversion) TableName() string {
+	return "referral_conversions"
 }

@@ -125,6 +125,10 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
           <span class="font-bold">Срок действия до:</span>
           <span> {{ dateFormatter.format(new Date(link.expiresAt)) }}</span>
         </div>
+        <div v-if="link.conversionsCount > 0" class="space-x-2">
+          <span class="font-bold">Конверсии:</span>
+          <span>{{ link.conversionsCount }}</span>
+        </div>
         <div class="space-x-2">
           <span class="font-bold">Обновлено:</span>
           <span> {{ dateFormatter.format(new Date(link.updatedAt)) }}</span>

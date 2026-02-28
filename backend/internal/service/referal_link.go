@@ -51,6 +51,10 @@ func (s *ReferalLinkService) UpdateLink(req *models.UpdateLinkRequest, member *m
 	return s.repo.Update(updatedEntity)
 }
 
+func (s *ReferalLinkService) TrackConversion(linkId int64, memberId int64) error {
+	return s.repo.TrackConversion(linkId, memberId)
+}
+
 // ExpireLinks замораживает реферальные ссылки с истёкшим сроком действия
 func (s *ReferalLinkService) ExpireLinks() (int64, error) {
 	return s.repo.ExpireLinks()

@@ -49,6 +49,8 @@ func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFi
 		return nil, 0, err
 	}
 
+	r.LoadConversionsCounts(links)
+
 	return links, count, nil
 }
 
@@ -76,6 +78,27 @@ func (r *ReferalLinkRepository) GetById(id int64) (*models.ReferalLink, error) {
 		return nil, err
 	}
 	return &event, nil
+}
+
+func (r *ReferalLinkRepository) TrackConversion(linkId int64, memberId int64) error {
+	conversion := &models.ReferralConversion{
+		ReferralLinkId: linkId,
+		MemberId:       memberId,
+	}
+	return database.DB.Create(conversion).Error
+}
+
+func (r *ReferalLinkRepository) GetConversionsCount(linkId int64) (int64, error) {
+	var count int64
+	err := database.DB.Model(&models.ReferralConversion{}).Where("referral_link_id = ?", linkId).Count(&count).Error
+	return count, err
+}
+
+func (r *ReferalLinkRepository) LoadConversionsCounts(links []models.ReferalLink) {
+	for i := range links {
+		count, _ := r.GetConversionsCount(links[i].Id)
+		links[i].ConversionsCount = count
+	}
 }
 
 // ExpireLinks замораживает ссылки с истёкшим сроком действия

@@ -106,6 +106,26 @@ func (h *ReferalLinkHandler) UpdateLink(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+type TrackConversionRequest struct {
+	ReferralLinkId int64 `json:"referralLinkId"`
+}
+
+func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
+	req := new(TrackConversionRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	member := c.Locals("member").(*models.Member)
+
+	err := h.svc.TrackConversion(req.ReferralLinkId, member.Id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {
 	req := new(models.DeleteLinkRequest)
 	if err := c.BodyParser(req); err != nil {
