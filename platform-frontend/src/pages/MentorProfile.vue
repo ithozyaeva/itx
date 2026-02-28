@@ -3,7 +3,7 @@ import type { MentorWithReviews } from '@/services/mentors'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
 import { mentorsService } from '@/services/mentors'
 import { Tag, Typography } from 'itx-ui-kit'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -25,8 +25,8 @@ onMounted(loadMentor)
       Назад к менторам
     </RouterLink>
 
-    <div v-if="!mentor" class="text-muted-foreground">
-      Загрузка...
+    <div v-if="!mentor" class="flex justify-center py-12">
+      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
     <div v-else class="space-y-6">
