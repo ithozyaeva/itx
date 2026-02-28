@@ -107,7 +107,7 @@ onUnmounted(() => {
   <transition name="fade">
     <div
       v-if="isMenuOpen"
-      class="px-6 md:px-10 inset-0 fixed bg-background z-40 flex flex-col justify-center items-center"
+      class="px-6 md:px-10 inset-0 fixed bg-background z-40 flex flex-col justify-center items-center overflow-auto"
     >
       <Navigation
         class="flex flex-col px-6 md:px-10 justify-center items-center navigation"

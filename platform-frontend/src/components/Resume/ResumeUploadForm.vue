@@ -195,7 +195,7 @@ function formatWorkFormat(format?: WorkFormat) {
               <p class="text-sm text-muted-foreground">
                 Файл
               </p>
-              <p class="text-base font-medium">
+              <p class="text-base font-medium break-all">
                 {{ resume.fileName }}
               </p>
             </div>
@@ -248,7 +248,7 @@ function formatWorkFormat(format?: WorkFormat) {
             <p class="text-muted-foreground">
               Опыт
             </p>
-            <p class="text-foreground whitespace-pre-line">
+            <p class="text-foreground whitespace-pre-line break-words">
               {{ resume.workExperience || 'Не указано' }}
             </p>
           </div>

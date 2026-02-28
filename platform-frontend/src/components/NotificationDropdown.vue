@@ -114,7 +114,7 @@ onUnmounted(() => {
 
     <div
       v-if="isOpen"
-      class="absolute right-0 top-full mt-2 w-80 bg-popover border rounded-lg shadow-lg z-50 overflow-hidden"
+      class="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-popover border rounded-lg shadow-lg z-50 overflow-hidden"
     >
       <div class="flex items-center justify-between px-4 py-3 border-b">
         <span class="font-semibold text-sm">Уведомления</span>

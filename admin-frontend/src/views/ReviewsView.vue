@@ -94,7 +94,9 @@ async function handleBulkApprove() {
                   Имя: {{ review.author.firstName ?? "" }} {{ review.author.lastName ?? "" }} <br> Telegram: {{
                     review.author.tg }}
                 </TableCell>
-                <TableCell>{{ review.text }}</TableCell>
+                <TableCell class="max-w-[300px] truncate">
+                  {{ review.text }}
+                </TableCell>
                 <TableCell>{{ new Date(review.date).toLocaleDateString() }}</TableCell>
                 <TableCell>{{ reviewStatuses.find((status) => status.value === review.status)?.label }}</TableCell>
                 <TableCell>

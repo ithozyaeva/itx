@@ -17,7 +17,7 @@ defineProps<{
         class="w-full "
       />
     </div>
-    <div class="flex flex-col gap-3 items-center text-center px-5 sm:px-28 lg:px-16 ">
+    <div class="flex flex-col gap-3 items-center text-center px-5 sm:px-12 lg:px-16 ">
       <Typography
         variant="h3"
         as="h3"

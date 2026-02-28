@@ -32,7 +32,7 @@ function trackJointimerClick() {
 
 <template>
   <footer class="w-full md:py-0 bg-accent rounded-t-[50px]">
-    <div class="flex px-6 md:px-10 container  flex-col lg:flex-row gap-12 lg:gap-9 pt-8 pb-11">
+    <div class="flex px-6 md:px-10 container flex-col lg:flex-row gap-8 lg:gap-9 pt-8 pb-11">
       <div class="flex flex-col gap-5 basis-1/2">
         <Typography
           variant="h3"

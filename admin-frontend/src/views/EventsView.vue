@@ -93,15 +93,21 @@ function selectEvent(entityId: number) {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>{{ event.title }}</TableCell>
+                <TableCell class="max-w-[200px] truncate">
+                  {{ event.title }}
+                </TableCell>
                 <TableCell>
                   <div v-if="event.eventTags.length > 0" class="flex flex-wrap items-center gap-1">
                     <Label v-for="tag in event.eventTags" :key="tag.id" :title="tag.name">{{ tag.name.length > 30 ? `${tag.name.slice(0, 24)}...` : tag.name }}</Label>
                   </div>
                 </TableCell>
                 <TableCell>{{ event.eventType }}</TableCell>
-                <TableCell>{{ event.place }}</TableCell>
-                <TableCell>{{ event.hosts?.map((host) => `${host.firstName} ${host.lastName}`).join(', ') }}</TableCell>
+                <TableCell class="max-w-[200px] truncate">
+                  {{ event.place }}
+                </TableCell>
+                <TableCell class="max-w-[200px] truncate">
+                  {{ event.hosts?.map((host) => `${host.firstName} ${host.lastName}`).join(', ') }}
+                </TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" @click="selectEvent(event.id)">
                     <Pencil class="h-4 w-4" />

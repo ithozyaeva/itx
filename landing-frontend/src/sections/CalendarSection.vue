@@ -113,7 +113,7 @@ onMounted(loadEvents)
         </div>
       </div>
 
-      <div class="grid gap-3 pt-12 lg:grid-cols-2 lg:gap-5">
+      <div class="grid gap-3 pt-12 md:grid-cols-2 md:gap-5">
         <Card
           v-for="event in visibleEvents"
           :key="event.title"
@@ -194,7 +194,7 @@ onMounted(loadEvents)
               >
                 <TgImage
                   :username="host.tg"
-                  class="rounded-full"
+                  class="rounded-full w-12 h-12 shrink-0"
                   width="48"
                   height="48"
                 />

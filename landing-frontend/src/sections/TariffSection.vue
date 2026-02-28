@@ -90,7 +90,7 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
           </Typography>
         </div>
       </div>
-      <div class="grid pt-12 lg:grid-cols-3 gap-5">
+      <div class="grid pt-12 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <div
           v-for="(tariff, index) in tariffs"
           :key="tariff.name"

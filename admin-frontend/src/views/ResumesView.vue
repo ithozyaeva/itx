@@ -146,7 +146,7 @@ onMounted(() => resumeService.searchWithFilters(filters))
                 </TableCell>
                 <TableCell>{{ resume.desiredPosition || '—' }}</TableCell>
                 <TableCell>{{ formatWorkFormat(resume.workFormat) }}</TableCell>
-                <TableCell class="max-w-[280px] whitespace-pre-line text-sm text-muted-foreground">
+                <TableCell class="max-w-[200px] lg:max-w-[280px] whitespace-pre-line break-words text-sm text-muted-foreground">
                   {{ resume.workExperience || '—' }}
                 </TableCell>
                 <TableCell>{{ resume.fileName }}</TableCell>
