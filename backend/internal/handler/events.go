@@ -228,7 +228,14 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Событие не найдено"})
 	}
 
-	// Send cancel alerts before deleting (need event data for notifications)
+	// Snapshot member IDs before cascade delete removes event_members
+	memberIds := GetEventMemberIds(int64(id))
+
+	if err := h.service.Delete(entity); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Send notifications after delete using pre-snapshotted member IDs
 	go func() {
 		telegramBot := bot.GetGlobalBot()
 		if telegramBot == nil {
@@ -240,11 +247,8 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 		}
 	}()
 
-	go CreateNotificationsForEventMembers(int64(id), "event_cancel", "Событие отменено", fmt.Sprintf("Событие \"%s\" было отменено.", entity.Title))
-
-	if err := h.service.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
+	notifBody := fmt.Sprintf("Событие \"%s\" было отменено.", entity.Title)
+	go CreateNotificationsForMembers(memberIds, "event_cancel", "Событие отменено", notifBody)
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "event", int64(id), entity.Title)
 

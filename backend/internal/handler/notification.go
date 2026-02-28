@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 
 	"ithozyeva/database"
@@ -57,6 +58,10 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": result.Error.Error()})
 	}
 
+	if result.RowsAffected == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Уведомление не найдено"})
+	}
+
 	return c.SendStatus(fiber.StatusOK)
 }
 
@@ -83,16 +88,22 @@ func CreateNotification(memberId int64, notifType string, title string, body str
 	return database.DB.Create(&notification).Error
 }
 
-// CreateNotificationsForEventMembers creates notifications for all members of an event
-func CreateNotificationsForEventMembers(eventId int64, notifType string, title string, body string) {
-	var members []models.Member
-	database.DB.Raw(`
-		SELECT m.* FROM members m
-		JOIN event_members em ON em.member_id = m.id
-		WHERE em.event_id = ?
-	`, eventId).Scan(&members)
+// GetEventMemberIds returns member IDs for an event (call before deleting the event)
+func GetEventMemberIds(eventId int64) []int64 {
+	var memberIds []int64
+	if err := database.DB.Raw(`
+		SELECT member_id FROM event_members WHERE event_id = ?
+	`, eventId).Scan(&memberIds).Error; err != nil {
+		log.Printf("Error getting event member IDs for event %d: %v", eventId, err)
+	}
+	return memberIds
+}
 
-	for _, member := range members {
-		CreateNotification(member.Id, notifType, title, body)
+// CreateNotificationsForMembers creates notifications for a list of member IDs
+func CreateNotificationsForMembers(memberIds []int64, notifType string, title string, body string) {
+	for _, memberId := range memberIds {
+		if err := CreateNotification(memberId, notifType, title, body); err != nil {
+			log.Printf("Error creating notification for member %d: %v", memberId, err)
+		}
 	}
 }

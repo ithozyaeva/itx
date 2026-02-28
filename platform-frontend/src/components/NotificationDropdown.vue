@@ -9,6 +9,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 const notifications = ref<Notification[]>([])
 const unreadCount = ref(0)
 const isOpen = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
 async function fetchUnreadCount() {
@@ -62,8 +63,7 @@ async function markAllAsRead() {
 }
 
 function handleClickOutside(event: MouseEvent) {
-  const target = event.target as HTMLElement
-  if (!target.closest('.notification-dropdown')) {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     isOpen.value = false
   }
 }
@@ -101,7 +101,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="notification-dropdown relative">
+  <div ref="dropdownRef" class="relative">
     <button class="relative p-1 rounded hover:bg-secondary cursor-pointer" @click="toggleDropdown">
       <Bell class="h-5 w-5" />
       <Badge
