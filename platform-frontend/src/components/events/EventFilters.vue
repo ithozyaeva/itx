@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { EventSearchFilters } from '@/services/events'
+import { reactive, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { useDictionary } from '@/composables/useDictionary'
-import { reactive, watch } from 'vue'
 
 const emit = defineEmits<{
   change: [filters: EventSearchFilters]

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
+import { CalendarIcon, Tag, Typography } from 'itx-ui-kit'
+import { ChevronDown, Loader2, MapPin } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useDictionary } from '@/composables/useDictionary'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
@@ -7,9 +10,6 @@ import { useUser } from '@/composables/useUser'
 import { dateFormatter, wrapLinks } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
-import { CalendarIcon, Tag, Typography } from 'itx-ui-kit'
-import { ChevronDown, Loader2, MapPin } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
 import Button from '../ui/button/Button.vue'
 
 const props = defineProps<{

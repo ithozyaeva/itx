@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { useSidebar } from '@/composables/useSidebar'
-import { isUserAdmin, isUserSubscribed } from '@/composables/useUser'
-import { reviewService } from '@/services/reviews'
 import { CloseIcon, Typography } from 'itx-ui-kit'
 import { Shield } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Button } from '@/components/ui/button'
+import { useSidebar } from '@/composables/useSidebar'
+import { isUserAdmin, isUserSubscribed } from '@/composables/useUser'
+import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
 
 const { sidebarItems, isOpen, toggleSidebar } = useSidebar()

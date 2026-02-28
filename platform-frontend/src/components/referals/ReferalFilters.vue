@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ReferalSearchFilters } from '@/services/referals'
+import { reactive, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { useDictionary } from '@/composables/useDictionary'
-import { reactive, watch } from 'vue'
 
 const emit = defineEmits<{
   change: [filters: ReferalSearchFilters]

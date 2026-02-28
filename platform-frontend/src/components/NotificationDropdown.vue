@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { Notification } from '@/services/notifications'
+import { Bell, CheckCheck } from 'lucide-vue-next'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { handleError } from '@/services/errorService'
 import { notificationService } from '@/services/notifications'
-import { Bell, CheckCheck } from 'lucide-vue-next'
-import { onMounted, onUnmounted, ref } from 'vue'
 
 const notifications = ref<Notification[]>([])
 const unreadCount = ref(0)

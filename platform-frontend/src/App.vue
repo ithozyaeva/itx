@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { onBeforeMount, ref } from 'vue'
 import { Toaster } from '@/components/ui/toast'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
 import { handleError } from '@/services/errorService'
-import { onBeforeMount, ref } from 'vue'
 import Layout from './components/layout/Layout.vue'
 
 const tg_user = useUser()

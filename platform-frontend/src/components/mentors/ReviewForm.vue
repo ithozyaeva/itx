@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { Service } from '@/models/profile'
+import { Loader2 } from 'lucide-vue-next'
+import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { mentorsService } from '@/services/mentors'
-import { Loader2 } from 'lucide-vue-next'
-import { ref } from 'vue'
 
 const props = defineProps<{
   mentorId: number

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
 import type { EventSearchFilters } from '@/services/events'
+import { Typography } from 'itx-ui-kit'
+import { CalendarX, Loader2 } from 'lucide-vue-next'
+import { onMounted, ref } from 'vue'
 import EventCard from '@/components/events/EventCard.vue'
 import EventFilters from '@/components/events/EventFilters.vue'
 import { Button } from '@/components/ui/button'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
-import { Typography } from 'itx-ui-kit'
-import { CalendarX, Loader2 } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
 
 const PAGE_SIZE = 10
 

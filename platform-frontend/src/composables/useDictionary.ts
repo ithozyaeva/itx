@@ -1,17 +1,17 @@
-import type { DictionaryItem } from '@/services/dictionaryService'
 import type { ComputedRef } from 'vue'
+import type { DictionaryItem } from '@/services/dictionaryService'
 
-import { dictionaryService } from '@/services/dictionaryService'
 import { useQuery } from '@tanstack/vue-query'
-
 import { computed } from 'vue'
 
-export type DictionaryKey =
-  | 'placeTypes'
-  | 'memberRoles'
-  | 'reviewStatuses'
-  | 'grades'
-  | 'referalLinkStatuses'
+import { dictionaryService } from '@/services/dictionaryService'
+
+export type DictionaryKey
+  = | 'placeTypes'
+    | 'memberRoles'
+    | 'reviewStatuses'
+    | 'grades'
+    | 'referalLinkStatuses'
 
 export const dictionaryKeys = {
   all: ['dictionaries'] as const,

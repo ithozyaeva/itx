@@ -1,4 +1,5 @@
 import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Events from '@/pages/Events.vue'
 import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
@@ -6,7 +7,6 @@ import MyReviews from '@/pages/MyReviews.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
 import Home from '@/pages/User.vue'
-import { createRouter, createWebHistory } from 'vue-router'
 import { useMainStore } from '../store'
 
 const routes: RouteRecordRaw[] = [

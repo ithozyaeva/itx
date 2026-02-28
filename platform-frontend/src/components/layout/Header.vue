@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { BurgerIcon } from 'itx-ui-kit'
+import { LogOut } from 'lucide-vue-next'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
-import { BurgerIcon } from 'itx-ui-kit'
-import { LogOut } from 'lucide-vue-next'
 
 const user = useUser()
 const { toggleSidebar } = useSidebar()

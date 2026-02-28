@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
 import MemberProfileCard from '@/components/Profile/MemberProfileForm.vue'
 import MentorInfoForm from '@/components/Profile/MentorInfoForm.vue'
@@ -6,7 +7,6 @@ import ProfTagsForm from '@/components/Profile/ProfTagsForm.vue'
 import ServicesForm from '@/components/Profile/ServicesForm.vue'
 import { isUserMentor, useUser } from '@/composables/useUser'
 import { profileService } from '@/services/profile'
-import { onMounted } from 'vue'
 
 const user = useUser()
 

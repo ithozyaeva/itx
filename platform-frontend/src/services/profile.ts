@@ -1,6 +1,6 @@
 import type { Contacts, Mentor, ProfTag, Service, TelegramUser } from '@/models/profile'
-import { useUser } from '@/composables/useUser'
 import ky from 'ky'
+import { useUser } from '@/composables/useUser'
 import { apiClient } from './api'
 import { handleError } from './errorService'
 

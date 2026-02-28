@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
+import { Edit } from 'lucide-vue-next'
+import { reactive, ref, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/composables/useUser'
 import { profileService } from '@/services/profile'
-import { Edit } from 'lucide-vue-next'
-import { reactive, ref, watchEffect } from 'vue'
 
 const user = useUser<Mentor>()
 const isEdit = ref<boolean>(false)

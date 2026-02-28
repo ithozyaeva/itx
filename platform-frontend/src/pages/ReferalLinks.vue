@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { ReferalLink } from '@/models/referals'
 import type { ReferalSearchFilters } from '@/services/referals'
+import { Typography } from 'itx-ui-kit'
+import { onMounted, ref } from 'vue'
 import ReferalFilters from '@/components/referals/ReferalFilters.vue'
 import ReferalLinkCard from '@/components/referals/ReferalLinkCard.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { handleError } from '@/services/errorService'
 import { referalLinkService } from '@/services/referals'
-import { Typography } from 'itx-ui-kit'
-import { onMounted, ref } from 'vue'
 
 const containerRef = ref<HTMLElement | null>(null)
 useCardReveal(containerRef)

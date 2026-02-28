@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { Contacts, Mentor } from '@/models/profile'
+import { Typography } from 'itx-ui-kit'
+import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
+import { ref, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -8,9 +11,6 @@ import { useUser } from '@/composables/useUser'
 import { CONTACT_TYPES } from '@/models/profile'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
-import { Typography } from 'itx-ui-kit'
-import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
-import { ref, watchEffect } from 'vue'
 
 const isEdit = ref<boolean>(false)
 const isLoading = ref(false)
