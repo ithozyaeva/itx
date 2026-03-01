@@ -29,7 +29,7 @@ func main() {
 	// Добавляем middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: config.CFG.AllowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Telegram-User-Token",
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))

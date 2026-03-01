@@ -73,6 +73,10 @@ func (s *PointsService) CheckProfileComplete(member *models.Member) {
 		"Полностью заполненный профиль")
 }
 
+func (s *PointsService) GetBalance(memberId int64) (int, error) {
+	return s.repo.GetBalance(memberId)
+}
+
 func (s *PointsService) GetMyPoints(memberId int64) (*models.PointsSummary, error) {
 	balance, err := s.repo.GetBalance(memberId)
 	if err != nil {

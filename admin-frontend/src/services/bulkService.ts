@@ -7,4 +7,5 @@ export const bulkService = {
   deleteReviews: (ids: number[]) => api.post('bulk/reviews/delete', { json: { ids } }).json(),
   approveReviews: (ids: number[]) => api.post('bulk/reviews/approve', { json: { ids } }).json(),
   deleteMentorsReviews: (ids: number[]) => api.post('bulk/mentors-reviews/delete', { json: { ids } }).json(),
+  approveMentorsReviews: (ids: number[]) => api.post('bulk/mentors-reviews/approve', { json: { ids } }).json(),
 }

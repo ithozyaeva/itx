@@ -1,5 +1,10 @@
 import type { TelegramUser } from './profile'
 
+export interface EventTag {
+  id: number
+  name: string
+}
+
 export interface CommunityEvent {
   id: number
   title: string
@@ -19,6 +24,7 @@ export interface CommunityEvent {
   maxParticipants: number
   hosts: TelegramUser[]
   members: TelegramUser[]
+  eventTags: EventTag[]
 }
 
 export type PlaceType = 'ONLINE' | 'OFFLINE' | 'HYBRID'

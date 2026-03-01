@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
@@ -74,19 +75,18 @@ func (h *MentorHandler) AddReviewFromPlatform(c *fiber.Ctx) error {
 	author := member.FirstName + " " + member.LastName
 
 	review := &models.ReviewOnService{
-		ServiceId: req.ServiceId,
-		Author:    author,
-		Text:      req.Text,
-		Date:      c.Context().Time().Format("2006-01-02"),
+		ServiceId:      req.ServiceId,
+		Author:         author,
+		Text:           req.Text,
+		Date:           c.Context().Time().Format("2006-01-02"),
+		Status:         models.ReviewOnServiceStatusDraft,
+		AuthorMemberId: &member.Id,
 	}
 
 	result, err := h.svc.AddReviewToService(review)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonReviewService, "review_service", int64(result.Id),
-		"Отзыв на услугу ментора")
 
 	return c.JSON(result)
 }
@@ -265,6 +265,30 @@ func (h *MentorHandler) UpdateContacts(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
+}
+
+type UpdateOrderRequest struct {
+	Order int `json:"order"`
+}
+
+func (h *MentorHandler) UpdateOrder(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	req := new(UpdateOrderRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	if err := database.DB.Model(&models.MentorDbShortModel{}).Where("id = ?", id).Update("order", req.Order).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "mentor", id, fmt.Sprintf("order=%d", req.Order))
+
+	return c.JSON(fiber.Map{"ok": true})
 }
 
 type UpdateServicesRequest struct {

@@ -12,13 +12,22 @@ func (Service) TableName() string {
 	return "services"
 }
 
+type ReviewOnServiceStatus string
+
+const (
+	ReviewOnServiceStatusDraft    ReviewOnServiceStatus = "DRAFT"
+	ReviewOnServiceStatusApproved ReviewOnServiceStatus = "APPROVED"
+)
+
 type ReviewOnService struct {
-	Id        int     `json:"id" gorm:"primaryKey"`
-	ServiceId int     `json:"serviceId" gorm:"column:serviceId"`
-	Service   Service `json:"service" gorm:"foreignKey:ServiceId;references:Id"`
-	Author    string  `json:"author"`
-	Text      string  `json:"text"`
-	Date      string  `json:"date"`
+	Id             int                   `json:"id" gorm:"primaryKey"`
+	ServiceId      int                   `json:"serviceId" gorm:"column:serviceId"`
+	Service        Service               `json:"service" gorm:"foreignKey:ServiceId;references:Id"`
+	Author         string                `json:"author"`
+	Text           string                `json:"text"`
+	Date           string                `json:"date"`
+	Status         ReviewOnServiceStatus `json:"status" gorm:"column:status;default:DRAFT"`
+	AuthorMemberId *int64                `json:"authorMemberId" gorm:"column:author_member_id"`
 }
 
 // TableName указывает GORM использовать правильное имя таблицы
@@ -28,14 +37,16 @@ func (ReviewOnService) TableName() string {
 
 // ReviewOnServiceWithMentor представляет отзыв на услугу с информацией о менторе
 type ReviewOnServiceWithMentor struct {
-	Id          int    `json:"id"`
-	ServiceId   int    `json:"serviceId"`
-	ServiceName string `json:"serviceName"`
-	MentorId    int64  `json:"mentorId"`
-	MentorName  string `json:"mentorName"`
-	Author      string `json:"author"`
-	Text        string `json:"text"`
-	Date        string `json:"date"`
+	Id             int                   `json:"id"`
+	ServiceId      int                   `json:"serviceId"`
+	ServiceName    string                `json:"serviceName"`
+	MentorId       int64                 `json:"mentorId"`
+	MentorName     string                `json:"mentorName"`
+	Author         string                `json:"author"`
+	Text           string                `json:"text"`
+	Date           string                `json:"date"`
+	Status         ReviewOnServiceStatus `json:"status"`
+	AuthorMemberId *int64                `json:"authorMemberId"`
 }
 
 // ReviewOnServiceRequest представляет запрос на создание отзыва на услугу

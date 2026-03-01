@@ -131,6 +131,12 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         >
           {{ event.customPlaceType }}
         </Tag>
+        <Tag
+          v-for="tag in event.eventTags"
+          :key="tag.id"
+        >
+          {{ tag.name }}
+        </Tag>
         <template v-if="!isPassedEvent">
           <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="getICS">
             + ICS

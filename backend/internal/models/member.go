@@ -2,6 +2,7 @@ package models
 
 import (
 	"log"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -29,6 +30,7 @@ type Member struct {
 	MemberRoles []MemberRole `json:"-" gorm:"foreignKey:MemberId;references:Id"`
 	Roles       []Role       `json:"roles" gorm:"-:all"`
 	Birthday    *DateOnly    `json:"birthday" gorm:"column:birthday"`
+	CreatedAt   time.Time    `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
 }
 
 type ReviewOnCommunity struct {

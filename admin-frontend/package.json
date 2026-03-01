@@ -12,7 +12,7 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky install"
+    "prepare": "husky install || true"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.87.1",

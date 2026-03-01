@@ -131,6 +131,35 @@ func (h *BulkHandler) BulkApproveReviews(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"approved": len(req.Ids)})
 }
 
+func (h *BulkHandler) BulkApproveServiceReviews(c *fiber.Ctx) error {
+	req := new(BulkIdsRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	if err := database.DB.Model(&models.ReviewOnService{}).Where("id IN ?", req.Ids).Update("status", "APPROVED").Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	var reviews []models.ReviewOnService
+	database.DB.Where("id IN ?", req.Ids).Find(&reviews)
+
+	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
+	go func() {
+		for _, id := range req.Ids {
+			h.auditSvc.Log(actorId, actorName, actorType, models.AuditActionApprove, "review_on_service", id, fmt.Sprintf("bulk approve #%d", id))
+		}
+		for _, review := range reviews {
+			if review.AuthorMemberId != nil {
+				h.pointsSvc.AwardIdempotent(*review.AuthorMemberId, models.PointReasonReviewService, "review_service", int64(review.Id), "Отзыв на услугу ментора")
+				CreateNotification(*review.AuthorMemberId, "review_approved", "Отзыв одобрен", "Ваш отзыв на услугу ментора был одобрен")
+			}
+		}
+	}()
+
+	return c.JSON(fiber.Map{"approved": len(req.Ids)})
+}
+
 func (h *BulkHandler) BulkDeleteMentorsReviews(c *fiber.Ctx) error {
 	req := new(BulkIdsRequest)
 	if err := c.BodyParser(req); err != nil {

@@ -10,8 +10,9 @@ import (
 
 type ReviewOnServiceHandler struct {
 	BaseHandler[models.ReviewOnService]
-	svc      *service.ReviewOnServiceService
-	auditSvc *service.AuditService
+	svc       *service.ReviewOnServiceService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 func NewReviewOnServiceHandler() *ReviewOnServiceHandler {
@@ -20,6 +21,7 @@ func NewReviewOnServiceHandler() *ReviewOnServiceHandler {
 		BaseHandler: *NewBaseHandler[models.ReviewOnService](svc),
 		svc:         svc,
 		auditSvc:    service.NewAuditService(),
+		pointsSvc:   service.NewPointsService(),
 	}
 }
 
@@ -94,6 +96,28 @@ func (h *ReviewOnServiceHandler) Delete(c *fiber.Ctx) error {
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "review_on_service", id, entity.Author)
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// Approve одобряет отзыв на услугу
+func (h *ReviewOnServiceHandler) Approve(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	result, err := h.svc.Approve(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionApprove, "review_on_service", id, result.Author)
+
+	if result.AuthorMemberId != nil {
+		go h.pointsSvc.AwardIdempotent(*result.AuthorMemberId, models.PointReasonReviewService, "review_service", int64(result.Id), "Отзыв на услугу ментора")
+		go CreateNotification(*result.AuthorMemberId, "review_approved", "Отзыв одобрен", "Ваш отзыв на услугу ментора был одобрен")
+	}
+
+	return c.JSON(result)
 }
 
 // GetById получает отзыв по ID

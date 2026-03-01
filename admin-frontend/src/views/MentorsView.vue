@@ -12,10 +12,12 @@ import MentorSearchFiltersComponent from '@/components/MentorSearchFilters.vue'
 import MentorModal from '@/components/modals/MentorModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+import api from '@/lib/api'
 import { bulkService } from '@/services/bulkService'
 import { mentorService } from '@/services/mentorService'
 
@@ -60,6 +62,15 @@ async function handleBulkDelete() {
   mentorService.search()
 }
 
+async function updateOrder(mentorId: number, order: number) {
+  try {
+    await api.patch(`mentors/${mentorId}/order`, { json: { order } })
+  }
+  catch {
+    // ignore
+  }
+}
+
 onMounted(mentorService.search)
 onUnmounted(mentorService.clearPagination)
 </script>
@@ -88,12 +99,13 @@ onUnmounted(mentorService.clearPagination)
                 <TableHead>Должность</TableHead>
                 <TableHead>Опыт</TableHead>
                 <TableHead>Теги</TableHead>
+                <TableHead>Порядок</TableHead>
                 <TableHead class="text-right" />
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow v-if="filteredMentors.length === 0" class="h-24">
-                <TableCell colspan="7" class="text-center">
+                <TableCell colspan="8" class="text-center">
                   Менторы не найдены
                 </TableCell>
               </TableRow>
@@ -114,6 +126,14 @@ onUnmounted(mentorService.clearPagination)
                       {{ tag.title }}
                     </Tag>
                   </div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    class="w-20"
+                    :model-value="mentor.order"
+                    @change="updateOrder(mentor.id, Number(($event.target as HTMLInputElement).value))"
+                  />
                 </TableCell>
                 <TableCell class="text-right">
                   <Button

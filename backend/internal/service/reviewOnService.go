@@ -30,6 +30,10 @@ func (s *ReviewOnServiceService) Search(limit *int, offset *int, filter *reposit
 	}, nil
 }
 
+func (s *ReviewOnServiceService) Approve(id int64) (*models.ReviewOnService, error) {
+	return s.repository.Approve(id)
+}
+
 func (s *ReviewOnServiceService) GetReviewsWithMentorInfo(limit *int, offset *int) (*models.RegistrySearch[models.ReviewOnServiceWithMentor], error) {
 	items, total, err := s.repository.GetReviewsWithMentorInfo(limit, offset)
 	if err != nil {

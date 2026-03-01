@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
+import { Tag, Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
+import Check from '~icons/lucide/check'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
@@ -25,17 +26,18 @@ async function handleBulkDelete() {
   mentorsReviewService.search()
 }
 
+async function handleBulkApprove() {
+  await bulkService.approveMentorsReviews(bulk.ids.value)
+  bulk.clearSelection()
+  mentorsReviewService.search()
+}
+
 onMounted(mentorsReviewService.search)
 onUnmounted(mentorsReviewService.clearPagination)
 
 const selectedReviewId = ref<number>()
 const { open, isOpen } = useModal()
 
-/**
- * Выбор отзыва для редактирования.
- *
- * @param reviewId - ID отзыва.
- */
 function selectReview(reviewId: number) {
   selectedReviewId.value = reviewId
   open()
@@ -68,12 +70,13 @@ function selectReview(reviewId: number) {
                 <TableHead>Автор</TableHead>
                 <TableHead>Текст</TableHead>
                 <TableHead>Дата</TableHead>
+                <TableHead>Статус</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow v-if="mentorsReviewService.items.value.total === 0" class="h-24">
-                <TableCell colspan="7" class="text-center">
+                <TableCell colspan="8" class="text-center">
                   Отзывы не найдены
                 </TableCell>
               </TableRow>
@@ -95,6 +98,20 @@ function selectReview(reviewId: number) {
                 </TableCell>
                 <TableCell>{{ new Date(review.date).toLocaleDateString() }}</TableCell>
                 <TableCell>
+                  <Tag :class="review.status === 'APPROVED' ? 'bg-green-500/10 text-green-600' : 'bg-yellow-500/10 text-yellow-600'">
+                    {{ review.status === 'APPROVED' ? 'Одобрен' : 'На модерации' }}
+                  </Tag>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    v-if="review.status !== 'APPROVED'"
+                    variant="ghost"
+                    size="sm"
+                    class="text-green-600"
+                    @click="mentorsReviewService.approve(review.id)"
+                  >
+                    <Check class="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="sm" @click="selectReview(review.id)">
                     <Pencil class="h-4 w-4" />
                   </Button>
@@ -140,7 +157,10 @@ function selectReview(reviewId: number) {
     <MentorsReviewModal v-model:is-open="isOpen" :review-id="selectedReviewId" @saved="mentorsReviewService.search" />
     <BulkActionBar
       :count="bulk.count.value"
-      :actions="[{ label: 'Удалить', handler: handleBulkDelete }]"
+      :actions="[
+        { label: 'Одобрить', handler: handleBulkApprove },
+        { label: 'Удалить', handler: handleBulkDelete },
+      ]"
       @clear="bulk.clearSelection"
     />
   </AdminLayout>

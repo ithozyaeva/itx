@@ -39,6 +39,10 @@ func (s *EventsService) RemoveMember(eventId int, memberId int) (*models.Event, 
 	return s.repo.RemoveMember(eventId, memberId)
 }
 
+func (s *EventsService) GetUpcomingEvents(limit int) ([]models.Event, error) {
+	return s.repo.GetUpcoming(limit)
+}
+
 func (s *EventsService) GetFutureEvents(now time.Time) ([]models.Event, error) {
 	allEvents, _, err := s.repo.Search(nil, nil, nil, nil)
 	if err != nil {

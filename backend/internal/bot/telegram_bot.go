@@ -123,6 +123,9 @@ func NewTelegramBot() (*TelegramBot, error) {
 }
 
 func (b *TelegramBot) Start() {
+	// Register bot commands menu
+	b.registerCommands()
+
 	// Start birthday checker
 	go b.startBirthdayChecker()
 
@@ -149,8 +152,83 @@ func (b *TelegramBot) Start() {
 			switch update.Message.Command() {
 			case "start":
 				b.handleStartCommand(update.Message)
+			case "mypoints":
+				b.handleMyPointsCommand(update.Message)
+			case "events":
+				b.handleEventsCommand(update.Message)
+			case "help":
+				b.handleHelpCommand(update.Message)
 			}
 		}
+	}
+}
+
+func (b *TelegramBot) registerCommands() {
+	commands := []tgbotapi.BotCommand{
+		{Command: "start", Description: "Авторизация на платформе"},
+		{Command: "mypoints", Description: "Мои баллы"},
+		{Command: "events", Description: "Ближайшие события"},
+		{Command: "help", Description: "Помощь"},
+	}
+	cfg := tgbotapi.NewSetMyCommands(commands...)
+	if _, err := b.bot.Request(cfg); err != nil {
+		log.Printf("Error registering bot commands: %v", err)
+	}
+}
+
+func (b *TelegramBot) handleMyPointsCommand(message *tgbotapi.Message) {
+	member, err := b.member.GetByTelegramID(message.From.ID)
+	if err != nil {
+		b.sendMessage(message.Chat.ID, "Вы не зарегистрированы на платформе. Используйте /start для авторизации.")
+		return
+	}
+
+	pointsSvc := service.NewPointsService()
+	balance, err := pointsSvc.GetBalance(member.Id)
+	if err != nil {
+		b.sendMessage(message.Chat.ID, "Ошибка при получении баллов.")
+		return
+	}
+
+	text := fmt.Sprintf("Ваш баланс: %d баллов", balance)
+	b.sendMessage(message.Chat.ID, text)
+}
+
+func (b *TelegramBot) handleEventsCommand(message *tgbotapi.Message) {
+	events, err := b.eventService.GetUpcomingEvents(3)
+	if err != nil || len(events) == 0 {
+		b.sendMessage(message.Chat.ID, "Ближайших событий не найдено.")
+		return
+	}
+
+	var builder strings.Builder
+	builder.WriteString("<b>Ближайшие события:</b>\n\n")
+	for _, event := range events {
+		dateStr := formatEventDateStr(event.Date, event.Timezone)
+		tzLabel := formatTimezoneLabel(event.Timezone)
+		builder.WriteString(fmt.Sprintf("📆 <b>%s</b>\n%s (%s)\n\n", event.Title, dateStr, tzLabel))
+	}
+
+	msg := tgbotapi.NewMessage(message.Chat.ID, builder.String())
+	msg.ParseMode = "HTML"
+	b.bot.Send(msg)
+}
+
+func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
+	text := "Доступные команды:\n" +
+		"/start - Авторизация на платформе\n" +
+		"/mypoints - Посмотреть баланс баллов\n" +
+		"/events - Ближайшие события\n" +
+		"/help - Помощь"
+	b.sendMessage(message.Chat.ID, text)
+}
+
+// SendDirectMessage отправляет личное сообщение пользователю по chatID
+func (b *TelegramBot) SendDirectMessage(chatID int64, text string) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("Error sending direct message to %d: %v", chatID, err)
 	}
 }
 

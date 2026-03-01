@@ -46,25 +46,41 @@ func (r *ReviewOnServiceRepository) Search(limit *int, offset *int, filter *Sear
 	return reviews, count, nil
 }
 
-// GetReviewsWithMentorInfo получает отзывы с информацией о менторе
+// Approve одобряет отзыв
+func (r *ReviewOnServiceRepository) Approve(id int64) (*models.ReviewOnService, error) {
+	var review models.ReviewOnService
+	if err := database.DB.Preload("Service").First(&review, id).Error; err != nil {
+		return nil, err
+	}
+	review.Status = models.ReviewOnServiceStatusApproved
+	if err := database.DB.Save(&review).Error; err != nil {
+		return nil, err
+	}
+	return &review, nil
+}
+
+// GetReviewsWithMentorInfo получает отзывы с информацией о менторе (только одобренные)
 func (r *ReviewOnServiceRepository) GetReviewsWithMentorInfo(limit *int, offset *int) ([]models.ReviewOnServiceWithMentor, int64, error) {
 	var reviews []models.ReviewOnServiceWithMentor
 	var count int64
 
 	query := database.DB.Table("\"reviewOnService\" AS r").
 		Select(`
-			r.id, 
-			r."serviceId", 
-			s.name as service_name, 
+			r.id,
+			r."serviceId",
+			s.name as service_name,
 			s."ownerId" as mentor_id,
 			m.username as mentor_name,
-			r.author, 
-			r.text, 
-			r.date
+			r.author,
+			r.text,
+			r.date,
+			r.status,
+			r.author_member_id
 		`).
 		Joins(`JOIN services s ON r."serviceId" = s.id`).
 		Joins(`JOIN mentors mt ON s."ownerId" = mt.id`).
-		Joins(`JOIN members m ON mt."memberId" = m.id`)
+		Joins(`JOIN members m ON mt."memberId" = m.id`).
+		Where(`r.status = ?`, "APPROVED")
 
 	// Сначала считаем общее количество
 	if err := query.Count(&count).Error; err != nil {

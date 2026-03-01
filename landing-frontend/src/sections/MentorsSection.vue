@@ -93,6 +93,20 @@ const filteredMentors = computed(() => {
   )
 })
 
+// Приоритет контактов: Telegram(1) > LinkedIn(5) > GitHub(6) > Email(2) > VK(7) > Сайт(8) > Телефон(3) > Другое(4)
+const contactPriority = [1, 5, 6, 2, 7, 8, 3, 4]
+
+function getBestContactLink(contacts: Mentor['contacts']): string {
+  if (!contacts || contacts.length === 0)
+    return '#'
+  for (const type of contactPriority) {
+    const contact = contacts.find(c => c.type === type)
+    if (contact?.link)
+      return contact.link
+  }
+  return contacts[0]?.link ?? '#'
+}
+
 const displayedMentors = computed(() =>
   filteredMentors.value.slice(0, visibleCount.value).map((mentor: Mentor) => ({
     id: mentor.id,
@@ -101,7 +115,7 @@ const displayedMentors = computed(() =>
     position: mentor.occupation,
     description: mentor.experience,
     labels: mentor.profTags.map(tag => tag.title),
-    link: mentor.contacts.find(c => c.type === 1)?.link ?? '#',
+    link: getBestContactLink(mentor.contacts),
   })),
 )
 

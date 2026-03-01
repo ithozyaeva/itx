@@ -75,6 +75,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	mentors.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentors), mentorHandler.Update)
 	mentors.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentors), mentorHandler.Delete)
 	mentors.Post("/review", mentorHandler.AddReviewToService)
+	mentors.Patch("/:id/order", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentors), mentorHandler.UpdateOrder)
 	mentors.Get("/:id/services", mentorHandler.GetServices)
 
 	// Здесь будут защищенные маршруты
@@ -114,6 +115,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	reviewsOnService.Get("/", reviewOnServiceHandler.Search)
 	reviewsOnService.Get("/:id", reviewOnServiceHandler.GetById)
 	reviewsOnService.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), reviewOnServiceHandler.CreateReview)
+	reviewsOnService.Post("/:id/approve", authMiddleware.RequirePermission(models.PermissionCanApproveAdminMentorsReview), reviewOnServiceHandler.Approve)
 	reviewsOnService.Patch("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), reviewOnServiceHandler.Update)
 	reviewsOnService.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), reviewOnServiceHandler.Delete)
 
@@ -140,6 +142,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	bulk.Post("/reviews/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminReviews), bulkHandler.BulkDeleteReviews)
 	bulk.Post("/reviews/approve", authMiddleware.RequirePermission(models.PermissionCanApprovedAdminReviews), bulkHandler.BulkApproveReviews)
 	bulk.Post("/mentors-reviews/delete", authMiddleware.RequirePermission(models.PermissionCanEditAdminMentorsReview), bulkHandler.BulkDeleteMentorsReviews)
+	bulk.Post("/mentors-reviews/approve", authMiddleware.RequirePermission(models.PermissionCanApproveAdminMentorsReview), bulkHandler.BulkApproveServiceReviews)
 
 	// Маршруты для баллов (админ)
 	pointsHandler := handler.NewPointsHandler()
@@ -151,6 +154,13 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	// Маршруты для журнала действий
 	auditLogHandler := handler.NewAuditLogHandler()
 	protected.Get("/audit-logs", authMiddleware.RequirePermission(models.PermissionCanViewAdminAuditLogs), auditLogHandler.Search)
+
+	// Маршруты для реферальных ссылок (админ)
+	referalHandler := handler.NewReferalLinkHandler()
+	adminReferals := protected.Group("/admin-referals")
+	adminReferals.Get("/", referalHandler.AdminSearch)
+	adminReferals.Get("/:id", referalHandler.AdminGetById)
+	adminReferals.Delete("/:id", referalHandler.AdminDelete)
 
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
@@ -215,6 +225,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	resumes := protected.Group("/resumes")
 	resumes.Post("/", resumeHandler.Upload)
 	resumes.Get("/me", resumeHandler.ListMy)
+	resumes.Get("/:id/download", resumeHandler.DownloadMy)
 	resumes.Patch("/:id", resumeHandler.UpdateMy)
 	resumes.Delete("/:id", resumeHandler.DeleteMy)
 

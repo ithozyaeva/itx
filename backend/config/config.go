@@ -22,6 +22,7 @@ type Config struct {
 	TelegramMainChatID int64
 	PublicDomain       string
 	BackendDomain      string
+	AllowedOrigins     string
 	S3                 S3Config
 
 	AlertReminderIntervalMinutes       int64
@@ -89,6 +90,16 @@ func LoadConfig() {
 		alertScheduledMinute = 0
 	}
 
+	jwtSecret := viper.GetString("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "jwt_secret"
+	}
+
+	allowedOrigins := viper.GetString("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "*"
+	}
+
 	CFG = &Config{
 		Database: DatabaseConfig{
 			Host:     viper.GetString("DB_HOST"),
@@ -97,12 +108,13 @@ func LoadConfig() {
 			Password: viper.GetString("DB_PASSWORD"),
 			Name:     viper.GetString("DB_NAME"),
 		},
-		JwtSecret:          []byte("jwt_secret"),
+		JwtSecret:          []byte(jwtSecret),
 		Port:               viper.GetString("PORT"),
 		TelegramToken:      viper.GetString("TELEGRAM_BOT_TOKEN"),
 		TelegramMainChatID: viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
 		PublicDomain:       viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
+		AllowedOrigins:     allowedOrigins,
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,

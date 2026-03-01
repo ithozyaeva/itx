@@ -157,6 +157,7 @@ func (h *ReviewOnCommunityHandler) Approve(c *fiber.Ctx) error {
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionApprove, "review_on_community", int64(id), result.Text)
 	go h.pointsSvc.AwardIdempotent(int64(result.AuthorId), models.PointReasonReviewCommunity, "review_community", int64(result.Id), "Отзыв о сообществе")
+	go CreateNotification(int64(result.AuthorId), "review_approved", "Отзыв одобрен", "Ваш отзыв о сообществе был одобрен")
 
 	return c.JSON(result)
 }

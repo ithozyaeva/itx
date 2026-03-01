@@ -176,6 +176,10 @@ func sanitizeFileName(name string) string {
 	return replacer.Replace(name)
 }
 
+func (s *ResumeService) GetByIdForMember(id, tgID int64) (*models.Resume, error) {
+	return s.repo.GetByIDAndTelegram(id, tgID)
+}
+
 func (s *ResumeService) GetByIdWithMember(id int64) (*models.Resume, error) {
 	return s.repo.GetByIdWithMember(id)
 }
