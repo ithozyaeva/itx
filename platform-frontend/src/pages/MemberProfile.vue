@@ -22,8 +22,11 @@ function pluralizeDays(n: number): string {
 
 const daysSinceJoined = computed(() => {
   if (!profile.value?.member.createdAt)
-    return 1
-  const diff = Date.now() - new Date(profile.value.member.createdAt).getTime()
+    return null
+  const date = new Date(profile.value.member.createdAt)
+  if (date.getFullYear() <= 1)
+    return null
+  const diff = Date.now() - date.getTime()
   return Math.max(1, Math.floor(diff / 86400000))
 })
 
@@ -116,7 +119,10 @@ onMounted(loadProfile)
             </div>
           </div>
         </div>
-        <div class="bg-card rounded-3xl border p-6">
+        <div
+          v-if="daysSinceJoined"
+          class="bg-card rounded-3xl border p-6"
+        >
           <div class="text-2xl font-bold">
             {{ daysSinceJoined }}
           </div>
