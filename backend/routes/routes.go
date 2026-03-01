@@ -243,4 +243,10 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	points := protected.Group("/points")
 	points.Get("/me", pointsHandler.GetMyPoints)
 	points.Get("/leaderboard", pointsHandler.GetLeaderboard)
+
+	// Маршруты для достижений
+	achievementHandler := handler.NewAchievementHandler()
+	achievements := protected.Group("/achievements")
+	achievements.Get("/me", achievementHandler.GetMyAchievements)
+	achievements.Get("/member/:id", achievementHandler.GetMemberAchievements)
 }
