@@ -178,6 +178,11 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 		}
 		existingUser = createdUser
 	} else {
+		existingUser.Username = req.Username
+		existingUser.FirstName = req.FirstName
+		existingUser.LastName = req.LastName
+		h.memberService.Update(existingUser)
+
 		_, err := h.authService.CreateOrUpdateToken(req.UserID, req.Token)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
