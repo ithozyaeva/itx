@@ -52,7 +52,7 @@ export function toDatetimeLocal(isoString: string, timezone = 'UTC') {
  */
 export function datetimeLocalToISO(datetimeLocal: string, timezone: string): string {
   const offsetMs = parseTimezoneOffsetMinutes(timezone) * 60 * 1000
-  const asUtc = new Date(datetimeLocal + 'Z')
+  const asUtc = new Date(`${datetimeLocal}Z`)
   const utc = new Date(asUtc.getTime() - offsetMs)
   return utc.toISOString()
 }

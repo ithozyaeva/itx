@@ -113,7 +113,9 @@ const chartOptions = {
       <div v-if="chartStats" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <Card data-reveal>
           <CardHeader class="p-3 lg:p-6">
-            <CardTitle class="text-sm lg:text-base">Рост участников</CardTitle>
+            <CardTitle class="text-sm lg:text-base">
+              Рост участников
+            </CardTitle>
           </CardHeader>
           <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
             <div class="h-48 lg:h-64">
@@ -124,7 +126,9 @@ const chartOptions = {
 
         <Card data-reveal>
           <CardHeader class="p-3 lg:p-6">
-            <CardTitle class="text-sm lg:text-base">Посещаемость событий</CardTitle>
+            <CardTitle class="text-sm lg:text-base">
+              Посещаемость событий
+            </CardTitle>
           </CardHeader>
           <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
             <div class="h-48 lg:h-64">
