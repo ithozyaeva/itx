@@ -1,0 +1,43 @@
+name: Setup S3 Environment Variables
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add S3 vars to backend/.env on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: S3_ENDPOINT,S3_REGION,S3_BUCKET,S3_ACCESS_KEY,S3_SECRET_KEY
+          script: |
+            cd ${{ secrets.PROJECT_PROD_PATH }}
+
+            # Remove old S3 vars if present
+            sed -i '/^S3_ENDPOINT=/d' backend/.env
+            sed -i '/^S3_REGION=/d' backend/.env
+            sed -i '/^S3_BUCKET=/d' backend/.env
+            sed -i '/^S3_ACCESS_KEY=/d' backend/.env
+            sed -i '/^S3_SECRET_KEY=/d' backend/.env
+
+            # Append new S3 vars
+            echo "" >> backend/.env
+            echo "S3_ENDPOINT=$S3_ENDPOINT" >> backend/.env
+            echo "S3_REGION=$S3_REGION" >> backend/.env
+            echo "S3_BUCKET=$S3_BUCKET" >> backend/.env
+            echo "S3_ACCESS_KEY=$S3_ACCESS_KEY" >> backend/.env
+            echo "S3_SECRET_KEY=$S3_SECRET_KEY" >> backend/.env
+
+            # Restart backend
+            docker compose -f docker-compose.prod.yml up -d --build backend
+        env:
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
