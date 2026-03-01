@@ -4,7 +4,6 @@ import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -56,9 +55,6 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	go h.pointsSvc.GiveForAction(author.Id, models.PointReasonReviewCommunity, "review_community", time.Now().UnixNano(),
-		"Отзыв о сообществе")
 
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -160,6 +156,7 @@ func (h *ReviewOnCommunityHandler) Approve(c *fiber.Ctx) error {
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionApprove, "review_on_community", int64(id), result.Text)
+	go h.pointsSvc.AwardIdempotent(int64(result.AuthorId), models.PointReasonReviewCommunity, "review_community", int64(result.Id), "Отзыв о сообществе")
 
 	return c.JSON(result)
 }
