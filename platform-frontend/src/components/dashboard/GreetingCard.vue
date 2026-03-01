@@ -1,11 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useUser, useUserLevel } from '@/composables/useUser'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
 
 const user = useUser()
 const { level, levelIndex } = useUserLevel()
 
-const daysSinceJoined = 1
+function pluralizeDays(n: number): string {
+  if (n % 10 === 1 && n % 100 !== 11)
+    return 'день'
+  if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20))
+    return 'дня'
+  return 'дней'
+}
+
+const daysSinceJoined = computed(() => {
+  if (!user.value?.createdAt)
+    return 1
+  const created = new Date(user.value.createdAt)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.max(diff, 1)
+})
 </script>
 
 <template>
@@ -13,10 +29,10 @@ const daysSinceJoined = 1
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold">
-          Привет, {{ user?.firstName }} 👋
+          Привет, {{ user?.firstName }}
         </h1>
         <p class="text-muted-foreground mt-1">
-          Ты в IT-Хозяевах уже {{ daysSinceJoined }} {{ daysSinceJoined === 1 ? 'день' : 'дней' }}
+          Ты в IT-Хозяевах уже {{ daysSinceJoined }} {{ pluralizeDays(daysSinceJoined) }}
         </p>
       </div>
       <div class="flex items-center gap-2">

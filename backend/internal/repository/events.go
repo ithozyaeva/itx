@@ -92,6 +92,18 @@ func (r *EventRepository) GetById(id int64) (*models.Event, error) {
 	return &event, nil
 }
 
+func (r *EventRepository) GetUpcoming(limit int) ([]models.Event, error) {
+	var events []models.Event
+	if err := database.DB.
+		Where("date >= CURRENT_TIMESTAMP").
+		Order("date ASC").
+		Limit(limit).
+		Find(&events).Error; err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
 func (r *EventRepository) AddMember(eventId int, memberId int) (*models.Event, error) {
 	entity, err := r.GetById(int64(eventId))
 	if err != nil {

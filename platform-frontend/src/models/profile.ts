@@ -10,6 +10,7 @@ export interface TelegramUser {
   bio: string
   avatarUrl: string
   roles: UserRole[]
+  createdAt?: string
 }
 
 export interface Mentor extends TelegramUser {

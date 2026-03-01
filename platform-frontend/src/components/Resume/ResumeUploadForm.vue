@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Resume, WorkFormat } from '@/models/resume'
 import { Typography } from 'itx-ui-kit'
-import { FileText, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-vue-next'
+import { Download, FileText, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
@@ -126,6 +126,16 @@ async function deleteResume(resume: Resume) {
   }
 }
 
+async function downloadResume(resume: Resume) {
+  try {
+    const data = await resumeService.download(resume.id)
+    window.open(data.url, '_blank')
+  }
+  catch (error) {
+    handleError(error)
+  }
+}
+
 function formatWorkFormat(format?: WorkFormat) {
   if (!format)
     return 'Не указано'
@@ -200,6 +210,9 @@ function formatWorkFormat(format?: WorkFormat) {
               </p>
             </div>
             <div class="flex gap-2">
+              <Button variant="secondary" size="sm" class="gap-2" @click="downloadResume(resume)">
+                <Download class="h-4 w-4" />
+              </Button>
               <Button variant="secondary" size="sm" class="gap-2" @click="startEdit(resume)">
                 <Pencil class="h-4 w-4" />
               </Button>

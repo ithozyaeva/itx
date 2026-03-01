@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PointsSummary } from '@/models/points'
 import { Typography } from 'itx-ui-kit'
-import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageSquare, Star, User } from 'lucide-vue-next'
+import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageSquare, Mic, Share2, Star, User } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useToast } from '@/components/ui/toast'
@@ -43,10 +43,18 @@ const rewards = [
 
 const quests = [
   { label: 'Запишись на событие', to: '/events', points: 10, icon: Calendar, reason: 'event_attend' },
+  { label: 'Проведи событие', to: '/events', points: 25, icon: Mic, reason: 'event_host' },
   { label: 'Оставь отзыв на сообщество', to: '/my-reviews', points: 15, icon: MessageSquare, reason: 'review_community' },
   { label: 'Загрузи резюме', to: '/resumes', points: 10, icon: FileText, reason: 'resume_upload' },
   { label: 'Заполни профиль полностью', to: '/me', points: 20, icon: User, reason: 'profile_complete' },
   { label: 'Создай реферальную ссылку', to: '/referals', points: 5, icon: Folder, reason: 'referal_create' },
+  { label: 'Получи конверсию по рефералу', to: '/referals', points: 30, icon: Share2, reason: 'referal_conversion' },
+]
+
+const weeklyQuests = [
+  { label: 'Еженедельная активность', points: 5, reason: 'weekly_activity' },
+  { label: '3+ события за месяц', points: 30, reason: 'monthly_active' },
+  { label: 'Серия 4 недели подряд', points: 50, reason: 'streak_4weeks' },
 ]
 
 const completedReasons = computed(() => {
@@ -194,6 +202,55 @@ onMounted(() => {
             {{ isQuestCompleted(quest.reason) ? '' : '+' }}{{ quest.points }}
           </div>
         </RouterLink>
+      </div>
+
+      <!-- Еженедельные задания -->
+      <Typography
+        variant="h3"
+        as="h2"
+        class="mb-4"
+      >
+        Бонусы за активность
+      </Typography>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+        <div
+          v-for="quest in weeklyQuests"
+          :key="quest.reason"
+          class="flex items-center gap-3 rounded-2xl p-4 transition-colors"
+          :class="isQuestCompleted(quest.reason)
+            ? 'bg-green-500/5 border border-green-500/30'
+            : 'bg-card border border-border'"
+        >
+          <div
+            class="flex items-center justify-center w-10 h-10 rounded-full shrink-0"
+            :class="isQuestCompleted(quest.reason) ? 'bg-green-500/20' : 'bg-primary/10'"
+          >
+            <CheckCircle
+              v-if="isQuestCompleted(quest.reason)"
+              class="h-5 w-5 text-green-500"
+            />
+            <Star
+              v-else
+              class="h-5 w-5 text-primary"
+            />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div
+              class="font-medium text-sm"
+              :class="isQuestCompleted(quest.reason) ? 'line-through text-muted-foreground' : ''"
+            >
+              {{ quest.label }}
+            </div>
+          </div>
+          <div
+            class="shrink-0 text-xs font-bold px-2 py-1 rounded-full"
+            :class="isQuestCompleted(quest.reason)
+              ? 'text-green-500 bg-green-500/10'
+              : 'text-yellow-500 bg-yellow-500/10'"
+          >
+            {{ isQuestCompleted(quest.reason) ? '' : '+' }}{{ quest.points }}
+          </div>
+        </div>
       </div>
 
       <!-- За что начисляются баллы -->

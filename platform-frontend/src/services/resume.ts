@@ -41,4 +41,9 @@ export const resumeService = {
   async delete(id: number) {
     await apiClient.delete(`resumes/${id}`)
   },
+
+  async download(id: number) {
+    const response = await apiClient.get(`resumes/${id}/download`)
+    return response.json<{ url: string }>()
+  },
 }

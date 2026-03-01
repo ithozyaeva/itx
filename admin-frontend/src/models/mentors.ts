@@ -74,6 +74,8 @@ export interface Contacts {
  * @prop Text - текст отзыва.
  * @prop Date - дата отзыва.
  */
+export type ReviewOnServiceStatus = 'DRAFT' | 'APPROVED'
+
 export interface ReviewOnService {
   id: number
   author: string
@@ -82,6 +84,8 @@ export interface ReviewOnService {
   date: string
   serviceName: string
   mentorName: string
+  status: ReviewOnServiceStatus
+  authorMemberId?: number
 }
 
 export const CONTACT_TYPES = [

@@ -156,6 +156,25 @@ func (h *ResumeHandler) DeleteMy(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *ResumeHandler) DownloadMy(c *fiber.Ctx) error {
+	member, ok := c.Locals("member").(*models.Member)
+	if !ok {
+		return fiber.ErrUnauthorized
+	}
+
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Некорректный идентификатор"})
+	}
+
+	resume, err := h.svc.GetByIdForMember(id, member.TelegramID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, err.Error())
+	}
+
+	return c.JSON(fiber.Map{"url": resume.FilePath})
+}
+
 func (h *ResumeHandler) AdminList(c *fiber.Ctx) error {
 	limit := queryIntPointer(c.Query("limit"))
 	offset := queryIntPointer(c.Query("offset"))

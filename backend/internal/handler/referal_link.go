@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strconv"
 	"strings"
 
 	"ithozyeva/internal/models"
@@ -133,16 +134,73 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Начисляем баллы автору реферальной ссылки за конверсию
+	// Начисляем баллы автору реферальной ссылки за конверсию и отправляем уведомление
 	go func() {
 		link, err := h.service.GetById(req.ReferralLinkId)
 		if err == nil && link.AuthorId != 0 {
 			h.pointsSvc.AwardIdempotent(link.AuthorId, models.PointReasonReferalConversion, "referal_conversion", req.ReferralLinkId,
 				"Конверсия по реферальной ссылке")
+			CreateNotification(link.AuthorId, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
 		}
 	}()
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *ReferalLinkHandler) AdminSearch(c *fiber.Ctx) error {
+	req := new(ReferalLinkSearchRequest)
+	if err := c.QueryParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	filter := make(repository.SearchFilter)
+
+	if req.Grade != nil && *req.Grade != "" {
+		filter["grade = ?"] = *req.Grade
+	}
+	if req.Company != nil && *req.Company != "" {
+		filter["company ILIKE ?"] = "%" + *req.Company + "%"
+	}
+	if req.Status != nil && *req.Status != "" {
+		filter["status = ?"] = *req.Status
+	}
+
+	result, err := h.service.Search(req.Limit, req.Offset, &filter, nil)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(result)
+}
+
+func (h *ReferalLinkHandler) AdminGetById(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	result, err := h.service.GetById(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Ссылка не найдена"})
+	}
+
+	return c.JSON(result)
+}
+
+func (h *ReferalLinkHandler) AdminDelete(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	err = h.svc.Delete(&models.ReferalLink{Id: id})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "referal_link", id, "admin delete")
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {

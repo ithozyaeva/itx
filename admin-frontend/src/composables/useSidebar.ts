@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
 import Home from '~icons/lucide/home'
+import Link from '~icons/lucide/link'
 import MessageSquare from '~icons/lucide/message-square'
 import Star from '~icons/lucide/star'
 import User from '~icons/lucide/user'
@@ -66,6 +67,11 @@ export function useSidebar() {
       path: '/resumes',
       icon: FileText,
       requiredPermission: 'can_view_admin_resumes',
+    },
+    {
+      title: 'Рефералы',
+      path: '/referrals',
+      icon: Link,
     },
     {
       title: 'Баллы',
