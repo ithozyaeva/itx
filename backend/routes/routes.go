@@ -249,4 +249,17 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	achievements := protected.Group("/achievements")
 	achievements.Get("/me", achievementHandler.GetMyAchievements)
 	achievements.Get("/member/:id", achievementHandler.GetMemberAchievements)
+
+	// Маршруты для биржи заданий
+	taskExchangeHandler := handler.NewTaskExchangeHandler()
+	tasks := protected.Group("/tasks")
+	tasks.Get("/", taskExchangeHandler.Search)
+	tasks.Get("/:id", taskExchangeHandler.GetById)
+	tasks.Post("/", taskExchangeHandler.Create)
+	tasks.Post("/:id/assign", taskExchangeHandler.Assign)
+	tasks.Post("/:id/unassign", taskExchangeHandler.Unassign)
+	tasks.Post("/:id/done", taskExchangeHandler.MarkDone)
+	tasks.Post("/:id/approve", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Approve)
+	tasks.Post("/:id/reject", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Reject)
+	tasks.Delete("/:id", taskExchangeHandler.Delete)
 }
