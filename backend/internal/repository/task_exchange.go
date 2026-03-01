@@ -60,43 +60,48 @@ func (r *TaskExchangeRepository) Create(task *models.TaskExchange) (*models.Task
 	return r.GetById(task.Id)
 }
 
-func (r *TaskExchangeRepository) Assign(id int64, assigneeId int64) error {
-	return database.DB.Model(&models.TaskExchange{}).
-		Where("id = ?", id).
+func (r *TaskExchangeRepository) Assign(id int64, assigneeId int64) (int64, error) {
+	result := database.DB.Model(&models.TaskExchange{}).
+		Where("id = ? AND status = ?", id, models.TaskStatusOpen).
 		Updates(map[string]interface{}{
 			"assignee_id": assigneeId,
 			"status":      models.TaskStatusInProgress,
-		}).Error
+		})
+	return result.RowsAffected, result.Error
 }
 
-func (r *TaskExchangeRepository) Unassign(id int64) error {
-	return database.DB.Model(&models.TaskExchange{}).
-		Where("id = ?", id).
+func (r *TaskExchangeRepository) Unassign(id int64) (int64, error) {
+	result := database.DB.Model(&models.TaskExchange{}).
+		Where("id = ? AND status = ?", id, models.TaskStatusInProgress).
 		Updates(map[string]interface{}{
 			"assignee_id": nil,
 			"status":      models.TaskStatusOpen,
-		}).Error
+		})
+	return result.RowsAffected, result.Error
 }
 
-func (r *TaskExchangeRepository) MarkDone(id int64) error {
-	return database.DB.Model(&models.TaskExchange{}).
-		Where("id = ?", id).
-		Update("status", models.TaskStatusDone).Error
+func (r *TaskExchangeRepository) MarkDone(id int64) (int64, error) {
+	result := database.DB.Model(&models.TaskExchange{}).
+		Where("id = ? AND status = ?", id, models.TaskStatusInProgress).
+		Update("status", models.TaskStatusDone)
+	return result.RowsAffected, result.Error
 }
 
-func (r *TaskExchangeRepository) Approve(id int64) error {
-	return database.DB.Model(&models.TaskExchange{}).
-		Where("id = ?", id).
-		Update("status", models.TaskStatusApproved).Error
+func (r *TaskExchangeRepository) Approve(id int64) (int64, error) {
+	result := database.DB.Model(&models.TaskExchange{}).
+		Where("id = ? AND status = ?", id, models.TaskStatusDone).
+		Update("status", models.TaskStatusApproved)
+	return result.RowsAffected, result.Error
 }
 
-func (r *TaskExchangeRepository) Reject(id int64) error {
-	return database.DB.Model(&models.TaskExchange{}).
-		Where("id = ?", id).
+func (r *TaskExchangeRepository) Reject(id int64) (int64, error) {
+	result := database.DB.Model(&models.TaskExchange{}).
+		Where("id = ? AND status = ?", id, models.TaskStatusDone).
 		Updates(map[string]interface{}{
 			"assignee_id": nil,
 			"status":      models.TaskStatusOpen,
-		}).Error
+		})
+	return result.RowsAffected, result.Error
 }
 
 func (r *TaskExchangeRepository) Delete(id int64) error {

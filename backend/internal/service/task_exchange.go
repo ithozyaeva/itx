@@ -38,16 +38,17 @@ func (s *TaskExchangeService) Create(task *models.TaskExchange) (*models.TaskExc
 func (s *TaskExchangeService) Assign(id int64, memberId int64) (*models.TaskExchange, error) {
 	task, err := s.repo.GetById(id)
 	if err != nil {
-		return nil, err
-	}
-	if task.Status != models.TaskStatusOpen {
-		return nil, errors.New("task is not open")
+		return nil, errors.New("задание не найдено")
 	}
 	if task.CreatorId == memberId {
-		return nil, errors.New("cannot assign own task")
+		return nil, errors.New("нельзя взять своё задание")
 	}
-	if err := s.repo.Assign(id, memberId); err != nil {
-		return nil, err
+	rows, err := s.repo.Assign(id, memberId)
+	if err != nil {
+		return nil, errors.New("не удалось взять задание")
+	}
+	if rows == 0 {
+		return nil, errors.New("задание недоступно для взятия")
 	}
 	return s.repo.GetById(id)
 }
@@ -55,16 +56,17 @@ func (s *TaskExchangeService) Assign(id int64, memberId int64) (*models.TaskExch
 func (s *TaskExchangeService) Unassign(id int64, memberId int64) (*models.TaskExchange, error) {
 	task, err := s.repo.GetById(id)
 	if err != nil {
-		return nil, err
-	}
-	if task.Status != models.TaskStatusInProgress {
-		return nil, errors.New("task is not in progress")
+		return nil, errors.New("задание не найдено")
 	}
 	if task.AssigneeId == nil || *task.AssigneeId != memberId {
-		return nil, errors.New("you are not the assignee")
+		return nil, errors.New("вы не являетесь исполнителем")
 	}
-	if err := s.repo.Unassign(id); err != nil {
-		return nil, err
+	rows, err := s.repo.Unassign(id)
+	if err != nil {
+		return nil, errors.New("не удалось отказаться от задания")
+	}
+	if rows == 0 {
+		return nil, errors.New("задание недоступно для отказа")
 	}
 	return s.repo.GetById(id)
 }
@@ -72,44 +74,39 @@ func (s *TaskExchangeService) Unassign(id int64, memberId int64) (*models.TaskEx
 func (s *TaskExchangeService) MarkDone(id int64, memberId int64) (*models.TaskExchange, error) {
 	task, err := s.repo.GetById(id)
 	if err != nil {
-		return nil, err
-	}
-	if task.Status != models.TaskStatusInProgress {
-		return nil, errors.New("task is not in progress")
+		return nil, errors.New("задание не найдено")
 	}
 	if task.AssigneeId == nil || *task.AssigneeId != memberId {
-		return nil, errors.New("you are not the assignee")
+		return nil, errors.New("вы не являетесь исполнителем")
 	}
-	if err := s.repo.MarkDone(id); err != nil {
-		return nil, err
+	rows, err := s.repo.MarkDone(id)
+	if err != nil {
+		return nil, errors.New("не удалось отметить задание выполненным")
+	}
+	if rows == 0 {
+		return nil, errors.New("задание не в работе")
 	}
 	return s.repo.GetById(id)
 }
 
 func (s *TaskExchangeService) Approve(id int64) (*models.TaskExchange, error) {
-	task, err := s.repo.GetById(id)
+	rows, err := s.repo.Approve(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("не удалось одобрить задание")
 	}
-	if task.Status != models.TaskStatusDone {
-		return nil, errors.New("task is not done")
-	}
-	if err := s.repo.Approve(id); err != nil {
-		return nil, err
+	if rows == 0 {
+		return nil, errors.New("задание не на проверке")
 	}
 	return s.repo.GetById(id)
 }
 
 func (s *TaskExchangeService) Reject(id int64) (*models.TaskExchange, error) {
-	task, err := s.repo.GetById(id)
+	rows, err := s.repo.Reject(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("не удалось отклонить задание")
 	}
-	if task.Status != models.TaskStatusDone {
-		return nil, errors.New("task is not done")
-	}
-	if err := s.repo.Reject(id); err != nil {
-		return nil, err
+	if rows == 0 {
+		return nil, errors.New("задание не на проверке")
 	}
 	return s.repo.GetById(id)
 }
@@ -117,16 +114,16 @@ func (s *TaskExchangeService) Reject(id int64) (*models.TaskExchange, error) {
 func (s *TaskExchangeService) Delete(id int64, memberId int64, isAdmin bool) error {
 	task, err := s.repo.GetById(id)
 	if err != nil {
-		return err
+		return errors.New("задание не найдено")
 	}
 	if isAdmin {
 		return s.repo.Delete(id)
 	}
 	if task.CreatorId != memberId {
-		return errors.New("only creator can delete")
+		return errors.New("только автор может удалить задание")
 	}
 	if task.Status != models.TaskStatusOpen {
-		return errors.New("can only delete open tasks")
+		return errors.New("можно удалить только открытые задания")
 	}
 	return s.repo.Delete(id)
 }

@@ -93,7 +93,8 @@ func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
 
 	task, err := h.svc.Assign(id, member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task assign error (task=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось взять задание"})
 	}
 
 	return c.JSON(task)
@@ -108,7 +109,8 @@ func (h *TaskExchangeHandler) Unassign(c *fiber.Ctx) error {
 
 	task, err := h.svc.Unassign(id, member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task unassign error (task=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отказаться от задания"})
 	}
 
 	return c.JSON(task)
@@ -123,7 +125,8 @@ func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
 
 	task, err := h.svc.MarkDone(id, member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task markDone error (task=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отметить задание выполненным"})
 	}
 
 	// Notify creator that task is done
@@ -145,7 +148,8 @@ func (h *TaskExchangeHandler) Approve(c *fiber.Ctx) error {
 
 	task, err := h.svc.Approve(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task approve error (task=%d): %v", id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось одобрить задание"})
 	}
 
 	// Award points
@@ -191,7 +195,8 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 
 	task, err := h.svc.Reject(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task reject error (task=%d): %v", id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отклонить задание"})
 	}
 
 	// Notify assignee about rejection
@@ -224,7 +229,8 @@ func (h *TaskExchangeHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(id, member.Id, isAdmin); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Task delete error (task=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось удалить задание"})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
