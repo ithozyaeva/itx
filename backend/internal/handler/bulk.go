@@ -10,12 +10,14 @@ import (
 )
 
 type BulkHandler struct {
-	auditSvc *service.AuditService
+	auditSvc  *service.AuditService
+	pointsSvc *service.PointsService
 }
 
 func NewBulkHandler() *BulkHandler {
 	return &BulkHandler{
-		auditSvc: service.NewAuditService(),
+		auditSvc:  service.NewAuditService(),
+		pointsSvc: service.NewPointsService(),
 	}
 }
 
@@ -113,10 +115,16 @@ func (h *BulkHandler) BulkApproveReviews(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	var reviews []models.ReviewOnCommunity
+	database.DB.Where("id IN ?", req.Ids).Find(&reviews)
+
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
 	go func() {
 		for _, id := range req.Ids {
 			h.auditSvc.Log(actorId, actorName, actorType, models.AuditActionApprove, "review_on_community", id, fmt.Sprintf("bulk approve #%d", id))
+		}
+		for _, review := range reviews {
+			h.pointsSvc.AwardIdempotent(int64(review.AuthorId), models.PointReasonReviewCommunity, "review_community", int64(review.Id), "Отзыв о сообществе")
 		}
 	}()
 
