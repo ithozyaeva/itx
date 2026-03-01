@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import type { PublicProfile } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
-import { ArrowLeft, Loader2, Trophy } from 'lucide-vue-next'
+import { ArrowLeft, Loader2, Trophy, UserX } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUser } from '@/composables/useUser'
+import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 
 const route = useRoute()
 const router = useRouter()
+const currentUser = useUser()
 const profile = ref<PublicProfile | null>(null)
 const isLoading = ref(true)
+const avatarError = ref(false)
 
 function pluralizeDays(n: number): string {
   if (n % 10 === 1 && n % 100 !== 11)
@@ -30,15 +34,31 @@ const daysSinceJoined = computed(() => {
   return Math.max(1, Math.floor(diff / 86400000))
 })
 
+const subscriptionLevel = computed(() => {
+  if (!profile.value)
+    return SUBSCRIPTION_LEVELS[0]
+  return getSubscriptionLevel(profile.value.member.roles)
+})
+
+const subscriptionLevelIndex = computed(() => {
+  if (!profile.value)
+    return 0
+  return getSubscriptionLevelIndex(profile.value.member.roles)
+})
+
 function getAvatarSrc(tg: string, avatarUrl?: string) {
   return avatarUrl || `https://t.me/i/userpic/320/${tg}.jpg`
 }
 
 async function loadProfile() {
   isLoading.value = true
+  avatarError.value = false
   try {
     const id = Number(route.params.id)
     profile.value = await profileService.getMemberById(id)
+    if (profile.value && currentUser.value && profile.value.member.id === currentUser.value.id) {
+      router.replace('/me')
+    }
   }
   catch (error) {
     handleError(error)
@@ -74,11 +94,17 @@ onMounted(loadProfile)
     >
       <div class="bg-card rounded-3xl border p-6">
         <div class="flex items-start gap-5">
-          <div class="w-20 h-20 rounded-full overflow-hidden shrink-0 bg-accent/20">
+          <div class="w-20 h-20 rounded-full overflow-hidden shrink-0 bg-accent/20 flex items-center justify-center">
             <img
+              v-if="!avatarError"
               :src="getAvatarSrc(profile.member.tg, profile.member.avatarUrl)"
               class="w-full h-full object-cover"
+              @error="avatarError = true"
             >
+            <span
+              v-else
+              class="text-2xl font-bold text-muted-foreground"
+            >{{ profile.member.firstName[0] }}{{ profile.member.lastName[0] }}</span>
           </div>
           <div class="min-w-0">
             <Typography
@@ -130,6 +156,19 @@ onMounted(loadProfile)
             {{ pluralizeDays(daysSinceJoined) }} с нами
           </div>
         </div>
+        <div class="bg-card rounded-3xl border p-6">
+          <div class="text-2xl font-bold">
+            {{ subscriptionLevel }}
+          </div>
+          <div class="mt-2 flex gap-1.5">
+            <span
+              v-for="i in SUBSCRIPTION_LEVELS.length"
+              :key="i"
+              class="h-2.5 w-2.5 rounded-full"
+              :class="i - 1 <= subscriptionLevelIndex ? 'bg-green-500' : 'bg-muted'"
+            />
+          </div>
+        </div>
       </div>
 
       <div
@@ -156,6 +195,14 @@ onMounted(loadProfile)
           Перейти к профилю ментора
         </RouterLink>
       </div>
+    </div>
+
+    <div
+      v-else
+      class="flex flex-col items-center gap-2 py-8 text-muted-foreground"
+    >
+      <UserX class="h-10 w-10" />
+      <p>Участник не найден</p>
     </div>
   </div>
 </template>
