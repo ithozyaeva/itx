@@ -1,5 +1,6 @@
 import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
+import Achievements from '@/pages/Achievements.vue'
 import Content from '@/pages/Content.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
@@ -27,6 +28,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/my-reviews', component: MyReviews, name: 'myReviews' },
   { path: '/points', component: MyPoints, name: 'myPoints' },
   { path: '/leaderboard', component: Leaderboard, name: 'leaderboard' },
+  { path: '/achievements', component: Achievements, name: 'achievements' },
 ]
 
 const router = createRouter({

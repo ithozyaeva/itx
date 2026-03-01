@@ -1,18 +1,61 @@
 <script setup lang="ts">
+import type { AchievementsResponse } from '@/models/achievement'
 import type { PublicProfile } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
-import { ArrowLeft, Loader2, Trophy, UserX } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  Award,
+  CalendarCheck,
+  Crown,
+  FileText,
+  Flame,
+  Footprints,
+  Loader2,
+  Medal,
+  MessageSquare,
+  MessagesSquare,
+  Mic,
+  Presentation,
+  Share2,
+  Star,
+  Trophy,
+  UserCheck,
+  UserPlus,
+  UserX,
+  Zap,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } from '@/models/profile'
+import { achievementsService } from '@/services/achievements'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
+
+const iconMap: Record<string, any> = {
+  'footprints': Footprints,
+  'flame': Flame,
+  'calendar-check': CalendarCheck,
+  'medal': Medal,
+  'mic': Mic,
+  'presentation': Presentation,
+  'star': Star,
+  'trophy': Trophy,
+  'crown': Crown,
+  'message-square': MessageSquare,
+  'messages-square': MessagesSquare,
+  'share-2': Share2,
+  'user-plus': UserPlus,
+  'user-check': UserCheck,
+  'zap': Zap,
+  'file-text': FileText,
+}
 
 const route = useRoute()
 const router = useRouter()
 const currentUser = useUser()
 const profile = ref<PublicProfile | null>(null)
+const achievements = ref<AchievementsResponse | null>(null)
 const isLoading = ref(true)
 const avatarError = ref(false)
 
@@ -58,6 +101,11 @@ async function loadProfile() {
     profile.value = await profileService.getMemberById(id)
     if (profile.value && currentUser.value && profile.value.member.id === currentUser.value.id) {
       router.replace('/me')
+    }
+    if (profile.value) {
+      achievementsService.getByMemberId(id).then((res) => {
+        achievements.value = res
+      }).catch(() => {})
     }
   }
   catch (error) {
@@ -194,6 +242,35 @@ onMounted(loadProfile)
         >
           Перейти к профилю ментора
         </RouterLink>
+      </div>
+
+      <div
+        v-if="achievements && achievements.unlockedCount > 0"
+        class="bg-card rounded-3xl border p-6"
+      >
+        <div class="flex items-center gap-2 mb-4">
+          <Award class="h-5 w-5 text-yellow-500" />
+          <Typography
+            variant="h3"
+            as="h2"
+          >
+            Достижения
+          </Typography>
+          <span class="text-sm text-muted-foreground">{{ achievements.unlockedCount }} / {{ achievements.totalCount }}</span>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <div
+            v-for="a in achievements.items.filter(i => i.unlocked)"
+            :key="a.id"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30"
+          >
+            <component
+              :is="iconMap[a.icon] || Award"
+              class="h-4 w-4 text-green-500"
+            />
+            <span class="text-sm font-medium">{{ a.title }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
