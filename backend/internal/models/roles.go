@@ -31,6 +31,7 @@ const (
 	PermissionCanViewAdminAuditLogs        Permission = "can_view_admin_audit_logs"
 	PermissionCanViewAdminPoints           Permission = "can_view_admin_points"
 	PermissionCanEditAdminPoints           Permission = "can_edit_admin_points"
+	PermissionCanApprovePlatformTasks      Permission = "can_approve_platform_tasks"
 )
 
 type PermissionModel struct {
