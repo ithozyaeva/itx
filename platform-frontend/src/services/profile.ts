@@ -1,4 +1,4 @@
-import type { Contacts, Mentor, ProfTag, Service, TelegramUser } from '@/models/profile'
+import type { Contacts, Mentor, ProfTag, PublicProfile, Service, TelegramUser } from '@/models/profile'
 import ky from 'ky'
 import { useUser } from '@/composables/useUser'
 import { apiClient } from './api'
@@ -66,6 +66,11 @@ export const profileService = {
 
     localStorageUser.value = data
     return data
+  },
+
+  async getMemberById(id: number): Promise<PublicProfile> {
+    const response = await apiClient.get(`members/${id}`)
+    return response.json<PublicProfile>()
   },
 
   async getAllProfTags() {

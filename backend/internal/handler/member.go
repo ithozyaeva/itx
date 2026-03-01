@@ -291,6 +291,34 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 	return c.JSON(mentor)
 }
 
+func (h *MembersHandler) GetPublicProfile(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	member, err := h.svc.GetById(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
+	}
+
+	points, _ := h.pointsSvc.GetBalance(member.Id)
+
+	result := fiber.Map{
+		"member":   member,
+		"points":   points,
+		"isMentor": false,
+	}
+
+	mentor, err := h.svc.GetMentor(member.Id)
+	if err == nil && mentor != nil {
+		result["isMentor"] = true
+		result["mentor"] = mentor
+	}
+
+	return c.JSON(result)
+}
+
 func (h *MembersHandler) GetPermissions(c *fiber.Ctx) error {
 	member, ok := c.Locals("member").(*models.Member)
 	if !ok || member == nil {

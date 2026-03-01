@@ -39,6 +39,13 @@ export interface ProfTag {
   title: string
 }
 
+export interface PublicProfile {
+  member: TelegramUser
+  points: number
+  isMentor: boolean
+  mentor?: Mentor
+}
+
 export const SUBSCRIPTION_LEVELS = [
   'Новичок',
   'Бригадир',

@@ -60,10 +60,11 @@ function getAvatarSrc(entry: LeaderboardEntry) {
       v-else
       class="space-y-3"
     >
-      <div
+      <RouterLink
         v-for="(entry, index) in entries"
         :key="entry.memberId"
-        class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm"
+        :to="`/members/${entry.memberId}`"
+        class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm hover:border-primary/30 transition-colors"
         :class="{ 'border-yellow-500/50 bg-yellow-500/5': index < 3 }"
       >
         <div
@@ -104,7 +105,7 @@ function getAvatarSrc(entry: LeaderboardEntry) {
             {{ entry.total }}
           </span>
         </div>
-      </div>
+      </RouterLink>
     </div>
   </div>
 </template>

@@ -4,6 +4,7 @@ import Content from '@/pages/Content.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
 import Leaderboard from '@/pages/Leaderboard.vue'
+import MemberProfile from '@/pages/MemberProfile.vue'
 import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
 import MyPoints from '@/pages/MyPoints.vue'
@@ -18,6 +19,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/me', component: Home, name: 'profile' },
   { path: '/events', component: Events, name: 'events' },
   { path: '/content', component: Content, name: 'content' },
+  { path: '/members/:id', component: MemberProfile, name: 'memberProfile' },
   { path: '/mentors', component: Mentors, name: 'mentors' },
   { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile' },
   { path: '/referals', component: ReferalLinks, name: 'referals' },
