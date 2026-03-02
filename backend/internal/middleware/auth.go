@@ -32,8 +32,8 @@ func (m *AuthMiddleware) RequireTGAuth(c *fiber.Ctx) error {
 
 	authToken, err := m.userRepo.GetByToken(telegramToken)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid Telegram User ID",
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
 		})
 	}
 
