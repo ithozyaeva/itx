@@ -2,6 +2,7 @@
 import { BurgerIcon } from 'itx-ui-kit'
 import { LogOut } from 'lucide-vue-next'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
+import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
@@ -56,6 +57,7 @@ function logout() {
         v-if="user"
         class="flex items-center gap-3"
       >
+        <ThemeToggle />
         <NotificationDropdown />
         <span class="mr-1 text-sm hidden sm:inline">
           {{ `${user.firstName} ${user.lastName?.[0] ?? ""}` }}

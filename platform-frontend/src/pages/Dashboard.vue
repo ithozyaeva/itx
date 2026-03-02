@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
-import { Bot, ExternalLink, Loader2, Lock } from 'lucide-vue-next'
+import { Bot, ExternalLink, Loader2, Lock, Play } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EventsSection from '@/components/dashboard/EventsSection.vue'
 import GreetingCard from '@/components/dashboard/GreetingCard.vue'
@@ -13,6 +13,7 @@ import { eventsService } from '@/services/events'
 const nearestEvent = ref<CommunityEvent | null>(null)
 const isLoading = ref(false)
 const { levelIndex } = useUserLevel()
+const showVideoEmbed = ref(false)
 
 async function loadNearestEvent() {
   isLoading.value = true
@@ -50,22 +51,55 @@ onMounted(() => loadNearestEvent())
         class="mt-6"
       />
 
-      <EventsSection />
+      <EventsSection :skip-first="!!nearestEvent" />
 
-      <!-- YouTube widget -->
-      <div class="mt-6 rounded-3xl border bg-card p-5 space-y-3">
-        <p class="font-medium text-sm">
-          Хозяева на YouTube
-        </p>
-        <div class="relative w-full rounded-2xl overflow-hidden" style="padding-bottom: 56.25%;">
+      <!-- Latest YouTube video -->
+      <div class="mt-6 rounded-3xl border bg-card overflow-hidden">
+        <div
+          class="relative w-full overflow-hidden"
+          style="padding-bottom: 56.25%;"
+        >
           <iframe
+            v-if="showVideoEmbed"
             class="absolute inset-0 w-full h-full"
-            src="https://www.youtube.com/embed/H6cWhHG_KBQ?start=996"
-            title="Хозяева на YouTube"
+            src="https://www.youtube.com/embed/H6cWhHG_KBQ?autoplay=1"
+            title="Деплой для глупеньких [ IT-X: Mornings ]"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
           />
+          <button
+            v-else
+            class="absolute inset-0 w-full h-full cursor-pointer"
+            @click="showVideoEmbed = true"
+          >
+            <img
+              src="https://img.youtube.com/vi/H6cWhHG_KBQ/mqdefault.jpg"
+              alt="Деплой для глупеньких [ IT-X: Mornings ]"
+              class="w-full h-full object-cover"
+            >
+            <div class="absolute inset-0 bg-black/20 hover:bg-black/30 transition-colors flex items-center justify-center">
+              <div class="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
+                <Play class="h-6 w-6 text-foreground ml-0.5" fill="currentColor" />
+              </div>
+            </div>
+          </button>
+        </div>
+        <div class="p-5 flex items-center justify-between">
+          <div>
+            <p class="font-medium text-sm">
+              Деплой для глупеньких [ IT-X: Mornings ]
+            </p>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              Последнее видео сообщества
+            </p>
+          </div>
+          <RouterLink
+            to="/content"
+            class="text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+          >
+            Все видео →
+          </RouterLink>
         </div>
       </div>
 
