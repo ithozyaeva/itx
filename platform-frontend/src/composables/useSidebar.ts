@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Award, BookOpen, Calendar, ClipboardList, FileText, Folder, Home, MessageSquare, Star, Trophy, Users } from 'lucide-vue-next'
+import { Award, BookOpen, Bot, Calendar, ClipboardList, FileText, Folder, Home, MessageSquare, Star, Trophy, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -68,6 +68,11 @@ const state = {
       title: 'Биржа заданий',
       path: '/tasks',
       icon: ClipboardList,
+    },
+    {
+      title: 'Автоотклики',
+      path: '/auto-apply',
+      icon: Bot,
     },
   ]),
 }
