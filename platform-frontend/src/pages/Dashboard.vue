@@ -52,6 +52,23 @@ onMounted(() => loadNearestEvent())
 
       <EventsSection />
 
+      <!-- YouTube widget -->
+      <div class="mt-6 rounded-3xl border bg-card p-5 space-y-3">
+        <p class="font-medium text-sm">
+          Хозяева на YouTube
+        </p>
+        <div class="relative w-full rounded-2xl overflow-hidden" style="padding-bottom: 56.25%;">
+          <iframe
+            class="absolute inset-0 w-full h-full"
+            src="https://www.youtube.com/embed/H6cWhHG_KBQ?start=996"
+            title="Хозяева на YouTube"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          />
+        </div>
+      </div>
+
       <!-- Auto-apply bot -->
       <div class="mt-6 rounded-3xl border bg-card p-5 flex items-center gap-4">
         <div class="flex items-center justify-center w-11 h-11 rounded-xl bg-primary/10 text-primary shrink-0">
