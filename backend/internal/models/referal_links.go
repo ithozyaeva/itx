@@ -13,6 +13,7 @@ type ReferalLink struct {
 	VacationsCount int               `json:"vacationsCount"`
 	ExpiresAt        *time.Time        `json:"expiresAt,omitempty" gorm:"column:expires_at"`
 	ConversionsCount int64             `json:"conversionsCount" gorm:"-"`
+	HasConverted     bool              `json:"hasConverted" gorm:"-"`
 	CreatedAt        time.Time         `json:"-"`
 	UpdatedAt        time.Time         `json:"updatedAt"`
 }

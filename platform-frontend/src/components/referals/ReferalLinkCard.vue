@@ -2,7 +2,7 @@
 import type { PropType } from 'vue'
 import type { ReferalLink } from '@/models/referals'
 import { Typography } from 'itx-ui-kit'
-import { Loader2, Pencil, Trash } from 'lucide-vue-next'
+import { Check, Loader2, Pencil, Trash } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
@@ -20,14 +20,17 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['updated', 'deleted'])
+const emit = defineEmits(['updated', 'deleted', 'converted'])
 
 const user = useUser()
 const isEditing = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
+const isConverting = ref(false)
+const hasConverted = ref(props.link.hasConverted)
 
 const isOwner = computed(() => user.value?.id === props.link.author.id)
+const canConvert = computed(() => !isOwner.value && props.link.status === 'active')
 
 function startEditing() {
   isEditing.value = true
@@ -63,6 +66,21 @@ async function handleDelete() {
   }
   finally {
     isDeleting.value = false
+  }
+}
+
+async function handleConvert() {
+  isConverting.value = true
+  try {
+    await referalLinkService.trackConversion(props.link.id)
+    hasConverted.value = true
+    emit('converted', props.link.id)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isConverting.value = false
   }
 }
 
@@ -133,6 +151,29 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
           <span> {{ dateFormatter.format(new Date(link.updatedAt)) }}</span>
         </div>
       </div>
+
+      <button
+        v-if="canConvert"
+        class="mt-3 w-full rounded-xl py-2 px-4 text-sm font-medium transition-colors"
+        :class="hasConverted
+          ? 'bg-secondary text-muted-foreground cursor-default'
+          : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'"
+        :disabled="hasConverted || isConverting"
+        @click="handleConvert"
+      >
+        <span class="flex items-center justify-center gap-1.5">
+          <Loader2
+            v-if="isConverting"
+            :size="14"
+            class="animate-spin"
+          />
+          <Check
+            v-else-if="hasConverted"
+            :size="14"
+          />
+          {{ hasConverted ? 'Вы откликнулись' : 'Откликнуться' }}
+        </span>
+      </button>
     </div>
 
     <ReferalLinkForm
