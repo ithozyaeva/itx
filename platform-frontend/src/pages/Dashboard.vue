@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
-import { Loader2, Lock } from 'lucide-vue-next'
+import { Bot, ExternalLink, Loader2, Lock } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EventsSection from '@/components/dashboard/EventsSection.vue'
 import GreetingCard from '@/components/dashboard/GreetingCard.vue'
@@ -51,6 +51,30 @@ onMounted(() => loadNearestEvent())
       />
 
       <EventsSection />
+
+      <!-- Auto-apply bot -->
+      <div class="mt-6 rounded-3xl border bg-card p-5 flex items-center gap-4">
+        <div class="flex items-center justify-center w-11 h-11 rounded-xl bg-primary/10 text-primary shrink-0">
+          <Bot :size="22" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm">
+            Бот для автооткликов на hh.ru
+          </p>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Доступен всем участникам сообщества
+          </p>
+        </div>
+        <a
+          href="https://t.me/roaster_resume_bot"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-xs font-medium hover:bg-primary/90 transition-colors shrink-0"
+        >
+          Открыть
+          <ExternalLink :size="12" />
+        </a>
+      </div>
 
       <!-- Locked content teaser -->
       <div
