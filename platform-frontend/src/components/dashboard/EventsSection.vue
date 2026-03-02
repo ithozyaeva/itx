@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
 import { CalendarX, Loader2 } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import EventCard from '@/components/events/EventCard.vue'
 import { Button } from '@/components/ui/button'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
+
+const props = withDefaults(defineProps<{
+  skipFirst?: boolean
+}>(), {
+  skipFirst: false,
+})
 
 const PAGE_SIZE = 5
 
@@ -26,10 +32,12 @@ const tabs = [
   { key: 'networking', label: 'Нетворкинг' },
 ]
 
+const initialOffset = computed(() => props.skipFirst ? 1 : 0)
+
 async function loadEvents() {
   isLoading.value = true
   try {
-    const result = await eventsService.searchNext(PAGE_SIZE, 0)
+    const result = await eventsService.searchNext(PAGE_SIZE, initialOffset.value)
     events.value = result.items
     total.value = result.total
   }
