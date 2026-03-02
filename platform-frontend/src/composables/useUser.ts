@@ -30,6 +30,16 @@ export function isUserAdmin() {
   return computed(() => user.value?.roles?.includes('ADMIN') ?? false)
 }
 
+export function canViewAdminPanel() {
+  const user = useUser()
+  return computed(() => {
+    const roles = user.value?.roles
+    if (!roles)
+      return false
+    return roles.includes('ADMIN') || roles.includes('EVENT_MAKER')
+  })
+}
+
 export function useUserLevel() {
   const user = useUser()
   const level = computed(() => user.value ? getSubscriptionLevel(user.value.roles) : SUBSCRIPTION_LEVELS[0])

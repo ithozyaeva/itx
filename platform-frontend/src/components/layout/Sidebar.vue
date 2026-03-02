@@ -5,7 +5,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/composables/useSidebar'
-import { isUserAdmin, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
+import { canViewAdminPanel, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
 import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
 
@@ -28,7 +28,7 @@ function navigateTo(path: string) {
 
 const isModalOpen = ref(false)
 const isSubscribed = isUserSubscribed()
-const isAdmin = isUserAdmin()
+const isAdmin = canViewAdminPanel()
 
 async function handleSaveReview(text: string) {
   await reviewService

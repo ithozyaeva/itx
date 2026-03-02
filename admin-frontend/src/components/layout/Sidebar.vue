@@ -5,6 +5,7 @@ import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
+import ExternalLink from '~icons/lucide/external-link'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSidebar } from '@/composables/useSidebar'
@@ -113,6 +114,15 @@ watch(() => route.path, () => {
             </li>
           </ul>
         </TooltipProvider>
+      </div>
+      <div class="border-t border-border/20 p-2">
+        <a
+          href="/platform"
+          class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-primary-foreground hover:bg-accent hover:text-accent-foreground transition"
+        >
+          <ExternalLink class="h-5 w-5" />
+          <span v-if="!isCollapsed || isMobileOpen">Платформа</span>
+        </a>
       </div>
     </div>
   </div>
