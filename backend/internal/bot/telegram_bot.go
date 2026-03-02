@@ -523,7 +523,13 @@ func (b *TelegramBot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) {
 			return
 		}
 
-		b.answerCallbackQuery(callback.ID, "Отлично! Вы будете получать напоминания о мероприятии")
+		// Синхронизируем участие: добавляем в event_members
+		_, err = b.eventService.AddMember(int(eventId), int(member.Id))
+		if err != nil {
+			log.Printf("Error adding member %d to event %d: %v", member.Id, eventId, err)
+		}
+
+		b.answerCallbackQuery(callback.ID, "Отлично! Вы записаны на мероприятие")
 
 		// Обновляем сообщение, убирая кнопки
 		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, callback.Message.Text)
@@ -551,7 +557,13 @@ func (b *TelegramBot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) {
 			return
 		}
 
-		b.answerCallbackQuery(callback.ID, "Вы отписаны от уведомлений об этом мероприятии")
+		// Синхронизируем участие: убираем из event_members
+		_, err = b.eventService.RemoveMember(int(eventId), int(member.Id))
+		if err != nil {
+			log.Printf("Error removing member %d from event %d: %v", member.Id, eventId, err)
+		}
+
+		b.answerCallbackQuery(callback.ID, "Вы отписаны от мероприятия")
 
 		// Обновляем сообщение, убирая кнопки
 		editMsg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, callback.Message.Text)
