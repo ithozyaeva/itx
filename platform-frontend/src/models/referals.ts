@@ -9,6 +9,7 @@ export interface ReferalLink {
   status: ReferalLinkStatus
   vacationsCount: number
   conversionsCount: number
+  hasConverted: boolean
   expiresAt?: string
   updatedAt: string
 }

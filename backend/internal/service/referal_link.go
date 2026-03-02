@@ -19,6 +19,17 @@ func NewReferalLinkService() *ReferalLinkService {
 	}
 }
 
+func (s *ReferalLinkService) SearchWithMember(limit *int, offset *int, filter *repository.SearchFilter, order *repository.Order, memberId int64) (*models.RegistrySearch[models.ReferalLink], error) {
+	items, count, err := s.repo.SearchWithMember(limit, offset, filter, order, memberId)
+	if err != nil {
+		return nil, err
+	}
+	return &models.RegistrySearch[models.ReferalLink]{
+		Items: items,
+		Total: int(count),
+	}, nil
+}
+
 func (s *ReferalLinkService) AddLink(req *models.AddLinkRequest, member *models.Member) (*models.ReferalLink, error) {
 	newEntity := &models.ReferalLink{
 		Author:         *member,

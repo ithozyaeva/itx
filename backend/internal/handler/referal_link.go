@@ -54,9 +54,14 @@ func (h *ReferalLinkHandler) Search(c *fiber.Ctx) error {
 		filter["status = ?"] = *req.Status
 	}
 
-	result, err := h.service.Search(req.Limit, req.Offset, &filter, nil)
+	var memberId int64
+	if member, ok := c.Locals("member").(*models.Member); ok && member != nil {
+		memberId = member.Id
+	}
+
+	result, err := h.svc.SearchWithMember(req.Limit, req.Offset, &filter, nil, memberId)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при загрузке реферальных ссылок"})
 	}
 
 	return c.JSON(result)

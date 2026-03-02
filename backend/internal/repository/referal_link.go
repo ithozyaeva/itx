@@ -19,6 +19,10 @@ func NewReferalLinkRepository() *ReferalLinkRepository {
 }
 
 func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.ReferalLink, int64, error) {
+	return e.SearchWithMember(limit, offset, filter, order, 0)
+}
+
+func (e *ReferalLinkRepository) SearchWithMember(limit *int, offset *int, filter *SearchFilter, order *Order, memberId int64) ([]models.ReferalLink, int64, error) {
 	var links []models.ReferalLink
 	var count int64
 
@@ -51,6 +55,9 @@ func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFi
 	}
 
 	e.LoadConversionsCounts(links)
+	if memberId != 0 {
+		e.LoadHasConverted(links, memberId)
+	}
 
 	return links, count, nil
 }
@@ -127,6 +134,35 @@ func (r *ReferalLinkRepository) LoadConversionsCounts(links []models.ReferalLink
 
 	for i := range links {
 		links[i].ConversionsCount = countMap[links[i].Id]
+	}
+}
+
+func (r *ReferalLinkRepository) LoadHasConverted(links []models.ReferalLink, memberId int64) {
+	if len(links) == 0 || memberId == 0 {
+		return
+	}
+
+	ids := make([]int64, len(links))
+	for i, link := range links {
+		ids[i] = link.Id
+	}
+
+	var convertedIds []int64
+	if err := database.DB.Model(&models.ReferralConversion{}).
+		Select("referral_link_id").
+		Where("referral_link_id IN ? AND member_id = ?", ids, memberId).
+		Pluck("referral_link_id", &convertedIds).Error; err != nil {
+		log.Printf("Error loading has converted: %v", err)
+		return
+	}
+
+	convertedSet := make(map[int64]bool, len(convertedIds))
+	for _, id := range convertedIds {
+		convertedSet[id] = true
+	}
+
+	for i := range links {
+		links[i].HasConverted = convertedSet[links[i].Id]
 	}
 }
 
