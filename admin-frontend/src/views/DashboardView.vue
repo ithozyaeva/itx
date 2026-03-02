@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from 'chart.js'
 import { Typography } from 'itx-ui-kit'
-import { Calendar, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
+import { Calendar, ClipboardList, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Bar, Line } from 'vue-chartjs'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -51,6 +51,10 @@ const statCards = [
   { key: 'approvedReviews', label: 'Опубликованные отзывы', icon: MessageSquare },
   { key: 'referralLinks', label: 'Реферальные ссылки', icon: Folder },
   { key: 'resumes', label: 'Резюме', icon: FileText },
+  { key: 'openTasks', label: 'Открытые задания', icon: ClipboardList },
+  { key: 'inProgressTasks', label: 'Задания в работе', icon: ClipboardList },
+  { key: 'doneTasks', label: 'Выполненные задания', icon: ClipboardList },
+  { key: 'approvedTasks', label: 'Принятые задания', icon: ClipboardList },
 ] as const
 
 const memberGrowthData = computed(() => ({

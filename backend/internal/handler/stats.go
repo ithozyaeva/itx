@@ -14,14 +14,18 @@ func NewStatsHandler() *StatsHandler {
 }
 
 type DashboardStats struct {
-	TotalMembers   int64 `json:"totalMembers"`
-	TotalMentors   int64 `json:"totalMentors"`
-	UpcomingEvents int64 `json:"upcomingEvents"`
-	PastEvents     int64 `json:"pastEvents"`
-	PendingReviews int64 `json:"pendingReviews"`
+	TotalMembers    int64 `json:"totalMembers"`
+	TotalMentors    int64 `json:"totalMentors"`
+	UpcomingEvents  int64 `json:"upcomingEvents"`
+	PastEvents      int64 `json:"pastEvents"`
+	PendingReviews  int64 `json:"pendingReviews"`
 	ApprovedReviews int64 `json:"approvedReviews"`
-	ReferralLinks  int64 `json:"referralLinks"`
-	Resumes        int64 `json:"resumes"`
+	ReferralLinks   int64 `json:"referralLinks"`
+	Resumes         int64 `json:"resumes"`
+	OpenTasks       int64 `json:"openTasks"`
+	InProgressTasks int64 `json:"inProgressTasks"`
+	DoneTasks       int64 `json:"doneTasks"`
+	ApprovedTasks   int64 `json:"approvedTasks"`
 }
 
 func (h *StatsHandler) GetStats(c *fiber.Ctx) error {
@@ -35,6 +39,10 @@ func (h *StatsHandler) GetStats(c *fiber.Ctx) error {
 	database.DB.Model(&models.ReviewOnCommunity{}).Where("status = ?", "APPROVED").Count(&stats.ApprovedReviews)
 	database.DB.Model(&models.ReferalLink{}).Count(&stats.ReferralLinks)
 	database.DB.Model(&models.Resume{}).Count(&stats.Resumes)
+	database.DB.Model(&models.TaskExchange{}).Where("status = ?", "OPEN").Count(&stats.OpenTasks)
+	database.DB.Model(&models.TaskExchange{}).Where("status = ?", "IN_PROGRESS").Count(&stats.InProgressTasks)
+	database.DB.Model(&models.TaskExchange{}).Where("status = ?", "DONE").Count(&stats.DoneTasks)
+	database.DB.Model(&models.TaskExchange{}).Where("status = ?", "APPROVED").Count(&stats.ApprovedTasks)
 
 	return c.JSON(stats)
 }
