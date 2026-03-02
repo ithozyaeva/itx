@@ -1045,7 +1045,15 @@ func sendAuthToBackend(token string, user *tgbotapi.User) {
 
 	url := fmt.Sprintf("%s/api/auth/telegram-from-bot", config.CFG.BackendDomain)
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println("Ошибка создания запроса:", err)
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Bot-Secret", config.CFG.BotSharedSecret)
+
+	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		log.Println("Ошибка отправки запроса:", err)
 		return

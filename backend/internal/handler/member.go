@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime"
+	"log"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -68,7 +69,8 @@ func (h *MembersHandler) Search(c *fiber.Ctx) error {
 
 	result, err := h.svc.Search(req.Limit, req.Offset, finalFilter, nil)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Members search error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска участников"})
 	}
 
 	return c.JSON(result)
@@ -83,7 +85,7 @@ func (h *MembersHandler) GetById(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetById(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
 	}
 
 	return c.JSON(result)
@@ -100,7 +102,8 @@ func (h *MembersHandler) Create(c *fiber.Ctx) error {
 	result, err := h.svc.Create(request)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Member create error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания участника"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "member", result.Id, result.FirstName+" "+result.LastName)
@@ -145,7 +148,8 @@ func (h *MembersHandler) Update(c *fiber.Ctx) error {
 	result, err := h.svc.Update(member)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Member update error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления участника"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "member", result.Id, result.FirstName+" "+result.LastName)
@@ -167,7 +171,8 @@ func (h *MembersHandler) Delete(c *fiber.Ctx) error {
 	entityName := entity.FirstName + " " + entity.LastName
 
 	if err := h.svc.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Member delete error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления участника"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "member", int64(id), entityName)
@@ -255,13 +260,15 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	contentType := fileHeader.Header.Get("Content-Type")
-	if contentType == "" {
-		if guessed := mime.TypeByExtension(ext); guessed != "" {
-			contentType = guessed
-		} else {
-			contentType = "application/octet-stream"
-		}
+	// Определяем Content-Type по содержимому файла, а не по заголовку клиента
+	contentType := http.DetectContentType(data)
+	allowedContentTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/webp": true,
+	}
+	if !allowedContentTypes[contentType] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Недопустимый тип файла"})
 	}
 
 	s3Client, err := utils.NewS3Client()

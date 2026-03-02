@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"encoding/base64"
+	"ithozyeva/config"
 	"ithozyeva/internal/bot"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
@@ -151,6 +153,14 @@ type HandleBotMessageReq struct {
 }
 
 func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
+	// Проверяем shared secret для защиты от неавторизованных вызовов
+	secret := c.Get("X-Bot-Secret")
+	if config.CFG.BotSharedSecret == "" || subtle.ConstantTimeCompare([]byte(secret), []byte(config.CFG.BotSharedSecret)) != 1 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
 	var req HandleBotMessageReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -161,13 +171,19 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 	// Проверяем, существует ли пользователь
 	existingUser, err := h.authService.GetByTelegramID(req.UserID)
 	if err != nil {
+		// Определяем роль на основе проверки подписки, а не из тела запроса
+		role := models.MemberRoleUnsubscriber
+		if isSubscriber, checkErr := bot.CheckUserInChat(req.UserID); checkErr == nil && isSubscriber {
+			role = models.MemberRoleSubscriber
+		}
+
 		// Если пользователь не существует, создаем нового
 		newUser := &models.Member{
 			TelegramID: req.UserID,
 			Username:   req.Username,
 			FirstName:  req.FirstName,
 			LastName:   req.LastName,
-			Roles:      []models.Role{req.Role},
+			Roles:      []models.Role{role},
 		}
 
 		createdUser, err := h.authService.CreateNewMember(newUser, req.Token)
