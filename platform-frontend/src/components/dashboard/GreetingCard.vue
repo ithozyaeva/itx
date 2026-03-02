@@ -19,8 +19,11 @@ const daysSinceJoined = computed(() => {
     return 1
   const created = new Date(user.value.createdAt)
   const now = new Date()
+  // Сравниваем по календарным дням, а не по 24-часовым периодам
+  created.setHours(0, 0, 0, 0)
+  now.setHours(0, 0, 0, 0)
   const diff = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
-  return Math.max(diff, 1)
+  return diff + 1 // день вступления считается за первый
 })
 </script>
 
