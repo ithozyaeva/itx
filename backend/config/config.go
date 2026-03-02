@@ -23,6 +23,7 @@ type Config struct {
 	PublicDomain       string
 	BackendDomain      string
 	AllowedOrigins     string
+	BotSharedSecret    string
 	S3                 S3Config
 
 	AlertReminderIntervalMinutes       int64
@@ -92,12 +93,18 @@ func LoadConfig() {
 
 	jwtSecret := viper.GetString("JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "jwt_secret"
+		log.Fatal("FATAL: JWT_SECRET environment variable is required and must not be empty")
 	}
 
 	allowedOrigins := viper.GetString("ALLOWED_ORIGINS")
 	if allowedOrigins == "" {
+		log.Println("WARNING: ALLOWED_ORIGINS not set, defaulting to '*'. Set explicitly in production!")
 		allowedOrigins = "*"
+	}
+
+	botSharedSecret := viper.GetString("BOT_SHARED_SECRET")
+	if botSharedSecret == "" {
+		log.Println("WARNING: BOT_SHARED_SECRET not set. /telegram-from-bot endpoint will reject all requests.")
 	}
 
 	CFG = &Config{
@@ -115,6 +122,7 @@ func LoadConfig() {
 		PublicDomain:       viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
+		BotSharedSecret:    botSharedSecret,
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,

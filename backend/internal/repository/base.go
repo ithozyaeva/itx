@@ -1,9 +1,12 @@
 package repository
 
 import (
-	"fmt"
+	"errors"
+	"regexp"
+	"strings"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BaseRepository[T any] interface {
@@ -26,6 +29,21 @@ type Order struct {
 	Order    string
 }
 
+// validColumnName matches only safe SQL identifiers (letters, digits, underscores)
+var validColumnName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+// Validate checks that ColumnBy and Order are safe SQL identifiers
+func (o *Order) Validate() (string, string, error) {
+	if !validColumnName.MatchString(o.ColumnBy) {
+		return "", "", errors.New("invalid sort column")
+	}
+	dir := strings.ToUpper(o.Order)
+	if dir != "ASC" && dir != "DESC" {
+		return "", "", errors.New("invalid sort direction")
+	}
+	return o.ColumnBy, dir, nil
+}
+
 func NewBaseRepository[T any](db *gorm.DB, model *T) BaseRepository[T] {
 	return &baseRepository[T]{db: db, model: model}
 }
@@ -44,7 +62,14 @@ func (r *baseRepository[T]) Search(limit *int, offset *int, filter *SearchFilter
 	}
 
 	if order != nil {
-		query = query.Order(fmt.Sprintf("\"%s\" %s", order.ColumnBy, order.Order))
+		col, dir, err := order.Validate()
+		if err != nil {
+			return nil, 0, err
+		}
+		query = query.Order(clause.OrderByColumn{
+			Column: clause.Column{Name: col},
+			Desc:   dir == "DESC",
+		})
 	}
 
 	if err := query.Count(&count).Error; err != nil {

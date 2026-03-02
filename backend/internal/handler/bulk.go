@@ -2,11 +2,14 @@ package handler
 
 import (
 	"fmt"
+	"log"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 type BulkHandler struct {
@@ -111,12 +114,19 @@ func (h *BulkHandler) BulkApproveReviews(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	if err := database.DB.Model(&models.ReviewOnCommunity{}).Where("id IN ?", req.Ids).Update("status", "APPROVED").Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
 	var reviews []models.ReviewOnCommunity
-	database.DB.Where("id IN ?", req.Ids).Find(&reviews)
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.ReviewOnCommunity{}).
+			Where("id IN ? AND status != ?", req.Ids, "APPROVED").
+			Update("status", "APPROVED").Error; err != nil {
+			return err
+		}
+		return tx.Where("id IN ?", req.Ids).Find(&reviews).Error
+	})
+	if err != nil {
+		log.Printf("BulkApproveReviews error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при одобрении отзывов"})
+	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
 	go func() {
@@ -138,12 +148,19 @@ func (h *BulkHandler) BulkApproveServiceReviews(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	if err := database.DB.Model(&models.ReviewOnService{}).Where("id IN ?", req.Ids).Update("status", "APPROVED").Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
 	var reviews []models.ReviewOnService
-	database.DB.Where("id IN ?", req.Ids).Find(&reviews)
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.ReviewOnService{}).
+			Where("id IN ? AND status != ?", req.Ids, "APPROVED").
+			Update("status", "APPROVED").Error; err != nil {
+			return err
+		}
+		return tx.Where("id IN ?", req.Ids).Find(&reviews).Error
+	})
+	if err != nil {
+		log.Printf("BulkApproveServiceReviews error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при одобрении отзывов"})
+	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
 	go func() {

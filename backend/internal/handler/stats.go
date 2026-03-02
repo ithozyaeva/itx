@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 
@@ -70,7 +72,8 @@ func (h *StatsHandler) GetChartStats(c *fiber.Ctx) error {
 		GROUP BY date_trunc('month', e.date)
 		ORDER BY date_trunc('month', e.date)
 	`).Scan(&chartStats.EventAttendance).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Chart stats (event attendance) error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики"})
 	}
 
 	// Member growth by month (last 12 months) using created_at
@@ -90,7 +93,8 @@ func (h *StatsHandler) GetChartStats(c *fiber.Ctx) error {
 		) mc ON mc.m = d.month
 		ORDER BY d.month
 	`).Scan(&chartStats.MemberGrowth).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Chart stats (member growth) error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики"})
 	}
 
 	return c.JSON(chartStats)
