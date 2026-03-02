@@ -21,6 +21,9 @@ export const eventsService = {
   searchNext: async (limit: number, offset: number, filters?: EventSearchFilters) => {
     return apiClient.get('events', { searchParams: { limit, offset, dateFrom: new Date().toISOString(), ...cleanFilters(filters) } }).json<{ items: CommunityEvent[], total: number }>()
   },
+  getById: async (id: number) => {
+    return apiClient.get(`events/${id}`).json<CommunityEvent>()
+  },
   applyEvent: async (eventId: number) => {
     return apiClient.post('events/apply', { json: { eventId } }).json<CommunityEvent>()
   },

@@ -9,6 +9,10 @@ export interface DashboardStats {
   approvedReviews: number
   referralLinks: number
   resumes: number
+  openTasks: number
+  inProgressTasks: number
+  doneTasks: number
+  approvedTasks: number
 }
 
 export interface MonthlyStats {

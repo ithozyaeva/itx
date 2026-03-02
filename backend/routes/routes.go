@@ -210,6 +210,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	eventHandler := handler.NewEventsHandler()
 	events := protected.Group("/events")
 	events.Get("/", eventHandler.Search)
+	events.Get("/:id", eventHandler.GetById)
 	events.Post("/apply", eventHandler.AddMember)
 	events.Post("/decline", eventHandler.RemoveMember)
 

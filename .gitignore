@@ -32,3 +32,7 @@ static/
 .env
 
 pgdata
+
+# Claude Code / OMC
+.claude/
+.omc/

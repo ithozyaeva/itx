@@ -125,6 +125,7 @@ func (h *BulkHandler) BulkApproveReviews(c *fiber.Ctx) error {
 		}
 		for _, review := range reviews {
 			h.pointsSvc.AwardIdempotent(int64(review.AuthorId), models.PointReasonReviewCommunity, "review_community", int64(review.Id), "Отзыв о сообществе")
+			CreateNotification(int64(review.AuthorId), "review_approved", "Отзыв одобрен", "Ваш отзыв о сообществе был одобрен")
 		}
 	}()
 
