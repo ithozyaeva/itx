@@ -226,6 +226,9 @@ func (c *S3Client) UploadWithACL(ctx context.Context, key string, content []byte
 
 func (c *S3Client) GetPublicURL(key string) string {
 	cfg := config.CFG.S3
+	if publicURL := strings.TrimSpace(cfg.PublicURL); publicURL != "" {
+		return fmt.Sprintf("%s/%s", strings.TrimRight(publicURL, "/"), key)
+	}
 	endpoint := strings.TrimSpace(cfg.Endpoint)
 	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(endpoint, "/"), c.bucket, key)
 }
