@@ -38,6 +38,8 @@ var AllAchievements = []models.Achievement{
 	{Id: "profile_complete", Title: "Перфекционист", Description: "Полностью заполнить профиль", Icon: "user-check", Category: models.AchievementCategoryActivity, Threshold: 1},
 	{Id: "streak_4w", Title: "Марафонец", Description: "Серия активности 4 недели", Icon: "zap", Category: models.AchievementCategoryActivity, Threshold: 1},
 	{Id: "resume_upload", Title: "Карьерист", Description: "Загрузить резюме", Icon: "file-text", Category: models.AchievementCategoryActivity, Threshold: 1},
+	{Id: "first_listing", Title: "Продавец", Description: "Опубликовать первое объявление", Icon: "package", Category: models.AchievementCategoryActivity, Threshold: 1},
+	{Id: "first_purchase", Title: "Покупатель", Description: "Оставить первую заявку на покупку", Icon: "shopping-cart", Category: models.AchievementCategoryActivity, Threshold: 1},
 }
 
 // achievementReasonMap maps achievement IDs to the PointReason they track.
@@ -55,6 +57,8 @@ var achievementReasonMap = map[string]models.PointReason{
 	"profile_complete": models.PointReasonProfileComplete,
 	"streak_4w":        models.PointReasonStreak4Weeks,
 	"resume_upload":    models.PointReasonResumeUpload,
+	"first_listing":    models.PointReasonMarketplaceCreate,
+	"first_purchase":   models.PointReasonMarketplaceBuy,
 }
 
 func (s *AchievementService) GetUserAchievements(memberId int64) (*models.AchievementsResponse, error) {

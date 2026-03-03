@@ -17,8 +17,10 @@ const (
 	PointReasonMonthlyActive    PointReason = "monthly_active"
 	PointReasonStreak4Weeks     PointReason = "streak_4weeks"
 	PointReasonAdminManual      PointReason = "admin_manual"
-	PointReasonTaskCreate       PointReason = "task_create"
-	PointReasonTaskExecute      PointReason = "task_execute"
+	PointReasonTaskCreate          PointReason = "task_create"
+	PointReasonTaskExecute         PointReason = "task_execute"
+	PointReasonMarketplaceCreate   PointReason = "marketplace_create"
+	PointReasonMarketplaceBuy      PointReason = "marketplace_buy"
 )
 
 var PointValues = map[PointReason]int{
@@ -33,8 +35,10 @@ var PointValues = map[PointReason]int{
 	PointReasonWeeklyActivity:   5,
 	PointReasonMonthlyActive:    30,
 	PointReasonStreak4Weeks:     50,
-	PointReasonTaskCreate:       15,
-	PointReasonTaskExecute:      25,
+	PointReasonTaskCreate:          15,
+	PointReasonTaskExecute:         25,
+	PointReasonMarketplaceCreate:   15,
+	PointReasonMarketplaceBuy:      10,
 }
 
 type PointTransaction struct {

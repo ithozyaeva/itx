@@ -13,6 +13,7 @@ import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
+import Marketplace from '@/pages/Marketplace.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
 import { useMainStore } from '../store'
@@ -31,6 +32,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/points', component: MyPoints, name: 'myPoints' },
   { path: '/leaderboard', component: Leaderboard, name: 'leaderboard' },
   { path: '/achievements', component: Achievements, name: 'achievements' },
+  { path: '/marketplace', component: Marketplace, name: 'marketplace' },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange' },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot' },
 ]
