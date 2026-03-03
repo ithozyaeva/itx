@@ -169,6 +169,16 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	chatActivity.Get("/chart", chatActivityHandler.GetChart)
 	chatActivity.Get("/top-users", chatActivityHandler.GetTopUsers)
 	chatActivity.Get("/chats", chatActivityHandler.GetChats)
+	chatActivity.Get("/user-stats", chatActivityHandler.GetUserStats)
+	chatActivity.Get("/export", chatActivityHandler.ExportCSV)
+
+	// Маршруты для заданий чатов (админ)
+	chatQuestHandler := handler.NewChatQuestHandler()
+	chatQuests := protected.Group("/chat-quests")
+	chatQuests.Get("/", chatQuestHandler.GetAll)
+	chatQuests.Post("/", chatQuestHandler.Create)
+	chatQuests.Put("/:id", chatQuestHandler.Update)
+	chatQuests.Delete("/:id", chatQuestHandler.Delete)
 
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
@@ -252,6 +262,11 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	points := protected.Group("/points")
 	points.Get("/me", pointsHandler.GetMyPoints)
 	points.Get("/leaderboard", pointsHandler.GetLeaderboard)
+
+	// Маршруты для заданий чатов (платформа)
+	chatQuestHandler := handler.NewChatQuestHandler()
+	chatQuests := protected.Group("/chat-quests")
+	chatQuests.Get("/active", chatQuestHandler.GetActive)
 
 	// Маршруты для достижений
 	achievementHandler := handler.NewAchievementHandler()

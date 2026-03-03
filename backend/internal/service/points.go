@@ -50,6 +50,21 @@ func (s *PointsService) GiveForAction(memberId int64, reason models.PointReason,
 	}
 }
 
+// GiveCustomPoints начисляет произвольное количество баллов (для квестов чатов)
+func (s *PointsService) GiveCustomPoints(memberId int64, amount int, reason models.PointReason, sourceType string, sourceId int64, description string) {
+	tx := &models.PointTransaction{
+		MemberId:    memberId,
+		Amount:      amount,
+		Reason:      reason,
+		SourceType:  sourceType,
+		SourceId:    sourceId,
+		Description: description,
+	}
+	if err := s.repo.GivePoints(tx); err != nil {
+		log.Printf("Error giving custom points (reason=%s, member=%d, amount=%d): %v", reason, memberId, amount, err)
+	}
+}
+
 func (s *PointsService) AwardEventPoints(event *models.Event) error {
 	for _, host := range event.Hosts {
 		s.AwardIdempotent(host.Id, models.PointReasonEventHost, "event", event.Id,

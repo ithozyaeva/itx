@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type { Permission } from '@/types/permissions'
 import { computed, ref } from 'vue'
+import Award from '~icons/lucide/award'
 import BarChart3 from '~icons/lucide/bar-chart-3'
 import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
@@ -84,6 +85,11 @@ export function useSidebar() {
       title: 'Активность чатов',
       path: '/chat-activity',
       icon: BarChart3,
+    },
+    {
+      title: 'Задания чатов',
+      path: '/chat-quests',
+      icon: Award,
     },
     {
       title: 'Журнал действий',

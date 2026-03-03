@@ -12,14 +12,21 @@ import (
 
 type ChatActivityService struct {
 	repo           *repository.ChatActivityRepository
+	memberRepo     *repository.MemberRepository
+	questService   *ChatQuestService
 	trackedChatIDs map[int64]bool
+	memberIDCache  map[int64]int64 // telegram_user_id -> member_id
 	mu             sync.RWMutex
+	memberMu       sync.RWMutex
 }
 
 func NewChatActivityService() *ChatActivityService {
 	s := &ChatActivityService{
 		repo:           repository.NewChatActivityRepository(),
+		memberRepo:     repository.NewMemberRepository(),
+		questService:   NewChatQuestService(),
 		trackedChatIDs: make(map[int64]bool),
+		memberIDCache:  make(map[int64]int64),
 	}
 	s.loadTrackedChats()
 	return s
@@ -41,6 +48,30 @@ func (s *ChatActivityService) loadTrackedChats() {
 	log.Printf("Loaded %d tracked chats for activity monitoring", len(s.trackedChatIDs))
 }
 
+// resolveMemberID находит member_id по telegram_user_id с кешированием
+func (s *ChatActivityService) resolveMemberID(telegramUserID int64) *int64 {
+	// Проверяем кеш
+	s.memberMu.RLock()
+	if memberID, ok := s.memberIDCache[telegramUserID]; ok {
+		s.memberMu.RUnlock()
+		return &memberID
+	}
+	s.memberMu.RUnlock()
+
+	// Ищем в БД
+	member, err := s.memberRepo.GetByTelegramID(telegramUserID)
+	if err != nil {
+		return nil
+	}
+
+	// Кешируем
+	s.memberMu.Lock()
+	s.memberIDCache[telegramUserID] = member.Id
+	s.memberMu.Unlock()
+
+	return &member.Id
+}
+
 // TrackMessage проверяет, что чат отслеживается, и сохраняет сообщение
 func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 	if message == nil || message.From == nil {
@@ -55,24 +86,33 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 		return
 	}
 
+	// Определяем member_id
+	memberID := s.resolveMemberID(message.From.ID)
+
 	msg := &models.ChatMessage{
 		ChatID:            message.Chat.ID,
 		TelegramUserID:    message.From.ID,
 		TelegramUsername:  message.From.UserName,
 		TelegramFirstName: message.From.FirstName,
+		MemberID:          memberID,
 		SentAt:            time.Unix(int64(message.Date), 0),
 	}
 
 	if err := s.repo.SaveMessage(msg); err != nil {
 		log.Printf("Error saving chat message: %v", err)
+		return
 	}
+
+	// Обрабатываем квесты
+	go s.questService.ProcessMessage(message, memberID)
 }
 
-// GetStats возвращает общую статистику активности
+// GetStats возвращает общую статистику активности с данными за предыдущую неделю
 func (s *ChatActivityService) GetStats() (*models.ChatActivityStats, error) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	weekStart := todayStart.AddDate(0, 0, -7)
+	prevWeekStart := todayStart.AddDate(0, 0, -14)
 	tomorrow := todayStart.AddDate(0, 0, 1)
 
 	totalToday, uniqueToday, err := s.repo.GetTotalStats(todayStart, tomorrow)
@@ -85,17 +125,25 @@ func (s *ChatActivityService) GetStats() (*models.ChatActivityStats, error) {
 		return nil, err
 	}
 
+	// Статистика за предыдущую неделю для сравнения
+	totalLastWeek, uniqueLastWeek, err := s.repo.GetTotalStats(prevWeekStart, weekStart)
+	if err != nil {
+		return nil, err
+	}
+
 	chatStats, err := s.repo.GetMessageCountsByChat(weekStart, tomorrow)
 	if err != nil {
 		return nil, err
 	}
 
 	return &models.ChatActivityStats{
-		TotalMessagesToday: totalToday,
-		TotalMessagesWeek:  totalWeek,
-		UniqueUsersToday:   uniqueToday,
-		UniqueUsersWeek:    uniqueWeek,
-		ChatStats:          chatStats,
+		TotalMessagesToday:    totalToday,
+		TotalMessagesWeek:     totalWeek,
+		UniqueUsersToday:      uniqueToday,
+		UniqueUsersWeek:       uniqueWeek,
+		TotalMessagesLastWeek: totalLastWeek,
+		UniqueUsersLastWeek:   uniqueLastWeek,
+		ChatStats:             chatStats,
 	}, nil
 }
 
@@ -116,4 +164,32 @@ func (s *ChatActivityService) GetTopUsers(days int, limit int) ([]models.TopUser
 // GetTrackedChats возвращает список отслеживаемых чатов
 func (s *ChatActivityService) GetTrackedChats() ([]models.TrackedChat, error) {
 	return s.repo.GetTrackedChats()
+}
+
+// GetUserStats возвращает статистику конкретного пользователя
+func (s *ChatActivityService) GetUserStats(userID int64, days int) (*models.UserStats, error) {
+	return s.repo.GetUserStats(userID, days)
+}
+
+// GetDailyActivityByUser возвращает активность пользователя по дням
+func (s *ChatActivityService) GetDailyActivityByUser(userID int64, days int) ([]models.DailyActivity, error) {
+	return s.repo.GetDailyActivityByUser(userID, days)
+}
+
+// GetMessagesForExport возвращает данные для CSV экспорта
+func (s *ChatActivityService) GetMessagesForExport(chatID *int64, days int) ([]models.ExportRow, error) {
+	return s.repo.GetMessagesForExport(chatID, days)
+}
+
+// CleanupOldMessages удаляет сообщения старше retentionDays дней
+func (s *ChatActivityService) CleanupOldMessages(retentionDays int) {
+	beforeDate := time.Now().AddDate(0, 0, -retentionDays)
+	count, err := s.repo.DeleteOldMessages(beforeDate)
+	if err != nil {
+		log.Printf("Error cleaning up old chat messages: %v", err)
+		return
+	}
+	if count > 0 {
+		log.Printf("Cleaned up %d old chat messages (older than %d days)", count, retentionDays)
+	}
 }
