@@ -39,9 +39,6 @@ const newCanShip = ref(false)
 const newCondition = ref<'NEW' | 'USED'>('NEW')
 const newDefects = ref('')
 const newPackageContents = ref('')
-const newContactTelegram = ref('')
-const newContactEmail = ref('')
-const newContactPhone = ref('')
 const newImage = ref<File | null>(null)
 
 const statusTabs: { key: MarketplaceItemStatus | 'all', label: string }[] = [
@@ -94,9 +91,7 @@ async function createItem() {
         condition: newCondition.value,
         defects: newDefects.value.trim(),
         packageContents: newPackageContents.value.trim(),
-        contactTelegram: newContactTelegram.value.trim(),
-        contactEmail: newContactEmail.value.trim(),
-        contactPhone: newContactPhone.value.trim(),
+        contactTelegram: user.value?.tg ?? '',
       },
       newImage.value ?? undefined,
     )
@@ -121,9 +116,6 @@ function resetForm() {
   newCondition.value = 'NEW'
   newDefects.value = ''
   newPackageContents.value = ''
-  newContactTelegram.value = ''
-  newContactEmail.value = ''
-  newContactPhone.value = ''
   newImage.value = null
 }
 
@@ -335,29 +327,18 @@ onMounted(() => {
               <span>Покупатель: {{ displayName(item.buyer) }}</span>
             </div>
 
-            <!-- Contacts -->
+            <!-- Contact -->
             <div
-              v-if="item.contactTelegram || item.contactEmail || item.contactPhone"
-              class="mt-2 mb-3 space-y-0.5"
+              v-if="item.contactTelegram"
+              class="mt-2 mb-3"
             >
-              <p
-                v-if="item.contactTelegram"
-                class="text-xs text-muted-foreground"
+              <a
+                :href="`https://t.me/${item.contactTelegram.replace('@', '')}`"
+                target="_blank"
+                class="text-xs text-accent hover:underline"
               >
-                TG: {{ item.contactTelegram }}
-              </p>
-              <p
-                v-if="item.contactEmail"
-                class="text-xs text-muted-foreground"
-              >
-                Email: {{ item.contactEmail }}
-              </p>
-              <p
-                v-if="item.contactPhone"
-                class="text-xs text-muted-foreground"
-              >
-                Тел: {{ item.contactPhone }}
-              </p>
+                @{{ item.contactTelegram.replace('@', '') }}
+              </a>
             </div>
 
             <!-- Actions -->
@@ -509,36 +490,6 @@ onMounted(() => {
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
               placeholder="Что входит в комплект..."
             />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1">Telegram контакт</label>
-            <input
-              v-model="newContactTelegram"
-              type="text"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="@username"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input
-              v-model="newContactEmail"
-              type="email"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="email@example.com"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1">Телефон</label>
-            <input
-              v-model="newContactPhone"
-              type="tel"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="+7 900 000 00 00"
-            >
           </div>
 
           <div>

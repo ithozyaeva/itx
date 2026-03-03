@@ -29,8 +29,10 @@ export const marketplaceService = {
     formData.append('defects', data.defects)
     formData.append('packageContents', data.packageContents)
     formData.append('contactTelegram', data.contactTelegram)
-    formData.append('contactEmail', data.contactEmail)
-    formData.append('contactPhone', data.contactPhone)
+    if (data.contactEmail)
+      formData.append('contactEmail', data.contactEmail)
+    if (data.contactPhone)
+      formData.append('contactPhone', data.contactPhone)
     if (image) {
       formData.append('image', image)
     }
