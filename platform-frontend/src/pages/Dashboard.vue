@@ -130,21 +130,21 @@ onMounted(async () => {
     ])
 
     if (results[0].status === 'fulfilled')
-      nearestEvent.value = results[0].value.items[0] ?? null
+      nearestEvent.value = results[0].value?.items?.[0] ?? null
     if (results[1].status === 'fulfilled')
-      upcomingEvents.value = results[1].value.items
+      upcomingEvents.value = results[1].value?.items ?? []
     if (results[2].status === 'fulfilled')
       pointsSummary.value = results[2].value
     if (results[3].status === 'fulfilled')
-      chatQuests.value = results[3].value
+      chatQuests.value = results[3].value ?? []
     if (results[4].status === 'fulfilled')
-      openTasks.value = results[4].value.items
+      openTasks.value = results[4].value?.items ?? []
     if (results[5].status === 'fulfilled') {
       const a = results[5].value
       achievements.value = {
-        total: a.totalCount,
-        unlocked: a.unlockedCount,
-        recent: a.items.filter(i => i.unlocked).slice(0, 3),
+        total: a?.totalCount ?? 0,
+        unlocked: a?.unlockedCount ?? 0,
+        recent: (a?.items ?? []).filter(i => i.unlocked).slice(0, 3),
       }
     }
   }
