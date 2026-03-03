@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Award, BookOpen, Bot, Calendar, ClipboardList, FileText, Folder, Home, MessageSquare, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
+import { Award, BookOpen, Calendar, ClipboardList, FileText, Folder, Home, MessageSquare, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -9,75 +9,45 @@ export interface SidebarItem {
   indicator?: boolean
 }
 
+export interface SidebarGroup {
+  label?: string
+  items: SidebarItem[]
+}
+
 // Создаем синглтон с состоянием
 const state = {
   isOpen: ref(false),
-  sidebarItems: ref<SidebarItem[]>([
+  sidebarGroups: ref<SidebarGroup[]>([
     {
-      title: 'Дом',
-      path: '/',
-      icon: Home,
+      items: [
+        { title: 'Главная', path: '/', icon: Home },
+      ],
     },
     {
-      title: 'События',
-      path: '/events',
-      icon: Calendar,
-      indicator: true,
+      label: 'Сообщество',
+      items: [
+        { title: 'События', path: '/events', icon: Calendar, indicator: true },
+        { title: 'Контент', path: '/content', icon: BookOpen },
+        { title: 'Участники', path: '/mentors', icon: Users },
+      ],
     },
     {
-      title: 'Контент',
-      path: '/content',
-      icon: BookOpen,
+      label: 'Активность',
+      items: [
+        { title: 'Мои баллы', path: '/points', icon: Star },
+        { title: 'Рейтинг', path: '/leaderboard', icon: Trophy },
+        { title: 'Достижения', path: '/achievements', icon: Award },
+        { title: 'Биржа заданий', path: '/tasks', icon: ClipboardList },
+      ],
     },
     {
-      title: 'Участники',
-      path: '/mentors',
-      icon: Users,
-    },
-    {
-      title: 'Рефералки',
-      path: '/referals',
-      icon: Folder,
-    },
-    {
-      title: 'Резюме',
-      path: '/resumes',
-      icon: FileText,
-    },
-    {
-      title: 'Мои отзывы',
-      path: '/my-reviews',
-      icon: MessageSquare,
-    },
-    {
-      title: 'Мои баллы',
-      path: '/points',
-      icon: Star,
-    },
-    {
-      title: 'Рейтинг',
-      path: '/leaderboard',
-      icon: Trophy,
-    },
-    {
-      title: 'Достижения',
-      path: '/achievements',
-      icon: Award,
-    },
-    {
-      title: 'Барахолка',
-      path: '/marketplace',
-      icon: ShoppingBag,
-    },
-    {
-      title: 'Биржа заданий',
-      path: '/tasks',
-      icon: ClipboardList,
-    },
-    {
-      title: 'Автоотклики',
-      path: '/auto-apply',
-      icon: Bot,
+      label: 'Мои разделы',
+      items: [
+        { title: 'Рефералки', path: '/referals', icon: Folder },
+        { title: 'Резюме', path: '/resumes', icon: FileText },
+        { title: 'Мои отзывы', path: '/my-reviews', icon: MessageSquare },
+        { title: 'Барахолка', path: '/marketplace', icon: ShoppingBag },
+      ],
     },
   ]),
 }
@@ -91,7 +61,7 @@ function toggleSidebar() {
 export function useSidebar() {
   return {
     isOpen: state.isOpen,
-    sidebarItems: state.sidebarItems,
+    sidebarGroups: state.sidebarGroups,
     toggleSidebar,
   }
 }

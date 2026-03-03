@@ -9,7 +9,7 @@ import { canViewAdminPanel, isUserSubscribed, useUser, useUserLevel } from '@/co
 import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
 
-const { sidebarItems, isOpen, toggleSidebar } = useSidebar()
+const { sidebarGroups, isOpen, toggleSidebar } = useSidebar()
 const route = useRoute()
 const router = useRouter()
 const user = useUser()
@@ -48,7 +48,7 @@ async function handleSaveReview(text: string) {
       ]"
     >
       <div class="flex flex-col justify-between items-center pb-2 h-full">
-        <div class="w-full">
+        <div class="w-full overflow-y-auto">
           <div class="flex items-center justify-between p-4 md:hidden">
             <Typography
               variant="h4"
@@ -63,35 +63,47 @@ async function handleSaveReview(text: string) {
               <CloseIcon class="w-6 h-6" />
             </button>
           </div>
-          <div class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1">
-              <li
-                v-for="item in sidebarItems"
-                :key="item.path"
+          <div class="flex-1 py-4">
+            <div
+              v-for="(group, groupIndex) in sidebarGroups"
+              :key="groupIndex"
+              :class="groupIndex > 0 ? 'mt-4' : ''"
+            >
+              <p
+                v-if="group.label"
+                class="px-4 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-primary-foreground/40"
               >
-                <Button
-                  variant="ghost"
-                  class="w-full justify-start py-2 cursor-pointer text-primary-foreground hover:bg-accent hover:text-accent-foreground"
-                  :class="[
-                    isActive(item.path) ? 'bg-accent text-accent-foreground' : '',
-                  ]"
-                  @click="navigateTo(item.path)"
+                {{ group.label }}
+              </p>
+              <ul class="space-y-0.5">
+                <li
+                  v-for="item in group.items"
+                  :key="item.path"
                 >
-                  <component
-                    :is="item.icon"
-                    class="h-5 w-5 mr-2"
-                  />
-                  <span>{{ item.title }}</span>
-                  <span
-                    v-if="item.indicator"
-                    class="ml-auto h-2 w-2 rounded-full bg-green-500"
-                  />
-                </Button>
-              </li>
-            </ul>
+                  <Button
+                    variant="ghost"
+                    class="w-full justify-start py-2 cursor-pointer text-primary-foreground hover:bg-accent hover:text-accent-foreground"
+                    :class="[
+                      isActive(item.path) ? 'bg-accent text-accent-foreground' : '',
+                    ]"
+                    @click="navigateTo(item.path)"
+                  >
+                    <component
+                      :is="item.icon"
+                      class="h-5 w-5 mr-2"
+                    />
+                    <span>{{ item.title }}</span>
+                    <span
+                      v-if="item.indicator"
+                      class="ml-auto h-2 w-2 rounded-full bg-green-500"
+                    />
+                  </Button>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-        <div class="flex flex-col items-center gap-2 w-full px-3">
+        <div class="flex flex-col items-center gap-2 w-full px-3 shrink-0">
           <a
             v-if="isAdmin"
             href="/admin"
