@@ -9,14 +9,26 @@ import {
   ArrowRight,
   Award,
   Calendar,
+  CalendarCheck,
   CheckCircle,
   ClipboardList,
+  Crown,
+  FileText,
   Flame,
+  Footprints,
   Loader2,
+  Medal,
   MessageCircle,
+  MessageSquare,
+  MessagesSquare,
+  Mic,
+  Presentation,
   Radio,
+  Share2,
   Star,
   Trophy,
+  UserCheck,
+  UserPlus,
   Users,
   Zap,
 } from 'lucide-vue-next'
@@ -32,6 +44,25 @@ import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
 import { pointsService } from '@/services/points'
 import { taskExchangeService } from '@/services/taskExchange'
+
+const achievementIconMap: Record<string, any> = {
+  'footprints': Footprints,
+  'flame': Flame,
+  'calendar-check': CalendarCheck,
+  'medal': Medal,
+  'mic': Mic,
+  'presentation': Presentation,
+  'star': Star,
+  'trophy': Trophy,
+  'crown': Crown,
+  'message-square': MessageSquare,
+  'messages-square': MessagesSquare,
+  'share-2': Share2,
+  'user-plus': UserPlus,
+  'user-check': UserCheck,
+  'zap': Zap,
+  'file-text': FileText,
+}
 
 const user = useUser()
 const { level, levelIndex } = useUserLevel()
@@ -497,7 +528,12 @@ onMounted(async () => {
             :key="ach.id"
             class="flex items-center gap-2.5 rounded-2xl bg-muted/40 px-4 py-3 shrink-0"
           >
-            <span class="text-2xl">{{ ach.icon }}</span>
+            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 shrink-0">
+              <component
+                :is="achievementIconMap[ach.icon] || Award"
+                class="h-5 w-5 text-green-500"
+              />
+            </div>
             <div>
               <p class="text-sm font-medium">
                 {{ ach.title }}
