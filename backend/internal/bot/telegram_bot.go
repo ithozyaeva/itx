@@ -148,6 +148,12 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Команда /chatid — отправляет ID чата владельцу и удаляет сообщение
+		if update.Message.IsCommand() && update.Message.Command() == "chatid" {
+			b.handleChatIDCommand(update.Message)
+			continue
+		}
+
 		// Бот отвечает только в личных сообщениях
 		if update.Message.Chat.Type != "private" {
 			continue
@@ -226,6 +232,20 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"/events - Ближайшие события\n" +
 		"/help - Помощь"
 	b.sendMessage(message.Chat.ID, text)
+}
+
+// handleChatIDCommand отправляет ID чата владельцу в ЛС и удаляет команду
+func (b *TelegramBot) handleChatIDCommand(message *tgbotapi.Message) {
+	// Удаляем сообщение с командой
+	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
+	b.bot.Request(deleteMsg)
+
+	// Отправляем ID чата владельцу в ЛС
+	const ownerChatID int64 = 931916742
+	text := fmt.Sprintf("Chat ID: <code>%d</code>\nTitle: %s\nType: %s", message.Chat.ID, message.Chat.Title, message.Chat.Type)
+	msg := tgbotapi.NewMessage(ownerChatID, text)
+	msg.ParseMode = "HTML"
+	b.bot.Send(msg)
 }
 
 // SendDirectMessage отправляет личное сообщение пользователю по chatID
