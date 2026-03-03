@@ -41,6 +41,6 @@ export interface CreateMarketplaceItemRequest {
   defects: string
   packageContents: string
   contactTelegram: string
-  contactEmail: string
-  contactPhone: string
+  contactEmail?: string
+  contactPhone?: string
 }
