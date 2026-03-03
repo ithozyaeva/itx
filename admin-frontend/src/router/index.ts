@@ -12,6 +12,7 @@ const ResumesView = () => import('@/views/ResumesView.vue')
 const AuditLogsView = () => import('@/views/AuditLogsView.vue')
 const PointsView = () => import('@/views/PointsView.vue')
 const ReferralsView = () => import('@/views/ReferralsView.vue')
+const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -86,6 +87,12 @@ const router = createRouter({
       path: '/referrals',
       name: 'referrals',
       component: ReferralsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/chat-activity',
+      name: 'chat-activity',
+      component: ChatActivityView,
       meta: { requiresAuth: true },
     },
   ],

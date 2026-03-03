@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type { Permission } from '@/types/permissions'
 import { computed, ref } from 'vue'
+import BarChart3 from '~icons/lucide/bar-chart-3'
 import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
 import Home from '~icons/lucide/home'
@@ -78,6 +79,11 @@ export function useSidebar() {
       path: '/points',
       icon: Star,
       requiredPermission: 'can_view_admin_points',
+    },
+    {
+      title: 'Активность чатов',
+      path: '/chat-activity',
+      icon: BarChart3,
     },
     {
       title: 'Журнал действий',

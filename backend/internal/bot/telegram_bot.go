@@ -90,6 +90,7 @@ type TelegramBot struct {
 	member                 *service.MemberService
 	eventAlertSubscription *service.EventAlertSubscriptionService
 	eventService           *service.EventsService
+	chatActivityService    *service.ChatActivityService
 }
 
 func NewTelegramBot() (*TelegramBot, error) {
@@ -113,12 +114,15 @@ func NewTelegramBot() (*TelegramBot, error) {
 	eventAlertSubscriptionService := service.NewEventAlertSubscriptionService()
 	eventService := service.NewEventsService()
 
+	chatActivityService := service.NewChatActivityService()
+
 	return &TelegramBot{
 		bot:                    bot,
 		tg_service:             tg_service,
 		member:                 member_service,
 		eventAlertSubscription: eventAlertSubscriptionService,
 		eventService:           eventService,
+		chatActivityService:    chatActivityService,
 	}, nil
 }
 
@@ -147,6 +151,9 @@ func (b *TelegramBot) Start() {
 		if update.Message == nil {
 			continue
 		}
+
+		// Трекинг активности чатов — для каждого сообщения (асинхронно, чтобы не блокировать обработку)
+		go b.chatActivityService.TrackMessage(update.Message)
 
 		// Команда /chatid — отправляет ID чата владельцу и удаляет сообщение
 		if update.Message.IsCommand() && update.Message.Command() == "chatid" {

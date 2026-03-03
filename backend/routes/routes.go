@@ -162,6 +162,14 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	adminReferals.Get("/:id", referalHandler.AdminGetById)
 	adminReferals.Delete("/:id", referalHandler.AdminDelete)
 
+	// Маршруты для активности чатов
+	chatActivityHandler := handler.NewChatActivityHandler()
+	chatActivity := protected.Group("/chat-activity")
+	chatActivity.Get("/stats", chatActivityHandler.GetStats)
+	chatActivity.Get("/chart", chatActivityHandler.GetChart)
+	chatActivity.Get("/top-users", chatActivityHandler.GetTopUsers)
+	chatActivity.Get("/chats", chatActivityHandler.GetChats)
+
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
 	eventTags := protected.Group("/eventTags")
