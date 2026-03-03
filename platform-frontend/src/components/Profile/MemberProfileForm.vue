@@ -52,6 +52,9 @@ async function handleAvatarUpload(event: Event) {
       avatarSrc.value = updated.avatarUrl
     }
   }
+  catch (err) {
+    handleError(err)
+  }
   finally {
     isUploadingAvatar.value = false
   }
