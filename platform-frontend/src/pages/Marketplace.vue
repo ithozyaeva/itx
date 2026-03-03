@@ -11,9 +11,9 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import {
   Dialog,
-  DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { isUserAdmin, useUser } from '@/composables/useUser'
@@ -405,7 +405,7 @@ onMounted(() => {
 
     <!-- Create dialog -->
     <Dialog v-model:open="showCreateDialog">
-      <DialogContent>
+      <DialogScrollContent>
         <DialogHeader>
           <DialogTitle>Новое объявление</DialogTitle>
         </DialogHeader>
@@ -565,7 +565,7 @@ onMounted(() => {
             </button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </DialogScrollContent>
     </Dialog>
   </div>
 </template>

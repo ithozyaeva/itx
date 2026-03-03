@@ -272,7 +272,6 @@ onMounted(async () => {
 
       <!-- Nearest Event -->
       <div
-        v-if="nearestEvent"
         class="mt-5 rounded-3xl border bg-card overflow-hidden"
         data-reveal
       >
@@ -281,7 +280,7 @@ onMounted(async () => {
             <Zap class="h-4 w-4 text-accent" />
             <span class="text-sm font-medium text-accent">Ближайшее событие</span>
             <span
-              v-if="isNearestEventLive"
+              v-if="nearestEvent && isNearestEventLive"
               class="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white ml-auto"
             >
               <Radio class="h-3 w-3" />
@@ -289,62 +288,73 @@ onMounted(async () => {
             </span>
           </div>
 
-          <h2 class="text-xl font-bold">
-            {{ nearestEvent.title }}
-          </h2>
-          <p
-            v-if="nearestEvent.description"
-            class="text-sm text-muted-foreground mt-1.5 line-clamp-2"
-          >
-            {{ nearestEvent.description }}
-          </p>
+          <template v-if="nearestEvent">
+            <h2 class="text-xl font-bold">
+              {{ nearestEvent.title }}
+            </h2>
+            <p
+              v-if="nearestEvent.description"
+              class="text-sm text-muted-foreground mt-1.5 line-clamp-2"
+            >
+              {{ nearestEvent.description }}
+            </p>
 
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-muted-foreground">
-            <span class="flex items-center gap-1.5">
-              <Calendar class="h-3.5 w-3.5" />
-              {{ nearestEventDate }}
-            </span>
-            <span
-              v-if="nearestEvent.hosts.length"
-              class="flex items-center gap-1.5"
-            >
-              <Users class="h-3.5 w-3.5" />
-              {{ nearestEvent.hosts.map(h => h.firstName).join(', ') }}
-            </span>
-            <span class="flex items-center gap-1.5">
-              {{ nearestEvent.members.length }}{{ nearestEvent.maxParticipants > 0 ? `/${nearestEvent.maxParticipants}` : '' }} участников
-            </span>
-          </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-muted-foreground">
+              <span class="flex items-center gap-1.5">
+                <Calendar class="h-3.5 w-3.5" />
+                {{ nearestEventDate }}
+              </span>
+              <span
+                v-if="nearestEvent.hosts.length"
+                class="flex items-center gap-1.5"
+              >
+                <Users class="h-3.5 w-3.5" />
+                {{ nearestEvent.hosts.map(h => h.firstName).join(', ') }}
+              </span>
+              <span class="flex items-center gap-1.5">
+                {{ nearestEvent.members.length }}{{ nearestEvent.maxParticipants > 0 ? `/${nearestEvent.maxParticipants}` : '' }} участников
+              </span>
+            </div>
 
-          <div class="flex items-center gap-3 mt-4">
+            <div class="flex items-center gap-3 mt-4">
+              <RouterLink
+                v-if="isMemberOfNearest || isHostOfNearest"
+                to="/events"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-accent/10 text-accent px-4 py-2 text-sm font-medium"
+              >
+                <CheckCircle class="h-4 w-4" />
+                {{ isHostOfNearest ? 'Вы ведущий' : 'Вы записаны' }}
+              </RouterLink>
+              <RouterLink
+                v-else
+                to="/events"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                Записаться
+                <ArrowRight class="h-3.5 w-3.5" />
+              </RouterLink>
+            </div>
+          </template>
+
+          <template v-else>
+            <p class="text-sm text-muted-foreground">
+              Пока нет запланированных событий
+            </p>
             <RouterLink
-              v-if="isMemberOfNearest || isHostOfNearest"
               to="/events"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-accent/10 text-accent px-4 py-2 text-sm font-medium"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors mt-3"
             >
-              <CheckCircle class="h-4 w-4" />
-              {{ isHostOfNearest ? 'Вы ведущий' : 'Вы записаны' }}
-            </RouterLink>
-            <RouterLink
-              v-else
-              to="/events"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              Записаться
+              Посмотреть события
               <ArrowRight class="h-3.5 w-3.5" />
             </RouterLink>
-          </div>
+          </template>
         </div>
       </div>
 
       <!-- Active Quests & Tasks Grid -->
-      <div
-        v-if="activeQuests.length > 0 || openTasks.length > 0"
-        class="mt-5 grid gap-5 lg:grid-cols-2"
-      >
+      <div class="mt-5 grid gap-5 lg:grid-cols-2">
         <!-- Chat Quests -->
         <div
-          v-if="activeQuests.length > 0"
           class="rounded-3xl border bg-card p-5"
           data-reveal
         >
@@ -361,7 +371,10 @@ onMounted(async () => {
             </RouterLink>
           </div>
 
-          <div class="space-y-3">
+          <div
+            v-if="activeQuests.length > 0"
+            class="space-y-3"
+          >
             <div
               v-for="quest in activeQuests.slice(0, 3)"
               :key="quest.id"
@@ -407,11 +420,16 @@ onMounted(async () => {
               {{ completedQuests.length }} выполнено
             </div>
           </div>
+          <p
+            v-else
+            class="text-sm text-muted-foreground"
+          >
+            Нет активных заданий. Пиши в чатах, чтобы зарабатывать баллы!
+          </p>
         </div>
 
         <!-- Open Tasks -->
         <div
-          v-if="openTasks.length > 0"
           class="rounded-3xl border bg-card p-5"
           data-reveal
         >
@@ -428,7 +446,10 @@ onMounted(async () => {
             </RouterLink>
           </div>
 
-          <div class="space-y-3">
+          <div
+            v-if="openTasks.length > 0"
+            class="space-y-3"
+          >
             <RouterLink
               v-for="task in openTasks"
               :key="task.id"
@@ -453,19 +474,24 @@ onMounted(async () => {
               </div>
             </RouterLink>
           </div>
+          <p
+            v-else
+            class="text-sm text-muted-foreground"
+          >
+            Нет открытых заданий
+          </p>
         </div>
       </div>
 
       <!-- Achievements Preview -->
       <div
-        v-if="achievements.recent.length > 0"
         class="mt-5 rounded-3xl border bg-card p-5"
         data-reveal
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <Award class="h-4 w-4 text-purple-500" />
-            <span class="text-sm font-semibold">Последние достижения</span>
+            <span class="text-sm font-semibold">Достижения</span>
           </div>
           <RouterLink
             to="/achievements"
@@ -474,7 +500,10 @@ onMounted(async () => {
             Все →
           </RouterLink>
         </div>
-        <div class="flex gap-3 overflow-x-auto pb-1">
+        <div
+          v-if="achievements.recent.length > 0"
+          class="flex gap-3 overflow-x-auto pb-1"
+        >
           <div
             v-for="ach in achievements.recent"
             :key="ach.id"
@@ -491,11 +520,21 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+        <div v-else>
+          <p class="text-sm text-muted-foreground">
+            {{ achievements.unlocked }} из {{ achievements.total }} открыто
+          </p>
+          <RouterLink
+            to="/achievements"
+            class="text-sm text-accent hover:underline mt-1 inline-block"
+          >
+            Посмотреть все достижения →
+          </RouterLink>
+        </div>
       </div>
 
       <!-- Upcoming Events -->
       <div
-        v-if="upcomingEvents.length > 0"
         class="mt-5"
         data-reveal
       >
@@ -513,12 +552,30 @@ onMounted(async () => {
             Все события →
           </RouterLink>
         </div>
-        <div class="space-y-4">
+        <div
+          v-if="upcomingEvents.length > 0"
+          class="space-y-4"
+        >
           <EventCard
             v-for="event in upcomingEvents"
             :key="event.id"
             :event="event"
           />
+        </div>
+        <div
+          v-else
+          class="rounded-3xl border bg-card p-6 text-center"
+        >
+          <Calendar class="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+          <p class="text-sm text-muted-foreground">
+            Нет предстоящих событий
+          </p>
+          <RouterLink
+            to="/events"
+            class="text-sm text-accent hover:underline mt-1 inline-block"
+          >
+            Посмотреть все события →
+          </RouterLink>
         </div>
       </div>
 
