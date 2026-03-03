@@ -23,7 +23,6 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import EventCard from '@/components/events/EventCard.vue'
-import { useCardReveal } from '@/composables/useCardReveal'
 import { useUser, useUserLevel } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
@@ -33,9 +32,6 @@ import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
 import { pointsService } from '@/services/points'
 import { taskExchangeService } from '@/services/taskExchange'
-
-const containerRef = ref<HTMLElement | null>(null)
-useCardReveal(containerRef)
 
 const user = useUser()
 const { level, levelIndex } = useUserLevel()
@@ -162,10 +158,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="px-4 py-6 md:py-8 max-w-4xl mx-auto"
-  >
+  <div class="px-4 py-6 md:py-8 max-w-4xl mx-auto">
     <!-- Loading -->
     <div
       v-if="isLoading"
@@ -178,7 +171,6 @@ onMounted(async () => {
       <!-- Hero Greeting -->
       <div
         class="relative rounded-3xl border bg-card p-6 md:p-8 overflow-hidden"
-        data-reveal
       >
         <!-- Subtle accent gradient -->
         <div class="absolute top-0 right-0 w-48 h-48 rounded-full bg-accent/5 -translate-y-1/2 translate-x-1/4 blur-2xl" />
@@ -273,7 +265,6 @@ onMounted(async () => {
       <!-- Nearest Event -->
       <div
         class="mt-5 rounded-3xl border bg-card overflow-hidden"
-        data-reveal
       >
         <div class="p-5 md:p-6">
           <div class="flex items-center gap-2 mb-3">
@@ -356,7 +347,6 @@ onMounted(async () => {
         <!-- Chat Quests -->
         <div
           class="rounded-3xl border bg-card p-5"
-          data-reveal
         >
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
@@ -431,7 +421,6 @@ onMounted(async () => {
         <!-- Open Tasks -->
         <div
           class="rounded-3xl border bg-card p-5"
-          data-reveal
         >
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
@@ -486,7 +475,6 @@ onMounted(async () => {
       <!-- Achievements Preview -->
       <div
         class="mt-5 rounded-3xl border bg-card p-5"
-        data-reveal
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
@@ -536,7 +524,6 @@ onMounted(async () => {
       <!-- Upcoming Events -->
       <div
         class="mt-5"
-        data-reveal
       >
         <div class="flex items-center justify-between mb-4">
           <Typography
@@ -582,7 +569,6 @@ onMounted(async () => {
       <!-- Quick Links -->
       <div
         class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3"
-        data-reveal
       >
         <RouterLink
           to="/leaderboard"
