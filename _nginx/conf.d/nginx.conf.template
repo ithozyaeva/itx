@@ -41,6 +41,7 @@ server {
     proxy_pass http://${BACKEND_CONTAINER}:3000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
+    client_max_body_size 10m;
   }
 
   location / {

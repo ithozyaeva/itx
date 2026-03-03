@@ -22,6 +22,7 @@ type MentorDbModel struct {
 
 type MentorModel struct {
 	Id         int64     `json:"id"`
+	TelegramID int64     `json:"telegramID"`
 	Username   string    `json:"tg"`
 	FirstName  string    `json:"firstName"`
 	LastName   string    `json:"lastName"`
@@ -66,6 +67,7 @@ func (m *MentorDbModel) SetID(id int64) {
 func (m *MentorDbModel) ToModel() MentorModel {
 	return MentorModel{
 		Id:         m.Id,
+		TelegramID: m.Member.TelegramID,
 		Username:   m.Member.Username,
 		FirstName:  m.Member.FirstName,
 		LastName:   m.Member.LastName,
