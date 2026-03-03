@@ -1,6 +1,12 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"ithozyeva/internal/s3resolve"
+
+	"gorm.io/gorm"
+)
 
 type MarketplaceItemStatus string
 type MarketplaceItemCondition string
@@ -40,6 +46,11 @@ type MarketplaceItem struct {
 
 func (MarketplaceItem) TableName() string {
 	return "marketplace_items"
+}
+
+func (m *MarketplaceItem) AfterFind(tx *gorm.DB) (err error) {
+	m.ImagePath = s3resolve.ResolveS3URL(m.ImagePath)
+	return nil
 }
 
 type CreateMarketplaceItemRequest struct {

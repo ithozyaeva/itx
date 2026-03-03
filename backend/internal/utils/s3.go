@@ -8,8 +8,10 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"ithozyeva/config"
+	"ithozyeva/internal/s3resolve"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -24,8 +26,9 @@ type contextKey string
 const contentSha256Key contextKey = "contentSha256"
 
 type S3Client struct {
-	client *s3.Client
-	bucket string
+	client        *s3.Client
+	presignClient *s3.PresignClient
+	bucket        string
 }
 
 func NewS3Client() (*S3Client, error) {
@@ -83,7 +86,9 @@ func NewS3Client() (*S3Client, error) {
 		})
 	})
 
-	return &S3Client{client: client, bucket: cfg.Bucket}, nil
+	presignClient := s3.NewPresignClient(client)
+
+	return &S3Client{client: client, presignClient: presignClient, bucket: cfg.Bucket}, nil
 }
 
 // cleanupHeadersMiddleware удаляет лишние заголовки AWS SDK, которые могут мешать cloud.ru
@@ -224,13 +229,74 @@ func (c *S3Client) UploadWithACL(ctx context.Context, key string, content []byte
 	return nil
 }
 
+// GetPublicURL returns just the S3 key for storage in the database.
 func (c *S3Client) GetPublicURL(key string) string {
-	cfg := config.CFG.S3
-	if publicURL := strings.TrimSpace(cfg.PublicURL); publicURL != "" {
-		return fmt.Sprintf("%s/%s", strings.TrimRight(publicURL, "/"), key)
+	return key
+}
+
+// GetPresignedURL generates a presigned URL for the given S3 key with 7-day expiry.
+func (c *S3Client) GetPresignedURL(key string) (string, error) {
+	result, err := c.presignClient.PresignGetObject(context.Background(), &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(7*24*time.Hour))
+	if err != nil {
+		return "", fmt.Errorf("failed to presign URL: %w", err)
 	}
-	endpoint := strings.TrimSpace(cfg.Endpoint)
-	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(endpoint, "/"), c.bucket, key)
+	return result.URL, nil
+}
+
+// ResolveURL takes a stored value (S3 key or old-style full URL) and returns a presigned URL.
+// Returns empty string if the input is empty.
+func (c *S3Client) ResolveURL(stored string) string {
+	if stored == "" {
+		return ""
+	}
+	key := ExtractS3Key(stored, c.bucket)
+	url, err := c.GetPresignedURL(key)
+	if err != nil {
+		log.Printf("Failed to generate presigned URL for key %s: %v", key, err)
+		return stored
+	}
+	return url
+}
+
+// ExtractS3Key extracts the S3 object key from either a full URL or a bare key.
+func ExtractS3Key(stored string, bucket string) string {
+	if !strings.HasPrefix(stored, "http") {
+		return stored
+	}
+	parsed, err := url.Parse(stored)
+	if err != nil {
+		return stored
+	}
+	path := strings.TrimPrefix(parsed.Path, "/")
+	path = strings.TrimPrefix(path, bucket+"/")
+	return path
+}
+
+// Global S3 resolver for use in model hooks
+var globalS3 *S3Client
+
+func InitGlobalS3() {
+	client, err := NewS3Client()
+	if err != nil {
+		log.Printf("Warning: failed to init global S3 client: %v", err)
+		return
+	}
+	globalS3 = client
+	// Register resolver for use in model hooks (breaks import cycle)
+	s3resolve.Resolver = func(stored string) string {
+		return client.ResolveURL(stored)
+	}
+}
+
+// ResolveS3URL resolves a stored S3 key or old-style URL to a presigned URL.
+func ResolveS3URL(stored string) string {
+	if globalS3 == nil || stored == "" {
+		return stored
+	}
+	return globalS3.ResolveURL(stored)
 }
 
 func (c *S3Client) Delete(ctx context.Context, key string) error {
