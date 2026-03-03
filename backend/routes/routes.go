@@ -263,4 +263,16 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	tasks.Post("/:id/approve", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Approve)
 	tasks.Post("/:id/reject", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Reject)
 	tasks.Delete("/:id", taskExchangeHandler.Delete)
+
+	// Маршруты для барахолки
+	marketplaceHandler := handler.NewMarketplaceHandler()
+	marketplace := protected.Group("/marketplace")
+	marketplace.Get("/", marketplaceHandler.Search)
+	marketplace.Get("/:id", marketplaceHandler.GetById)
+	marketplace.Post("/", marketplaceHandler.Create)
+	marketplace.Patch("/:id", marketplaceHandler.Update)
+	marketplace.Post("/:id/request-purchase", marketplaceHandler.RequestPurchase)
+	marketplace.Post("/:id/cancel-purchase", marketplaceHandler.CancelPurchase)
+	marketplace.Post("/:id/sold", marketplaceHandler.MarkSold)
+	marketplace.Delete("/:id", marketplaceHandler.Delete)
 }

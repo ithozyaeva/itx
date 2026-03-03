@@ -6,6 +6,7 @@ import Content from '@/pages/Content.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
 import Leaderboard from '@/pages/Leaderboard.vue'
+import Marketplace from '@/pages/Marketplace.vue'
 import MemberProfile from '@/pages/MemberProfile.vue'
 import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
@@ -31,6 +32,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/points', component: MyPoints, name: 'myPoints' },
   { path: '/leaderboard', component: Leaderboard, name: 'leaderboard' },
   { path: '/achievements', component: Achievements, name: 'achievements' },
+  { path: '/marketplace', component: Marketplace, name: 'marketplace' },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange' },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot' },
 ]
