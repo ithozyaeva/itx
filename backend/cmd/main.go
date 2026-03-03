@@ -5,6 +5,7 @@ import (
 	"ithozyeva/database"
 	"ithozyeva/internal/bot"
 	"ithozyeva/internal/service"
+	"ithozyeva/internal/utils"
 	"ithozyeva/routes"
 	"log"
 	"time"
@@ -20,6 +21,9 @@ func main() {
 
 	// Подключаемся к базе данных
 	database.SetupDatabase()
+
+	// Инициализируем глобальный S3 клиент для presigned URL
+	utils.InitGlobalS3()
 
 	// Создаем экземпляр Fiber
 	app := fiber.New(fiber.Config{

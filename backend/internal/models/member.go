@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"ithozyeva/internal/s3resolve"
+
 	"gorm.io/gorm"
 )
 
@@ -89,6 +91,7 @@ func (m *Member) SetRoleStrings(roleStrings []Role, memberId int64) {
 
 func (m *Member) AfterFind(tx *gorm.DB) (err error) {
 	m.Roles = m.GetRoleStrings()
+	m.AvatarURL = s3resolve.ResolveS3URL(m.AvatarURL)
 	return nil
 }
 
