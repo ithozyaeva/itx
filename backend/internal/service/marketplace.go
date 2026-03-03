@@ -72,7 +72,7 @@ func (s *MarketplaceService) Create(req *models.CreateMarketplaceItemRequest, se
 			}
 			key := fmt.Sprintf("marketplace/%d/%s%s", sellerId, uuid.New().String(), ext)
 
-			if err := s3Client.Upload(context.Background(), key, imageContent, imageContentType); err != nil {
+			if err := s3Client.UploadPublic(context.Background(), key, imageContent, imageContentType); err != nil {
 				log.Printf("marketplace: s3 upload error: %v", err)
 			} else {
 				item.ImagePath = s3Client.GetPublicURL(key)

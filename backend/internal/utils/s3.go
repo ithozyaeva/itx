@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
@@ -198,12 +199,24 @@ func min(a, b int) int {
 }
 
 func (c *S3Client) Upload(ctx context.Context, key string, content []byte, contentType string) error {
-	_, err := c.client.PutObject(ctx, &s3.PutObjectInput{
+	return c.UploadWithACL(ctx, key, content, contentType, "")
+}
+
+func (c *S3Client) UploadPublic(ctx context.Context, key string, content []byte, contentType string) error {
+	return c.UploadWithACL(ctx, key, content, contentType, "public-read")
+}
+
+func (c *S3Client) UploadWithACL(ctx context.Context, key string, content []byte, contentType string, acl string) error {
+	input := &s3.PutObjectInput{
 		Bucket:      aws.String(c.bucket),
 		Key:         aws.String(key),
 		Body:        bytes.NewReader(content),
 		ContentType: aws.String(contentType),
-	})
+	}
+	if acl != "" {
+		input.ACL = s3types.ObjectCannedACL(acl)
+	}
+	_, err := c.client.PutObject(ctx, input)
 	if err != nil {
 		log.Printf("S3 Upload error: bucket=%s, key=%s, error=%v", c.bucket, key, err)
 		return fmt.Errorf("failed to upload to S3: %w", err)
