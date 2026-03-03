@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import type { PointsSummary } from '@/models/points'
+import type { ChatQuestWithProgress } from '@/services/chatQuestService'
 import { Typography } from 'itx-ui-kit'
-import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageSquare, Mic, Share2, Star, User } from 'lucide-vue-next'
+import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageCircle, MessageSquare, Mic, Share2, Star, User } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useToast } from '@/components/ui/toast'
+import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 
 const { toast } = useToast()
 const data = ref<PointsSummary | null>(null)
+const chatQuests = ref<ChatQuestWithProgress[]>([])
 const isLoading = ref(true)
 
 const reasonLabels: Record<string, string> = {
@@ -104,7 +107,12 @@ function showNewCompletions() {
 async function fetchPoints() {
   isLoading.value = true
   try {
-    data.value = await pointsService.getMyPoints()
+    const [points, quests] = await Promise.all([
+      pointsService.getMyPoints(),
+      chatQuestService.getActiveQuests().catch(() => [] as ChatQuestWithProgress[]),
+    ])
+    data.value = points
+    chatQuests.value = quests
     showNewCompletions()
   }
   catch (error) {
@@ -113,6 +121,24 @@ async function fetchPoints() {
   finally {
     isLoading.value = false
   }
+}
+
+function questProgress(quest: ChatQuestWithProgress) {
+  return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
+}
+
+function formatQuestDeadline(dateStr: string) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays <= 0)
+    return 'Истекло'
+  if (diffDays === 1)
+    return 'Остался 1 день'
+  if (diffDays <= 7)
+    return `Осталось ${diffDays} дн.`
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 }
 
 onMounted(() => {
@@ -252,6 +278,78 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
+      <!-- Задания в чатах -->
+      <template v-if="chatQuests.length > 0">
+        <Typography
+          variant="h3"
+          as="h2"
+          class="mb-4"
+        >
+          Задания в чатах
+        </Typography>
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+          <div
+            v-for="quest in chatQuests"
+            :key="quest.id"
+            class="rounded-2xl p-4 transition-colors"
+            :class="quest.completed
+              ? 'bg-green-500/5 border border-green-500/30'
+              : 'bg-card border border-border'"
+          >
+            <div class="flex items-start gap-3">
+              <div
+                class="flex items-center justify-center w-10 h-10 rounded-full shrink-0"
+                :class="quest.completed ? 'bg-green-500/20' : 'bg-primary/10'"
+              >
+                <CheckCircle
+                  v-if="quest.completed"
+                  class="h-5 w-5 text-green-500"
+                />
+                <MessageCircle
+                  v-else
+                  class="h-5 w-5 text-primary"
+                />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div
+                  class="font-medium text-sm"
+                  :class="quest.completed ? 'line-through text-muted-foreground' : ''"
+                >
+                  {{ quest.title }}
+                </div>
+                <div
+                  v-if="quest.description"
+                  class="text-xs text-muted-foreground mt-0.5"
+                >
+                  {{ quest.description }}
+                </div>
+                <!-- Прогресс-бар -->
+                <div v-if="!quest.completed" class="mt-2">
+                  <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>{{ quest.currentCount }} / {{ quest.targetCount }}</span>
+                    <span>{{ formatQuestDeadline(quest.endsAt) }}</span>
+                  </div>
+                  <div class="w-full bg-muted rounded-full h-1.5">
+                    <div
+                      class="bg-primary rounded-full h-1.5 transition-all"
+                      :style="{ width: `${questProgress(quest)}%` }"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div
+                class="shrink-0 text-xs font-bold px-2 py-1 rounded-full"
+                :class="quest.completed
+                  ? 'text-green-500 bg-green-500/10'
+                  : 'text-yellow-500 bg-yellow-500/10'"
+              >
+                {{ quest.completed ? '' : '+' }}{{ quest.pointsReward }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- За что начисляются баллы -->
       <Typography

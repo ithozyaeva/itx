@@ -21,6 +21,7 @@ type ChatMessage struct {
 	TelegramUserID    int64     `json:"telegramUserId" gorm:"column:telegram_user_id"`
 	TelegramUsername  string    `json:"telegramUsername" gorm:"column:telegram_username"`
 	TelegramFirstName string    `json:"telegramFirstName" gorm:"column:telegram_first_name"`
+	MemberID          *int64    `json:"memberId" gorm:"column:member_id"`
 	SentAt            time.Time `json:"sentAt" gorm:"column:sent_at"`
 	CreatedAt         time.Time `json:"createdAt" gorm:"column:created_at"`
 }
@@ -53,9 +54,35 @@ type TopUser struct {
 
 // ChatActivityStats — общая статистика активности
 type ChatActivityStats struct {
-	TotalMessagesToday int64             `json:"totalMessagesToday"`
-	TotalMessagesWeek  int64             `json:"totalMessagesWeek"`
-	UniqueUsersToday   int64             `json:"uniqueUsersToday"`
-	UniqueUsersWeek    int64             `json:"uniqueUsersWeek"`
-	ChatStats          []ChatMessageCount `json:"chatStats"`
+	TotalMessagesToday    int64              `json:"totalMessagesToday"`
+	TotalMessagesWeek     int64              `json:"totalMessagesWeek"`
+	UniqueUsersToday      int64              `json:"uniqueUsersToday"`
+	UniqueUsersWeek       int64              `json:"uniqueUsersWeek"`
+	TotalMessagesLastWeek int64              `json:"totalMessagesLastWeek"`
+	UniqueUsersLastWeek   int64              `json:"uniqueUsersLastWeek"`
+	ChatStats             []ChatMessageCount `json:"chatStats"`
+}
+
+// UserDailyActivity — активность пользователя по дням
+type UserDailyActivity struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+// UserStats — статистика конкретного пользователя
+type UserStats struct {
+	TelegramUserID    int64  `json:"telegramUserId"`
+	TelegramUsername  string `json:"telegramUsername"`
+	TelegramFirstName string `json:"telegramFirstName"`
+	TotalMessages     int64  `json:"totalMessages"`
+	ActiveChats       int64  `json:"activeChats"`
+	AvgPerDay         float64 `json:"avgPerDay"`
+}
+
+// ExportRow — строка для CSV экспорта
+type ExportRow struct {
+	Date             string `json:"date"`
+	ChatTitle        string `json:"chatTitle"`
+	TelegramUsername string `json:"telegramUsername"`
+	MessageCount     int64  `json:"messageCount"`
 }

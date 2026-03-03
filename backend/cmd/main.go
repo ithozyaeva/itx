@@ -75,6 +75,20 @@ func main() {
 		}
 	}()
 
+	// Запускаем фоновую задачу для очистки старых сообщений чатов (раз в сутки)
+	go func() {
+		chatActivitySvc := service.NewChatActivityService()
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		// Выполняем сразу при старте
+		chatActivitySvc.CleanupOldMessages(90)
+
+		for range ticker.C {
+			chatActivitySvc.CleanupOldMessages(90)
+		}
+	}()
+
 	// Запускаем Telegram бота в отдельной горутине
 	go func() {
 		telegramBot, err := bot.NewTelegramBot()

@@ -137,3 +137,86 @@ func (r *ChatActivityRepository) GetTotalStats(from, to time.Time) (totalMessage
 	`, from, to).Scan(&uniqueUsers).Error
 	return
 }
+
+// GetUserStats возвращает статистику конкретного пользователя
+func (r *ChatActivityRepository) GetUserStats(userID int64, days int) (*models.UserStats, error) {
+	var stats models.UserStats
+	err := database.DB.Raw(`
+		SELECT
+			telegram_user_id,
+			MAX(telegram_username) as telegram_username,
+			MAX(telegram_first_name) as telegram_first_name,
+			COUNT(*) as total_messages,
+			COUNT(DISTINCT chat_id) as active_chats,
+			ROUND(COUNT(*)::numeric / GREATEST(?, 1), 1) as avg_per_day
+		FROM chat_messages
+		WHERE telegram_user_id = ? AND sent_at >= CURRENT_DATE - ?::int * INTERVAL '1 day'
+		GROUP BY telegram_user_id
+	`, days, userID, days).Scan(&stats).Error
+	if err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}
+
+// GetDailyActivityByUser возвращает активность конкретного пользователя по дням
+func (r *ChatActivityRepository) GetDailyActivityByUser(userID int64, days int) ([]models.DailyActivity, error) {
+	var activity []models.DailyActivity
+	err := database.DB.Raw(`
+		SELECT TO_CHAR(d.day, 'YYYY-MM-DD') as date,
+		       COALESCE(cnt, 0) as count
+		FROM generate_series(
+		  CURRENT_DATE - ?::int * INTERVAL '1 day',
+		  CURRENT_DATE,
+		  '1 day'::interval
+		) d(day)
+		LEFT JOIN (
+		  SELECT DATE(sent_at) as day, COUNT(*) as cnt
+		  FROM chat_messages
+		  WHERE telegram_user_id = ? AND sent_at >= CURRENT_DATE - ?::int * INTERVAL '1 day'
+		  GROUP BY DATE(sent_at)
+		) cm ON cm.day = d.day::date
+		ORDER BY d.day
+	`, days, userID, days).Scan(&activity).Error
+	return activity, err
+}
+
+// GetMessagesForExport возвращает агрегированные данные для CSV экспорта
+func (r *ChatActivityRepository) GetMessagesForExport(chatID *int64, days int) ([]models.ExportRow, error) {
+	var rows []models.ExportRow
+	var err error
+
+	if chatID != nil {
+		err = database.DB.Raw(`
+			SELECT TO_CHAR(DATE(cm.sent_at), 'YYYY-MM-DD') as date,
+			       tc.title as chat_title,
+			       COALESCE(cm.telegram_username, cm.telegram_first_name) as telegram_username,
+			       COUNT(*) as message_count
+			FROM chat_messages cm
+			JOIN tracked_chats tc ON tc.chat_id = cm.chat_id
+			WHERE cm.chat_id = ? AND cm.sent_at >= CURRENT_DATE - ?::int * INTERVAL '1 day'
+			GROUP BY DATE(cm.sent_at), tc.title, COALESCE(cm.telegram_username, cm.telegram_first_name)
+			ORDER BY date DESC, message_count DESC
+		`, *chatID, days).Scan(&rows).Error
+	} else {
+		err = database.DB.Raw(`
+			SELECT TO_CHAR(DATE(cm.sent_at), 'YYYY-MM-DD') as date,
+			       tc.title as chat_title,
+			       COALESCE(cm.telegram_username, cm.telegram_first_name) as telegram_username,
+			       COUNT(*) as message_count
+			FROM chat_messages cm
+			JOIN tracked_chats tc ON tc.chat_id = cm.chat_id
+			WHERE cm.sent_at >= CURRENT_DATE - ?::int * INTERVAL '1 day'
+			GROUP BY DATE(cm.sent_at), tc.title, COALESCE(cm.telegram_username, cm.telegram_first_name)
+			ORDER BY date DESC, message_count DESC
+		`, days).Scan(&rows).Error
+	}
+
+	return rows, err
+}
+
+// DeleteOldMessages удаляет сообщения старше указанной даты
+func (r *ChatActivityRepository) DeleteOldMessages(beforeDate time.Time) (int64, error) {
+	result := database.DB.Where("sent_at < ?", beforeDate).Delete(&models.ChatMessage{})
+	return result.RowsAffected, result.Error
+}

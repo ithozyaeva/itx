@@ -5,6 +5,8 @@ export interface ChatActivityStats {
   totalMessagesWeek: number
   uniqueUsersToday: number
   uniqueUsersWeek: number
+  totalMessagesLastWeek: number
+  uniqueUsersLastWeek: number
   chatStats: ChatMessageCount[]
 }
 
@@ -35,14 +37,25 @@ export interface TrackedChat {
   isActive: boolean
 }
 
+export interface UserStats {
+  telegramUserId: number
+  telegramUsername: string
+  telegramFirstName: string
+  totalMessages: number
+  activeChats: number
+  avgPerDay: number
+}
+
 export const chatActivityService = {
   getStats: async () => {
     return api.get('chat-activity/stats').json<ChatActivityStats>()
   },
-  getChart: async (chatId?: number, days = 30) => {
+  getChart: async (chatId?: number, days = 30, userId?: number) => {
     const searchParams: Record<string, string> = { days: String(days) }
     if (chatId)
       searchParams.chat_id = String(chatId)
+    if (userId)
+      searchParams.user_id = String(userId)
     return api.get('chat-activity/chart', { searchParams }).json<DailyActivity[]>()
   },
   getTopUsers: async (days = 7, limit = 5) => {
@@ -52,5 +65,23 @@ export const chatActivityService = {
   },
   getChats: async () => {
     return api.get('chat-activity/chats').json<TrackedChat[]>()
+  },
+  getUserStats: async (userId: number, days = 30) => {
+    return api.get('chat-activity/user-stats', {
+      searchParams: { user_id: String(userId), days: String(days) },
+    }).json<UserStats>()
+  },
+  exportCSV: async (days = 30, chatId?: number) => {
+    const searchParams: Record<string, string> = { days: String(days) }
+    if (chatId)
+      searchParams.chat_id = String(chatId)
+    const response = await api.get('chat-activity/export', { searchParams })
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'chat-activity.csv'
+    a.click()
+    URL.revokeObjectURL(url)
   },
 }

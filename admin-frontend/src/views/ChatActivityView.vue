@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChatActivityStats, DailyActivity, TopUser, TrackedChat } from '@/services/chatActivityService'
+import type { ChatActivityStats, DailyActivity, TopUser, TrackedChat, UserStats } from '@/services/chatActivityService'
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -12,10 +12,11 @@ import {
   Tooltip,
 } from 'chart.js'
 import { Typography } from 'itx-ui-kit'
-import { BarChart3, MessageSquare, Users } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, BarChart3, Download, MessageSquare, Users, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Line } from 'vue-chartjs'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { chatActivityService } from '@/services/chatActivityService'
@@ -32,6 +33,11 @@ const chats = ref<TrackedChat[]>([])
 const selectedChatId = ref<number | undefined>(undefined)
 const selectedDays = ref(30)
 const isLoading = ref(true)
+
+// Фильтр по пользователю
+const selectedUser = ref<TopUser | null>(null)
+const userStats = ref<UserStats | null>(null)
+const userChartData = ref<DailyActivity[]>([])
 
 onMounted(async () => {
   try {
@@ -67,6 +73,26 @@ watch([selectedChatId, selectedDays], () => {
   loadChart()
 })
 
+function calcChange(current: number, previous: number): number | null {
+  if (previous === 0)
+    return current > 0 ? 100 : null
+  return Math.round(((current - previous) / previous) * 100)
+}
+
+const messagesChange = computed(() =>
+  stats.value ? calcChange(stats.value.totalMessagesWeek, stats.value.totalMessagesLastWeek) : null,
+)
+const usersChange = computed(() =>
+  stats.value ? calcChange(stats.value.uniqueUsersWeek, stats.value.uniqueUsersLastWeek) : null,
+)
+
+const summaryCards = computed(() => [
+  { label: 'Сообщений сегодня', value: stats.value?.totalMessagesToday ?? 0, icon: MessageSquare, change: null },
+  { label: 'Сообщений за неделю', value: stats.value?.totalMessagesWeek ?? 0, icon: BarChart3, change: messagesChange.value },
+  { label: 'Активных сегодня', value: stats.value?.uniqueUsersToday ?? 0, icon: Users, change: null },
+  { label: 'Активных за неделю', value: stats.value?.uniqueUsersWeek ?? 0, icon: Users, change: usersChange.value },
+])
+
 const lineChartData = computed(() => ({
   labels: chartData.value.map(d => d.date.slice(5)),
   datasets: [{
@@ -90,12 +116,47 @@ const chartOptions = {
   },
 }
 
-const summaryCards = computed(() => [
-  { label: 'Сообщений сегодня', value: stats.value?.totalMessagesToday ?? 0, icon: MessageSquare },
-  { label: 'Сообщений за неделю', value: stats.value?.totalMessagesWeek ?? 0, icon: BarChart3 },
-  { label: 'Активных сегодня', value: stats.value?.uniqueUsersToday ?? 0, icon: Users },
-  { label: 'Активных за неделю', value: stats.value?.uniqueUsersWeek ?? 0, icon: Users },
-])
+const userLineChartData = computed(() => ({
+  labels: userChartData.value.map(d => d.date.slice(5)),
+  datasets: [{
+    label: 'Сообщения',
+    data: userChartData.value.map(d => d.count),
+    borderColor: 'hsl(var(--primary))',
+    backgroundColor: 'hsl(var(--primary) / 0.1)',
+    fill: true,
+    tension: 0.3,
+  }],
+}))
+
+async function selectUser(user: TopUser) {
+  selectedUser.value = user
+  try {
+    const [us, uc] = await Promise.all([
+      chatActivityService.getUserStats(user.telegramUserId, 30),
+      chatActivityService.getChart(undefined, 30, user.telegramUserId),
+    ])
+    userStats.value = us
+    userChartData.value = uc
+  }
+  catch (error) {
+    console.error('Ошибка загрузки статистики пользователя:', error)
+  }
+}
+
+function clearUserSelection() {
+  selectedUser.value = null
+  userStats.value = null
+  userChartData.value = []
+}
+
+async function handleExport() {
+  try {
+    await chatActivityService.exportCSV(selectedDays.value, selectedChatId.value)
+  }
+  catch (error) {
+    console.error('Ошибка экспорта:', error)
+  }
+}
 </script>
 
 <template>
@@ -117,6 +178,15 @@ const summaryCards = computed(() => [
           <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0">
             <p class="text-2xl lg:text-3xl font-bold">
               {{ card.value }}
+            </p>
+            <p
+              v-if="card.change !== null"
+              class="text-xs mt-1 flex items-center gap-0.5"
+              :class="card.change >= 0 ? 'text-green-500' : 'text-red-500'"
+            >
+              <ArrowUp v-if="card.change >= 0" class="h-3 w-3" />
+              <ArrowDown v-else class="h-3 w-3" />
+              {{ Math.abs(card.change) }}% vs прошлая неделя
             </p>
           </CardContent>
         </Card>
@@ -153,7 +223,7 @@ const summaryCards = computed(() => [
             <CardTitle class="text-sm lg:text-base">
               График активности
             </CardTitle>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
               <select
                 v-model="selectedChatId"
                 class="text-sm border rounded-md px-2 py-1 bg-background"
@@ -179,6 +249,10 @@ const summaryCards = computed(() => [
                   30 дней
                 </option>
               </select>
+              <Button size="sm" variant="outline" @click="handleExport">
+                <Download class="h-4 w-4 mr-1" />
+                CSV
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -216,7 +290,12 @@ const summaryCards = computed(() => [
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(user, index) in topUsers" :key="user.telegramUserId" class="border-b last:border-0">
+                <tr
+                  v-for="(user, index) in topUsers"
+                  :key="user.telegramUserId"
+                  class="border-b last:border-0 cursor-pointer hover:bg-muted/50"
+                  @click="selectUser(user)"
+                >
                   <td class="py-2">
                     {{ index + 1 }}
                   </td>
@@ -233,6 +312,51 @@ const summaryCards = computed(() => [
                 </tr>
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Статистика пользователя -->
+      <Card v-if="selectedUser" data-reveal>
+        <CardHeader class="p-3 lg:p-6">
+          <div class="flex items-center justify-between">
+            <CardTitle class="text-sm lg:text-base">
+              Статистика: {{ selectedUser.telegramUsername ? `@${selectedUser.telegramUsername}` : selectedUser.telegramFirstName }}
+            </CardTitle>
+            <button class="p-1 rounded-md hover:bg-muted" @click="clearUserSelection">
+              <X class="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent class="p-3 pt-0 lg:p-6 lg:pt-0 space-y-4">
+          <div v-if="userStats" class="grid grid-cols-3 gap-3">
+            <div class="text-center p-3 bg-muted/50 rounded-lg">
+              <p class="text-2xl font-bold">
+                {{ userStats.totalMessages }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                Сообщений
+              </p>
+            </div>
+            <div class="text-center p-3 bg-muted/50 rounded-lg">
+              <p class="text-2xl font-bold">
+                {{ userStats.activeChats }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                Чатов
+              </p>
+            </div>
+            <div class="text-center p-3 bg-muted/50 rounded-lg">
+              <p class="text-2xl font-bold">
+                {{ userStats.avgPerDay }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                Среднее/день
+              </p>
+            </div>
+          </div>
+          <div v-if="userChartData.length > 0" class="h-48">
+            <Line :data="userLineChartData" :options="chartOptions" />
           </div>
         </CardContent>
       </Card>

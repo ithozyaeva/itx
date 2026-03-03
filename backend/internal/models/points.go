@@ -21,6 +21,7 @@ const (
 	PointReasonTaskExecute         PointReason = "task_execute"
 	PointReasonMarketplaceCreate   PointReason = "marketplace_create"
 	PointReasonMarketplaceBuy      PointReason = "marketplace_buy"
+	PointReasonChatQuest           PointReason = "chat_quest"
 )
 
 var PointValues = map[PointReason]int{
