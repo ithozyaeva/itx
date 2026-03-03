@@ -148,6 +148,11 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Бот отвечает только в личных сообщениях
+		if update.Message.Chat.Type != "private" {
+			continue
+		}
+
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
