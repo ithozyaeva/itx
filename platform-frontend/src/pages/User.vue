@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
 import MemberProfileCard from '@/components/Profile/MemberProfileForm.vue'
 import MentorInfoForm from '@/components/Profile/MentorInfoForm.vue'
+import NotificationSettingsForm from '@/components/Profile/NotificationSettingsForm.vue'
 import ProfTagsForm from '@/components/Profile/ProfTagsForm.vue'
 import ServicesForm from '@/components/Profile/ServicesForm.vue'
 import { isUserMentor, useUser } from '@/composables/useUser'
@@ -37,6 +38,7 @@ const isMentor = isUserMentor()
       </div>
       <ServicesForm v-if="isMentor" />
       <ContactsForm v-if="isMentor" />
+      <NotificationSettingsForm />
     </div>
   </div>
 </template>

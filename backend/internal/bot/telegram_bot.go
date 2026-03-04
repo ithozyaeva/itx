@@ -85,12 +85,13 @@ func SetGlobalBot(bot *TelegramBot) {
 }
 
 type TelegramBot struct {
-	bot                    *tgbotapi.BotAPI
-	tg_service             *service.TelegramService
-	member                 *service.MemberService
-	eventAlertSubscription *service.EventAlertSubscriptionService
-	eventService           *service.EventsService
-	chatActivityService    *service.ChatActivityService
+	bot                          *tgbotapi.BotAPI
+	tg_service                   *service.TelegramService
+	member                       *service.MemberService
+	eventAlertSubscription       *service.EventAlertSubscriptionService
+	eventService                 *service.EventsService
+	chatActivityService          *service.ChatActivityService
+	notificationSettingsService  *service.NotificationSettingsService
 }
 
 func NewTelegramBot() (*TelegramBot, error) {
@@ -115,14 +116,16 @@ func NewTelegramBot() (*TelegramBot, error) {
 	eventService := service.NewEventsService()
 
 	chatActivityService := service.NewChatActivityService()
+	notificationSettingsService := service.NewNotificationSettingsService()
 
 	return &TelegramBot{
-		bot:                    bot,
-		tg_service:             tg_service,
-		member:                 member_service,
-		eventAlertSubscription: eventAlertSubscriptionService,
-		eventService:           eventService,
-		chatActivityService:    chatActivityService,
+		bot:                         bot,
+		tg_service:                  tg_service,
+		member:                      member_service,
+		eventAlertSubscription:      eventAlertSubscriptionService,
+		eventService:                eventService,
+		chatActivityService:         chatActivityService,
+		notificationSettingsService: notificationSettingsService,
 	}, nil
 }
 
@@ -612,6 +615,22 @@ func (b *TelegramBot) answerCallbackQuery(callbackID string, text string) {
 	}
 }
 
+// getNotificationSettingsMap получает настройки уведомлений для списка участников
+func (b *TelegramBot) getNotificationSettingsMap(members []models.Member) map[int64]*models.NotificationSettings {
+	memberIds := make([]int64, 0, len(members))
+	for _, m := range members {
+		if m.TelegramID != 0 {
+			memberIds = append(memberIds, m.Id)
+		}
+	}
+	settingsMap, err := b.notificationSettingsService.GetByMemberIds(memberIds)
+	if err != nil {
+		log.Printf("Error getting notification settings: %v", err)
+		return make(map[int64]*models.NotificationSettings)
+	}
+	return settingsMap
+}
+
 // SendInitialEventAlerts отправляет инициализирующие алерты всем подписанным пользователям
 func (b *TelegramBot) SendInitialEventAlerts(event *models.Event) error {
 	members, err := b.member.GetSubscribedMembersWithTelegram()
@@ -619,8 +638,15 @@ func (b *TelegramBot) SendInitialEventAlerts(event *models.Event) error {
 		return fmt.Errorf("error getting subscribed members: %v", err)
 	}
 
+	settingsMap := b.getNotificationSettingsMap(members)
+
 	for _, member := range members {
 		if member.TelegramID == 0 {
+			continue
+		}
+
+		// Проверяем настройки уведомлений
+		if s, ok := settingsMap[member.Id]; ok && !s.NewEvents {
 			continue
 		}
 
@@ -643,15 +669,41 @@ func (b *TelegramBot) SendInitialEventAlerts(event *models.Event) error {
 	return nil
 }
 
-func (b *TelegramBot) SendRepeatingEventAlert(event *models.Event) error {
+func (b *TelegramBot) SendRepeatingEventAlert(event *models.Event, alertType string) error {
 	members, err := b.eventAlertSubscription.GetSubscribedMembersForEvent(event.Id)
 	if err != nil {
 		return fmt.Errorf("error getting subscribed members for event: %v", err)
 	}
 
+	settingsMap := b.getNotificationSettingsMap(members)
+
 	for _, member := range members {
 		if member.TelegramID == 0 {
 			continue
+		}
+
+		// Проверяем настройки уведомлений по типу алерта
+		if s, ok := settingsMap[member.Id]; ok {
+			switch alertType {
+			case "first":
+				if !s.RemindWeek {
+					continue
+				}
+			case "second":
+				if !s.RemindDay {
+					continue
+				}
+			case "third":
+				if !s.RemindHour {
+					continue
+				}
+			case "start":
+				if !s.EventStart {
+					continue
+				}
+			default:
+				log.Printf("Unknown alertType %q for event %d", alertType, event.Id)
+			}
 		}
 
 		err = b.SendEventAlert(member.TelegramID, event, false)
@@ -674,8 +726,15 @@ func (b *TelegramBot) SendEventUpdateAlert(event *models.Event) error {
 		return fmt.Errorf("error getting subscribed members for event: %v", err)
 	}
 
+	settingsMap := b.getNotificationSettingsMap(members)
+
 	for _, member := range members {
 		if member.TelegramID == 0 {
+			continue
+		}
+
+		// Проверяем настройки уведомлений
+		if s, ok := settingsMap[member.Id]; ok && !s.EventUpdates {
 			continue
 		}
 
@@ -703,8 +762,15 @@ func (b *TelegramBot) SendEventCancelAlert(event *models.Event) error {
 		return fmt.Errorf("error getting subscribed members for event: %v", err)
 	}
 
+	settingsMap := b.getNotificationSettingsMap(members)
+
 	for _, member := range members {
 		if member.TelegramID == 0 {
+			continue
+		}
+
+		// Проверяем настройки уведомлений
+		if s, ok := settingsMap[member.Id]; ok && !s.EventCancelled {
 			continue
 		}
 
@@ -1025,7 +1091,7 @@ func (b *TelegramBot) checkRepeatingAlerts(event *models.Event, now time.Time) {
 		}
 
 		log.Printf("Sending repeating alert for event %d, type: %s, timeUntilEvent: %v", event.Id, alertType, timeUntilEvent)
-		if err := b.SendRepeatingEventAlert(event); err != nil {
+		if err := b.SendRepeatingEventAlert(event, alertType); err != nil {
 			log.Printf("Error sending repeating alert: %v", err)
 			return
 		}

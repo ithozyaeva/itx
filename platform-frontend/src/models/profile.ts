@@ -46,6 +46,18 @@ export interface PublicProfile {
   mentor?: Mentor
 }
 
+export interface NotificationSettings {
+  id: number
+  memberId: number
+  newEvents: boolean
+  remindWeek: boolean
+  remindDay: boolean
+  remindHour: boolean
+  eventStart: boolean
+  eventUpdates: boolean
+  eventCancelled: boolean
+}
+
 export const SUBSCRIPTION_LEVELS = [
   'Новичок',
   'Бригадир',
