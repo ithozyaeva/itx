@@ -88,7 +88,11 @@ func NewS3Client() (*S3Client, error) {
 
 	presignClient := s3.NewPresignClient(client)
 
-	return &S3Client{client: client, presignClient: presignClient, bucket: cfg.Bucket}, nil
+	return &S3Client{
+		client:        client,
+		presignClient: presignClient,
+		bucket:        cfg.Bucket,
+	}, nil
 }
 
 // cleanupHeadersMiddleware удаляет лишние заголовки AWS SDK, которые могут мешать cloud.ru
@@ -218,14 +222,19 @@ func (c *S3Client) UploadWithACL(ctx context.Context, key string, content []byte
 		Body:        bytes.NewReader(content),
 		ContentType: aws.String(contentType),
 	}
+
+	// ACL не обязателен для Cloud.ru, так как используются presigned URLs
+	// Но оставляем для совместимости с AWS S3
 	if acl != "" {
 		input.ACL = s3types.ObjectCannedACL(acl)
 	}
+
 	_, err := c.client.PutObject(ctx, input)
 	if err != nil {
 		log.Printf("S3 Upload error: bucket=%s, key=%s, error=%v", c.bucket, key, err)
 		return fmt.Errorf("failed to upload to S3: %w", err)
 	}
+	log.Printf("S3 Upload successful: bucket=%s, key=%s", c.bucket, key)
 	return nil
 }
 
@@ -236,10 +245,15 @@ func (c *S3Client) GetPublicURL(key string) string {
 
 // GetPresignedURL generates a presigned URL for the given S3 key with 7-day expiry.
 func (c *S3Client) GetPresignedURL(key string) (string, error) {
+	return c.GetPresignedURLWithExpiry(key, 7*24*time.Hour)
+}
+
+// GetPresignedURLWithExpiry generates a presigned URL with custom expiry time.
+func (c *S3Client) GetPresignedURLWithExpiry(key string, expiry time.Duration) (string, error) {
 	result, err := c.presignClient.PresignGetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(key),
-	}, s3.WithPresignExpires(7*24*time.Hour))
+	}, s3.WithPresignExpires(expiry))
 	if err != nil {
 		return "", fmt.Errorf("failed to presign URL: %w", err)
 	}
@@ -253,6 +267,8 @@ func (c *S3Client) ResolveURL(stored string) string {
 		return ""
 	}
 	key := ExtractS3Key(stored, c.bucket)
+
+	// Use presigned URL for all files (Cloud.ru requires authorization even for "public" files)
 	url, err := c.GetPresignedURL(key)
 	if err != nil {
 		log.Printf("Failed to generate presigned URL for key %s: %v", key, err)

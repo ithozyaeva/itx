@@ -92,7 +92,7 @@ function showNewCompletions() {
     q => isQuestCompleted(q.reason) && !seen.has(q.reason),
   )
 
-  if (newlyCompleted.length > 0) {
+  if (newlyCompleted?.length > 0) {
     const labels = newlyCompleted.map(q => q.label).join(', ')
     const totalPoints = newlyCompleted.reduce((sum, q) => sum + q.points, 0)
     toast({
@@ -280,7 +280,7 @@ onMounted(() => {
       </div>
 
       <!-- Задания в чатах -->
-      <template v-if="chatQuests.length > 0">
+      <template v-if="chatQuests?.length > 0">
         <Typography
           variant="h3"
           as="h2"
@@ -397,7 +397,7 @@ onMounted(() => {
         История транзакций
       </Typography>
       <div
-        v-if="data.transactions.length === 0"
+        v-if="(data.transactions?.length ?? 0) === 0"
         class="text-center py-12 text-muted-foreground"
       >
         Пока нет транзакций. Выполняйте задания, чтобы зарабатывать баллы!

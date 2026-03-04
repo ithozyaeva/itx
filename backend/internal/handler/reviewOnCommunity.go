@@ -47,10 +47,7 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 
 	author := c.Locals("member").(*models.Member)
 
-	err := h.svc.CreateReviewOnCommunity(&models.CreateReviewOnCommunityRequest{
-		AuthorTg: author.Username,
-		Text:     review.Text,
-	})
+	err := h.svc.CreateReviewOnCommunityByMemberId(author.Id, review.Text, nil)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})

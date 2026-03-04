@@ -37,7 +37,6 @@ type Config struct {
 
 type S3Config struct {
 	Endpoint  string
-	PublicURL string
 	Region    string
 	AccessKey string
 	SecretKey string
@@ -133,7 +132,6 @@ func LoadConfig() {
 		AlertScheduledMinute:               alertScheduledMinute,
 		S3: S3Config{
 			Endpoint:  viper.GetString("S3_ENDPOINT"),
-			PublicURL: viper.GetString("S3_PUBLIC_URL"),
 			Region:    viper.GetString("S3_REGION"),
 			AccessKey: viper.GetString("S3_ACCESS_KEY"),
 			SecretKey: viper.GetString("S3_SECRET_KEY"),
