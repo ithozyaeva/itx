@@ -32,32 +32,37 @@ func (s *ReviewOnCommunityService) GetAllWithAuthor(limit *int, offset *int) (*m
 	}, nil
 }
 
-// CreateReviewOnCommunity создает новый отзыв о сообществе
-func (s *ReviewOnCommunityService) CreateReviewOnCommunity(req *models.CreateReviewOnCommunityRequest) error {
-	// Найти пользователя по Telegram
-	member, err := repository.NewMemberRepository().GetMemberByTelegram(req.AuthorTg)
-	if err != nil {
-		return fmt.Errorf("не удалось найти пользователя с Telegram %s: %w", req.AuthorTg, err)
-	}
-
+// CreateReviewOnCommunityByMemberId создает новый отзыв о сообществе по ID участника
+func (s *ReviewOnCommunityService) CreateReviewOnCommunityByMemberId(memberId int64, text string, dateStr *string) error {
 	date := time.Now().Format("2006-01-02")
-	if req.Date != nil && *req.Date != "" {
-		date = *req.Date
+	if dateStr != nil && *dateStr != "" {
+		date = *dateStr
 	}
 
 	review := &models.ReviewOnCommunity{
-		AuthorId: uint(member.Id),
-		Text:     req.Text,
+		AuthorId: uint(memberId),
+		Text:     text,
 		Date:     date,
 		Status:   models.ReviewOnCommunityStatusDraft,
 	}
 
-	_, err = s.repo.Create(review)
+	_, err := s.repo.Create(review)
 	if err != nil {
 		return fmt.Errorf("ошибка при создании отзыва: %w", err)
 	}
 
 	return nil
+}
+
+// CreateReviewOnCommunity создает новый отзыв о сообществе (deprecated: используйте CreateReviewOnCommunityByMemberId)
+func (s *ReviewOnCommunityService) CreateReviewOnCommunity(req *models.CreateReviewOnCommunityRequest) error {
+	// Найти пользователя по Telegram username
+	member, err := repository.NewMemberRepository().GetMemberByTelegram(req.AuthorTg)
+	if err != nil {
+		return fmt.Errorf("не удалось найти пользователя с Telegram %s: %w", req.AuthorTg, err)
+	}
+
+	return s.CreateReviewOnCommunityByMemberId(member.Id, req.Text, req.Date)
 }
 
 func (s *ReviewOnCommunityService) GetByAuthorId(authorId int64) ([]models.ReviewOnCommunity, error) {

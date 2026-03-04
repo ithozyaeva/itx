@@ -203,6 +203,7 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
 	member.Bio = request.Bio
+	member.Username = request.Username
 
 	parsedDate, err := utils.ParseDate(request.Birthday)
 
@@ -273,15 +274,20 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 
 	s3Client, err := utils.NewS3Client()
 	if err != nil {
+		log.Printf("Failed to create S3 client: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
 	}
 
 	key := fmt.Sprintf("avatars/%d/%s%s", member.TelegramID, uuid.NewString(), ext)
+	log.Printf("Uploading avatar: key=%s, contentType=%s, size=%d", key, contentType, len(data))
+	
 	if err := s3Client.UploadPublic(context.Background(), key, data, contentType); err != nil {
+		log.Printf("Failed to upload avatar: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
 	}
 
 	avatarURL := s3Client.GetPublicURL(key)
+	log.Printf("Avatar uploaded successfully. Stored key: %s", avatarURL)
 	member.AvatarURL = avatarURL
 
 	result, err := h.svc.Update(member)

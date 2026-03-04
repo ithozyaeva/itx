@@ -28,6 +28,7 @@ const editedUser = reactive({
   lastName: user.value?.lastName,
   birthday: user.value?.birthday,
   bio: user.value?.bio ?? '',
+  tg: user.value?.tg ?? '',
 })
 
 function handleSubmit() {
@@ -109,9 +110,19 @@ async function handleAvatarUpload(event: Event) {
             class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-2"
           >
         </template>
-        <p class="text-muted-foreground mb-4 mt-2">
-          {{ user?.tg }}
-        </p>
+        <template v-if="!isEdit">
+          <p class="text-muted-foreground mb-4 mt-2">
+            {{ user?.tg }}
+          </p>
+        </template>
+        <template v-else>
+          <input
+            v-model="editedUser.tg"
+            type="text"
+            placeholder="Username в Telegram"
+            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-2"
+          >
+        </template>
         <div
           v-if="pointsBalance !== null"
           class="flex items-center justify-center gap-1.5 mb-4"
