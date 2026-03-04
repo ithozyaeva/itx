@@ -105,6 +105,11 @@
   }
 }
 
+/* Fix: itx-ui-kit Tag hover makes text invisible on certain backgrounds */
+.tag.default {
+  pointer-events: none;
+}
+
 [data-reveal] {
   opacity: 0;
   filter: blur(4px);
