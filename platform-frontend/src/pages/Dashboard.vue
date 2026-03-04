@@ -5,7 +5,6 @@ import type { ChatHighlight } from '@/models/highlight'
 import type { PointsSummary } from '@/models/points'
 import type { TaskExchange } from '@/models/taskExchange'
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
-import { Typography } from 'itx-ui-kit'
 import {
   ArrowRight,
   Award,
@@ -35,7 +34,6 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import EventCard from '@/components/events/EventCard.vue'
 import { useUser, useUserLevel } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
@@ -70,8 +68,7 @@ const user = useUser()
 const { level, levelIndex } = useUserLevel()
 
 const isLoading = ref(true)
-const nearestEvent = ref<CommunityEvent | null>(null)
-const upcomingEvents = ref<CommunityEvent[]>([])
+const nearestEvents = ref<CommunityEvent[]>([])
 const pointsSummary = ref<PointsSummary | null>(null)
 const chatQuests = ref<ChatQuestWithProgress[]>([])
 const openTasks = ref<TaskExchange[]>([])
@@ -127,36 +124,25 @@ function formatQuestDeadline(dateStr: string) {
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 }
 
-const isNearestEventLive = computed(() => {
-  if (!nearestEvent.value)
-    return false
+function isEventLive(event: CommunityEvent) {
   const now = new Date()
-  const eventDate = new Date(nearestEvent.value.date)
+  const eventDate = new Date(event.date)
   const diffMs = now.getTime() - eventDate.getTime()
   return diffMs >= 0 && diffMs < 2 * 60 * 60 * 1000
-})
+}
 
-const nearestEventDate = computed(() =>
-  nearestEvent.value ? dateFormatter.format(new Date(nearestEvent.value.date)) : '',
-)
+function isMemberOfEvent(event: CommunityEvent) {
+  return user.value ? event.members.some(m => m.id === user.value!.id) : false
+}
 
-const isMemberOfNearest = computed(() =>
-  user.value && nearestEvent.value
-    ? nearestEvent.value.members.some(m => m.id === user.value!.id)
-    : false,
-)
-
-const isHostOfNearest = computed(() =>
-  user.value && nearestEvent.value
-    ? nearestEvent.value.hosts.some(h => h.id === user.value!.id)
-    : false,
-)
+function isHostOfEvent(event: CommunityEvent) {
+  return user.value ? event.hosts.some(h => h.id === user.value!.id) : false
+}
 
 onMounted(async () => {
   try {
     const results = await Promise.allSettled([
-      eventsService.searchNext(1, 0),
-      eventsService.searchNext(4, 1),
+      eventsService.searchNext(3, 0),
       pointsService.getMyPoints(),
       chatQuestService.getActiveQuests(),
       taskExchangeService.getAll({ status: 'OPEN', limit: 3 }),
@@ -165,25 +151,23 @@ onMounted(async () => {
     ])
 
     if (results[0].status === 'fulfilled')
-      nearestEvent.value = results[0].value?.items?.[0] ?? null
+      nearestEvents.value = results[0].value?.items ?? []
     if (results[1].status === 'fulfilled')
-      upcomingEvents.value = results[1].value?.items ?? []
+      pointsSummary.value = results[1].value
     if (results[2].status === 'fulfilled')
-      pointsSummary.value = results[2].value
+      chatQuests.value = results[2].value ?? []
     if (results[3].status === 'fulfilled')
-      chatQuests.value = results[3].value ?? []
-    if (results[4].status === 'fulfilled')
-      openTasks.value = results[4].value?.items ?? []
-    if (results[5].status === 'fulfilled') {
-      const a = results[5].value
+      openTasks.value = results[3].value?.items ?? []
+    if (results[4].status === 'fulfilled') {
+      const a = results[4].value
       achievements.value = {
         total: a?.totalCount ?? 0,
         unlocked: a?.unlockedCount ?? 0,
         recent: (a?.items ?? []).filter(i => i.unlocked).slice(0, 3),
       }
     }
-    if (results[6].status === 'fulfilled')
-      highlights.value = results[6].value ?? []
+    if (results[5].status === 'fulfilled')
+      highlights.value = results[5].value ?? []
   }
   catch (error) {
     handleError(error)
@@ -299,59 +283,64 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Nearest Event -->
+      <!-- Nearest Events -->
       <div
-        class="mt-5 rounded-3xl border bg-card overflow-hidden"
+        v-if="nearestEvents.length > 0"
+        class="mt-5 space-y-4"
       >
-        <div class="p-5 md:p-6">
-          <div class="flex items-center gap-2 mb-3">
-            <Zap class="h-4 w-4 text-accent" />
-            <span class="text-sm font-medium text-accent">Ближайшее событие</span>
-            <span
-              v-if="nearestEvent && isNearestEventLive"
-              class="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white ml-auto"
-            >
-              <Radio class="h-3 w-3" />
-              LIVE
-            </span>
-          </div>
+        <div
+          v-for="event in nearestEvents"
+          :key="event.id"
+          class="rounded-3xl border bg-card overflow-hidden"
+        >
+          <div class="p-5 md:p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <Zap class="h-4 w-4 text-accent" />
+              <span class="text-sm font-medium text-accent">Ближайшее событие</span>
+              <span
+                v-if="isEventLive(event)"
+                class="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white ml-auto"
+              >
+                <Radio class="h-3 w-3" />
+                LIVE
+              </span>
+            </div>
 
-          <template v-if="nearestEvent">
             <h2 class="text-xl font-bold">
-              {{ nearestEvent.title }}
+              {{ event.title }}
             </h2>
             <p
-              v-if="nearestEvent.description"
+              v-if="event.description"
               class="text-sm text-muted-foreground mt-1.5 line-clamp-2"
             >
-              {{ nearestEvent.description }}
+              {{ event.description }}
             </p>
 
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-muted-foreground">
               <span class="flex items-center gap-1.5">
                 <Calendar class="h-3.5 w-3.5" />
-                {{ nearestEventDate }}
+                {{ dateFormatter.format(new Date(event.date)) }}
               </span>
               <span
-                v-if="nearestEvent.hosts.length"
+                v-if="event.hosts.length"
                 class="flex items-center gap-1.5"
               >
                 <Users class="h-3.5 w-3.5" />
-                {{ nearestEvent.hosts.map(h => h.firstName).join(', ') }}
+                {{ event.hosts.map(h => h.firstName).join(', ') }}
               </span>
               <span class="flex items-center gap-1.5">
-                {{ nearestEvent.members.length }}{{ nearestEvent.maxParticipants > 0 ? `/${nearestEvent.maxParticipants}` : '' }} участников
+                {{ event.members.length }}{{ event.maxParticipants > 0 ? `/${event.maxParticipants}` : '' }} участников
               </span>
             </div>
 
             <div class="flex items-center gap-3 mt-4">
               <RouterLink
-                v-if="isMemberOfNearest || isHostOfNearest"
+                v-if="isMemberOfEvent(event) || isHostOfEvent(event)"
                 to="/events"
                 class="inline-flex items-center gap-1.5 rounded-xl bg-accent/10 text-accent px-4 py-2 text-sm font-medium"
               >
                 <CheckCircle class="h-4 w-4" />
-                {{ isHostOfNearest ? 'Вы ведущий' : 'Вы записаны' }}
+                {{ isHostOfEvent(event) ? 'Вы ведущий' : 'Вы записаны' }}
               </RouterLink>
               <RouterLink
                 v-else
@@ -362,20 +351,29 @@ onMounted(async () => {
                 <ArrowRight class="h-3.5 w-3.5" />
               </RouterLink>
             </div>
-          </template>
+          </div>
+        </div>
+      </div>
 
-          <template v-else>
-            <p class="text-sm text-muted-foreground">
-              Пока нет запланированных событий
-            </p>
-            <RouterLink
-              to="/events"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors mt-3"
-            >
-              Посмотреть события
-              <ArrowRight class="h-3.5 w-3.5" />
-            </RouterLink>
-          </template>
+      <div
+        v-else
+        class="mt-5 rounded-3xl border bg-card overflow-hidden"
+      >
+        <div class="p-5 md:p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <Zap class="h-4 w-4 text-accent" />
+            <span class="text-sm font-medium text-accent">Ближайшие события</span>
+          </div>
+          <p class="text-sm text-muted-foreground">
+            Пока нет запланированных событий
+          </p>
+          <RouterLink
+            to="/events"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors mt-3"
+          >
+            Посмотреть события
+            <ArrowRight class="h-3.5 w-3.5" />
+          </RouterLink>
         </div>
       </div>
 
@@ -600,51 +598,6 @@ onMounted(async () => {
             class="text-sm text-accent hover:underline mt-1 inline-block"
           >
             Посмотреть все достижения →
-          </RouterLink>
-        </div>
-      </div>
-
-      <!-- Upcoming Events -->
-      <div
-        class="mt-5"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <Typography
-            variant="h4"
-            as="h2"
-          >
-            Предстоящие события
-          </Typography>
-          <RouterLink
-            to="/events"
-            class="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Все события →
-          </RouterLink>
-        </div>
-        <div
-          v-if="upcomingEvents.length > 0"
-          class="space-y-4"
-        >
-          <EventCard
-            v-for="event in upcomingEvents"
-            :key="event.id"
-            :event="event"
-          />
-        </div>
-        <div
-          v-else
-          class="rounded-3xl border bg-card p-6 text-center"
-        >
-          <Calendar class="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-          <p class="text-sm text-muted-foreground">
-            Нет предстоящих событий
-          </p>
-          <RouterLink
-            to="/events"
-            class="text-sm text-accent hover:underline mt-1 inline-block"
-          >
-            Посмотреть все события →
           </RouterLink>
         </div>
       </div>
