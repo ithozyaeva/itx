@@ -85,13 +85,14 @@ func SetGlobalBot(bot *TelegramBot) {
 }
 
 type TelegramBot struct {
-	bot                          *tgbotapi.BotAPI
-	tg_service                   *service.TelegramService
-	member                       *service.MemberService
-	eventAlertSubscription       *service.EventAlertSubscriptionService
-	eventService                 *service.EventsService
-	chatActivityService          *service.ChatActivityService
-	notificationSettingsService  *service.NotificationSettingsService
+	bot                         *tgbotapi.BotAPI
+	tg_service                  *service.TelegramService
+	member                      *service.MemberService
+	eventAlertSubscription      *service.EventAlertSubscriptionService
+	eventService                *service.EventsService
+	chatActivityService         *service.ChatActivityService
+	notificationSettingsService *service.NotificationSettingsService
+	chatHighlightService        *service.ChatHighlightService
 }
 
 func NewTelegramBot() (*TelegramBot, error) {
@@ -117,6 +118,7 @@ func NewTelegramBot() (*TelegramBot, error) {
 
 	chatActivityService := service.NewChatActivityService()
 	notificationSettingsService := service.NewNotificationSettingsService()
+	chatHighlightService := service.NewChatHighlightService()
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -126,6 +128,7 @@ func NewTelegramBot() (*TelegramBot, error) {
 		eventService:                eventService,
 		chatActivityService:         chatActivityService,
 		notificationSettingsService: notificationSettingsService,
+		chatHighlightService:        chatHighlightService,
 	}, nil
 }
 
@@ -158,9 +161,23 @@ func (b *TelegramBot) Start() {
 		// Трекинг активности чатов — для каждого сообщения (асинхронно, чтобы не блокировать обработку)
 		go b.chatActivityService.TrackMessage(update.Message)
 
+		// Обработка новых участников чата
+		if update.Message.NewChatMembers != nil {
+			for _, newMember := range update.Message.NewChatMembers {
+				b.handleNewChatMember(update.Message.Chat.ID, &newMember)
+			}
+			continue
+		}
+
 		// Команда /chatid — отправляет ID чата владельцу и удаляет сообщение
 		if update.Message.IsCommand() && update.Message.Command() == "chatid" {
 			b.handleChatIDCommand(update.Message)
+			continue
+		}
+
+		// Команда /highlight — сохранение сообщения как хайлайт
+		if update.Message.IsCommand() && update.Message.Command() == "highlight" {
+			b.handleHighlightCommand(update.Message)
 			continue
 		}
 
@@ -356,6 +373,81 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 		log.Printf("Error sending message: %v", err)
 	} else {
 		log.Printf("Successfully sent auth button to user %d", message.From.ID)
+	}
+}
+
+// handleHighlightCommand сохраняет сообщение как хайлайт
+func (b *TelegramBot) handleHighlightCommand(message *tgbotapi.Message) {
+	if message.ReplyToMessage == nil {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Ответьте на сообщение командой /highlight, чтобы сохранить его как хайлайт.")
+		msg.ReplyToMessageID = message.MessageID
+		b.bot.Send(msg)
+		return
+	}
+
+	reply := message.ReplyToMessage
+	if reply.Text == "" {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Можно сохранить только текстовые сообщения.")
+		msg.ReplyToMessageID = message.MessageID
+		b.bot.Send(msg)
+		return
+	}
+
+	// Ищем member по telegram ID автора сообщения
+	var memberID *int64
+	member, err := b.member.GetByTelegramID(reply.From.ID)
+	if err == nil && member != nil {
+		memberID = &member.Id
+	}
+
+	highlight := &models.ChatHighlight{
+		ChatID:           message.Chat.ID,
+		MessageID:        reply.MessageID,
+		AuthorTelegramID: reply.From.ID,
+		AuthorUsername:    reply.From.UserName,
+		AuthorFirstName:  reply.From.FirstName,
+		MessageText:      reply.Text,
+		HighlightedBy:    message.From.ID,
+		MemberID:         memberID,
+	}
+
+	_, err = b.chatHighlightService.Create(highlight)
+	if err != nil {
+		log.Printf("Error saving highlight: %v", err)
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Ошибка при сохранении хайлайта.")
+		msg.ReplyToMessageID = message.MessageID
+		b.bot.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(message.Chat.ID, "⭐ Сообщение сохранено как хайлайт!")
+	msg.ReplyToMessageID = message.MessageID
+	b.bot.Send(msg)
+}
+
+// handleNewChatMember приветствует новых участников в основном чате
+func (b *TelegramBot) handleNewChatMember(chatID int64, user *tgbotapi.User) {
+	if chatID != config.CFG.TelegramMainChatID {
+		return
+	}
+	if user.IsBot {
+		return
+	}
+
+	name := user.FirstName
+	if user.UserName != "" {
+		name = "@" + user.UserName
+	}
+
+	text := fmt.Sprintf("👋 Приветствуем <b>%s</b> в IT-Хозяевах!\n\n"+
+		"🌐 <a href=\"https://ithozyaeva.ru/platform\">Платформа</a> — здесь всё самое интересное!",
+		name)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("Error sending welcome message: %v", err)
 	}
 }
 
