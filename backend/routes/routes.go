@@ -293,6 +293,12 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	notifSettings.Get("/", notifSettingsHandler.GetMy)
 	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
 
+	// Маршруты для хайлайтов из чатов
+	highlightHandler := handler.NewChatHighlightHandler()
+	highlights := protected.Group("/highlights")
+	highlights.Get("/recent", highlightHandler.GetRecent)
+	highlights.Get("/", highlightHandler.Search)
+
 	// Маршруты для барахолки
 	marketplaceHandler := handler.NewMarketplaceHandler()
 	marketplace := protected.Group("/marketplace")

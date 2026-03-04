@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { UserAchievement } from '@/models/achievement'
 import type { CommunityEvent } from '@/models/event'
+import type { ChatHighlight } from '@/models/highlight'
 import type { PointsSummary } from '@/models/points'
 import type { TaskExchange } from '@/models/taskExchange'
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
@@ -42,6 +43,7 @@ import { achievementsService } from '@/services/achievements'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/events'
+import { highlightsService } from '@/services/highlights'
 import { pointsService } from '@/services/points'
 import { taskExchangeService } from '@/services/taskExchange'
 
@@ -74,6 +76,7 @@ const pointsSummary = ref<PointsSummary | null>(null)
 const chatQuests = ref<ChatQuestWithProgress[]>([])
 const openTasks = ref<TaskExchange[]>([])
 const achievements = ref<{ total: number, unlocked: number, recent: UserAchievement[] }>({ total: 0, unlocked: 0, recent: [] })
+const highlights = ref<ChatHighlight[]>([])
 
 function pluralizeDays(n: number): string {
   if (n % 10 === 1 && n % 100 !== 11)
@@ -158,6 +161,7 @@ onMounted(async () => {
       chatQuestService.getActiveQuests(),
       taskExchangeService.getAll({ status: 'OPEN', limit: 3 }),
       achievementsService.getMyAchievements(),
+      highlightsService.getRecent(5),
     ])
 
     if (results[0].status === 'fulfilled')
@@ -178,6 +182,8 @@ onMounted(async () => {
         recent: (a?.items ?? []).filter(i => i.unlocked).slice(0, 3),
       }
     }
+    if (results[6].status === 'fulfilled')
+      highlights.value = results[6].value ?? []
   }
   catch (error) {
     handleError(error)
@@ -500,6 +506,47 @@ onMounted(async () => {
           >
             Нет открытых заданий
           </p>
+        </div>
+      </div>
+
+      <!-- Chat Highlights -->
+      <div
+        v-if="highlights.length > 0"
+        class="mt-5 rounded-3xl border bg-card p-5"
+      >
+        <div class="flex items-center gap-2 mb-4">
+          <MessageSquare class="h-4 w-4 text-yellow-500" />
+          <span class="text-sm font-semibold">Лучшее из чатов</span>
+        </div>
+        <div class="space-y-3">
+          <div
+            v-for="hl in highlights"
+            :key="hl.id"
+            class="rounded-2xl bg-muted/40 p-3.5"
+          >
+            <div class="flex items-center gap-2 mb-1.5">
+              <div class="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 shrink-0">
+                <span class="text-xs font-bold text-accent">
+                  {{ (hl.authorFirstName || hl.authorUsername || '?')[0].toUpperCase() }}
+                </span>
+              </div>
+              <span class="text-sm font-medium truncate">
+                {{ hl.authorFirstName || hl.authorUsername || 'Аноним' }}
+              </span>
+              <span
+                v-if="hl.authorUsername"
+                class="text-xs text-muted-foreground"
+              >
+                @{{ hl.authorUsername }}
+              </span>
+            </div>
+            <p class="text-sm text-foreground/90 whitespace-pre-line line-clamp-3">
+              {{ hl.messageText }}
+            </p>
+            <p class="text-[11px] text-muted-foreground mt-1.5">
+              {{ new Date(hl.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) }}
+            </p>
+          </div>
         </div>
       </div>
 
