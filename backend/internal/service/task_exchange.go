@@ -31,8 +31,52 @@ func (s *TaskExchangeService) Create(task *models.TaskExchange) (*models.TaskExc
 	if task.Title == "" {
 		return nil, errors.New("title is required")
 	}
+	if task.MaxAssignees <= 0 {
+		task.MaxAssignees = 1
+	}
 	task.Status = models.TaskStatusOpen
 	return s.repo.Create(task)
+}
+
+func (s *TaskExchangeService) Update(id int64, memberId int64, isAdmin bool, req models.UpdateTaskExchangeRequest) (*models.TaskExchange, error) {
+	task, err := s.repo.GetById(id)
+	if err != nil {
+		return nil, errors.New("задание не найдено")
+	}
+	if !isAdmin && task.CreatorId != memberId {
+		return nil, errors.New("только автор или админ может редактировать задание")
+	}
+	if task.Status == models.TaskStatusDone || task.Status == models.TaskStatusApproved {
+		return nil, errors.New("нельзя редактировать задание в этом статусе")
+	}
+
+	updates := map[string]interface{}{}
+	if req.Title != nil && *req.Title != "" {
+		updates["title"] = *req.Title
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.MaxAssignees != nil && *req.MaxAssignees >= 1 {
+		count, err := s.repo.GetAssigneesCount(id)
+		if err != nil {
+			return nil, errors.New("не удалось проверить количество исполнителей")
+		}
+		if int64(*req.MaxAssignees) < count {
+			return nil, errors.New("нельзя уменьшить лимит ниже текущего числа исполнителей")
+		}
+		updates["max_assignees"] = *req.MaxAssignees
+	}
+
+	if len(updates) == 0 {
+		return task, nil
+	}
+
+	if err := s.repo.Update(id, updates); err != nil {
+		return nil, errors.New("не удалось обновить задание")
+	}
+
+	return s.repo.GetById(id)
 }
 
 func (s *TaskExchangeService) Assign(id int64, memberId int64) (*models.TaskExchange, error) {
@@ -43,13 +87,37 @@ func (s *TaskExchangeService) Assign(id int64, memberId int64) (*models.TaskExch
 	if task.CreatorId == memberId {
 		return nil, errors.New("нельзя взять своё задание")
 	}
-	rows, err := s.repo.Assign(id, memberId)
-	if err != nil {
-		return nil, errors.New("не удалось взять задание")
-	}
-	if rows == 0 {
+	if task.Status != models.TaskStatusOpen {
 		return nil, errors.New("задание недоступно для взятия")
 	}
+
+	isAlready, err := s.repo.IsAssignee(id, memberId)
+	if err != nil {
+		return nil, errors.New("не удалось проверить назначение")
+	}
+	if isAlready {
+		return nil, errors.New("вы уже являетесь исполнителем")
+	}
+
+	count, err := s.repo.GetAssigneesCount(id)
+	if err != nil {
+		return nil, errors.New("не удалось проверить количество исполнителей")
+	}
+	if count >= int64(task.MaxAssignees) {
+		return nil, errors.New("все слоты исполнителей заняты")
+	}
+
+	if err := s.repo.AddAssignee(id, memberId); err != nil {
+		return nil, errors.New("не удалось взять задание")
+	}
+
+	// Check if all slots are filled now
+	if count+1 >= int64(task.MaxAssignees) {
+		if err := s.repo.UpdateStatus(id, models.TaskStatusInProgress); err != nil {
+			return nil, errors.New("не удалось обновить статус задания")
+		}
+	}
+
 	return s.repo.GetById(id)
 }
 
@@ -58,26 +126,67 @@ func (s *TaskExchangeService) Unassign(id int64, memberId int64) (*models.TaskEx
 	if err != nil {
 		return nil, errors.New("задание не найдено")
 	}
-	if task.AssigneeId == nil || *task.AssigneeId != memberId {
+
+	isAssigned, err := s.repo.IsAssignee(id, memberId)
+	if err != nil {
+		return nil, errors.New("не удалось проверить назначение")
+	}
+	if !isAssigned {
 		return nil, errors.New("вы не являетесь исполнителем")
 	}
-	rows, err := s.repo.Unassign(id)
-	if err != nil {
+
+	if err := s.repo.RemoveAssignee(id, memberId); err != nil {
 		return nil, errors.New("не удалось отказаться от задания")
 	}
-	if rows == 0 {
-		return nil, errors.New("задание недоступно для отказа")
+
+	// If was IN_PROGRESS and now has free slots, revert to OPEN
+	if task.Status == models.TaskStatusInProgress {
+		if err := s.repo.UpdateStatus(id, models.TaskStatusOpen); err != nil {
+			return nil, errors.New("не удалось обновить статус задания")
+		}
 	}
+
 	return s.repo.GetById(id)
 }
 
-func (s *TaskExchangeService) MarkDone(id int64, memberId int64) (*models.TaskExchange, error) {
+func (s *TaskExchangeService) RemoveAssignee(id int64, assigneeId int64, requesterId int64, isAdmin bool) (*models.TaskExchange, error) {
 	task, err := s.repo.GetById(id)
 	if err != nil {
 		return nil, errors.New("задание не найдено")
 	}
-	if task.AssigneeId == nil || *task.AssigneeId != memberId {
-		return nil, errors.New("вы не являетесь исполнителем")
+	if !isAdmin && task.CreatorId != requesterId {
+		return nil, errors.New("только автор или админ может удалять исполнителей")
+	}
+
+	isAssigned, err := s.repo.IsAssignee(id, assigneeId)
+	if err != nil {
+		return nil, errors.New("не удалось проверить назначение")
+	}
+	if !isAssigned {
+		return nil, errors.New("пользователь не является исполнителем")
+	}
+
+	if err := s.repo.RemoveAssignee(id, assigneeId); err != nil {
+		return nil, errors.New("не удалось удалить исполнителя")
+	}
+
+	// If was IN_PROGRESS and now has free slots, revert to OPEN
+	if task.Status == models.TaskStatusInProgress {
+		if err := s.repo.UpdateStatus(id, models.TaskStatusOpen); err != nil {
+			return nil, errors.New("не удалось обновить статус задания")
+		}
+	}
+
+	return s.repo.GetById(id)
+}
+
+func (s *TaskExchangeService) MarkDone(id int64, memberId int64, isAdmin bool) (*models.TaskExchange, error) {
+	task, err := s.repo.GetById(id)
+	if err != nil {
+		return nil, errors.New("задание не найдено")
+	}
+	if !isAdmin && task.CreatorId != memberId {
+		return nil, errors.New("только автор или админ может отметить выполнение")
 	}
 	rows, err := s.repo.MarkDone(id)
 	if err != nil {

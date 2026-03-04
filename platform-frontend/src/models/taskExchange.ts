@@ -8,8 +8,8 @@ export interface TaskExchange {
   description: string
   creatorId: number
   creator: TelegramUser
-  assigneeId: number | null
-  assignee: TelegramUser | null
+  maxAssignees: number
+  assignees: TelegramUser[]
   status: TaskExchangeStatus
   createdAt: string
   updatedAt: string
@@ -23,4 +23,11 @@ export interface TaskExchangeSearchResponse {
 export interface CreateTaskExchangeRequest {
   title: string
   description: string
+  maxAssignees: number
+}
+
+export interface UpdateTaskExchangeRequest {
+  title?: string
+  description?: string
+  maxAssignees?: number
 }

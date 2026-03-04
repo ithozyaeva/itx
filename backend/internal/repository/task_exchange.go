@@ -26,7 +26,7 @@ func (r *TaskExchangeRepository) Search(status *string, limit, offset int) ([]mo
 
 	findQuery := database.DB.
 		Preload("Creator").
-		Preload("Assignee")
+		Preload("Assignees")
 
 	if status != nil && *status != "" {
 		findQuery = findQuery.Where("status = ?", *status)
@@ -45,7 +45,7 @@ func (r *TaskExchangeRepository) GetById(id int64) (*models.TaskExchange, error)
 	var task models.TaskExchange
 	err := database.DB.
 		Preload("Creator").
-		Preload("Assignee").
+		Preload("Assignees").
 		First(&task, id).Error
 	if err != nil {
 		return nil, err
@@ -60,24 +60,46 @@ func (r *TaskExchangeRepository) Create(task *models.TaskExchange) (*models.Task
 	return r.GetById(task.Id)
 }
 
-func (r *TaskExchangeRepository) Assign(id int64, assigneeId int64) (int64, error) {
-	result := database.DB.Model(&models.TaskExchange{}).
-		Where("id = ? AND status = ?", id, models.TaskStatusOpen).
-		Updates(map[string]interface{}{
-			"assignee_id": assigneeId,
-			"status":      models.TaskStatusInProgress,
-		})
-	return result.RowsAffected, result.Error
+func (r *TaskExchangeRepository) AddAssignee(taskId int64, memberId int64) error {
+	assignee := models.TaskExchangeAssignee{
+		TaskId:   taskId,
+		MemberId: memberId,
+	}
+	return database.DB.Create(&assignee).Error
 }
 
-func (r *TaskExchangeRepository) Unassign(id int64) (int64, error) {
-	result := database.DB.Model(&models.TaskExchange{}).
-		Where("id = ? AND status = ?", id, models.TaskStatusInProgress).
-		Updates(map[string]interface{}{
-			"assignee_id": nil,
-			"status":      models.TaskStatusOpen,
-		})
-	return result.RowsAffected, result.Error
+func (r *TaskExchangeRepository) RemoveAssignee(taskId int64, memberId int64) error {
+	return database.DB.
+		Where("task_id = ? AND member_id = ?", taskId, memberId).
+		Delete(&models.TaskExchangeAssignee{}).Error
+}
+
+func (r *TaskExchangeRepository) GetAssigneesCount(taskId int64) (int64, error) {
+	var count int64
+	err := database.DB.Model(&models.TaskExchangeAssignee{}).
+		Where("task_id = ?", taskId).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *TaskExchangeRepository) IsAssignee(taskId int64, memberId int64) (bool, error) {
+	var count int64
+	err := database.DB.Model(&models.TaskExchangeAssignee{}).
+		Where("task_id = ? AND member_id = ?", taskId, memberId).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func (r *TaskExchangeRepository) UpdateStatus(id int64, status models.TaskExchangeStatus) error {
+	return database.DB.Model(&models.TaskExchange{}).
+		Where("id = ?", id).
+		Update("status", status).Error
+}
+
+func (r *TaskExchangeRepository) Update(id int64, updates map[string]interface{}) error {
+	return database.DB.Model(&models.TaskExchange{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 func (r *TaskExchangeRepository) MarkDone(id int64) (int64, error) {
@@ -97,10 +119,7 @@ func (r *TaskExchangeRepository) Approve(id int64) (int64, error) {
 func (r *TaskExchangeRepository) Reject(id int64) (int64, error) {
 	result := database.DB.Model(&models.TaskExchange{}).
 		Where("id = ? AND status = ?", id, models.TaskStatusDone).
-		Updates(map[string]interface{}{
-			"assignee_id": nil,
-			"status":      models.TaskStatusOpen,
-		})
+		Update("status", models.TaskStatusInProgress)
 	return result.RowsAffected, result.Error
 }
 
