@@ -70,10 +70,16 @@ func (h *TaskExchangeHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Название обязательно"})
 	}
 
+	maxAssignees := req.MaxAssignees
+	if maxAssignees <= 0 {
+		maxAssignees = 1
+	}
+
 	task := &models.TaskExchange{
-		Title:       req.Title,
-		Description: req.Description,
-		CreatorId:   member.Id,
+		Title:        req.Title,
+		Description:  req.Description,
+		CreatorId:    member.Id,
+		MaxAssignees: maxAssignees,
 	}
 
 	created, err := h.svc.Create(task)
@@ -82,6 +88,35 @@ func (h *TaskExchangeHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(created)
+}
+
+func (h *TaskExchangeHandler) Update(c *fiber.Ctx) error {
+	member := c.Locals("member").(*models.Member)
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	isAdmin := false
+	for _, role := range member.Roles {
+		if role == models.MemberRoleAdmin {
+			isAdmin = true
+			break
+		}
+	}
+
+	var req models.UpdateTaskExchangeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
+	}
+
+	task, err := h.svc.Update(id, member.Id, isAdmin, req)
+	if err != nil {
+		log.Printf("Task update error (task=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(task)
 }
 
 func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
@@ -94,7 +129,7 @@ func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
 	task, err := h.svc.Assign(id, member.Id)
 	if err != nil {
 		log.Printf("Task assign error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось взять задание"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.JSON(task)
@@ -110,7 +145,36 @@ func (h *TaskExchangeHandler) Unassign(c *fiber.Ctx) error {
 	task, err := h.svc.Unassign(id, member.Id)
 	if err != nil {
 		log.Printf("Task unassign error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отказаться от задания"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(task)
+}
+
+func (h *TaskExchangeHandler) RemoveAssignee(c *fiber.Ctx) error {
+	member := c.Locals("member").(*models.Member)
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	memberId, err := strconv.ParseInt(c.Params("memberId"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID участника"})
+	}
+
+	isAdmin := false
+	for _, role := range member.Roles {
+		if role == models.MemberRoleAdmin {
+			isAdmin = true
+			break
+		}
+	}
+
+	task, err := h.svc.RemoveAssignee(id, memberId, member.Id, isAdmin)
+	if err != nil {
+		log.Printf("Task removeAssignee error (task=%d, assignee=%d, requester=%d): %v", id, memberId, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.JSON(task)
@@ -123,10 +187,18 @@ func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 
-	task, err := h.svc.MarkDone(id, member.Id)
+	isAdmin := false
+	for _, role := range member.Roles {
+		if role == models.MemberRoleAdmin {
+			isAdmin = true
+			break
+		}
+	}
+
+	task, err := h.svc.MarkDone(id, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Task markDone error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отметить задание выполненным"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Notify creator that task is done
@@ -157,23 +229,20 @@ func (h *TaskExchangeHandler) Approve(c *fiber.Ctx) error {
 		h.pointSvc.GiveForAction(task.CreatorId, models.PointReasonTaskCreate, "task_exchange", task.Id,
 			fmt.Sprintf("Создание задания: %s", task.Title))
 
-		if task.AssigneeId != nil {
-			h.pointSvc.GiveForAction(*task.AssigneeId, models.PointReasonTaskExecute, "task_exchange", task.Id,
+		for _, assignee := range task.Assignees {
+			h.pointSvc.GiveForAction(assignee.Id, models.PointReasonTaskExecute, "task_exchange", task.Id,
 				fmt.Sprintf("Выполнение задания: %s", task.Title))
+
+			if err := CreateNotification(assignee.Id, "task", "Задание одобрено",
+				fmt.Sprintf("Выполнение задания «%s» одобрено! Вам начислено %d баллов", task.Title, models.PointValues[models.PointReasonTaskExecute])); err != nil {
+				log.Printf("Error creating notification: %v", err)
+			}
 		}
 
 		// Notify creator
 		if err := CreateNotification(task.CreatorId, "task", "Задание одобрено",
 			fmt.Sprintf("Задание «%s» одобрено! Вам начислено %d баллов", task.Title, models.PointValues[models.PointReasonTaskCreate])); err != nil {
 			log.Printf("Error creating notification: %v", err)
-		}
-
-		// Notify assignee
-		if task.AssigneeId != nil {
-			if err := CreateNotification(*task.AssigneeId, "task", "Задание одобрено",
-				fmt.Sprintf("Выполнение задания «%s» одобрено! Вам начислено %d баллов", task.Title, models.PointValues[models.PointReasonTaskExecute])); err != nil {
-				log.Printf("Error creating notification: %v", err)
-			}
 		}
 	}()
 
@@ -186,12 +255,12 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 
-	// Get task before rejection to know the assignee
+	// Get task before rejection to know the assignees
 	taskBefore, err := h.svc.GetById(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Задание не найдено"})
 	}
-	assigneeId := taskBefore.AssigneeId
+	assignees := taskBefore.Assignees
 
 	task, err := h.svc.Reject(id)
 	if err != nil {
@@ -199,10 +268,10 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отклонить задание"})
 	}
 
-	// Notify assignee about rejection
+	// Notify assignees about rejection
 	go func() {
-		if assigneeId != nil {
-			if err := CreateNotification(*assigneeId, "task", "Задание отклонено",
+		for _, assignee := range assignees {
+			if err := CreateNotification(assignee.Id, "task", "Задание отклонено",
 				fmt.Sprintf("Выполнение задания «%s» отклонено. Задание возвращено в открытые", task.Title)); err != nil {
 				log.Printf("Error creating notification: %v", err)
 			}

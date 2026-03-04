@@ -1,4 +1,4 @@
-import type { CreateTaskExchangeRequest, TaskExchange, TaskExchangeSearchResponse } from '@/models/taskExchange'
+import type { CreateTaskExchangeRequest, TaskExchange, TaskExchangeSearchResponse, UpdateTaskExchangeRequest } from '@/models/taskExchange'
 import { apiClient } from './api'
 
 export const taskExchangeService = {
@@ -22,12 +22,20 @@ export const taskExchangeService = {
     return apiClient.post('tasks', { json: data }).json<TaskExchange>()
   },
 
+  async update(id: number, data: UpdateTaskExchangeRequest) {
+    return apiClient.put(`tasks/${id}`, { json: data }).json<TaskExchange>()
+  },
+
   async assign(id: number) {
     return apiClient.post(`tasks/${id}/assign`).json<TaskExchange>()
   },
 
   async unassign(id: number) {
     return apiClient.post(`tasks/${id}/unassign`).json<TaskExchange>()
+  },
+
+  async removeAssignee(taskId: number, memberId: number) {
+    return apiClient.delete(`tasks/${taskId}/assignees/${memberId}`).json<TaskExchange>()
   },
 
   async markDone(id: number) {
