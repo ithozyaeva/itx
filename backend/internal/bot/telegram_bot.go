@@ -78,10 +78,15 @@ func GetGlobalBot() *TelegramBot {
 }
 
 // SetGlobalBot устанавливает глобальный экземпляр бота
-func SetGlobalBot(bot *TelegramBot) {
+func SetGlobalBot(b *TelegramBot) {
 	botMutex.Lock()
 	defer botMutex.Unlock()
-	globalBot = bot
+	globalBot = b
+
+	// Регистрируем callback для отправки Telegram DM из service-слоя (избегаем circular import)
+	service.SendTelegramDMFunc = func(chatID int64, text string) {
+		b.SendDirectMessage(chatID, text)
+	}
 }
 
 type TelegramBot struct {

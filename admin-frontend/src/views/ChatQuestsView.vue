@@ -314,6 +314,21 @@ onMounted(async () => {
                   />
                 </div>
 
+                <div>
+                  <label class="text-sm font-medium mb-1 block">Тип задания</label>
+                  <select
+                    v-model="form.questType"
+                    class="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                  >
+                    <option value="message_count">
+                      Количество сообщений
+                    </option>
+                    <option value="daily_streak">
+                      Дни подряд
+                    </option>
+                  </select>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="text-sm font-medium mb-1 block">Чат</label>
@@ -330,7 +345,7 @@ onMounted(async () => {
                     </select>
                   </div>
                   <div>
-                    <label class="text-sm font-medium mb-1 block">Целевое кол-во</label>
+                    <label class="text-sm font-medium mb-1 block">{{ form.questType === 'daily_streak' ? 'Целевое кол-во дней' : 'Целевое кол-во сообщений' }}</label>
                     <input
                       v-model.number="form.targetCount"
                       type="number"
