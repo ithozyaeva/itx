@@ -26,8 +26,8 @@ reload_nginx() {
 
 if [ "${ENVIRONMENT}" = "dev" ]; then
   if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
-    CERT_ISSUER=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null)
-    CERT_SUBJECT=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -subject 2>/dev/null)
+    CERT_ISSUER=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null | sed 's/^issuer=//')
+    CERT_SUBJECT=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -subject 2>/dev/null | sed 's/^subject=//')
     
     if [ "${CERT_ISSUER}" = "${CERT_SUBJECT}" ]; then
       echo 'Self-signed certificate detected. Requesting Let'\''s Encrypt certificate...'
@@ -75,8 +75,8 @@ else
     fi
   else
     # Проверяем, является ли существующий сертификат самоподписанным
-    CERT_ISSUER=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null)
-    CERT_SUBJECT=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -subject 2>/dev/null)
+    CERT_ISSUER=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null | sed 's/^issuer=//')
+    CERT_SUBJECT=$(openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -subject 2>/dev/null | sed 's/^subject=//')
     
     if [ "${CERT_ISSUER}" = "${CERT_SUBJECT}" ]; then
       echo 'Self-signed certificate detected in production. Replacing with Let'\''s Encrypt certificate...'
