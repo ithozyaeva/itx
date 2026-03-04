@@ -110,6 +110,13 @@ function questProgress(quest: ChatQuestWithProgress) {
   return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
 }
 
+function questDeadlineDays(dateStr: string) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
+
 function formatQuestDeadline(dateStr: string) {
   const date = new Date(dateStr)
   const now = new Date()
@@ -389,7 +396,7 @@ onMounted(async () => {
               <span class="text-sm font-semibold">Задания в чатах</span>
             </div>
             <RouterLink
-              to="/points"
+              to="/quests"
               class="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Все →
@@ -408,13 +415,26 @@ onMounted(async () => {
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5 min-w-0">
                   <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10 shrink-0">
-                    <MessageCircle class="h-4 w-4 text-orange-500" />
+                    <component
+                      :is="quest.questType === 'daily_streak' ? Flame : MessageCircle"
+                      class="h-4 w-4 text-orange-500"
+                    />
                   </div>
                   <div class="min-w-0">
                     <p class="text-sm font-medium truncate">
                       {{ quest.title }}
                     </p>
-                    <p class="text-xs text-muted-foreground">
+                    <p
+                      v-if="quest.description"
+                      class="text-xs text-muted-foreground line-clamp-1"
+                    >
+                      {{ quest.description }}
+                    </p>
+                    <p
+                      class="text-xs flex items-center gap-1"
+                      :class="questDeadlineDays(quest.endsAt) <= 1 ? 'text-red-500' : questDeadlineDays(quest.endsAt) <= 3 ? 'text-orange-500' : 'text-muted-foreground'"
+                    >
+                      <Calendar class="h-3 w-3" />
                       {{ formatQuestDeadline(quest.endsAt) }}
                     </p>
                   </div>
@@ -425,7 +445,7 @@ onMounted(async () => {
               </div>
               <div class="mt-2.5">
                 <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>{{ quest.currentCount }} / {{ quest.targetCount }}</span>
+                  <span>{{ quest.currentCount }} / {{ quest.targetCount }} {{ quest.questType === 'daily_streak' ? 'дней подряд' : 'сообщений' }}</span>
                   <span>{{ questProgress(quest) }}%</span>
                 </div>
                 <div class="w-full bg-muted rounded-full h-1.5">

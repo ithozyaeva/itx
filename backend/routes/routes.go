@@ -266,6 +266,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	// Маршруты для заданий чатов (платформа)
 	chatQuestHandler := handler.NewChatQuestHandler()
 	chatQuests := protected.Group("/chat-quests")
+	chatQuests.Get("/all", chatQuestHandler.GetAllForMember)
 	chatQuests.Get("/active", chatQuestHandler.GetActive)
 
 	// Маршруты для достижений

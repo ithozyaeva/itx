@@ -19,4 +19,8 @@ export const chatQuestService = {
   async getActiveQuests() {
     return apiClient.get('chat-quests/active').json<ChatQuestWithProgress[]>()
   },
+
+  async getAllQuests(filter?: string) {
+    return apiClient.get('chat-quests/all', { searchParams: filter ? { filter } : {} }).json<ChatQuestWithProgress[]>()
+  },
 }

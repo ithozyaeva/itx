@@ -109,6 +109,23 @@ func (h *ChatQuestHandler) Delete(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
+// GetAllForMember возвращает все квесты с прогрессом текущего пользователя
+func (h *ChatQuestHandler) GetAllForMember(c *fiber.Ctx) error {
+	member := getMemberFromContext(c)
+	if member == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Не авторизован"})
+	}
+
+	filter := c.Query("filter", "all")
+
+	quests, err := h.service.GetAllQuestsForMember(member.Id, filter)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки заданий"})
+	}
+
+	return c.JSON(quests)
+}
+
 // GetActive возвращает активные квесты с прогрессом текущего пользователя
 func (h *ChatQuestHandler) GetActive(c *fiber.Ctx) error {
 	member := getMemberFromContext(c)

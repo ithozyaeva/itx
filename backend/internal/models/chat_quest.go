@@ -2,6 +2,11 @@ package models
 
 import "time"
 
+const (
+	QuestTypeMessageCount = "message_count"
+	QuestTypeDailyStreak  = "daily_streak"
+)
+
 type ChatQuest struct {
 	Id           int64     `json:"id" gorm:"primaryKey"`
 	Title        string    `json:"title" gorm:"column:title;size:255;not null"`
@@ -39,4 +44,16 @@ type ChatQuestWithProgress struct {
 	ChatQuest
 	CurrentCount int  `json:"currentCount"`
 	Completed    bool `json:"completed"`
+}
+
+// ChatQuestStreakDay — запись дня активности для daily_streak квестов
+type ChatQuestStreakDay struct {
+	Id       int64     `json:"id" gorm:"primaryKey"`
+	QuestID  int64     `json:"questId" gorm:"column:quest_id;not null"`
+	MemberID int64     `json:"memberId" gorm:"column:member_id;not null"`
+	Day      time.Time `json:"day" gorm:"column:day;type:date;not null"`
+}
+
+func (ChatQuestStreakDay) TableName() string {
+	return "chat_quest_streak_days"
 }

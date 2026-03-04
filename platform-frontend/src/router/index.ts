@@ -12,6 +12,7 @@ import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
 import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
+import Quests from '@/pages/Quests.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
@@ -34,6 +35,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/achievements', component: Achievements, name: 'achievements' },
   { path: '/marketplace', component: Marketplace, name: 'marketplace' },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange' },
+  { path: '/quests', component: Quests, name: 'quests' },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot' },
 ]
 
