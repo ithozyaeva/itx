@@ -25,7 +25,7 @@ const total = ref(0)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const showCreateDialog = ref(false)
-const activeStatus = ref<MarketplaceItemStatus | 'all'>('all')
+const activeStatus = ref<MarketplaceItemStatus | 'all'>('ACTIVE')
 
 const user = useUser()
 const isAdmin = isUserAdmin()

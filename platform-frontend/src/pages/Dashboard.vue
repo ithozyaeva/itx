@@ -152,7 +152,10 @@ onMounted(async () => {
       eventsService.searchNext(3, 0),
       pointsService.getMyPoints(),
       chatQuestService.getActiveQuests(),
-      taskExchangeService.getAll({ status: 'OPEN', limit: 3 }),
+      Promise.all([
+        taskExchangeService.getAll({ status: 'OPEN', limit: 10 }),
+        taskExchangeService.getAll({ status: 'IN_PROGRESS', limit: 10 }),
+      ]),
       achievementsService.getMyAchievements(),
       highlightsService.getRecent(5),
     ])
@@ -163,8 +166,12 @@ onMounted(async () => {
       pointsSummary.value = results[1].value
     if (results[2].status === 'fulfilled')
       chatQuests.value = results[2].value ?? []
-    if (results[3].status === 'fulfilled')
-      openTasks.value = results[3].value?.items ?? []
+    if (results[3].status === 'fulfilled') {
+      const [openRes, inProgressRes] = results[3].value
+      const open = openRes?.items ?? []
+      const inProgress = (inProgressRes?.items ?? []).filter(t => t.assignees.length < t.maxAssignees)
+      openTasks.value = [...open, ...inProgress].slice(0, 3)
+    }
     if (results[4].status === 'fulfilled') {
       const a = results[4].value
       achievements.value = {
@@ -509,8 +516,11 @@ onMounted(async () => {
                     {{ task.description }}
                   </p>
                 </div>
-                <span class="text-xs font-medium text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full shrink-0">
-                  Открыто
+                <span
+                  class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                  :class="task.status === 'IN_PROGRESS' ? 'text-orange-500 bg-orange-500/10' : 'text-blue-500 bg-blue-500/10'"
+                >
+                  {{ task.status === 'IN_PROGRESS' ? `${task.assignees.length}/${task.maxAssignees}` : 'Открыто' }}
                 </span>
               </div>
               <div class="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
