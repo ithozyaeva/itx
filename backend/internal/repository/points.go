@@ -52,6 +52,12 @@ func (r *PointsRepository) GetLeaderboard(limit int) ([]models.MemberPointsBalan
 		 LIMIT ?`,
 		limit,
 	).Scan(&entries).Error
+	
+	// Manually resolve S3 URLs since Raw SQL doesn't trigger GORM hooks
+	for i := range entries {
+		entries[i].AfterFind(nil)
+	}
+	
 	return entries, err
 }
 
