@@ -287,6 +287,12 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	tasks.Post("/:id/reject", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Reject)
 	tasks.Delete("/:id", taskExchangeHandler.Delete)
 
+	// Маршруты для настроек уведомлений
+	notifSettingsHandler := handler.NewNotificationSettingsHandler()
+	notifSettings := protected.Group("/notification-settings")
+	notifSettings.Get("/", notifSettingsHandler.GetMy)
+	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
+
 	// Маршруты для барахолки
 	marketplaceHandler := handler.NewMarketplaceHandler()
 	marketplace := protected.Group("/marketplace")
