@@ -440,11 +440,7 @@ func (b *TelegramBot) handleNewChatMember(chatID int64, user *tgbotapi.User) {
 	}
 
 	text := fmt.Sprintf("👋 Приветствуем <b>%s</b> в IT-Хозяевах!\n\n"+
-		"Полезные ссылки для начала:\n"+
-		"🌐 <a href=\"https://it-x.ru/platform\">Платформа</a>\n"+
-		"📅 <a href=\"https://it-x.ru/platform/events\">События</a>\n"+
-		"👥 <a href=\"https://it-x.ru/platform/mentors\">Менторы</a>\n"+
-		"📝 <a href=\"https://it-x.ru/platform/tasks\">Биржа заданий</a>",
+		"🌐 <a href=\"https://ithozyaeva.ru/platform\">Платформа</a> — здесь всё самое интересное!",
 		name)
 
 	msg := tgbotapi.NewMessage(chatID, text)
