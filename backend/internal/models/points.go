@@ -1,6 +1,12 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"ithozyeva/internal/s3resolve"
+
+	"gorm.io/gorm"
+)
 
 type PointReason string
 
@@ -60,6 +66,11 @@ type MemberPointsBalance struct {
 	Username  string `json:"tg"`
 	AvatarURL string `json:"avatarUrl"`
 	Total     int    `json:"total"`
+}
+
+func (m *MemberPointsBalance) AfterFind(tx *gorm.DB) (err error) {
+	m.AvatarURL = s3resolve.ResolveS3URL(m.AvatarURL)
+	return nil
 }
 
 type PointsSummary struct {
