@@ -28,7 +28,7 @@ const state = {
       items: [
         { title: 'События', path: '/events', icon: Calendar, indicator: true },
         { title: 'Контент', path: '/content', icon: BookOpen },
-        { title: 'Участники', path: '/mentors', icon: Users },
+        { title: 'Менторы', path: '/mentors', icon: Users },
       ],
     },
     {

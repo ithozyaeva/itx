@@ -77,7 +77,11 @@ function getAvatarSrc(entry: LeaderboardEntry) {
         <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-accent/20">
           <img
             :src="getAvatarSrc(entry)"
-            class="w-full h-full object-cover"
+            :alt="`${entry.firstName} ${entry.lastName}`"
+            :style="{ opacity: 0 }"
+            loading="lazy"
+            class="w-full h-full object-cover transition-opacity duration-300"
+            @load="($event.target as HTMLImageElement).style.opacity = '1'"
           >
         </div>
 

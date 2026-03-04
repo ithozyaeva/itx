@@ -81,13 +81,26 @@ async function loadQuests() {
   }
 }
 
+function formatDateForAPI(dateStr: string): string {
+  if (!dateStr)
+    return dateStr
+  // datetime-local даёт "2026-03-04T17:00", Go ожидает RFC3339
+  const d = new Date(dateStr)
+  return d.toISOString()
+}
+
 async function handleSubmit() {
   try {
+    const payload = {
+      ...form.value,
+      startsAt: formatDateForAPI(form.value.startsAt),
+      endsAt: formatDateForAPI(form.value.endsAt),
+    }
     if (editingQuest.value) {
-      await chatQuestService.update(editingQuest.value.id, form.value)
+      await chatQuestService.update(editingQuest.value.id, payload)
     }
     else {
-      await chatQuestService.create(form.value)
+      await chatQuestService.create(payload)
     }
     showModal.value = false
     resetForm()
