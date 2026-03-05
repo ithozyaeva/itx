@@ -111,6 +111,19 @@ func main() {
 		}
 	}()
 
+	// Запускаем фоновую задачу для розыгрышей (проверка каждые 5 минут)
+	go func() {
+		raffleSvc := service.NewRaffleService()
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		raffleSvc.DrawExpiredRaffles()
+
+		for range ticker.C {
+			raffleSvc.DrawExpiredRaffles()
+		}
+	}()
+
 	// Запускаем Telegram бота в отдельной горутине
 	go func() {
 		telegramBot, err := bot.NewTelegramBot()
