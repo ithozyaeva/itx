@@ -14,7 +14,7 @@ import {
   X,
   XCircle,
 } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   Dialog,
   DialogContent,
@@ -239,6 +239,23 @@ function displayName(member: { firstName: string, lastName: string, tg: string }
 
 onMounted(() => {
   fetchTasks()
+})
+
+watch(showCreateDialog, (open) => {
+  if (!open) {
+    newTitle.value = ''
+    newDescription.value = ''
+    newMaxAssignees.value = 1
+  }
+})
+
+watch(showEditDialog, (open) => {
+  if (!open) {
+    editTask.value = null
+    editTitle.value = ''
+    editDescription.value = ''
+    editMaxAssignees.value = 1
+  }
 })
 </script>
 
