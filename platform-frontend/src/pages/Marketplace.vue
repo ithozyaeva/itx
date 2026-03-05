@@ -241,7 +241,8 @@ onMounted(() => {
             v-if="item.imagePath"
             :src="item.imagePath"
             :alt="item.title"
-            class="w-full h-48 object-cover rounded-t-2xl"
+            loading="lazy"
+            class="w-full h-48 object-cover rounded-t-2xl bg-muted"
           >
           <div
             v-else

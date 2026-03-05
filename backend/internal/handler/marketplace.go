@@ -170,9 +170,6 @@ func (h *MarketplaceHandler) RequestPurchase(c *fiber.Ctx) error {
 	}
 
 	go func() {
-		h.pointSvc.GiveForAction(member.Id, models.PointReasonMarketplaceBuy, "marketplace", item.Id,
-			fmt.Sprintf("Заявка на покупку: %s", item.Title))
-
 		if err := CreateNotification(item.SellerId, "marketplace", "Новая заявка на покупку",
 			fmt.Sprintf("На ваше объявление «%s» поступила заявка на покупку", item.Title)); err != nil {
 			log.Printf("Error creating notification: %v", err)
@@ -225,6 +222,11 @@ func (h *MarketplaceHandler) MarkSold(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("Marketplace markSold error (item=%d, member=%d): %v", id, member.Id, err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if item.BuyerId != nil {
+		go h.pointSvc.GiveForAction(*item.BuyerId, models.PointReasonMarketplaceBuy, "marketplace", item.Id,
+			fmt.Sprintf("Покупка: %s", item.Title))
 	}
 
 	return c.JSON(item)
