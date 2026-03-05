@@ -79,6 +79,24 @@ func main() {
 		}
 	}()
 
+	// Запускаем фоновую задачу для выдачи ачивки "Чаттер недели" (каждый понедельник)
+	go func() {
+		pointsSvc := service.NewPointsService()
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		// При старте — если сегодня понедельник, запускаем сразу
+		if time.Now().UTC().Weekday() == time.Monday {
+			pointsSvc.AwardWeeklyChatter()
+		}
+
+		for range ticker.C {
+			if time.Now().UTC().Weekday() == time.Monday {
+				pointsSvc.AwardWeeklyChatter()
+			}
+		}
+	}()
+
 	// Запускаем фоновую задачу для очистки старых сообщений чатов (раз в сутки)
 	go func() {
 		chatActivitySvc := service.NewChatActivityService()

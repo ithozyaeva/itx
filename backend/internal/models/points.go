@@ -28,6 +28,7 @@ const (
 	PointReasonMarketplaceCreate   PointReason = "marketplace_create"
 	PointReasonMarketplaceBuy      PointReason = "marketplace_buy"
 	PointReasonChatQuest           PointReason = "chat_quest"
+	PointReasonChatterOfWeek       PointReason = "chatter_of_week"
 )
 
 var PointValues = map[PointReason]int{
@@ -46,6 +47,7 @@ var PointValues = map[PointReason]int{
 	PointReasonTaskExecute:         25,
 	PointReasonMarketplaceCreate:   15,
 	PointReasonMarketplaceBuy:      10,
+	PointReasonChatterOfWeek:       15,
 }
 
 type PointTransaction struct {

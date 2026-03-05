@@ -3,6 +3,7 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"time"
 )
 
 type PointsRepository struct{}
@@ -141,6 +142,23 @@ func (r *PointsRepository) GetMembersWithMonthlyEvents(year int, month int, minE
 		year, month, minEvents,
 	).Scan(&memberIds).Error
 	return memberIds, err
+}
+
+// GetTopChatterForWeek возвращает member_id участника с наибольшим количеством сообщений
+// за неделю, начинающуюся с monday (пн 00:00:00 UTC). Возвращает 0, если нет данных.
+func (r *PointsRepository) GetTopChatterForWeek(monday time.Time) (int64, error) {
+	nextMonday := monday.AddDate(0, 0, 7)
+	var memberId int64
+	err := database.DB.Raw(
+		`SELECT member_id FROM chat_messages
+		 WHERE member_id IS NOT NULL
+		   AND sent_at >= ? AND sent_at < ?
+		 GROUP BY member_id
+		 ORDER BY COUNT(*) DESC
+		 LIMIT 1`,
+		monday, nextMonday,
+	).Scan(&memberId).Error
+	return memberId, err
 }
 
 func (r *PointsRepository) GetMembersWithStreak(weeks int) ([]int64, error) {

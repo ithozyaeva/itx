@@ -81,7 +81,7 @@ func (s *PointsService) AwardEventPoints(event *models.Event) error {
 
 // CheckProfileComplete проверяет заполненность профиля и начисляет одноразовый бонус.
 func (s *PointsService) CheckProfileComplete(member *models.Member) {
-	if member.FirstName == "" || member.LastName == "" || member.Bio == "" || member.Birthday == nil || member.AvatarURL == "" {
+	if member.FirstName == "" || member.LastName == "" || member.Bio == "" || member.Birthday == nil {
 		return
 	}
 	s.AwardIdempotent(member.Id, models.PointReasonProfileComplete, "profile", member.Id,
@@ -152,6 +152,39 @@ func (s *PointsService) AdminAwardPoints(memberId int64, amount int, description
 
 func (s *PointsService) DeleteTransaction(id int64) error {
 	return s.repo.DeleteTransaction(id)
+}
+
+// isoWeekMonday возвращает дату понедельника ISO-недели (UTC 00:00:00).
+func isoWeekMonday(year, week int) time.Time {
+	// 4 января всегда в первой ISO-неделе года
+	jan4 := time.Date(year, 1, 4, 0, 0, 0, 0, time.UTC)
+	// weekday: Monday=0 ... Sunday=6
+	weekday := int(jan4.Weekday()+6) % 7
+	// Monday of week 1
+	week1Monday := jan4.AddDate(0, 0, -weekday)
+	return week1Monday.AddDate(0, 0, (week-1)*7)
+}
+
+// AwardWeeklyChatter находит самого активного участника чата за прошлую неделю и начисляет ему 15 баллов.
+func (s *PointsService) AwardWeeklyChatter() {
+	now := time.Now().UTC()
+	prevWeek := now.AddDate(0, 0, -7)
+	prevYear, prevWeekNum := prevWeek.ISOWeek()
+	monday := isoWeekMonday(prevYear, prevWeekNum)
+
+	memberId, err := s.repo.GetTopChatterForWeek(monday)
+	if err != nil {
+		log.Printf("AwardWeeklyChatter: error querying top chatter: %v", err)
+		return
+	}
+	if memberId == 0 {
+		return
+	}
+
+	sourceId := int64(prevYear*100 + prevWeekNum)
+	s.AwardIdempotent(memberId, models.PointReasonChatterOfWeek, "weekly_chatter", sourceId,
+		fmt.Sprintf("Чаттер недели %d/%d", prevWeekNum, prevYear))
+	log.Printf("AwardWeeklyChatter: awarded member %d for week %d/%d", memberId, prevWeekNum, prevYear)
 }
 
 // AwardActivityBonuses начисляет бонусы за активность: еженедельная активность, 3+ события в месяц, серия 4 недели.
