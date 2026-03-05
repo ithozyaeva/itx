@@ -85,12 +85,14 @@ func (r *MemberRepository) Create(member *models.Member) (*models.Member, error)
 func (r *MemberRepository) Update(member *models.Member) (*models.Member, error) {
 	result := database.DB.Model(&models.Member{}).
 		Where("id = ?", member.Id).
-		Update("birthday", member.Birthday).
-		Update("first_name", member.FirstName).
-		Update("last_name", member.LastName).
-		Update("bio", member.Bio).
-		Update("avatar_url", member.AvatarURL).
-		Update("username", member.Username)
+		Updates(map[string]interface{}{
+			"birthday":   member.Birthday,
+			"first_name": member.FirstName,
+			"last_name":  member.LastName,
+			"bio":        member.Bio,
+			"avatar_url": member.AvatarURL,
+			"username":   member.Username,
+		})
 
 	member.SetRoleStrings(member.Roles, member.Id)
 	database.DB.Where("member_id = ? AND role NOT IN ?", member.Id, member.Roles).Delete(&models.MemberRole{})
