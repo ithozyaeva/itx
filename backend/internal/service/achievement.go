@@ -6,13 +6,13 @@ import (
 )
 
 type AchievementService struct {
-	repo     *repository.AchievementRepository
+	repo       *repository.AchievementRepository
 	pointsRepo *repository.PointsRepository
 }
 
 func NewAchievementService() *AchievementService {
 	return &AchievementService{
-		repo:     repository.NewAchievementRepository(),
+		repo:       repository.NewAchievementRepository(),
 		pointsRepo: repository.NewPointsRepository(),
 	}
 }
@@ -52,6 +52,7 @@ var AllAchievements = []models.Achievement{
 	{Id: "tasks_done_10", Title: "Мастер дел", Description: "Выполнить 10 заданий", Icon: "briefcase", Category: models.AchievementCategoryActivity, Threshold: 10},
 	{Id: "first_quest", Title: "Квестер", Description: "Выполнить первое задание в чате", Icon: "target", Category: models.AchievementCategoryActivity, Threshold: 1},
 	{Id: "quests_5", Title: "Охотник за квестами", Description: "Выполнить 5 заданий в чатах", Icon: "swords", Category: models.AchievementCategoryActivity, Threshold: 5},
+	{Id: "chatter_of_week", Title: "Чаттерc недели", Description: "Стать самым активным участником чата за неделю", Icon: "message-circle", Category: models.AchievementCategoryActivity, Threshold: 1},
 }
 
 // achievementReasonMap maps achievement IDs to the PointReason they track.
@@ -82,6 +83,7 @@ var achievementReasonMap = map[string]models.PointReason{
 	"tasks_done_10":    models.PointReasonTaskExecute,
 	"first_quest":      models.PointReasonChatQuest,
 	"quests_5":         models.PointReasonChatQuest,
+	"chatter_of_week":  models.PointReasonChatterOfWeek,
 }
 
 func (s *AchievementService) GetUserAchievements(memberId int64) (*models.AchievementsResponse, error) {
