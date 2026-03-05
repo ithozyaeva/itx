@@ -5,6 +5,8 @@ import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Content from '@/pages/Content.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
+import Guilds from '@/pages/Guilds.vue'
+import Kudos from '@/pages/Kudos.vue'
 import Leaderboard from '@/pages/Leaderboard.vue'
 import Marketplace from '@/pages/Marketplace.vue'
 import MemberProfile from '@/pages/MemberProfile.vue'
@@ -12,9 +14,12 @@ import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
 import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
+import MyStats from '@/pages/MyStats.vue'
 import Quests from '@/pages/Quests.vue'
+import Raffles from '@/pages/Raffles.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
+import Seasons from '@/pages/Seasons.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
 import { useMainStore } from '../store'
@@ -37,6 +42,11 @@ const routes: RouteRecordRaw[] = [
   { path: '/tasks', component: TaskExchange, name: 'taskExchange' },
   { path: '/quests', component: Quests, name: 'quests' },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot' },
+  { path: '/kudos', component: Kudos, name: 'kudos' },
+  { path: '/seasons', component: Seasons, name: 'seasons' },
+  { path: '/raffles', component: Raffles, name: 'raffles' },
+  { path: '/guilds', component: Guilds, name: 'guilds' },
+  { path: '/my-stats', component: MyStats, name: 'myStats' },
 ]
 
 const router = createRouter({

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Award, BookOpen, Calendar, ClipboardList, FileText, Flame, Folder, Home, MessageSquare, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
+import { Award, BarChart3, BookOpen, Calendar, ClipboardList, FileText, Flame, Folder, Gift, Heart, Home, MessageSquare, Shield, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -29,6 +29,8 @@ const state = {
         { title: 'События', path: '/events', icon: Calendar, indicator: true },
         { title: 'Контент', path: '/content', icon: BookOpen },
         { title: 'Менторы', path: '/mentors', icon: Users },
+        { title: 'Благодарности', path: '/kudos', icon: Heart },
+        { title: 'Гильдии', path: '/guilds', icon: Shield },
       ],
     },
     {
@@ -36,14 +38,17 @@ const state = {
       items: [
         { title: 'Мои баллы', path: '/points', icon: Star },
         { title: 'Рейтинг', path: '/leaderboard', icon: Trophy },
+        { title: 'Сезоны', path: '/seasons', icon: Trophy },
         { title: 'Достижения', path: '/achievements', icon: Award },
         { title: 'Биржа заданий', path: '/tasks', icon: ClipboardList },
         { title: 'Задания в чатах', path: '/quests', icon: Flame },
+        { title: 'Розыгрыши', path: '/raffles', icon: Gift },
       ],
     },
     {
       label: 'Мои разделы',
       items: [
+        { title: 'Моя статистика', path: '/my-stats', icon: BarChart3 },
         { title: 'Рефералки', path: '/referals', icon: Folder },
         { title: 'Резюме', path: '/resumes', icon: FileText },
         { title: 'Мои отзывы', path: '/my-reviews', icon: MessageSquare },

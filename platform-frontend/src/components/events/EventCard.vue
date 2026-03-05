@@ -173,9 +173,15 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         <span>{{ event.hosts.map(host => `${host.firstName} ${host.lastName}`).join(', ') }}</span>
       </div>
       <div v-if="event.videoLink" class="flex items-start gap-2">
-        <span class="shrink-0">Запись:</span>
+        <span class="shrink-0">Трансляция:</span>
         <a :href="event.videoLink" target="_blank" class="underline break-all">
           {{ event.videoLink }}
+        </a>
+      </div>
+      <div v-if="event.recordingUrl" class="flex items-start gap-2">
+        <span class="shrink-0">Запись:</span>
+        <a :href="event.recordingUrl" target="_blank" class="underline break-all text-accent">
+          {{ event.recordingUrl }}
         </a>
       </div>
     </div>

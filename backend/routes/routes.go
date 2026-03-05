@@ -180,6 +180,19 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	chatQuests.Put("/:id", chatQuestHandler.Update)
 	chatQuests.Delete("/:id", chatQuestHandler.Delete)
 
+	// Маршруты для сезонов (админ)
+	seasonHandler := handler.NewSeasonHandler()
+	adminSeasons := protected.Group("/seasons")
+	adminSeasons.Get("/", seasonHandler.GetAll)
+	adminSeasons.Post("/", seasonHandler.Create)
+	adminSeasons.Post("/:id/finish", seasonHandler.Finish)
+
+	// Маршруты для розыгрышей (админ)
+	raffleHandler := handler.NewRaffleHandler()
+	adminRaffles := protected.Group("/raffles")
+	adminRaffles.Post("/", raffleHandler.Create)
+	adminRaffles.Delete("/:id", raffleHandler.Delete)
+
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
 	eventTags := protected.Group("/eventTags")
@@ -313,4 +326,40 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	marketplace.Post("/:id/cancel-purchase", marketplaceHandler.CancelPurchase)
 	marketplace.Post("/:id/sold", marketplaceHandler.MarkSold)
 	marketplace.Delete("/:id", marketplaceHandler.Delete)
+
+	// Маршруты для стены благодарностей
+	kudosHandler := handler.NewKudosHandler()
+	kudos := protected.Group("/kudos")
+	kudos.Get("/", kudosHandler.GetRecent)
+	kudos.Post("/", kudosHandler.Send)
+
+	// Маршруты для сезонов
+	seasonHandler := handler.NewSeasonHandler()
+	seasons := protected.Group("/seasons")
+	seasons.Get("/", seasonHandler.GetAll)
+	seasons.Get("/active", seasonHandler.GetActive)
+	seasons.Get("/:id/leaderboard", seasonHandler.GetLeaderboard)
+
+	// Маршруты для розыгрышей
+	raffleHandler := handler.NewRaffleHandler()
+	raffles := protected.Group("/raffles")
+	raffles.Get("/", raffleHandler.GetAll)
+	raffles.Post("/:id/buy", raffleHandler.BuyTickets)
+
+	// Маршруты для гильдий
+	guildHandler := handler.NewGuildHandler()
+	guilds := protected.Group("/guilds")
+	guilds.Get("/", guildHandler.GetAll)
+	guilds.Post("/", guildHandler.Create)
+	guilds.Put("/:id", guildHandler.Update)
+	guilds.Delete("/:id", guildHandler.Delete)
+	guilds.Post("/:id/join", guildHandler.Join)
+	guilds.Post("/:id/leave", guildHandler.Leave)
+	guilds.Get("/:id/members", guildHandler.GetMembers)
+
+	// Маршруты для статистики профиля
+	profileStatsHandler := handler.NewProfileStatsHandler()
+	profileStats := protected.Group("/profile-stats")
+	profileStats.Get("/me", profileStatsHandler.GetMyStats)
+	profileStats.Get("/:id", profileStatsHandler.GetMemberStats)
 }
