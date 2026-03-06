@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeMount, ref } from 'vue'
 import { Toaster } from '@/components/ui/toast'
+import { startSSE } from '@/composables/useSSE'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
@@ -31,6 +32,7 @@ onBeforeMount(() => {
         tg_user.value = { ...tg_user.value, ...user }
         tg_token.value = authToken
         window.history.replaceState({}, document.title, window.location.pathname)
+        startSSE()
       })
       .catch((error) => {
         handleError(error)
@@ -38,6 +40,9 @@ onBeforeMount(() => {
       .finally(() => {
         isLoading.value = false
       })
+  }
+  else if (tg_user.value) {
+    startSSE()
   }
   else if (!tg_user.value && !import.meta.env.DEV) {
     window.location.pathname = '/'

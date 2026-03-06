@@ -85,7 +85,11 @@ func CreateNotification(memberId int64, notifType string, title string, body str
 		Title:    title,
 		Body:     body,
 	}
-	return database.DB.Create(&notification).Error
+	if err := database.DB.Create(&notification).Error; err != nil {
+		return err
+	}
+	PublishToMember(memberId, "notifications")
+	return nil
 }
 
 // GetEventMemberIds returns member IDs for an event (call before deleting the event)

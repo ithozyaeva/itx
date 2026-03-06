@@ -3,6 +3,7 @@ import type { Notification } from '@/services/notifications'
 import { Bell, CheckCheck } from 'lucide-vue-next'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
+import { useSSE } from '@/composables/useSSE'
 import { handleError } from '@/services/errorService'
 import { notificationService } from '@/services/notifications'
 
@@ -10,7 +11,6 @@ const notifications = ref<Notification[]>([])
 const unreadCount = ref(0)
 const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
-let pollInterval: ReturnType<typeof setInterval> | null = null
 
 async function fetchUnreadCount() {
   try {
@@ -87,15 +87,18 @@ function formatDate(dateStr: string) {
   return date.toLocaleDateString('ru-RU')
 }
 
+useSSE('notifications', () => {
+  fetchUnreadCount()
+  if (isOpen.value)
+    fetchNotifications()
+})
+
 onMounted(() => {
   fetchUnreadCount()
-  pollInterval = setInterval(fetchUnreadCount, 30000)
   document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
-  if (pollInterval)
-    clearInterval(pollInterval)
   document.removeEventListener('click', handleClickOutside)
 })
 </script>

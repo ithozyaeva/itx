@@ -362,4 +362,8 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	profileStats := protected.Group("/profile-stats")
 	profileStats.Get("/me", profileStatsHandler.GetMyStats)
 	profileStats.Get("/:id", profileStatsHandler.GetMemberStats)
+
+	// SSE (Server-Sent Events) для real-time обновлений
+	sseHandler := handler.NewSSEHandler()
+	protected.Get("/sse", sseHandler.Stream)
 }
