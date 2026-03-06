@@ -186,6 +186,12 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Команда /whois — информация об участнике в групповых чатах
+		if update.Message.IsCommand() && update.Message.Command() == "whois" {
+			b.handleWhoisCommand(update.Message)
+			continue
+		}
+
 		// Бот отвечает только в личных сообщениях
 		if update.Message.Chat.Type != "private" {
 			continue
@@ -211,6 +217,7 @@ func (b *TelegramBot) registerCommands() {
 		{Command: "start", Description: "Авторизация на платформе"},
 		{Command: "mypoints", Description: "Мои баллы"},
 		{Command: "events", Description: "Ближайшие события"},
+		{Command: "whois", Description: "Кто этот участник"},
 		{Command: "help", Description: "Помощь"},
 	}
 	cfg := tgbotapi.NewSetMyCommands(commands...)
@@ -262,8 +269,116 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"/start - Авторизация на платформе\n" +
 		"/mypoints - Посмотреть баланс баллов\n" +
 		"/events - Ближайшие события\n" +
+		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
 		"/help - Помощь"
 	b.sendMessage(message.Chat.ID, text)
+}
+
+// handleWhoisCommand показывает информацию об участнике сообщества
+func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
+	var member *models.Member
+	var err error
+
+	// Способ 1: ответ на сообщение
+	if message.ReplyToMessage != nil {
+		member, err = b.member.GetByTelegramID(message.ReplyToMessage.From.ID)
+	} else {
+		// Способ 2: /whois @username
+		args := strings.TrimSpace(message.CommandArguments())
+		if args == "" {
+			msg := tgbotapi.NewMessage(message.Chat.ID, "Ответьте на сообщение командой /whois или укажите username: /whois @username")
+			msg.ReplyToMessageID = message.MessageID
+			b.bot.Send(msg)
+			return
+		}
+		username := strings.TrimPrefix(args, "@")
+		member, err = b.member.GetByUsername(username)
+	}
+
+	if err != nil || member == nil {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Участник не найден на платформе.")
+		msg.ReplyToMessageID = message.MessageID
+		b.bot.Send(msg)
+		return
+	}
+
+	// Формируем карточку участника
+	var builder strings.Builder
+
+	name := strings.TrimSpace(fmt.Sprintf("%s %s", member.FirstName, member.LastName))
+	if name == "" {
+		name = member.Username
+	}
+	builder.WriteString(fmt.Sprintf("👤 <b>%s</b>", name))
+	if member.Username != "" {
+		builder.WriteString(fmt.Sprintf(" (@%s)", member.Username))
+	}
+	builder.WriteString("\n")
+
+	// Роли
+	if len(member.Roles) > 0 {
+		roleLabels := map[models.Role]string{
+			models.MemberRoleSubscriber:   "Участник",
+			models.MemberRoleMentor:       "Ментор",
+			models.MemberRoleAdmin:        "Админ",
+			models.MemberRoleEventMaker:   "Организатор событий",
+			models.MemberRoleUnsubscriber: "Неактивный",
+		}
+		var roles []string
+		for _, role := range member.Roles {
+			if label, ok := roleLabels[role]; ok {
+				roles = append(roles, label)
+			}
+		}
+		if len(roles) > 0 {
+			builder.WriteString(fmt.Sprintf("🏷 %s\n", strings.Join(roles, ", ")))
+		}
+	}
+
+	// Био
+	if member.Bio != "" {
+		builder.WriteString(fmt.Sprintf("\n📝 %s\n", member.Bio))
+	}
+
+	// Баллы
+	pointsSvc := service.NewPointsService()
+	balance, pointsErr := pointsSvc.GetBalance(member.Id)
+	if pointsErr == nil {
+		builder.WriteString(fmt.Sprintf("\n⭐ Баллы: %d", balance))
+	}
+
+	// Менторская информация
+	mentor, mentorErr := b.member.GetMentor(member.Id)
+	if mentorErr == nil && mentor != nil {
+		if mentor.Occupation != "" {
+			builder.WriteString(fmt.Sprintf("\n💼 %s", mentor.Occupation))
+		}
+		if mentor.Experience != "" {
+			builder.WriteString(fmt.Sprintf("\n📊 Опыт: %s", mentor.Experience))
+		}
+		if len(mentor.ProfTags) > 0 {
+			var tags []string
+			for _, tag := range mentor.ProfTags {
+				tags = append(tags, tag.Title)
+			}
+			builder.WriteString(fmt.Sprintf("\n🔧 %s", strings.Join(tags, ", ")))
+		}
+	}
+
+	// Ссылка на профиль
+	platformURL := config.CFG.PublicDomain
+	if platformURL != "" {
+		if !strings.HasPrefix(platformURL, "http://") && !strings.HasPrefix(platformURL, "https://") {
+			platformURL = "https://" + platformURL
+		}
+		builder.WriteString(fmt.Sprintf("\n\n🔗 <a href=\"%s/members/%d\">Профиль на платформе</a>", platformURL, member.Id))
+	}
+
+	msg := tgbotapi.NewMessage(message.Chat.ID, builder.String())
+	msg.ParseMode = "HTML"
+	msg.ReplyToMessageID = message.MessageID
+	msg.DisableWebPagePreview = true
+	b.bot.Send(msg)
 }
 
 // handleChatIDCommand отправляет ID чата владельцу в ЛС и удаляет команду

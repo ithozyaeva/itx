@@ -57,6 +57,10 @@ func (s *MemberService) GetByTelegramID(telegramID int64) (*models.Member, error
 	return s.repo.GetByTelegramID(telegramID)
 }
 
+func (s *MemberService) GetByUsername(username string) (*models.Member, error) {
+	return s.repo.GetMemberByTelegram(username)
+}
+
 func (s *MemberService) GetSubscribedMembersWithTelegram() ([]models.Member, error) {
 	return s.repo.GetSubscribedMembersWithTelegram()
 }
