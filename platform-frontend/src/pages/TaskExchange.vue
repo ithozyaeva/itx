@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useSSE } from '@/composables/useSSE'
 import {
   Dialog,
   DialogContent,
@@ -232,6 +233,8 @@ function displayName(member: { firstName: string, lastName: string, tg: string }
   const name = [member.firstName, member.lastName].filter(Boolean).join(' ')
   return name || `@${member.tg}`
 }
+
+useSSE('tasks', () => fetchTasks())
 
 onMounted(() => {
   fetchTasks()

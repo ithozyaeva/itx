@@ -87,6 +87,7 @@ func (h *TaskExchangeHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось создать задание"})
 	}
 
+	BroadcastEvent("tasks")
 	return c.Status(fiber.StatusCreated).JSON(created)
 }
 
@@ -116,6 +117,7 @@ func (h *TaskExchangeHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	BroadcastEvent("tasks")
 	return c.JSON(task)
 }
 
@@ -132,6 +134,7 @@ func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	BroadcastEvent("tasks")
 	return c.JSON(task)
 }
 
@@ -209,6 +212,7 @@ func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
 		}
 	}()
 
+	BroadcastEvent("tasks")
 	return c.JSON(task)
 }
 
@@ -246,6 +250,7 @@ func (h *TaskExchangeHandler) Approve(c *fiber.Ctx) error {
 		}
 	}()
 
+	BroadcastEvent("tasks")
 	return c.JSON(task)
 }
 
@@ -278,6 +283,7 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 		}
 	}()
 
+	BroadcastEvent("tasks")
 	return c.JSON(task)
 }
 
@@ -302,5 +308,6 @@ func (h *TaskExchangeHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось удалить задание"})
 	}
 
+	BroadcastEvent("tasks")
 	return c.SendStatus(fiber.StatusNoContent)
 }

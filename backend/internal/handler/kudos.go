@@ -31,6 +31,8 @@ func (h *KudosHandler) Send(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	BroadcastEvent("kudos")
+	PublishToMember(req.ToId, "points")
 	return c.Status(fiber.StatusCreated).JSON(kudos)
 }
 

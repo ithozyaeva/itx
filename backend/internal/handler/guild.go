@@ -39,6 +39,7 @@ func (h *GuildHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	BroadcastEvent("guilds")
 	return c.Status(fiber.StatusCreated).JSON(guild)
 }
 
@@ -52,6 +53,7 @@ func (h *GuildHandler) Join(c *fiber.Ctx) error {
 	if err := h.svc.Join(id, member.Id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+	BroadcastEvent("guilds")
 	return c.JSON(fiber.Map{"ok": true})
 }
 
@@ -65,6 +67,7 @@ func (h *GuildHandler) Leave(c *fiber.Ctx) error {
 	if err := h.svc.Leave(id, member.Id); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+	BroadcastEvent("guilds")
 	return c.JSON(fiber.Map{"ok": true})
 }
 

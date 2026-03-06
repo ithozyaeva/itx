@@ -4,6 +4,7 @@ import type { TelegramUser } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
 import { Heart, Loader2, Send } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import { useSSE } from '@/composables/useSSE'
 import {
   Dialog,
   DialogFooter,
@@ -90,6 +91,8 @@ function openDialog() {
   fetchMembers()
   showDialog.value = true
 }
+
+useSSE('kudos', () => fetchKudos())
 
 onMounted(() => {
   fetchKudos()

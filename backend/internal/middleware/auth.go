@@ -23,6 +23,9 @@ func NewAuthMiddleware(db *gorm.DB) *AuthMiddleware {
 
 func (m *AuthMiddleware) RequireTGAuth(c *fiber.Ctx) error {
 	telegramToken := c.Get("X-Telegram-User-Token")
+	if telegramToken == "" {
+		telegramToken = c.Query("token")
+	}
 
 	if telegramToken == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

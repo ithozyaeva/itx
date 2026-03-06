@@ -18,5 +18,6 @@ func CreateNotification(memberId int64, notifType string, title string, body str
 		log.Printf("Error creating notification for member %d: %v", memberId, err)
 		return err
 	}
+	GetSSEHub().Publish(memberId, SSEEvent{Type: "notifications"})
 	return nil
 }

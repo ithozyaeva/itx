@@ -3,6 +3,7 @@ import type { RaffleItem } from '@/models/raffle'
 import { Typography } from 'itx-ui-kit'
 import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { useSSE } from '@/composables/useSSE'
 import { handleError } from '@/services/errorService'
 import { raffleService } from '@/services/raffles'
 
@@ -60,6 +61,8 @@ function timeLeft(endsAt: string) {
 function winnerName(r: RaffleItem) {
   return [r.winnerFirstName, r.winnerLastName].filter(Boolean).join(' ')
 }
+
+useSSE('raffles', () => fetchRaffles())
 
 onMounted(() => {
   fetchRaffles()

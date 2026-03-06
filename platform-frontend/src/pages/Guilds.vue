@@ -3,6 +3,7 @@ import type { GuildMemberEntry, GuildPublic } from '@/models/guild'
 import { Typography } from 'itx-ui-kit'
 import { Loader2, LogOut, Plus, Shield, Trash2, Users } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import { useSSE } from '@/composables/useSSE'
 import {
   Dialog,
   DialogFooter,
@@ -116,6 +117,8 @@ function isInAnyGuild() {
 function displayName(firstName: string, lastName: string) {
   return [firstName, lastName].filter(Boolean).join(' ')
 }
+
+useSSE('guilds', () => fetchGuilds())
 
 onMounted(() => {
   fetchGuilds()
