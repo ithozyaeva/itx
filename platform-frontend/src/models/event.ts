@@ -23,6 +23,8 @@ export interface CommunityEvent {
   repeatEndDate?: string
   recordingUrl: string
   maxParticipants: number
+  exclusiveChatId?: number | null
+  exclusiveChatTitle?: string
   hosts: TelegramUser[]
   members: TelegramUser[]
   eventTags: EventTag[]

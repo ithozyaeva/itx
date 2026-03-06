@@ -170,6 +170,9 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
+	// Подставляем название эксклюзивного чата
+	h.resolveExclusiveChatTitle(event)
+
 	result, err := h.service.Create(event)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -198,6 +201,9 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 	if err := c.BodyParser(event); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
+
+	// Подставляем название эксклюзивного чата
+	h.resolveExclusiveChatTitle(event)
 
 	result, err := h.service.Update(event)
 	if err != nil {
@@ -260,4 +266,23 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "event", int64(id), entity.Title)
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// resolveExclusiveChatTitle подставляет название чата по его ID
+func (h *EventsHandler) resolveExclusiveChatTitle(event *models.Event) {
+	if event.ExclusiveChatID == nil || *event.ExclusiveChatID == 0 {
+		event.ExclusiveChatTitle = ""
+		return
+	}
+	chatActivitySvc := service.NewChatActivityService()
+	chats, err := chatActivitySvc.GetTrackedChats()
+	if err != nil {
+		return
+	}
+	for _, chat := range chats {
+		if chat.ChatID == *event.ExclusiveChatID {
+			event.ExclusiveChatTitle = chat.Title
+			return
+		}
+	}
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
 import { CalendarIcon, Tag, Typography } from 'itx-ui-kit'
-import { ChevronDown, Loader2, MapPin } from 'lucide-vue-next'
+import { ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useDictionary } from '@/composables/useDictionary'
@@ -22,6 +22,7 @@ const isMembersExpanded = ref(false)
 
 const formattedDate = computed(() => dateFormatter.format(new Date(props.event.date)))
 
+const isExclusive = computed(() => !!props.event.exclusiveChatId)
 const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
 const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
 const isPassedEvent = computed(() => new Date(props.event.date) < new Date())
@@ -116,7 +117,18 @@ const { openInGoogleCalendar } = useGoogleCalendar()
 </script>
 
 <template>
-  <div data-reveal class="bg-card rounded-3xl border p-4 hover:shadow-md transition-shadow flex flex-col gap-2">
+  <div
+    data-reveal
+    class="rounded-3xl border p-4 transition-shadow flex flex-col gap-2"
+    :class="isExclusive
+      ? 'bg-gradient-to-br from-amber-50/80 to-yellow-50/50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-300/60 dark:border-amber-600/40 hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/20'
+      : 'bg-card hover:shadow-md'"
+  >
+    <!-- Exclusive badge -->
+    <div v-if="isExclusive" class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+      <Crown class="h-4 w-4" />
+      <span class="text-xs font-semibold uppercase tracking-wide">{{ event.exclusiveChatTitle || 'Эксклюзив' }}</span>
+    </div>
     <!-- Header: title + tags -->
     <div class="flex flex-col gap-1.5">
       <Typography variant="h4" as="h3">

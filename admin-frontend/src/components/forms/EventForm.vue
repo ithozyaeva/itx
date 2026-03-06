@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDictionary } from '@/composables/useDictionary'
 import { requiredRule, useFormValidation } from '@/composables/useFormValidation'
 import { datetimeLocalToISO, toDatetimeLocal } from '@/lib/utils'
+import { chatActivityService } from '@/services/chatActivityService'
 import { handleError } from '@/services/errorService'
 import { eventsService } from '@/services/eventsService'
 
@@ -101,7 +102,27 @@ const { values, errors, touched, validate, isValid } = useFormValidation<Communi
   repeatPeriod: undefined,
   repeatInterval: 1,
   repeatEndDate: undefined,
+  exclusiveChatId: null,
+  exclusiveChatTitle: '',
 }, validationRules)
+
+// Загрузка списка чатов для эксклюзивных событий
+interface TrackedChatOption { chatId: string, title: string }
+const trackedChats = ref<TrackedChatOption[]>([])
+onMounted(async () => {
+  try {
+    const chats = await chatActivityService.getChats()
+    trackedChats.value = chats.map(c => ({ chatId: String(c.chatId), title: c.title }))
+  }
+  catch { /* не критично */ }
+})
+
+const exclusiveChatModel = computed({
+  get: () => values.value.exclusiveChatId ? String(values.value.exclusiveChatId) : '',
+  set: (val: string | null) => {
+    values.value.exclusiveChatId = val ? Number(val) : null
+  },
+})
 
 const repeatEndType = ref<'never' | 'date'>('never')
 
@@ -287,6 +308,25 @@ const { placeTypes } = useDictionary(['placeTypes'])
           min="0"
           placeholder="0"
         />
+      </div>
+      <div class="space-y-2">
+        <Label for="exclusiveChat">Эксклюзивный чат (алерты только участникам чата)</Label>
+        <Select id="exclusiveChat" v-model="exclusiveChatModel">
+          <SelectTrigger>
+            <SelectValue placeholder="Для всех участников" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">
+              Для всех участников
+            </SelectItem>
+            <SelectItem v-for="chat in trackedChats" :key="chat.chatId" :value="chat.chatId">
+              {{ chat.title }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p class="text-xs text-muted-foreground">
+          Если выбран чат — алерты получат только его участники, но событие будет видно всем с элитным оформлением
+        </p>
       </div>
       <div class="space-y-2">
         <Label for="hosts">Спикеры встречи</Label>
