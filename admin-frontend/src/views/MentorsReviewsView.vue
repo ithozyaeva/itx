@@ -51,7 +51,7 @@ function selectReview(reviewId: number) {
         <Typography variant="h2" as="h1">
           Отзывы на менторов
         </Typography>
-        <Button @click="open">
+        <Button @click="selectedReviewId = undefined; open()">
           <Plus class="mr-2 h-4 w-4" />
           Добавить отзыв
         </Button>
