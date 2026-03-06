@@ -44,6 +44,6 @@ export const chatQuestService = {
     return api.put(`chat-quests/${id}`, { json: quest }).json<ChatQuest>()
   },
   async remove(id: number) {
-    return api.delete(`chat-quests/${id}`).json()
+    await api.delete(`chat-quests/${id}`)
   },
 }

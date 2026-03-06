@@ -35,7 +35,7 @@ func main() {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: config.CFG.AllowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Telegram-User-Token",
-		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 	}))
 
 	// Настраиваем маршруты

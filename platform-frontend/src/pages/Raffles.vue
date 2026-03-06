@@ -9,7 +9,7 @@ import { raffleService } from '@/services/raffles'
 const items = ref<RaffleItem[]>([])
 const isLoading = ref(true)
 const buyingId = ref<number | null>(null)
-const ticketCount = ref(1)
+const ticketCounts = ref<Record<number, number>>({})
 
 const activeRaffles = computed(() => items.value.filter(r => r.status === 'ACTIVE'))
 const finishedRaffles = computed(() => items.value.filter(r => r.status === 'FINISHED'))
@@ -27,11 +27,15 @@ async function fetchRaffles() {
   }
 }
 
+function getTicketCount(id: number) {
+  return ticketCounts.value[id] ?? 1
+}
+
 async function buyTickets(id: number) {
   buyingId.value = id
   try {
-    await raffleService.buyTickets(id, ticketCount.value)
-    ticketCount.value = 1
+    await raffleService.buyTickets(id, getTicketCount(id))
+    ticketCounts.value[id] = 1
     await fetchRaffles()
   }
   catch (error) {
@@ -143,8 +147,9 @@ onMounted(() => {
 
             <div class="flex items-center gap-2">
               <select
-                v-model.number="ticketCount"
+                :value="getTicketCount(raffle.id)"
                 class="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                @change="ticketCounts[raffle.id] = Number(($event.target as HTMLSelectElement).value)"
               >
                 <option
                   v-for="n in 10"
@@ -163,7 +168,7 @@ onMounted(() => {
                   v-if="buyingId === raffle.id"
                   class="h-4 w-4 animate-spin inline mr-1"
                 />
-                Купить ({{ raffle.ticketCost * ticketCount }} б.)
+                Купить ({{ raffle.ticketCost * getTicketCount(raffle.id) }} б.)
               </button>
             </div>
           </div>

@@ -92,11 +92,14 @@ func (r *RaffleRepository) PickRandomWinner(raffleId int64) (int64, error) {
 }
 
 func (r *RaffleRepository) FinishRaffle(id int64, winnerId int64) error {
+	updates := map[string]interface{}{
+		"status": models.RaffleStatusFinished,
+	}
+	if winnerId != 0 {
+		updates["winner_id"] = winnerId
+	}
 	return database.DB.Model(&models.Raffle{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"status":    models.RaffleStatusFinished,
-			"winner_id": winnerId,
-		}).Error
+		Updates(updates).Error
 }
 
 func (r *RaffleRepository) Update(raffle *models.Raffle) error {

@@ -63,7 +63,7 @@ class SeasonService {
   finish = async (id: number): Promise<boolean> => {
     try {
       this.isLoading.value = true
-      await api.post(`seasons/${id}/finish`).json()
+      await api.post(`seasons/${id}/finish`)
 
       this.toast.toast({
         title: 'Успешно',
