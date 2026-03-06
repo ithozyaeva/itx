@@ -23,7 +23,7 @@ export const guildService = {
   },
 
   async remove(id: number) {
-    return apiClient.delete(`guilds/${id}`).json()
+    await apiClient.delete(`guilds/${id}`)
   },
 
   async getMembers(id: number) {

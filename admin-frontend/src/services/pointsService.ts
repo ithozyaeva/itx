@@ -77,7 +77,7 @@ class PointsService {
   deleteTransaction = async (id: number): Promise<boolean> => {
     try {
       this.isLoading.value = true
-      await api.delete(`points/${id}`).json()
+      await api.delete(`points/${id}`)
 
       this.toast.toast({
         title: 'Успешно',
