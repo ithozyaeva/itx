@@ -15,7 +15,6 @@ import {
   XCircle,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useSSE } from '@/composables/useSSE'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useSSE } from '@/composables/useSSE'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { taskExchangeService } from '@/services/taskExchange'
