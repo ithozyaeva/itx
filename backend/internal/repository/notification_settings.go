@@ -73,6 +73,7 @@ func (r *NotificationSettingsRepository) Upsert(settings *models.NotificationSet
 		return settings, nil
 	}
 
+	existing.MuteAll = settings.MuteAll
 	existing.NewEvents = settings.NewEvents
 	existing.RemindWeek = settings.RemindWeek
 	existing.RemindDay = settings.RemindDay

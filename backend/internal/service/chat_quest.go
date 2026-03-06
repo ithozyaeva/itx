@@ -137,6 +137,11 @@ func (s *ChatQuestService) completeQuest(quest models.ChatQuest, memberID int64)
 		if SendTelegramDMFunc == nil {
 			return
 		}
+		// Проверяем MuteAll
+		notifSettingsRepo := repository.NewNotificationSettingsRepository()
+		if ns, err := notifSettingsRepo.GetByMemberId(memberID); err == nil && ns.MuteAll {
+			return
+		}
 		member, err := s.memberRepo.GetById(memberID)
 		if err != nil {
 			log.Printf("Error getting member for telegram notification (member=%d): %v", memberID, err)

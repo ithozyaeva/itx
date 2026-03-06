@@ -1,0 +1,2 @@
+ALTER TABLE "notification_settings"
+ADD COLUMN IF NOT EXISTS "mute_all" BOOLEAN NOT NULL DEFAULT FALSE;
