@@ -4,7 +4,6 @@ import type { TelegramUser } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
 import { Heart, Loader2, Send } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
-import { useSSE } from '@/composables/useSSE'
 import {
   Dialog,
   DialogFooter,
@@ -12,6 +11,7 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { apiClient } from '@/services/api'
 import { handleError } from '@/services/errorService'
