@@ -3,6 +3,7 @@ import type { Permission } from '@/types/permissions'
 import { computed, ref } from 'vue'
 import Award from '~icons/lucide/award'
 import BarChart3 from '~icons/lucide/bar-chart-3'
+import Calendar from '~icons/lucide/calendar'
 import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
 import Home from '~icons/lucide/home'
@@ -62,7 +63,7 @@ export function useSidebar() {
     {
       title: 'События',
       path: '/events',
-      icon: Users,
+      icon: Calendar,
       requiredPermission: 'can_view_admin_events',
     },
     {

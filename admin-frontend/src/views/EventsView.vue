@@ -48,7 +48,7 @@ function selectEvent(entityId: number) {
         <Typography variant="h2" as="h1">
           События сообщества
         </Typography>
-        <Button @click="open">
+        <Button @click="selectedEventId = undefined; open()">
           <Plus class="mr-2 h-4 w-4" />
           Добавить событие
         </Button>
