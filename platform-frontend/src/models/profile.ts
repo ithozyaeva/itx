@@ -49,6 +49,7 @@ export interface PublicProfile {
 export interface NotificationSettings {
   id: number
   memberId: number
+  muteAll: boolean
   newEvents: boolean
   remindWeek: boolean
   remindDay: boolean

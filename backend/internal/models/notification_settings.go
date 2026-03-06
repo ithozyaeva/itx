@@ -3,6 +3,7 @@ package models
 type NotificationSettings struct {
 	Id             int64 `json:"id" gorm:"primaryKey"`
 	MemberId       int64 `json:"memberId" gorm:"column:member_id;uniqueIndex;not null"`
+	MuteAll        bool  `json:"muteAll" gorm:"column:mute_all;default:false"`
 	NewEvents      bool  `json:"newEvents" gorm:"column:new_events;default:true"`
 	RemindWeek     bool  `json:"remindWeek" gorm:"column:remind_week;default:true"`
 	RemindDay      bool  `json:"remindDay" gorm:"column:remind_day;default:true"`

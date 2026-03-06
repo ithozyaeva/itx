@@ -12,6 +12,7 @@ const isSaving = ref(false)
 const hasChanges = ref(false)
 
 const settings = reactive({
+  muteAll: false,
   newEvents: true,
   remindWeek: true,
   remindDay: true,
@@ -33,11 +34,17 @@ const toggleItems = [
   { key: 'eventCancelled' as const, label: 'Отмена событий', description: 'Когда событие отменяется' },
 ]
 
+function toggleMuteAll() {
+  settings.muteAll = !settings.muteAll
+  checkChanges()
+}
+
 onMounted(async () => {
   try {
     const data = await notificationSettingsService.get()
     if (data) {
       Object.assign(settings, {
+        muteAll: data.muteAll,
         newEvents: data.newEvents,
         remindWeek: data.remindWeek,
         remindDay: data.remindDay,
@@ -63,7 +70,8 @@ function toggleSetting(key: keyof typeof settings) {
 }
 
 function checkChanges() {
-  hasChanges.value = toggleItems.some(item => settings[item.key] !== originalSettings[item.key])
+  hasChanges.value = settings.muteAll !== originalSettings.muteAll
+    || toggleItems.some(item => settings[item.key] !== originalSettings[item.key])
 }
 
 async function handleSubmit() {
@@ -109,9 +117,33 @@ async function handleSubmit() {
         class="w-full space-y-3"
       >
         <div
+          class="flex items-center justify-between py-2 px-3 rounded-xl bg-destructive/5 border border-destructive/20 cursor-pointer"
+          @click="toggleMuteAll"
+        >
+          <div class="flex flex-col">
+            <span class="text-sm font-medium">Отключить все уведомления</span>
+            <span class="text-xs text-muted-foreground">Включая уведомления от бота в Telegram</span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="settings.muteAll"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            :class="settings.muteAll ? 'bg-destructive' : 'bg-input'"
+            @click.stop="toggleMuteAll"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out"
+              :class="settings.muteAll ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+
+        <div
           v-for="item in toggleItems"
           :key="item.key"
-          class="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer"
+          class="flex items-center justify-between py-2 px-3 rounded-xl transition-colors"
+          :class="settings.muteAll ? 'opacity-40 pointer-events-none' : 'hover:bg-accent/50 cursor-pointer'"
           @click="toggleSetting(item.key)"
         >
           <div class="flex flex-col">

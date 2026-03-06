@@ -743,7 +743,7 @@ func (b *TelegramBot) SendInitialEventAlerts(event *models.Event) error {
 		}
 
 		// Проверяем настройки уведомлений
-		if s, ok := settingsMap[member.Id]; ok && !s.NewEvents {
+		if s, ok := settingsMap[member.Id]; ok && (s.MuteAll || !s.NewEvents) {
 			continue
 		}
 
@@ -780,6 +780,9 @@ func (b *TelegramBot) SendRepeatingEventAlert(event *models.Event, alertType str
 		}
 
 		// Проверяем настройки уведомлений по типу алерта
+		if s, ok := settingsMap[member.Id]; ok && s.MuteAll {
+			continue
+		}
 		if s, ok := settingsMap[member.Id]; ok {
 			switch alertType {
 			case "first":
@@ -831,7 +834,7 @@ func (b *TelegramBot) SendEventUpdateAlert(event *models.Event) error {
 		}
 
 		// Проверяем настройки уведомлений
-		if s, ok := settingsMap[member.Id]; ok && !s.EventUpdates {
+		if s, ok := settingsMap[member.Id]; ok && (s.MuteAll || !s.EventUpdates) {
 			continue
 		}
 
@@ -867,7 +870,7 @@ func (b *TelegramBot) SendEventCancelAlert(event *models.Event) error {
 		}
 
 		// Проверяем настройки уведомлений
-		if s, ok := settingsMap[member.Id]; ok && !s.EventCancelled {
+		if s, ok := settingsMap[member.Id]; ok && (s.MuteAll || !s.EventCancelled) {
 			continue
 		}
 
