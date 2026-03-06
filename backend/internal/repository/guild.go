@@ -25,7 +25,7 @@ func (r *GuildRepository) GetById(id int64) (*models.Guild, error) {
 }
 
 func (r *GuildRepository) GetAll(memberId int64) ([]models.GuildPublic, error) {
-	var items []models.GuildPublic
+	items := make([]models.GuildPublic, 0)
 	err := database.DB.Raw(`
 		SELECT g.id, g.name, g.description, g.icon, g.color, g.owner_id,
 			m.first_name as owner_first_name, m.last_name as owner_last_name,

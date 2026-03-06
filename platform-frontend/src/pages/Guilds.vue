@@ -35,7 +35,7 @@ const colorOptions = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8
 async function fetchGuilds() {
   isLoading.value = true
   try {
-    guilds.value = await guildService.getAll()
+    guilds.value = await guildService.getAll() ?? []
   }
   catch (error) {
     handleError(error)
