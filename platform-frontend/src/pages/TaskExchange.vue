@@ -92,9 +92,6 @@ async function createTask() {
       maxAssignees: newMaxAssignees.value,
     })
     showCreateDialog.value = false
-    newTitle.value = ''
-    newDescription.value = ''
-    newMaxAssignees.value = 1
     await fetchTasks()
   }
   catch (error) {
@@ -124,7 +121,6 @@ async function updateTask() {
       maxAssignees: editMaxAssignees.value,
     })
     showEditDialog.value = false
-    editTask.value = null
     await fetchTasks()
   }
   catch (error) {
