@@ -20,14 +20,6 @@ usePageMeta({
 const structuredData = computed(() => [
   {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
-    'name': 'IT-ХОЗЯЕВА',
-    'description': 'Закрытое сообщество IT-специалистов, в котором ценят опыт, юмор и профессионализм',
-    'url': 'https://ithozyaeva.ru',
-    'logo': 'https://ithozyaeva.ru/favicon.svg',
-  },
-  {
-    '@context': 'https://schema.org',
     '@type': 'WebSite',
     'name': 'IT-ХОЗЯЕВА',
     'url': 'https://ithozyaeva.ru',
