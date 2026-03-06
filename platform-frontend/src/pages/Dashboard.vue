@@ -305,9 +305,16 @@ onMounted(async () => {
         <div
           v-for="event in nearestEvents"
           :key="event.id"
-          class="rounded-3xl border bg-card overflow-hidden"
+          class="rounded-3xl border overflow-hidden"
+          :class="event.exclusiveChatId
+            ? 'bg-gradient-to-br from-amber-50/80 to-yellow-50/50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-300/60 dark:border-amber-600/40'
+            : 'bg-card'"
         >
           <div class="p-5 md:p-6">
+            <div v-if="event.exclusiveChatId" class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 mb-2">
+              <Crown class="h-4 w-4" />
+              <span class="text-xs font-semibold uppercase tracking-wide">{{ event.exclusiveChatTitle || 'Эксклюзив' }}</span>
+            </div>
             <div class="flex items-center gap-2 mb-3">
               <Zap class="h-4 w-4 text-accent" />
               <span class="text-sm font-medium text-accent">Ближайшее событие</span>
