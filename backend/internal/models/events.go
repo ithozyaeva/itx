@@ -41,6 +41,8 @@ type Event struct {
 	Hosts                    []Member   `json:"hosts" gorm:"many2many:event_hosts;foreignKey:id;joinForeignKey:event_id;References:id;joinReferences:member_id;replace:true"`
 	Members                  []Member   `json:"members" gorm:"many2many:event_members;foreignKey:id;joinForeignKey:event_id;References:id;joinReferences:member_id;replace:true"`
 	LastRepeatingAlertSentAt *time.Time `json:"lastRepeatingAlertSentAt" gorm:"column:last_repeating_alert_sent_at"`
+	ExclusiveChatID         *int64     `json:"exclusiveChatId" gorm:"column:exclusive_chat_id"`
+	ExclusiveChatTitle      string     `json:"exclusiveChatTitle" gorm:"column:exclusive_chat_title;default:''"`
 }
 
 type EventTag struct {

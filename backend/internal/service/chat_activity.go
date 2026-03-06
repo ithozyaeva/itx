@@ -107,6 +107,11 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 	go s.questService.ProcessMessage(message, memberID)
 }
 
+// GetMemberIDsByChatID возвращает member_id участников конкретного чата
+func (s *ChatActivityService) GetMemberIDsByChatID(chatID int64) ([]int64, error) {
+	return s.repo.GetMemberIDsByChatID(chatID)
+}
+
 // GetStats возвращает общую статистику активности с данными за предыдущую неделю
 func (s *ChatActivityService) GetStats() (*models.ChatActivityStats, error) {
 	now := time.Now()

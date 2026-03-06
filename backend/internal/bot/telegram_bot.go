@@ -603,6 +603,14 @@ func (b *TelegramBot) SendEventAlert(telegramID int64, event *models.Event, isIn
 func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, timeUntilEvent time.Duration) string {
 	var builder strings.Builder
 
+	if event.ExclusiveChatID != nil && *event.ExclusiveChatID != 0 {
+		label := event.ExclusiveChatTitle
+		if label == "" {
+			label = "Эксклюзив"
+		}
+		builder.WriteString(fmt.Sprintf("👑 <b>%s</b>\n", label))
+	}
+
 	if isInitial {
 		builder.WriteString("⭐ <b>Новое событие!</b>\n\n")
 	} else if timeUntilEvent <= 1*time.Minute && timeUntilEvent > -2*time.Minute {
@@ -850,10 +858,31 @@ func (b *TelegramBot) SendInitialEventAlerts(event *models.Event) error {
 		return fmt.Errorf("error getting subscribed members: %v", err)
 	}
 
+	// Для эксклюзивных событий — алерты только участникам указанного чата
+	var exclusiveMemberIDs map[int64]bool
+	if event.ExclusiveChatID != nil && *event.ExclusiveChatID != 0 {
+		chatActivitySvc := service.NewChatActivityService()
+		memberIDs, chatErr := chatActivitySvc.GetMemberIDsByChatID(*event.ExclusiveChatID)
+		if chatErr != nil {
+			log.Printf("Error getting exclusive chat members: %v", chatErr)
+		} else {
+			exclusiveMemberIDs = make(map[int64]bool, len(memberIDs))
+			for _, id := range memberIDs {
+				exclusiveMemberIDs[id] = true
+			}
+			log.Printf("Exclusive event %d: sending alerts to %d chat members", event.Id, len(exclusiveMemberIDs))
+		}
+	}
+
 	settingsMap := b.getNotificationSettingsMap(members)
 
 	for _, member := range members {
 		if member.TelegramID == 0 {
+			continue
+		}
+
+		// Фильтруем по эксклюзивному чату
+		if exclusiveMemberIDs != nil && !exclusiveMemberIDs[member.Id] {
 			continue
 		}
 

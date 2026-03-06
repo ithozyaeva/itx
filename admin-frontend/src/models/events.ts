@@ -17,6 +17,8 @@ export interface CommunityEvent {
   repeatInterval?: number
   repeatEndDate?: string
   maxParticipants: number
+  exclusiveChatId?: number | null
+  exclusiveChatTitle?: string
   hosts: Member[]
   eventTags: EventTag[]
 }

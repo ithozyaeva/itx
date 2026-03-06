@@ -33,6 +33,17 @@ func (r *ChatActivityRepository) GetTrackedChats() ([]models.TrackedChat, error)
 	return chats, err
 }
 
+// GetMemberIDsByChatID возвращает member_id участников, которые писали в указанном чате
+func (r *ChatActivityRepository) GetMemberIDsByChatID(chatID int64) ([]int64, error) {
+	var memberIDs []int64
+	err := database.DB.Raw(`
+		SELECT DISTINCT cm.member_id
+		FROM chat_messages cm
+		WHERE cm.chat_id = ? AND cm.member_id IS NOT NULL
+	`, chatID).Pluck("member_id", &memberIDs).Error
+	return memberIDs, err
+}
+
 // GetMessageCountsByChat возвращает количество сообщений по чатам за период
 func (r *ChatActivityRepository) GetMessageCountsByChat(from, to time.Time) ([]models.ChatMessageCount, error) {
 	var counts []models.ChatMessageCount
