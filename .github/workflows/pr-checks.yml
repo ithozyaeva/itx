@@ -26,6 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
+      - name: Run tests
+        if: matrix.app != 'landing-frontend'
+        run: npm run test
       - run: npm run build
 
   backend:
