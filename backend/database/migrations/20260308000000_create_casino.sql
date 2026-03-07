@@ -3,9 +3,11 @@ CREATE TABLE IF NOT EXISTS casino_bets (
     member_id BIGINT NOT NULL REFERENCES members(id),
     game VARCHAR(20) NOT NULL,
     bet_amount INT NOT NULL,
+    bet_choice VARCHAR(50) NOT NULL DEFAULT '',
+    result VARCHAR(50) NOT NULL DEFAULT '',
     multiplier DOUBLE PRECISION NOT NULL DEFAULT 0,
     payout INT NOT NULL DEFAULT 0,
-    result JSONB NOT NULL DEFAULT '{}',
+    profit INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

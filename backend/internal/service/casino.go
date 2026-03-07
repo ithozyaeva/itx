@@ -2,7 +2,6 @@ package service
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -67,19 +66,17 @@ func (s *CasinoService) PlayCoinFlip(memberId int64, req *models.CoinFlipRequest
 		multiplier = 1.9
 		payout = int(float64(req.BetAmount) * multiplier)
 	}
-
-	result, _ := json.Marshal(map[string]interface{}{
-		"choice":  req.Choice,
-		"outcome": outcome,
-	})
+	profit := payout - req.BetAmount
 
 	bet := &models.CasinoBet{
 		MemberId:   memberId,
 		Game:       "coin_flip",
 		BetAmount:  req.BetAmount,
+		BetChoice:  req.Choice,
+		Result:     outcome,
 		Multiplier: multiplier,
 		Payout:     payout,
-		Result:     result,
+		Profit:     profit,
 	}
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
@@ -91,10 +88,11 @@ func (s *CasinoService) PlayCoinFlip(memberId int64, req *models.CoinFlipRequest
 		Id:         bet.Id,
 		Game:       bet.Game,
 		BetAmount:  bet.BetAmount,
+		BetChoice:  bet.BetChoice,
+		Result:     bet.Result,
 		Multiplier: bet.Multiplier,
 		Payout:     bet.Payout,
-		Result:     bet.Result,
-		Won:        won,
+		Profit:     bet.Profit,
 		Balance:    balance,
 		CreatedAt:  bet.CreatedAt,
 	}, nil
@@ -136,20 +134,20 @@ func (s *CasinoService) PlayDiceRoll(memberId int64, req *models.DiceRollRequest
 		multiplier = 0.97 * (100.0 / winChance)
 		payout = int(float64(req.BetAmount) * multiplier)
 	}
+	profit := payout - req.BetAmount
 
-	result, _ := json.Marshal(map[string]interface{}{
-		"target":    req.Target,
-		"direction": req.Direction,
-		"roll":      roll,
-	})
+	betChoice := fmt.Sprintf("%s %d", req.Direction, req.Target)
+	result := fmt.Sprintf("%d", roll)
 
 	bet := &models.CasinoBet{
 		MemberId:   memberId,
 		Game:       "dice_roll",
 		BetAmount:  req.BetAmount,
+		BetChoice:  betChoice,
+		Result:     result,
 		Multiplier: multiplier,
 		Payout:     payout,
-		Result:     result,
+		Profit:     profit,
 	}
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
@@ -161,10 +159,11 @@ func (s *CasinoService) PlayDiceRoll(memberId int64, req *models.DiceRollRequest
 		Id:         bet.Id,
 		Game:       bet.Game,
 		BetAmount:  bet.BetAmount,
+		BetChoice:  bet.BetChoice,
+		Result:     bet.Result,
 		Multiplier: bet.Multiplier,
 		Payout:     bet.Payout,
-		Result:     bet.Result,
-		Won:        won,
+		Profit:     bet.Profit,
 		Balance:    balance,
 		CreatedAt:  bet.CreatedAt,
 	}, nil
@@ -183,19 +182,19 @@ func (s *CasinoService) PlayWheel(memberId int64, req *models.WheelRequest) (*mo
 	multiplier := wheelMultipliers[segment]
 	payout := int(float64(req.BetAmount) * multiplier)
 	won := payout > 0
+	profit := payout - req.BetAmount
 
-	result, _ := json.Marshal(map[string]interface{}{
-		"segment":    segment,
-		"multiplier": multiplier,
-	})
+	result := fmt.Sprintf("x%.1f", multiplier)
 
 	bet := &models.CasinoBet{
 		MemberId:   memberId,
 		Game:       "wheel",
 		BetAmount:  req.BetAmount,
+		BetChoice:  "spin",
+		Result:     result,
 		Multiplier: multiplier,
 		Payout:     payout,
-		Result:     result,
+		Profit:     profit,
 	}
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
@@ -207,10 +206,11 @@ func (s *CasinoService) PlayWheel(memberId int64, req *models.WheelRequest) (*mo
 		Id:         bet.Id,
 		Game:       bet.Game,
 		BetAmount:  bet.BetAmount,
+		BetChoice:  bet.BetChoice,
+		Result:     bet.Result,
 		Multiplier: bet.Multiplier,
 		Payout:     bet.Payout,
-		Result:     bet.Result,
-		Won:        won,
+		Profit:     bet.Profit,
 		Balance:    balance,
 		CreatedAt:  bet.CreatedAt,
 	}, nil
@@ -221,13 +221,22 @@ func (s *CasinoService) GetHistory(memberId int64, limit, offset int) ([]models.
 }
 
 func (s *CasinoService) GetStats(memberId int64) (*models.CasinoStats, error) {
-	return s.repo.GetStats(memberId)
+	stats, err := s.repo.GetStats(memberId)
+	if err != nil {
+		return nil, err
+	}
+	balance, err := s.pointRepo.GetBalance(memberId)
+	if err != nil {
+		return nil, err
+	}
+	stats.Balance = balance
+	return stats, nil
 }
 
 func (s *CasinoService) GetAdminStats() (*models.CasinoAdminStats, error) {
 	return s.repo.GetAdminStats()
 }
 
-func (s *CasinoService) SearchBets(username *string, limit, offset int) ([]models.CasinoAdminBet, int64, error) {
-	return s.repo.SearchBets(username, limit, offset)
+func (s *CasinoService) SearchBets(username *string, game *string, limit, offset int) ([]models.CasinoAdminBet, int64, error) {
+	return s.repo.SearchBets(username, game, limit, offset)
 }
