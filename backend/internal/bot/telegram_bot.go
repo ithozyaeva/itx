@@ -335,6 +335,18 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		}
 	}
 
+	// Грейд и компания
+	if member.Grade != "" || member.Company != "" {
+		parts := []string{}
+		if member.Grade != "" {
+			parts = append(parts, member.Grade)
+		}
+		if member.Company != "" {
+			parts = append(parts, member.Company)
+		}
+		builder.WriteString(fmt.Sprintf("\n💼 %s", strings.Join(parts, " · ")))
+	}
+
 	// Био
 	if member.Bio != "" {
 		builder.WriteString(fmt.Sprintf("\n📝 %s\n", member.Bio))

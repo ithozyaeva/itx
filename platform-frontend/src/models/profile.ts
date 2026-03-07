@@ -8,6 +8,8 @@ export interface TelegramUser {
   firstName: string
   lastName: string
   bio: string
+  grade: string
+  company: string
   avatarUrl: string
   roles: UserRole[]
   createdAt?: string

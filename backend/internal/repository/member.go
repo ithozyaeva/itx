@@ -90,6 +90,8 @@ func (r *MemberRepository) Update(member *models.Member) (*models.Member, error)
 			"first_name": member.FirstName,
 			"last_name":  member.LastName,
 			"bio":        member.Bio,
+			"grade":      member.Grade,
+			"company":    member.Company,
 			"avatar_url": member.AvatarURL,
 			"username":   member.Username,
 		})

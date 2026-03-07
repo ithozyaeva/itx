@@ -21,7 +21,7 @@ export const profileService = {
       handleError(err)
     }
   },
-  async updateMe(newUser: { firstName: string, lastName: string, birthday: string, bio: string, tg?: string }) {
+  async updateMe(newUser: { firstName: string, lastName: string, birthday: string, bio: string, grade: string, company: string, tg?: string }) {
     const response = await apiClient.patch('members/me', { json: newUser })
     const data = await response.json<TelegramUser>()
     localStorageUser.value = data

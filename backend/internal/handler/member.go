@@ -116,6 +116,8 @@ type UpdateRequest struct {
 	FirstName string        `json:"firstName"`
 	LastName  string        `json:"lastName"`
 	Bio       string        `json:"bio"`
+	Grade     string        `json:"grade"`
+	Company   string        `json:"company"`
 	Birthday  *string       `json:"birthday"`
 	Roles     []models.Role `json:"roles"`
 	Username  string        `json:"tg"`
@@ -203,6 +205,8 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
 	member.Bio = request.Bio
+	member.Grade = request.Grade
+	member.Company = request.Company
 	member.Username = request.Username
 
 	parsedDate, err := utils.ParseDate(request.Birthday)
