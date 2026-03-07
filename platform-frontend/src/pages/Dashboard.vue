@@ -242,7 +242,7 @@ onMounted(async () => {
           </div>
 
           <!-- Quick stats -->
-          <div class="grid grid-cols-3 gap-3 mt-6">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
             <RouterLink
               to="/points"
               class="flex items-center gap-2.5 rounded-2xl bg-muted/50 hover:bg-muted/80 transition-colors p-3"
@@ -399,7 +399,7 @@ onMounted(async () => {
       </div>
 
       <!-- Active Quests & Tasks Grid -->
-      <div class="mt-5 grid gap-5 lg:grid-cols-2">
+      <div class="mt-5 grid gap-5 md:grid-cols-2">
         <!-- Chat Quests -->
         <div
           class="rounded-3xl border bg-card p-5"

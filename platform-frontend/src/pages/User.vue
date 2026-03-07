@@ -29,7 +29,7 @@ const isMentor = isUserMentor()
     <div
       v-else
       class="container"
-      :class="isMentor ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'mx-auto px-4 max-w-3xl flex flex-col gap-4'"
+      :class="isMentor ? 'mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-4' : 'mx-auto px-4 max-w-3xl flex flex-col gap-4'"
     >
       <MemberProfileCard v-if="user" />
       <div v-if="isMentor" class="grid grid-cols-1 gap-4">

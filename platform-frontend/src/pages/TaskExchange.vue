@@ -369,7 +369,7 @@ watch(showEditDialog, (open) => {
             <!-- OPEN: take task (not creator, not already assigned) -->
             <button
               v-if="canTakeTask(task)"
-              class="px-3 py-1 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               @click="assignTask(task.id)"
             >
               Взять задание
@@ -378,7 +378,7 @@ watch(showEditDialog, (open) => {
             <!-- IN_PROGRESS: mark done (creator/admin) -->
             <button
               v-if="canMarkDone(task)"
-              class="px-3 py-1 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
               @click="markDone(task.id)"
             >
               Выполнено
@@ -387,7 +387,7 @@ watch(showEditDialog, (open) => {
             <!-- Unassign self (assignee, while OPEN or IN_PROGRESS) -->
             <button
               v-if="isAssignee(task) && (task.status === 'OPEN' || task.status === 'IN_PROGRESS')"
-              class="px-3 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
               @click="unassignTask(task.id)"
             >
               Отказаться
@@ -396,7 +396,7 @@ watch(showEditDialog, (open) => {
             <!-- Edit (creator/admin, while OPEN or IN_PROGRESS) -->
             <button
               v-if="canEdit(task)"
-              class="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               @click="openEditDialog(task)"
             >
               <Edit3 class="h-3.5 w-3.5" />
@@ -405,7 +405,7 @@ watch(showEditDialog, (open) => {
             <!-- DONE: approve/reject (admin) -->
             <button
               v-if="task.status === 'DONE' && isAdmin"
-              class="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
               @click="approveTask(task.id)"
             >
               <CheckCircle class="h-3.5 w-3.5" />
@@ -413,7 +413,7 @@ watch(showEditDialog, (open) => {
             </button>
             <button
               v-if="task.status === 'DONE' && isAdmin"
-              class="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
               @click="rejectTask(task.id)"
             >
               <XCircle class="h-3.5 w-3.5" />
@@ -423,7 +423,7 @@ watch(showEditDialog, (open) => {
             <!-- Delete (creator if OPEN, or admin) -->
             <button
               v-if="(task.status === 'OPEN' && isCreator(task)) || isAdmin"
-              class="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
               @click="deleteTask(task.id)"
             >
               <Trash2 class="h-3.5 w-3.5" />

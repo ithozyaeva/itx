@@ -359,8 +359,8 @@ onMounted(() => {
       >
         За что начисляются баллы
       </Typography>
-      <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8">
-        <table class="w-full text-sm">
+      <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8 overflow-x-auto">
+        <table class="w-full text-sm min-w-[320px]">
           <thead>
             <tr class="border-b border-border">
               <th class="text-left px-4 py-3 font-medium text-muted-foreground">
