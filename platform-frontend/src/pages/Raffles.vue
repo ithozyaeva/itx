@@ -18,7 +18,7 @@ const finishedRaffles = computed(() => items.value.filter(r => r.status === 'FIN
 async function fetchRaffles() {
   isLoading.value = true
   try {
-    items.value = await raffleService.getAll()
+    items.value = await raffleService.getAll() ?? []
   }
   catch (error) {
     handleError(error)

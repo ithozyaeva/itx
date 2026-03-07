@@ -25,7 +25,7 @@ func (r *RaffleRepository) GetById(id int64) (*models.Raffle, error) {
 }
 
 func (r *RaffleRepository) GetAll(memberId int64) ([]models.RafflePublic, error) {
-	var items []models.RafflePublic
+	items := make([]models.RafflePublic, 0)
 	err := database.DB.Raw(`
 		SELECT r.id, r.title, r.description, r.prize, r.ticket_cost, r.max_tickets,
 			r.ends_at, r.status, r.winner_id,

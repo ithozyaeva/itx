@@ -42,7 +42,7 @@ func (r *PointsRepository) GetTransactions(memberId int64, limit int) ([]models.
 }
 
 func (r *PointsRepository) GetLeaderboard(limit int) ([]models.MemberPointsBalance, error) {
-	var entries []models.MemberPointsBalance
+	entries := make([]models.MemberPointsBalance, 0)
 	err := database.DB.Raw(
 		`SELECT pt.member_id, m.first_name, m.last_name, m.username, m.avatar_url,
 		        COALESCE(SUM(pt.amount), 0) as total
@@ -67,7 +67,7 @@ func (r *PointsRepository) GivePoints(tx *models.PointTransaction) error {
 }
 
 func (r *PointsRepository) SearchTransactions(username *string, limit, offset int) ([]models.AdminPointTransaction, int64, error) {
-	var items []models.AdminPointTransaction
+	items := make([]models.AdminPointTransaction, 0)
 	var total int64
 
 	countQuery := database.DB.Table("point_transactions pt").Joins("JOIN members m ON m.id = pt.member_id")
