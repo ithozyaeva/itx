@@ -96,12 +96,11 @@ function handleLinkDeleted(deletedLinkId: number) {
 
     <ReferalFilters class="mb-6" @change="fetchReferalLinks" />
 
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <div class="bg-card rounded-3xl border p-4 shadow-md ">
         <div
           v-if="!showAddForm"
-          class="transition-shadow flex flex-col items-center justify-center gap-2 text-center cursor-pointer"
-          style="min-height: 150px;"
+          class="transition-shadow flex flex-col items-center justify-center gap-2 text-center cursor-pointer min-h-[100px] sm:min-h-[150px]"
           @click="toggleAddForm"
         >
           <span class="text-4xl">+</span>

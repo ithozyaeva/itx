@@ -347,7 +347,7 @@ onMounted(() => {
               <!-- ACTIVE: buy (not seller) -->
               <button
                 v-if="item.status === 'ACTIVE' && !isSeller(item)"
-                class="px-3 py-1 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 @click="requestPurchase(item.id)"
               >
                 Хочу купить
@@ -356,7 +356,7 @@ onMounted(() => {
               <!-- RESERVED: cancel (buyer) -->
               <button
                 v-if="item.status === 'RESERVED' && isBuyer(item)"
-                class="px-3 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 @click="cancelPurchase(item.id)"
               >
                 Отменить бронь
@@ -365,7 +365,7 @@ onMounted(() => {
               <!-- RESERVED: confirm sale (seller) -->
               <button
                 v-if="item.status === 'RESERVED' && isSeller(item)"
-                class="px-3 py-1 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
                 @click="markSold(item.id)"
               >
                 Подтвердить продажу
@@ -374,7 +374,7 @@ onMounted(() => {
               <!-- Delete (ACTIVE seller, or admin) -->
               <button
                 v-if="(item.status === 'ACTIVE' && isSeller(item)) || isAdmin"
-                class="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
                 @click="deleteItem(item.id)"
               >
                 <Trash2 class="h-3.5 w-3.5" />
