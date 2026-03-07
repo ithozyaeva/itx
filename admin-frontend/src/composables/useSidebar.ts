@@ -5,6 +5,7 @@ import Award from '~icons/lucide/award'
 import BarChart3 from '~icons/lucide/bar-chart-3'
 import Calendar from '~icons/lucide/calendar'
 import ClipboardList from '~icons/lucide/clipboard-list'
+import Dice5 from '~icons/lucide/dice-5'
 import FileText from '~icons/lucide/file-text'
 import Gift from '~icons/lucide/gift'
 import Home from '~icons/lucide/home'
@@ -103,6 +104,11 @@ export function useSidebar() {
       title: 'Розыгрыши',
       path: '/raffles',
       icon: Gift,
+    },
+    {
+      title: 'Казино',
+      path: '/casino',
+      icon: Dice5,
     },
     {
       title: 'Журнал действий',

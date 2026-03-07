@@ -31,6 +31,8 @@ const (
 	PointReasonChatterOfWeek       PointReason = "chatter_of_week"
 	PointReasonKudosReceived       PointReason = "kudos_received"
 	PointReasonRaffleSpend         PointReason = "raffle_spend"
+	PointReasonCasinoBet           PointReason = "casino_bet"
+	PointReasonCasinoWin           PointReason = "casino_win"
 )
 
 var PointValues = map[PointReason]int{

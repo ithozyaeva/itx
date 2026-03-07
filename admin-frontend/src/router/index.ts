@@ -16,6 +16,7 @@ const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 const ChatQuestsView = () => import('@/views/ChatQuestsView.vue')
 const SeasonsView = () => import('@/views/SeasonsView.vue')
 const RafflesView = () => import('@/views/RafflesView.vue')
+const CasinoView = () => import('@/views/CasinoView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -114,6 +115,12 @@ const router = createRouter({
       path: '/raffles',
       name: 'raffles',
       component: RafflesView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/casino',
+      name: 'casino',
+      component: CasinoView,
       meta: { requiresAuth: true },
     },
   ],

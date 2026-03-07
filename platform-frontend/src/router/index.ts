@@ -2,6 +2,7 @@ import type { NavigationGuardNext, RouteLocationNormalized, RouteRecordRaw } fro
 import { createRouter, createWebHistory } from 'vue-router'
 import Achievements from '@/pages/Achievements.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
+import Casino from '@/pages/Casino.vue'
 import Content from '@/pages/Content.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
@@ -45,6 +46,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/kudos', component: Kudos, name: 'kudos' },
   { path: '/seasons', component: Seasons, name: 'seasons' },
   { path: '/raffles', component: Raffles, name: 'raffles' },
+  { path: '/casino', component: Casino, name: 'casino' },
   { path: '/guilds', component: Guilds, name: 'guilds' },
   { path: '/my-stats', component: MyStats, name: 'myStats' },
 ]

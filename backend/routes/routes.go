@@ -194,6 +194,12 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	adminRaffles.Post("/", raffleHandler.Create)
 	adminRaffles.Delete("/:id", raffleHandler.Delete)
 
+	// Маршруты для казино (админ)
+	casinoHandler := handler.NewCasinoHandler()
+	adminCasino := protected.Group("/casino")
+	adminCasino.Get("/stats", casinoHandler.GetAdminStats)
+	adminCasino.Get("/bets", casinoHandler.GetAdminBets)
+
 	// Маршруты для тегов ивентов
 	eventTagHandler := handler.NewEventTagHandler()
 	eventTags := protected.Group("/eventTags")
@@ -346,6 +352,15 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	raffles := protected.Group("/raffles")
 	raffles.Get("/", raffleHandler.GetAll)
 	raffles.Post("/:id/buy", raffleHandler.BuyTickets)
+
+	// Маршруты для казино
+	casinoHandler := handler.NewCasinoHandler()
+	casino := protected.Group("/casino")
+	casino.Post("/coin-flip", casinoHandler.PlayCoinFlip)
+	casino.Post("/dice-roll", casinoHandler.PlayDiceRoll)
+	casino.Post("/wheel", casinoHandler.PlayWheel)
+	casino.Get("/history", casinoHandler.GetHistory)
+	casino.Get("/stats", casinoHandler.GetStats)
 
 	// Маршруты для гильдий
 	guildHandler := handler.NewGuildHandler()
