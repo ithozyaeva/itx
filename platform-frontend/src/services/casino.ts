@@ -15,7 +15,8 @@ export const casinoService = {
   },
 
   async getHistory(limit = 20) {
-    return apiClient.get(`casino/history?limit=${limit}`).json<CasinoBetResult[]>()
+    const res = await apiClient.get(`casino/history?limit=${limit}`).json<{ items: CasinoBetResult[], total: number }>()
+    return res.items ?? []
   },
 
   async getStats() {

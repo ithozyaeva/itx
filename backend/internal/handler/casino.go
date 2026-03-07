@@ -130,8 +130,12 @@ func (h *CasinoHandler) GetAdminBets(c *fiber.Ctx) error {
 	if q := c.Query("username"); q != "" {
 		username = &q
 	}
+	var game *string
+	if q := c.Query("game"); q != "" {
+		game = &q
+	}
 
-	items, total, err := h.svc.SearchBets(username, limit, offset)
+	items, total, err := h.svc.SearchBets(username, game, limit, offset)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -85,9 +85,9 @@ describe('casinoService', () => {
   })
 
   describe('getHistory', () => {
-    it('should call GET casino/history with default limit', async () => {
+    it('should call GET casino/history and extract items', async () => {
       const history = [{ id: 1 }, { id: 2 }]
-      mockJson.mockResolvedValue(history)
+      mockJson.mockResolvedValue({ items: history, total: 2 })
 
       const result = await casinoService.getHistory()
 
@@ -96,11 +96,19 @@ describe('casinoService', () => {
     })
 
     it('should call GET casino/history with custom limit', async () => {
-      mockJson.mockResolvedValue([])
+      mockJson.mockResolvedValue({ items: [], total: 0 })
 
       await casinoService.getHistory(50)
 
       expect(mockApiClient.get).toHaveBeenCalledWith('casino/history?limit=50')
+    })
+
+    it('should return empty array when items is null', async () => {
+      mockJson.mockResolvedValue({ items: null, total: 0 })
+
+      const result = await casinoService.getHistory()
+
+      expect(result).toEqual([])
     })
   })
 

@@ -84,12 +84,13 @@ func (r *CasinoRepository) GetHistory(memberId int64, limit, offset int) ([]mode
 		return nil, 0, err
 	}
 
-	if err := database.DB.Model(&models.CasinoBet{}).
-		Where("member_id = ?", memberId).
-		Order("created_at DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&items).Error; err != nil {
+	if err := database.DB.Raw(`
+		SELECT id, game, bet_amount, bet_choice, result, multiplier, payout, profit, created_at
+		FROM casino_bets
+		WHERE member_id = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, memberId, limit, offset).Scan(&items).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -124,7 +125,7 @@ func (r *CasinoRepository) GetAdminStats() (*models.CasinoAdminStats, error) {
 	return stats, err
 }
 
-func (r *CasinoRepository) SearchBets(username *string, limit, offset int) ([]models.CasinoAdminBet, int64, error) {
+func (r *CasinoRepository) SearchBets(username *string, game *string, limit, offset int) ([]models.CasinoAdminBet, int64, error) {
 	items := make([]models.CasinoAdminBet, 0)
 	var total int64
 
@@ -132,19 +133,36 @@ func (r *CasinoRepository) SearchBets(username *string, limit, offset int) ([]mo
 	if username != nil {
 		countQuery = countQuery.Where("m.username ILIKE ?", "%"+*username+"%")
 	}
+	if game != nil {
+		countQuery = countQuery.Where("cb.game = ?", *game)
+	}
 	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	baseQuery := `SELECT cb.id, cb.member_id, m.first_name as member_first_name, m.last_name as member_last_name,
-		m.username as member_username, cb.game, cb.bet_amount, cb.multiplier, cb.payout, cb.result, cb.created_at
+		m.username as member_username, cb.game, cb.bet_amount, cb.bet_choice, cb.result, cb.multiplier, cb.payout, cb.profit, cb.created_at
 		FROM casino_bets cb
 		JOIN members m ON m.id = cb.member_id`
 
 	var args []interface{}
+	var where []string
 	if username != nil {
-		baseQuery += ` WHERE m.username ILIKE ?`
+		where = append(where, "m.username ILIKE ?")
 		args = append(args, "%"+*username+"%")
+	}
+	if game != nil {
+		where = append(where, "cb.game = ?")
+		args = append(args, *game)
+	}
+	if len(where) > 0 {
+		baseQuery += " WHERE "
+		for i, w := range where {
+			if i > 0 {
+				baseQuery += " AND "
+			}
+			baseQuery += w
+		}
 	}
 	baseQuery += ` ORDER BY cb.created_at DESC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
