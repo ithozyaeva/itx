@@ -23,6 +23,10 @@ func (s *RaffleService) GetAll(memberId int64) ([]models.RafflePublic, error) {
 	return s.repo.GetAll(memberId)
 }
 
+func (s *RaffleService) GetAllAdmin() ([]models.Raffle, error) {
+	return s.repo.GetAllAdmin()
+}
+
 func (s *RaffleService) Create(raffle *models.Raffle) error {
 	return s.repo.Create(raffle)
 }

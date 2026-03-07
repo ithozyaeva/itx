@@ -27,6 +27,14 @@ func (h *RaffleHandler) GetAll(c *fiber.Ctx) error {
 	return c.JSON(items)
 }
 
+func (h *RaffleHandler) GetAllAdmin(c *fiber.Ctx) error {
+	items, err := h.svc.GetAllAdmin()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(items)
+}
+
 func (h *RaffleHandler) BuyTickets(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)

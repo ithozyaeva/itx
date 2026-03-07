@@ -190,6 +190,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	// Маршруты для розыгрышей (админ)
 	raffleHandler := handler.NewRaffleHandler()
 	adminRaffles := protected.Group("/raffles")
+	adminRaffles.Get("/", raffleHandler.GetAllAdmin)
 	adminRaffles.Post("/", raffleHandler.Create)
 	adminRaffles.Delete("/:id", raffleHandler.Delete)
 
