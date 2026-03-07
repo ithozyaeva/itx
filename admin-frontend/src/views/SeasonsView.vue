@@ -156,7 +156,7 @@ onMounted(() => {
         <div
           v-if="confirmFinishId"
           class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          @click.self="confirmFinishId = null"
+          @mousedown.self="confirmFinishId = null"
         >
           <Card class="w-full max-w-sm">
             <CardContent class="p-6 space-y-4">
@@ -189,7 +189,7 @@ onMounted(() => {
         <div
           v-if="showModal"
           class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          @click.self="showModal = false"
+          @mousedown.self="showModal = false"
         >
           <Card class="w-full max-w-lg">
             <CardHeader>

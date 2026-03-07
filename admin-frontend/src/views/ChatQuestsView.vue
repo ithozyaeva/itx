@@ -7,6 +7,7 @@ import { onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { chatActivityService } from '@/services/chatActivityService'
 import { chatQuestService } from '@/services/chatQuestService'
@@ -273,7 +274,7 @@ onMounted(async () => {
         <div
           v-if="deleteId"
           class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          @click.self="deleteId = null"
+          @mousedown.self="deleteId = null"
         >
           <Card class="w-full max-w-sm">
             <CardContent class="p-6 space-y-4">
@@ -298,7 +299,7 @@ onMounted(async () => {
         <div
           v-if="showModal"
           class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          @click.self="showModal = false"
+          @mousedown.self="showModal = false"
         >
           <Card class="w-full max-w-lg">
             <CardHeader>
@@ -329,33 +330,40 @@ onMounted(async () => {
 
                 <div>
                   <label class="text-sm font-medium mb-1 block">Тип задания</label>
-                  <select
-                    v-model="form.questType"
-                    class="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                  >
-                    <option value="message_count">
-                      Количество сообщений
-                    </option>
-                    <option value="daily_streak">
-                      Дни подряд
-                    </option>
-                  </select>
+                  <Select v-model="form.questType">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Тип задания" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="message_count">
+                        Количество сообщений
+                      </SelectItem>
+                      <SelectItem value="daily_streak">
+                        Дни подряд
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="text-sm font-medium mb-1 block">Чат</label>
-                    <select
-                      v-model="form.chatId"
-                      class="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                    <Select
+                      :model-value="form.chatId ? String(form.chatId) : ''"
+                      @update:model-value="form.chatId = $event ? Number($event) : null"
                     >
-                      <option :value="null">
-                        Любой чат
-                      </option>
-                      <option v-for="chat in chats" :key="chat.chatId" :value="chat.chatId">
-                        {{ chat.title }}
-                      </option>
-                    </select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Любой чат" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">
+                          Любой чат
+                        </SelectItem>
+                        <SelectItem v-for="chat in chats" :key="chat.chatId" :value="String(chat.chatId)">
+                          {{ chat.title }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label class="text-sm font-medium mb-1 block">{{ form.questType === 'daily_streak' ? 'Целевое кол-во дней' : 'Целевое кол-во сообщений' }}</label>

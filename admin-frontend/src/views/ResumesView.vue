@@ -9,6 +9,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { resumeService } from '@/services/resumeService'
 
@@ -87,11 +88,16 @@ onMounted(() => resumeService.searchWithFilters(filters))
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="space-y-2">
               <label class="text-sm font-medium text-muted-foreground">Формат работы</label>
-              <select v-model="filters.workFormat" class="w-full border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option v-for="option in workFormatOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <Select v-model="filters.workFormat">
+                <SelectTrigger>
+                  <SelectValue placeholder="Любой формат" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in workFormatOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium text-muted-foreground">Желаемая должность</label>

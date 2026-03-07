@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import MentorCard from '@/components/mentors/MentorCard.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { mentorsService } from '@/services/mentors'
 
@@ -80,17 +81,19 @@ onMounted(loadMentors)
         placeholder="Поиск по имени..."
         class="max-w-xs"
       />
-      <select
-        v-model="selectedTag"
-        class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-xs"
-      >
-        <option value="">
-          Все теги
-        </option>
-        <option v-for="tag in allTags" :key="tag.id" :value="tag.id">
-          {{ tag.title }}
-        </option>
-      </select>
+      <Select v-model="selectedTag" class="max-w-xs">
+        <SelectTrigger class="max-w-xs">
+          <SelectValue placeholder="Все теги" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">
+            Все теги
+          </SelectItem>
+          <SelectItem v-for="tag in allTags" :key="tag.id" :value="String(tag.id)">
+            {{ tag.title }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
 
     <div v-if="isLoading" class="flex justify-center py-12">

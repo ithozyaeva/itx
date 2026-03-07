@@ -3,6 +3,7 @@ import type { ProfTag } from '@/models/profile'
 import type { ReferalSearchFilters } from '@/services/referals'
 import { onMounted, reactive, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
 
 const emit = defineEmits<{
@@ -54,36 +55,40 @@ watch(filters, () => {
         placeholder="Поиск по компании..."
         class="max-w-xs"
       />
-      <select
-        v-model="filters.grade"
-        class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-xs"
-      >
-        <option value="">
-          Все грейды
-        </option>
-        <option
-          v-for="g in grades"
-          :key="g.value"
-          :value="g.value"
-        >
-          {{ g.label }}
-        </option>
-      </select>
-      <select
-        v-model="filters.status"
-        class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-xs"
-      >
-        <option value="">
-          Все статусы
-        </option>
-        <option
-          v-for="s in referalLinkStatuses"
-          :key="s.value"
-          :value="s.value"
-        >
-          {{ s.label }}
-        </option>
-      </select>
+      <Select v-model="filters.grade" class="max-w-xs">
+        <SelectTrigger class="max-w-xs">
+          <SelectValue placeholder="Все грейды" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">
+            Все грейды
+          </SelectItem>
+          <SelectItem
+            v-for="g in grades"
+            :key="g.value"
+            :value="g.value"
+          >
+            {{ g.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="filters.status" class="max-w-xs">
+        <SelectTrigger class="max-w-xs">
+          <SelectValue placeholder="Все статусы" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">
+            Все статусы
+          </SelectItem>
+          <SelectItem
+            v-for="s in referalLinkStatuses"
+            :key="s.value"
+            :value="s.value"
+          >
+            {{ s.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
     <div
       v-if="profTags.length > 0"

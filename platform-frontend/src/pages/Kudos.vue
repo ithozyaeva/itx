@@ -11,6 +11,7 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { apiClient } from '@/services/api'
@@ -184,25 +185,23 @@ onMounted(() => {
         >
           <div>
             <label class="block text-sm font-medium mb-1">Кому</label>
-            <select
-              v-model="selectedMemberId"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              required
+            <Select
+              :model-value="selectedMemberId ? String(selectedMemberId) : ''"
+              @update:model-value="selectedMemberId = $event ? Number($event) : null"
             >
-              <option
-                :value="null"
-                disabled
-              >
-                Выберите участника
-              </option>
-              <option
-                v-for="m in members"
-                :key="m.id"
-                :value="m.id"
-              >
-                {{ m.firstName }} {{ m.lastName }} (@{{ m.tg }})
-              </option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите участника" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="m in members"
+                  :key="m.id"
+                  :value="String(m.id)"
+                >
+                  {{ m.firstName }} {{ m.lastName }} (@{{ m.tg }})
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">Сообщение</label>
