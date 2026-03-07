@@ -12,6 +12,8 @@
     "type-check": "vue-tsc --build --noEmit",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "husky install || true"
   },
   "dependencies": {
@@ -34,10 +36,12 @@
     "@types/node": "^22.14.1",
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/eslint-config-typescript": "^14.5.0",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.24.0",
     "eslint-plugin-vue": "^10.0.0",
+    "happy-dom": "^20.8.3",
     "husky": "^8.0.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
@@ -45,6 +49,7 @@
     "typescript": "~5.7.2",
     "vite": "^6.4.1",
     "vite-plugin-vue-devtools": "^7.7.2",
+    "vitest": "^4.0.18",
     "vue-tsc": "^2.2.8"
   }
 }

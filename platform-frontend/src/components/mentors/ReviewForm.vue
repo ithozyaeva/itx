@@ -3,6 +3,7 @@ import type { Service } from '@/models/profile'
 import { Loader2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { mentorsService } from '@/services/mentors'
 
@@ -44,17 +45,19 @@ async function handleSubmit() {
     <h4 class="font-semibold">
       Оставить отзыв
     </h4>
-    <select
-      v-model="selectedServiceId"
-      class="w-full border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+    <Select
+      :model-value="String(selectedServiceId)"
+      @update:model-value="selectedServiceId = $event ? Number($event) : ''"
     >
-      <option value="" disabled>
-        Выберите услугу
-      </option>
-      <option v-for="service in services" :key="service.id" :value="service.id">
-        {{ service.name }}
-      </option>
-    </select>
+      <SelectTrigger>
+        <SelectValue placeholder="Выберите услугу" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem v-for="service in services" :key="service.id" :value="String(service.id)">
+          {{ service.name }}
+        </SelectItem>
+      </SelectContent>
+    </Select>
     <Textarea
       v-model="text"
       placeholder="Ваш отзыв..."

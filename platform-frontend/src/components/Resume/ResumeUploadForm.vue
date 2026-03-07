@@ -6,6 +6,7 @@ import { onMounted, reactive, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
@@ -169,11 +170,16 @@ function formatWorkFormat(format?: WorkFormat) {
         </div>
         <div>
           <label class="block text-sm font-medium text-muted-foreground mb-1">Формат работы</label>
-          <select v-model="form.workFormat" class="w-full border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option v-for="option in workFormatOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <Select v-model="form.workFormat">
+            <SelectTrigger>
+              <SelectValue placeholder="— Не выбрано —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="option in workFormatOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -269,11 +275,16 @@ function formatWorkFormat(format?: WorkFormat) {
           <div v-if="editingId === resume.id" class="mt-4 border-t pt-4 space-y-3">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input v-model="editForm.desiredPosition" placeholder="Желаемая должность" />
-              <select v-model="editForm.workFormat" class="w-full border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option v-for="option in workFormatOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <Select v-model="editForm.workFormat">
+                <SelectTrigger>
+                  <SelectValue placeholder="— Не выбрано —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in workFormatOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Textarea v-model="editForm.workExperience" rows="3" placeholder="Опыт работы" />
             <div class="flex gap-2 justify-end">

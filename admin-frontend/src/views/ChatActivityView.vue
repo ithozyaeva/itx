@@ -18,6 +18,7 @@ import { Line } from 'vue-chartjs'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { chatActivityService } from '@/services/chatActivityService'
 
@@ -224,31 +225,41 @@ async function handleExport() {
               График активности
             </CardTitle>
             <div class="flex gap-2 flex-wrap">
-              <select
-                v-model="selectedChatId"
-                class="text-sm border rounded-md px-2 py-1 bg-background"
+              <Select
+                :model-value="selectedChatId !== undefined ? String(selectedChatId) : ''"
+                @update:model-value="selectedChatId = $event ? Number($event) : undefined"
               >
-                <option :value="undefined">
-                  Все чаты
-                </option>
-                <option v-for="chat in chats" :key="chat.chatId" :value="chat.chatId">
-                  {{ chat.title }}
-                </option>
-              </select>
-              <select
-                v-model="selectedDays"
-                class="text-sm border rounded-md px-2 py-1 bg-background"
+                <SelectTrigger class="w-[160px]">
+                  <SelectValue placeholder="Все чаты" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">
+                    Все чаты
+                  </SelectItem>
+                  <SelectItem v-for="chat in chats" :key="chat.chatId" :value="String(chat.chatId)">
+                    {{ chat.title }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                :model-value="String(selectedDays)"
+                @update:model-value="selectedDays = Number($event)"
               >
-                <option :value="7">
-                  7 дней
-                </option>
-                <option :value="14">
-                  14 дней
-                </option>
-                <option :value="30">
-                  30 дней
-                </option>
-              </select>
+                <SelectTrigger class="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">
+                    7 дней
+                  </SelectItem>
+                  <SelectItem value="14">
+                    14 дней
+                  </SelectItem>
+                  <SelectItem value="30">
+                    30 дней
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <Button size="sm" variant="outline" @click="handleExport">
                 <Download class="h-4 w-4 mr-1" />
                 CSV
