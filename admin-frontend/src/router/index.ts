@@ -15,6 +15,7 @@ const ReferralsView = () => import('@/views/ReferralsView.vue')
 const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 const ChatQuestsView = () => import('@/views/ChatQuestsView.vue')
 const SeasonsView = () => import('@/views/SeasonsView.vue')
+const RafflesView = () => import('@/views/RafflesView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -107,6 +108,12 @@ const router = createRouter({
       path: '/seasons',
       name: 'seasons',
       component: SeasonsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/raffles',
+      name: 'raffles',
+      component: RafflesView,
       meta: { requiresAuth: true },
     },
   ],

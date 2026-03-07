@@ -40,6 +40,12 @@ func (r *RaffleRepository) GetAll(memberId int64) ([]models.RafflePublic, error)
 	return items, err
 }
 
+func (r *RaffleRepository) GetAllAdmin() ([]models.Raffle, error) {
+	var raffles []models.Raffle
+	err := database.DB.Order("status ASC, ends_at ASC").Find(&raffles).Error
+	return raffles, err
+}
+
 func (r *RaffleRepository) GetActive() ([]models.Raffle, error) {
 	var raffles []models.Raffle
 	err := database.DB.Where("status = ? AND ends_at > NOW()", models.RaffleStatusActive).Find(&raffles).Error

@@ -6,6 +6,7 @@ import BarChart3 from '~icons/lucide/bar-chart-3'
 import Calendar from '~icons/lucide/calendar'
 import ClipboardList from '~icons/lucide/clipboard-list'
 import FileText from '~icons/lucide/file-text'
+import Gift from '~icons/lucide/gift'
 import Home from '~icons/lucide/home'
 import Link from '~icons/lucide/link'
 import MessageSquare from '~icons/lucide/message-square'
@@ -97,6 +98,11 @@ export function useSidebar() {
       title: 'Сезоны',
       path: '/seasons',
       icon: Trophy,
+    },
+    {
+      title: 'Розыгрыши',
+      path: '/raffles',
+      icon: Gift,
     },
     {
       title: 'Журнал действий',
