@@ -28,6 +28,8 @@ type Member struct {
 	FirstName   string       `json:"firstName" gorm:"column:first_name"`
 	LastName    string       `json:"lastName" gorm:"column:last_name"`
 	Bio         string       `json:"bio" gorm:"column:bio;default:''"`
+	Grade       string       `json:"grade" gorm:"column:grade;default:''"`
+	Company     string       `json:"company" gorm:"column:company;default:''"`
 	AvatarURL   string       `json:"avatarUrl" gorm:"column:avatar_url;default:''"`
 	MemberRoles []MemberRole `json:"-" gorm:"foreignKey:MemberId;references:Id"`
 	Roles       []Role       `json:"roles" gorm:"-:all"`

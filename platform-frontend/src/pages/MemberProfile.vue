@@ -174,8 +174,14 @@ onMounted(loadProfile)
         </div>
 
         <p
+          v-if="profile.member.grade || profile.member.company"
+          class="mt-3 text-sm text-muted-foreground"
+        >
+          {{ [profile.member.grade, profile.member.company].filter(Boolean).join(' · ') }}
+        </p>
+        <p
           v-if="profile.member.bio"
-          class="mt-4 text-muted-foreground"
+          class="mt-3 text-muted-foreground"
         >
           {{ profile.member.bio }}
         </p>

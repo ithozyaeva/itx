@@ -28,6 +28,8 @@ const editedUser = reactive({
   lastName: user.value?.lastName,
   birthday: user.value?.birthday,
   bio: user.value?.bio ?? '',
+  grade: user.value?.grade ?? '',
+  company: user.value?.company ?? '',
   tg: user.value?.tg ?? '',
 })
 
@@ -130,6 +132,25 @@ async function handleAvatarUpload(event: Event) {
           <Star class="h-4 w-4 text-yellow-500" />
           <span class="font-medium text-yellow-500">{{ pointsBalance }} баллов</span>
         </div>
+        <p v-if="!isEdit && (user?.grade || user?.company)" class="text-sm text-muted-foreground mb-4">
+          {{ [user?.grade, user?.company].filter(Boolean).join(' · ') }}
+        </p>
+        <template v-if="isEdit">
+          <div class="flex gap-2 mt-2">
+            <input
+              v-model="editedUser.grade"
+              type="text"
+              placeholder="Грейд (Junior, Middle, Senior...)"
+              class="w-1/2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+            <input
+              v-model="editedUser.company"
+              type="text"
+              placeholder="Место работы"
+              class="w-1/2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+          </div>
+        </template>
         <p v-if="!isEdit && !!user?.bio" class="text-sm text-muted-foreground mb-4">
           {{ user?.bio }}
         </p>
