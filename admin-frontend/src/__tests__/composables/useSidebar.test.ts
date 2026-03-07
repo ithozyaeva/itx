@@ -25,7 +25,7 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      expect(sidebarItems.value).toHaveLength(14)
+      expect(sidebarItems.value).toHaveLength(15)
     })
 
     it('shows only items without requiredPermission when user has no permissions', () => {
@@ -33,11 +33,11 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Сезоны, Розыгрыши
+      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Сезоны, Розыгрыши, Казино
       const itemsWithoutPermission = sidebarItems.value
-      expect(itemsWithoutPermission.length).toBe(5)
+      expect(itemsWithoutPermission.length).toBe(6)
       expect(itemsWithoutPermission.map(i => i.path)).toEqual(
-        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/seasons', '/raffles']),
+        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/seasons', '/raffles', '/casino']),
       )
     })
 
@@ -78,7 +78,7 @@ describe('useSidebar', () => {
       const expectedPaths = [
         '/dashboard', '/mentors', '/members', '/reviews', '/mentor-reviews',
         '/events', '/resumes', '/referrals', '/points', '/chat-activity',
-        '/chat-quests', '/seasons', '/raffles', '/audit-logs',
+        '/chat-quests', '/seasons', '/raffles', '/casino', '/audit-logs',
       ]
       const actualPaths = sidebarItems.value.map(i => i.path)
       expect(actualPaths).toEqual(expectedPaths)

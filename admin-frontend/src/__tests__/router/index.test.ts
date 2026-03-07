@@ -41,8 +41,8 @@ describe('router', () => {
   })
 
   describe('route definitions', () => {
-    it('has 16 routes defined', () => {
-      expect(router.getRoutes()).toHaveLength(16)
+    it('has 17 routes defined', () => {
+      expect(router.getRoutes()).toHaveLength(17)
     })
 
     it('has a login route', () => {

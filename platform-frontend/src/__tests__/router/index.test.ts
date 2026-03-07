@@ -24,6 +24,7 @@ vi.mock('@/pages/Resumes.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Seasons.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/TaskExchange.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/User.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/pages/Casino.vue', () => ({ default: { template: '<div />' } }))
 
 describe('router', () => {
   let router: any
