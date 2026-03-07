@@ -70,6 +70,16 @@ func (r *GuildRepository) GetMemberGuildId(memberId int64) (int64, error) {
 	return gm.GuildId, nil
 }
 
+func (r *GuildRepository) GetMemberGuildName(memberId int64) string {
+	var name string
+	database.DB.Raw(`
+		SELECT g.name FROM guilds g
+		JOIN guild_members gm ON gm.guild_id = g.id
+		WHERE gm.member_id = ?
+	`, memberId).Scan(&name)
+	return name
+}
+
 func (r *GuildRepository) Update(guild *models.Guild) error {
 	return database.DB.Model(&models.Guild{}).Where("id = ?", guild.Id).
 		Updates(map[string]interface{}{

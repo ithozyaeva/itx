@@ -15,6 +15,7 @@ import (
 	"ithozyeva/config"
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -68,6 +69,16 @@ func formatTimezoneLabel(timezone string) string {
 		return "UTC"
 	}
 	return timezone
+}
+
+func formatMonths(months int) string {
+	if months%10 == 1 && months%100 != 11 {
+		return fmt.Sprintf("%d месяц", months)
+	}
+	if months%10 >= 2 && months%10 <= 4 && (months%100 < 10 || months%100 >= 20) {
+		return fmt.Sprintf("%d месяца", months)
+	}
+	return fmt.Sprintf("%d месяцев", months)
 }
 
 // GetGlobalBot возвращает глобальный экземпляр бота
@@ -340,11 +351,38 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		builder.WriteString(fmt.Sprintf("\n📝 %s\n", member.Bio))
 	}
 
+	// Давность участия
+	months := int(time.Since(member.CreatedAt).Hours() / 24 / 30)
+	if months > 0 {
+		builder.WriteString(fmt.Sprintf("\n📅 С нами: %s", formatMonths(months)))
+	} else {
+		days := int(time.Since(member.CreatedAt).Hours() / 24)
+		if days > 0 {
+			builder.WriteString(fmt.Sprintf("\n📅 С нами: %d дн.", days))
+		} else {
+			builder.WriteString("\n📅 С нами: сегодня")
+		}
+	}
+
 	// Баллы
 	pointsSvc := service.NewPointsService()
 	balance, pointsErr := pointsSvc.GetBalance(member.Id)
 	if pointsErr == nil {
 		builder.WriteString(fmt.Sprintf("\n⭐ Баллы: %d", balance))
+	}
+
+	// Благодарности
+	kudosRepo := repository.NewKudosRepository()
+	kudosCount, kudosErr := kudosRepo.GetReceivedCount(member.Id)
+	if kudosErr == nil && kudosCount > 0 {
+		builder.WriteString(fmt.Sprintf("\n💜 Благодарностей: %d", kudosCount))
+	}
+
+	// Гильдия
+	guildRepo := repository.NewGuildRepository()
+	guildName := guildRepo.GetMemberGuildName(member.Id)
+	if guildName != "" {
+		builder.WriteString(fmt.Sprintf("\n🛡 Гильдия: %s", guildName))
 	}
 
 	// Менторская информация
