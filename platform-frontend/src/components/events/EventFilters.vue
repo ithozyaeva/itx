@@ -2,6 +2,7 @@
 import type { EventSearchFilters } from '@/services/events'
 import { reactive, watch } from 'vue'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
 
 const emit = defineEmits<{
@@ -27,16 +28,18 @@ watch(filters, () => {
       placeholder="Поиск по названию..."
       class="w-full sm:max-w-xs"
     />
-    <select
-      v-model="filters.placeType"
-      class="border border-input rounded-xl bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring w-full sm:max-w-xs"
-    >
-      <option value="">
-        Все форматы
-      </option>
-      <option v-for="pt in placeTypes" :key="pt.value" :value="pt.value">
-        {{ pt.label }}
-      </option>
-    </select>
+    <Select v-model="filters.placeType" class="w-full sm:max-w-xs">
+      <SelectTrigger class="w-full sm:max-w-xs">
+        <SelectValue placeholder="Все форматы" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="">
+          Все форматы
+        </SelectItem>
+        <SelectItem v-for="pt in placeTypes" :key="pt.value" :value="pt.value">
+          {{ pt.label }}
+        </SelectItem>
+      </SelectContent>
+    </Select>
   </div>
 </template>

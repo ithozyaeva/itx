@@ -159,6 +159,7 @@ onMounted(loadProfile)
               variant="h2"
               as="h1"
               class="mb-1"
+              :title="`${profile.member.firstName} ${profile.member.lastName}`"
             >
               {{ profile.member.firstName }} {{ profile.member.lastName }}
             </Typography>
@@ -176,12 +177,14 @@ onMounted(loadProfile)
         <p
           v-if="profile.member.grade || profile.member.company"
           class="mt-3 text-sm text-muted-foreground"
+          :title="[profile.member.grade, profile.member.company].filter(Boolean).join(' · ')"
         >
           {{ [profile.member.grade, profile.member.company].filter(Boolean).join(' · ') }}
         </p>
         <p
           v-if="profile.member.bio"
           class="mt-3 text-muted-foreground"
+          :title="profile.member.bio"
         >
           {{ profile.member.bio }}
         </p>
@@ -239,6 +242,7 @@ onMounted(loadProfile)
         <p
           v-if="profile.mentor.occupation"
           class="text-muted-foreground mb-3"
+          :title="profile.mentor.occupation"
         >
           {{ profile.mentor.occupation }}
         </p>
@@ -269,6 +273,7 @@ onMounted(loadProfile)
             v-for="a in achievements.items.filter(i => i.unlocked)"
             :key="a.id"
             class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30"
+            :title="a.description || a.title"
           >
             <component
               :is="iconMap[a.icon] || Award"
