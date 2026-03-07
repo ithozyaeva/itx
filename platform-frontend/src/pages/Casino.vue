@@ -94,9 +94,9 @@ function formatDate(dateStr: string) {
 
 function gameLabel(game: string) {
   const labels: Record<string, string> = {
-    'coin-flip': 'Монетка',
-    'dice-roll': 'Кости',
-    'wheel': 'Колесо',
+    coin_flip: 'Монетка',
+    dice_roll: 'Кости',
+    wheel: 'Колесо',
   }
   return labels[game] ?? game
 }
