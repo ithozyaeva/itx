@@ -19,7 +19,7 @@ func (r *KudosRepository) GetRecent(limit, offset int) ([]models.KudosPublic, in
 	var total int64
 	database.DB.Model(&models.Kudos{}).Count(&total)
 
-	var items []models.KudosPublic
+	items := make([]models.KudosPublic, 0)
 	err := database.DB.Raw(`
 		SELECT k.id, k.from_id, k.message, k.created_at,
 			f.first_name as from_first_name, f.last_name as from_last_name, f.username as from_username, f.avatar_url as from_avatar_url,

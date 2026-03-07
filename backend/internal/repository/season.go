@@ -49,7 +49,7 @@ func (r *SeasonRepository) GetLeaderboard(seasonId int64, limit int) ([]models.S
 		return nil, err
 	}
 
-	var entries []models.SeasonLeaderboardEntry
+	entries := make([]models.SeasonLeaderboardEntry, 0)
 	err := database.DB.Raw(`
 		SELECT m.id as member_id, m.first_name, m.last_name, m.username, m.avatar_url,
 			COALESCE(SUM(pt.amount), 0) as total,
