@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { ReviewOnCommunity } from '@/services/reviews'
 import { Typography } from 'itx-ui-kit'
-import { Loader2, MessageSquareX, Pencil, Trash2 } from 'lucide-vue-next'
+import { Loader2, MessageSquareX, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import ReviewModal from '@/components/ReviewModal.vue'
 import { Button } from '@/components/ui/button'
 import { handleError } from '@/services/errorService'
 import { reviewService } from '@/services/reviews'
@@ -11,6 +12,7 @@ const reviews = ref<ReviewOnCommunity[]>([])
 const isLoading = ref(false)
 const editingId = ref<number | null>(null)
 const editText = ref('')
+const isModalOpen = ref(false)
 
 async function loadReviews() {
   isLoading.value = true
@@ -23,6 +25,12 @@ async function loadReviews() {
   finally {
     isLoading.value = false
   }
+}
+
+async function handleCreateReview(text: string) {
+  await reviewService.createReview(text)
+  isModalOpen.value = false
+  await loadReviews()
 }
 
 function startEdit(review: ReviewOnCommunity) {
@@ -66,13 +74,20 @@ onMounted(loadReviews)
 
 <template>
   <div class="container mx-auto px-4 py-8">
-    <Typography
-      variant="h2"
-      as="h1"
-      class="mb-6"
-    >
-      Мои отзывы
-    </Typography>
+    <div class="flex items-center justify-between mb-6">
+      <Typography
+        variant="h2"
+        as="h1"
+      >
+        Мои отзывы
+      </Typography>
+      <Button
+        @click="isModalOpen = true"
+      >
+        <Plus class="h-4 w-4 mr-1" />
+        Добавить отзыв
+      </Button>
+    </div>
 
     <div v-if="isLoading" class="flex justify-center py-12">
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
@@ -150,5 +165,10 @@ onMounted(loadReviews)
         </template>
       </div>
     </div>
+    <ReviewModal
+      :is-open="isModalOpen"
+      @close="isModalOpen = false"
+      @save="handleCreateReview"
+    />
   </div>
 </template>

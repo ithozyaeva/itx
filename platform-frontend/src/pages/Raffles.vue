@@ -3,6 +3,7 @@ import type { RaffleItem } from '@/models/raffle'
 import { Typography } from 'itx-ui-kit'
 import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSSE } from '@/composables/useSSE'
 import { handleError } from '@/services/errorService'
 import { raffleService } from '@/services/raffles'
@@ -149,19 +150,23 @@ onMounted(() => {
             </div>
 
             <div class="flex items-center gap-2">
-              <select
-                :value="getTicketCount(raffle.id)"
-                class="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                @change="ticketCounts[raffle.id] = Number(($event.target as HTMLSelectElement).value)"
+              <Select
+                :model-value="String(getTicketCount(raffle.id))"
+                @update:model-value="ticketCounts[raffle.id] = Number($event)"
               >
-                <option
-                  v-for="n in 10"
-                  :key="n"
-                  :value="n"
-                >
-                  {{ n }} шт.
-                </option>
-              </select>
+                <SelectTrigger class="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="n in 10"
+                    :key="n"
+                    :value="String(n)"
+                  >
+                    {{ n }} шт.
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <button
                 class="flex-1 px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 :disabled="buyingId === raffle.id"
