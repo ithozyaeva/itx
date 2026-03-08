@@ -63,28 +63,10 @@ const diceResultWin = ref(false)
 const diceResultTarget = ref(0)
 const diceResultDirection = ref<'over' | 'under'>('over')
 
-// Two 3D cubes: tens and units
-const diceTensRotX = ref(0)
-const diceTensRotY = ref(0)
-const diceUnitsRotX = ref(0)
-const diceUnitsRotY = ref(0)
-
-// Each cube face maps to a rotation that shows it:
-// front(0,0) right(0,90) back(0,180) left(0,-90) top(-90,0) bottom(90,0)
-const faceRotations: [number, number][] = [
-  [0, 0], // face 0: front
-  [0, 90], // face 1: right
-  [-90, 0], // face 2: top
-  [90, 0], // face 3: bottom
-  [0, -90], // face 4: left
-  [0, 180], // face 5: back
-]
-
-// We put digits 0-5 on faces 0-5, and 6-9 reuse faces with +360 rotation
-function getTargetRotation(digit: number): [number, number] {
-  const faceIndex = digit % 6
-  return faceRotations[faceIndex]
-}
+// Two vertical reels (0-9 each): tens and units
+// 10 panels in a ring, each 36deg apart
+const diceTensAngle = ref(0)
+const diceUnitsAngle = ref(0)
 
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
@@ -173,16 +155,11 @@ function playCoinFlip(choice: 'heads' | 'tails') {
   })
 }
 
-function rollDiceCubes(tensDigit: number, unitsDigit: number) {
-  // Add random full spins (2-4 full rotations per axis) then land on correct face
-  const [tensTargetX, tensTargetY] = getTargetRotation(tensDigit)
-  const [unitsTargetX, unitsTargetY] = getTargetRotation(unitsDigit)
-  const randomSpins = () => (2 + Math.floor(Math.random() * 3)) * 360
-  // Offset cubes slightly so they don't spin identically
-  diceTensRotX.value = randomSpins() + tensTargetX + (Math.random() > 0.5 ? 360 : 0)
-  diceTensRotY.value = randomSpins() + tensTargetY
-  diceUnitsRotX.value = randomSpins() + unitsTargetX
-  diceUnitsRotY.value = randomSpins() + unitsTargetY + (Math.random() > 0.5 ? 360 : 0)
+function rollReelTo(digit: number): number {
+  // Each digit is 36deg apart. Target angle = digit * 36.
+  // Add 3-5 full spins for visual effect.
+  const fullSpins = (3 + Math.floor(Math.random() * 3)) * 360
+  return fullSpins + digit * 36
 }
 
 function playDiceRoll() {
@@ -191,8 +168,9 @@ function playDiceRoll() {
   diceShowResult.value = false
   diceResultTarget.value = diceTarget.value
   diceResultDirection.value = diceDirection.value
-  // Start cubes spinning with a temporary random target
-  rollDiceCubes(Math.floor(Math.random() * 10), Math.floor(Math.random() * 10))
+  // Start reels spinning to random positions
+  diceTensAngle.value = rollReelTo(Math.floor(Math.random() * 10))
+  diceUnitsAngle.value = rollReelTo(Math.floor(Math.random() * 10))
   playGame(async () => {
     const result = await casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value)
     const raw = result.result
@@ -209,11 +187,10 @@ function playDiceRoll() {
       diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
     }
     diceResultWin.value = result.profit > 0
-    // Now roll to the correct faces
+    // Roll reels to correct digits
     const val = diceResultValue.value!
-    const tens = Math.floor(val / 10)
-    const units = val % 10
-    rollDiceCubes(tens, units)
+    diceTensAngle.value = rollReelTo(Math.floor(val / 10))
+    diceUnitsAngle.value = rollReelTo(val % 10)
     await delay(2200)
     diceRolling.value = false
     await delay(300)
@@ -554,72 +531,42 @@ onMounted(() => fetchData())
             </div>
 
             <div class="dice-visual">
-              <!-- Two 3D cubes -->
+              <!-- Two slot reels (tens + units) -->
               <div
                 v-if="!diceShowResult"
-                class="dice-cubes-row"
+                class="dice-reels-row"
               >
-                <!-- Tens cube -->
-                <div class="dice-cube-scene">
+                <div class="dice-reel-window">
                   <div
-                    class="dice-cube"
-                    :class="{ 'dice-cube-rolling': diceRolling }"
-                    :style="{ transform: `rotateX(${diceTensRotX}deg) rotateY(${diceTensRotY}deg)` }"
+                    class="dice-reel"
+                    :style="{ transform: `rotateX(-${diceTensAngle}deg)` }"
                   >
-                    <div class="dice-face dice-front">
-                      0
-                    </div>
-                    <div class="dice-face dice-right">
-                      1
-                    </div>
-                    <div class="dice-face dice-top">
-                      2
-                    </div>
-                    <div class="dice-face dice-bottom">
-                      3
-                    </div>
-                    <div class="dice-face dice-left">
-                      4
-                    </div>
-                    <div class="dice-face dice-back">
-                      5
+                    <div
+                      v-for="d in 10"
+                      :key="`t${d}`"
+                      class="dice-reel-panel"
+                      :style="{ transform: `rotateX(${(d - 1) * 36}deg) translateZ(50px)` }"
+                    >
+                      {{ d - 1 }}
                     </div>
                   </div>
                 </div>
-
-                <!-- Units cube -->
-                <div class="dice-cube-scene">
+                <div class="dice-reel-window">
                   <div
-                    class="dice-cube"
-                    :class="{ 'dice-cube-rolling': diceRolling }"
-                    :style="{ transform: `rotateX(${diceUnitsRotX}deg) rotateY(${diceUnitsRotY}deg)` }"
+                    class="dice-reel"
+                    :style="{ transform: `rotateX(-${diceUnitsAngle}deg)` }"
                   >
-                    <div class="dice-face dice-front">
-                      0
-                    </div>
-                    <div class="dice-face dice-right">
-                      1
-                    </div>
-                    <div class="dice-face dice-top">
-                      2
-                    </div>
-                    <div class="dice-face dice-bottom">
-                      3
-                    </div>
-                    <div class="dice-face dice-left">
-                      4
-                    </div>
-                    <div class="dice-face dice-back">
-                      5
+                    <div
+                      v-for="d in 10"
+                      :key="`u${d}`"
+                      class="dice-reel-panel"
+                      :style="{ transform: `rotateX(${(d - 1) * 36}deg) translateZ(50px)` }"
+                    >
+                      {{ d - 1 }}
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div
-                v-if="!diceShowResult && !diceRolling"
-                class="dice-cubes-shadow"
-              />
 
               <!-- Result reveal -->
               <Transition
@@ -1540,7 +1487,7 @@ onMounted(() => fetchData())
   border-color: hsl(var(--muted-foreground) / 0.3);
 }
 
-/* ======= DICE 3D CUBES ======= */
+/* ======= DICE SLOT REELS ======= */
 .dice-visual {
   display: flex;
   flex-direction: column;
@@ -1550,66 +1497,70 @@ onMounted(() => fetchData())
   min-height: 110px;
 }
 
-.dice-cubes-row {
+.dice-reels-row {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   align-items: center;
   justify-content: center;
 }
 
-.dice-cube-scene {
-  width: 56px;
+.dice-reel-window {
+  width: 48px;
   height: 56px;
   perspective: 300px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(145deg, hsl(217 55% 22%), hsl(220 50% 16%));
+  border: 1px solid hsl(217 40% 32% / 0.6);
+  box-shadow:
+    0 4px 12px hsl(217 60% 15% / 0.4),
+    inset 0 1px 3px hsl(217 60% 40% / 0.1),
+    inset 0 -1px 3px hsl(220 50% 8% / 0.4);
+  position: relative;
 }
 
-.dice-cube {
+.dice-reel-window::before,
+.dice-reel-window::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.dice-reel-window::before {
+  top: 0;
+  background: linear-gradient(to bottom, hsl(220 50% 16%), transparent);
+}
+
+.dice-reel-window::after {
+  bottom: 0;
+  background: linear-gradient(to top, hsl(220 50% 16%), transparent);
+}
+
+.dice-reel {
   width: 100%;
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateX(0deg) rotateY(0deg);
   transition: transform 2s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
-.dice-cube-rolling {
-  transition: transform 2s cubic-bezier(0.12, 0.8, 0.2, 1);
-}
-
-.dice-face {
+.dice-reel-panel {
   position: absolute;
-  width: 56px;
+  width: 48px;
   height: 56px;
-  border-radius: 10px;
-  background: linear-gradient(145deg, hsl(217 55% 28%), hsl(220 50% 20%));
-  border: 1px solid hsl(217 40% 38% / 0.5);
-  box-shadow:
-    inset 0 1px 4px hsl(217 60% 45% / 0.15),
-    inset 0 -1px 3px hsl(220 50% 10% / 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: hsl(217 80% 75%);
-  text-shadow: 0 0 12px hsl(217 80% 60% / 0.4);
+  text-shadow: 0 0 12px hsl(217 80% 60% / 0.3);
   backface-visibility: hidden;
-}
-
-.dice-front  { transform: rotateY(0deg) translateZ(28px); }
-.dice-right  { transform: rotateY(90deg) translateZ(28px); }
-.dice-back   { transform: rotateY(180deg) translateZ(28px); }
-.dice-left   { transform: rotateY(-90deg) translateZ(28px); }
-.dice-top    { transform: rotateX(90deg) translateZ(28px); }
-.dice-bottom { transform: rotateX(-90deg) translateZ(28px); }
-
-.dice-cubes-shadow {
-  width: 100px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, hsl(0 0% 0% / 0.1), transparent 70%);
-  margin-top: 6px;
 }
 
 /* ======= DICE RESULT REVEAL ======= */
