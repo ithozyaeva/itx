@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/composables/useDictionary', () => ({
   useDictionary: () => ({
@@ -30,6 +30,14 @@ vi.mock('@/components/ui/select', () => ({
 import EventFilters from '@/components/events/EventFilters.vue'
 
 describe('EventFilters', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('renders without errors', () => {
     const wrapper = mount(EventFilters)
     expect(wrapper.exists()).toBe(true)
@@ -45,6 +53,8 @@ describe('EventFilters', () => {
     const wrapper = mount(EventFilters)
     const input = wrapper.find('input')
     await input.setValue('meetup')
+
+    vi.advanceTimersByTime(400)
 
     const emitted = wrapper.emitted('change')
     expect(emitted).toBeDefined()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProfTag } from '@/models/profile'
 import type { ReferalSearchFilters } from '@/services/referals'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
@@ -42,9 +42,16 @@ function toggleTag(tagId: number) {
   }
 }
 
+const debounceTimer = ref<ReturnType<typeof setTimeout>>()
+
 watch(filters, () => {
-  emit('change', { ...filters })
+  clearTimeout(debounceTimer.value)
+  debounceTimer.value = setTimeout(() => {
+    emit('change', { ...filters })
+  }, 350)
 }, { deep: true })
+
+onBeforeUnmount(() => clearTimeout(debounceTimer.value))
 </script>
 
 <template>

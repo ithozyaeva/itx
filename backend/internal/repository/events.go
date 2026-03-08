@@ -21,16 +21,23 @@ func (e *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, 
 	var events []models.Event
 	var count int64
 
-	if err := database.DB.Model(&models.Event{}).Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
-
 	query := database.DB.Model(&models.Event{}).Preload("Hosts").Preload("Members").Preload("EventTags")
 
 	if filter != nil {
 		for key, value := range *filter {
 			query = query.Where(key, value)
 		}
+	}
+
+	// Count after filters are applied
+	countQuery := database.DB.Model(&models.Event{})
+	if filter != nil {
+		for key, value := range *filter {
+			countQuery = countQuery.Where(key, value)
+		}
+	}
+	if err := countQuery.Count(&count).Error; err != nil {
+		return nil, 0, err
 	}
 
 	if order != nil {

@@ -177,7 +177,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
       <div class="flex items-start gap-2">
         <MapPin class="shrink-0 mt-0.5" />
         <span v-if="event.placeType === 'OFFLINE'" class="break-all">{{ event.place }}</span>
-        <a v-if="event.placeType === 'ONLINE'" :href="event.place" target="_blank" class="underline break-all">{{ event.place }}</a>
+        <p v-if="event.placeType === 'ONLINE'" class="break-all" v-html="wrapLinks(event.place)" />
         <p v-if="event.placeType === 'HYBRID'" class="break-all" v-html="wrapLinks(event.place)" />
       </div>
       <div class="flex items-start gap-2">

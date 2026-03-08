@@ -72,14 +72,18 @@ async function fetchData() {
   }
 }
 
-async function playGame(action: () => Promise<CasinoBetResult>) {
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) {
   if (isPlaying.value)
     return
   isPlaying.value = true
   showResult.value = false
   lastResult.value = null
   try {
-    const result = await action()
+    const [result] = await Promise.all([action(), delay(delayMs)])
     lastResult.value = result
     showResult.value = true
     if (stats.value) {
@@ -111,16 +115,18 @@ function playWheel() {
   playGame(async () => {
     try {
       const result = await casinoService.wheelSpin(betAmount.value)
-      setTimeout(() => {
-        isWheelSpinning.value = false
-      }, 3000)
       return result
     }
     catch (error) {
       isWheelSpinning.value = false
       throw error
     }
-  })
+    finally {
+      setTimeout(() => {
+        isWheelSpinning.value = false
+      }, 4000)
+    }
+  }, 4000)
 }
 
 function formatDate(dateStr: string) {
