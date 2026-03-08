@@ -6,11 +6,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function wrapLinks(text: string): string {
-  // Регулярное выражение для поиска URL
-  const urlRegex = /(https?:\/\/\S+)/g
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
 
-  return text.replace(urlRegex, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" >$1</a>')
+export function wrapLinks(text: string): string {
+  const urlRegex = /(https?:\/\/\S+)/g
+  const escaped = escapeHtml(text)
+
+  return escaped.replace(urlRegex, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" >$1</a>')
 }
 
 export const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
