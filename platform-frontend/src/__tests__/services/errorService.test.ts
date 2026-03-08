@@ -9,86 +9,103 @@ vi.mock('@/components/ui/toast', () => ({
 
 import { ErrorType, handleError } from '@/services/errorService'
 
+function mockResponse(status: number, body?: Record<string, unknown>) {
+  return {
+    status,
+    json: vi.fn().mockResolvedValue(body ?? {}),
+  }
+}
+
 describe('errorService', () => {
   describe('handleError', () => {
-    it('handles HTTPError with 401 status as authentication error', () => {
+    it('handles HTTPError with 401 status as authentication error', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 401 },
+        response: mockResponse(401),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.AUTHENTICATION)
       expect(result.message).toBe('Ошибка аутентификации. Пожалуйста, войдите снова.')
       expect(result.originalError).toBe(error)
     })
 
-    it('handles HTTPError with 403 status as authentication error', () => {
+    it('handles HTTPError with 403 status as authentication error', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 403 },
+        response: mockResponse(403),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.AUTHENTICATION)
     })
 
-    it('handles HTTPError with 400 status as validation error', () => {
+    it('handles HTTPError with 400 status as validation error', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 400 },
+        response: mockResponse(400),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.VALIDATION)
       expect(result.message).toBe('Проверьте правильность введенных данных')
     })
 
-    it('handles HTTPError with 500 status as server error', () => {
+    it('handles HTTPError with server error message', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 500 },
+        response: mockResponse(400, { error: 'недостаточно баллов' }),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
+      expect(result.type).toBe(ErrorType.VALIDATION)
+      expect(result.message).toBe('недостаточно баллов')
+    })
+
+    it('handles HTTPError with 500 status as server error', async () => {
+      const error = {
+        name: 'HTTPError',
+        response: mockResponse(500),
+      }
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.SERVER)
       expect(result.message).toBe('Ошибка сервера. Пожалуйста, попробуйте позже.')
     })
 
-    it('handles HTTPError with 502 status as server error', () => {
+    it('handles HTTPError with 502 status as server error', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 502 },
+        response: mockResponse(502),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.SERVER)
     })
 
-    it('handles HTTPError with unknown status as unknown error', () => {
+    it('handles HTTPError with unknown status as unknown error', async () => {
       const error = {
         name: 'HTTPError',
-        response: { status: 418 },
+        response: mockResponse(418),
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.UNKNOWN)
       expect(result.message).toBe('Произошла неизвестная ошибка')
     })
 
-    it('handles NetworkError', () => {
+    it('handles NetworkError', async () => {
       const error = {
         name: 'NetworkError',
       }
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.NETWORK)
       expect(result.message).toBe('Проблемы с сетевым подключением')
     })
 
-    it('handles generic Error with message', () => {
+    it('handles generic Error with message', async () => {
       const error = new Error('Something went wrong')
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.UNKNOWN)
       expect(result.message).toBe('Something went wrong')
     })
 
-    it('handles unknown error without message', () => {
+    it('handles unknown error without message', async () => {
       const error = {}
-      const result = handleError(error)
+      const result = await handleError(error)
       expect(result.type).toBe(ErrorType.UNKNOWN)
       expect(result.message).toBe('Произошла неизвестная ошибка')
     })
