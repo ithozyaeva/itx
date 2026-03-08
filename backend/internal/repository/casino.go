@@ -1,11 +1,15 @@
 package repository
 
 import (
+	"errors"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 
 	"gorm.io/gorm"
 )
+
+var ErrInsufficientBalance = errors.New("недостаточно баллов")
 
 type CasinoRepository struct{}
 
@@ -26,7 +30,7 @@ func (r *CasinoRepository) PlaceBet(memberId int64, bet *models.CasinoBet, won b
 		}
 
 		if balance < bet.BetAmount {
-			return gorm.ErrInvalidData
+			return ErrInsufficientBalance
 		}
 
 		// Debit bet amount

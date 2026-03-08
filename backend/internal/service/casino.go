@@ -2,7 +2,9 @@ package service
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"ithozyeva/internal/models"
@@ -81,7 +83,11 @@ func (s *CasinoService) PlayCoinFlip(memberId int64, req *models.CoinFlipRequest
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
 	if err != nil {
-		return nil, fmt.Errorf("недостаточно баллов")
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return nil, err
+		}
+		log.Printf("casino PlaceBet error for member %d: %v", memberId, err)
+		return nil, fmt.Errorf("ошибка при размещении ставки")
 	}
 
 	return &models.CasinoBetResponse{
@@ -152,7 +158,11 @@ func (s *CasinoService) PlayDiceRoll(memberId int64, req *models.DiceRollRequest
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
 	if err != nil {
-		return nil, fmt.Errorf("недостаточно баллов")
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return nil, err
+		}
+		log.Printf("casino PlaceBet error for member %d: %v", memberId, err)
+		return nil, fmt.Errorf("ошибка при размещении ставки")
 	}
 
 	return &models.CasinoBetResponse{
@@ -199,7 +209,11 @@ func (s *CasinoService) PlayWheel(memberId int64, req *models.WheelRequest) (*mo
 
 	balance, err := s.repo.PlaceBet(memberId, bet, won)
 	if err != nil {
-		return nil, fmt.Errorf("недостаточно баллов")
+		if errors.Is(err, repository.ErrInsufficientBalance) {
+			return nil, err
+		}
+		log.Printf("casino PlaceBet error for member %d: %v", memberId, err)
+		return nil, fmt.Errorf("ошибка при размещении ставки")
 	}
 
 	return &models.CasinoBetResponse{
