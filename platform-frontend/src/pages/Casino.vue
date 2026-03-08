@@ -58,6 +58,10 @@ const coinShowResult = ref(false)
 
 const diceRolling = ref(false)
 const diceResultValue = ref<number | null>(null)
+const diceShowResult = ref(false)
+const diceResultWin = ref(false)
+const diceResultTarget = ref(0)
+const diceResultDirection = ref<'over' | 'under'>('over')
 const diceRotX = ref(0)
 const diceRotY = ref(0)
 const diceRotZ = ref(0)
@@ -149,6 +153,9 @@ function playCoinFlip(choice: 'heads' | 'tails') {
 function playDiceRoll() {
   diceRolling.value = true
   diceResultValue.value = null
+  diceShowResult.value = false
+  diceResultTarget.value = diceTarget.value
+  diceResultDirection.value = diceDirection.value
   // Random rotation axes each time for variety
   const spinsX = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
   const spinsY = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
@@ -171,8 +178,11 @@ function playDiceRoll() {
     else {
       diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
     }
+    diceResultWin.value = result.profit > 0
     await delay(600)
     diceRolling.value = false
+    await delay(200)
+    diceShowResult.value = true
     return result
   }, 2500)
 }
@@ -492,6 +502,7 @@ onMounted(() => fetchData())
             <div class="dice-visual">
               <div
                 class="dice-cube-scene"
+                :class="{ 'dice-scene-mini': diceShowResult }"
               >
                 <div
                   class="dice-cube"
@@ -533,13 +544,29 @@ onMounted(() => fetchData())
                   </div>
                 </div>
               </div>
-              <div
-                v-if="diceResultValue !== null && !diceRolling"
-                class="dice-result-number"
-              >
-                {{ diceResultValue }}
-              </div>
               <div class="dice-cube-shadow" :class="{ 'dice-shadow-rolling': diceRolling }" />
+
+              <!-- Big dice result reveal -->
+              <Transition
+                enter-active-class="dice-reveal-enter-active"
+                enter-from-class="dice-reveal-enter-from"
+                leave-active-class="dice-reveal-leave-active"
+                leave-to-class="dice-reveal-leave-to"
+              >
+                <div
+                  v-if="diceShowResult && diceResultValue !== null"
+                  class="dice-result-reveal"
+                  :class="diceResultWin ? 'dice-result-win' : 'dice-result-lose'"
+                  @click="diceShowResult = false"
+                >
+                  <div class="dice-result-big-number">
+                    {{ diceResultValue }}
+                  </div>
+                  <div class="dice-result-condition">
+                    {{ diceResultDirection === 'over' ? '>' : '<' }} {{ diceResultTarget }}
+                  </div>
+                </div>
+              </Transition>
             </div>
 
             <div class="dice-controls">
@@ -1519,21 +1546,79 @@ onMounted(() => fetchData())
 .dice-top    { transform: rotateX(90deg) translateZ(32px); }
 .dice-bottom { transform: rotateX(-90deg) translateZ(32px); }
 
-.dice-result-number {
-  margin-top: 10px;
-  font-size: 2.25rem;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: hsl(217 80% 65%);
-  text-shadow: 0 0 30px hsl(217 80% 60% / 0.5), 0 0 60px hsl(217 80% 60% / 0.2);
-  letter-spacing: -0.02em;
-  animation: diceNumberPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+.dice-scene-mini {
+  width: 36px;
+  height: 36px;
+  opacity: 0.3;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@keyframes diceNumberPop {
+.dice-result-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  animation: diceRevealPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dice-result-win .dice-result-big-number {
+  color: hsl(142 70% 55%);
+  text-shadow: 0 0 30px hsl(142 70% 50% / 0.5), 0 0 60px hsl(142 70% 50% / 0.15);
+}
+
+.dice-result-lose .dice-result-big-number {
+  color: hsl(0 70% 60%);
+  text-shadow: 0 0 30px hsl(0 70% 55% / 0.5), 0 0 60px hsl(0 70% 55% / 0.15);
+}
+
+.dice-result-big-number {
+  font-size: 2.75rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.dice-result-condition {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: 0.02em;
+}
+
+.dice-result-win .dice-result-condition {
+  color: hsl(142 50% 50% / 0.7);
+}
+
+.dice-result-lose .dice-result-condition {
+  color: hsl(0 50% 55% / 0.7);
+}
+
+@keyframes diceRevealPop {
   0% { opacity: 0; transform: scale(0.3) translateY(12px); }
-  60% { opacity: 1; transform: scale(1.15) translateY(-2px); }
+  60% { opacity: 1; transform: scale(1.08) translateY(-2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dice-reveal-enter-active {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dice-reveal-enter-from {
+  opacity: 0;
+  transform: scale(0.3) translateY(15px);
+}
+.dice-reveal-leave-active {
+  transition: all 0.25s ease-in;
+}
+.dice-reveal-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .dice-cube-shadow {
