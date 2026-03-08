@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CasinoBetResult, CasinoStats } from '@/models/casino'
 import { CircleDot, Dices, Loader2, RotateCw, TrendingDown, TrendingUp } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { casinoService } from '@/services/casino'
@@ -130,15 +130,18 @@ function playCoinFlip(choice: 'heads' | 'tails') {
   coinFlipping.value = true
   coinResult.value = null
   coinShowResult.value = false
-  // Random number of full spins (3-6) + final position
-  const baseSpins = (3 + Math.floor(Math.random() * 4)) * 360
+  // Random number of full spins (3-6)
+  const fullSpins = (3 + Math.floor(Math.random() * 4)) * 360
   playGame(async () => {
     const result = await casinoService.coinFlip(betAmount.value, choice)
     const outcome = parseCoinOutcome(result)
     coinResult.value = outcome
-    // Heads = 0deg, Tails = 180deg offset
-    const finalOffset = outcome === 'tails' ? 180 : 0
-    coinRotation.value += baseSpins + finalOffset
+    // Calculate target: heads = 0deg, tails = 180deg (mod 360)
+    const targetFace = outcome === 'tails' ? 180 : 0
+    // Normalize current position to find how far we need to go
+    const currentMod = coinRotation.value % 360
+    const correction = targetFace - currentMod
+    coinRotation.value += fullSpins + correction
     // Wait for spin to finish
     await delay(1800)
     coinFlipping.value = false
@@ -270,6 +273,7 @@ function gameIcon(game: string) {
 }
 
 onMounted(() => fetchData())
+onUnmounted(() => stopDiceSpinner())
 </script>
 
 <template>
@@ -313,7 +317,6 @@ onMounted(() => fetchData())
           enter-from-class="result-enter-from"
           enter-to-class="result-enter-to"
           leave-active-class="result-leave-active"
-          leave-from-class="result-leave-from"
           leave-to-class="result-leave-to"
         >
           <div
@@ -422,7 +425,6 @@ onMounted(() => fetchData())
               >
                 <div
                   class="coin-3d"
-                  :class="{ 'coin-spinning': coinFlipping }"
                   :style="{ transform: `rotateY(${coinRotation}deg) rotateX(8deg)` }"
                 >
                   <div class="coin-face-front">
@@ -513,6 +515,7 @@ onMounted(() => fetchData())
             <div class="dice-visual">
               <!-- Spinning number display -->
               <div
+                v-if="!diceShowResult"
                 class="dice-number-display"
                 :class="{
                   'dice-number-spinning': diceRolling,
@@ -526,7 +529,7 @@ onMounted(() => fetchData())
                   {{ String(diceDisplayNumber).padStart(2, '0') }}
                 </div>
                 <div
-                  v-else-if="!diceShowResult && diceResultValue === null"
+                  v-else
                   class="dice-idle-icon"
                 >
                   <Dices class="h-8 w-8" />
@@ -1187,10 +1190,6 @@ onMounted(() => fetchData())
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 1.8s cubic-bezier(0.12, 0.8, 0.2, 1);
-}
-
-.coin-spinning {
   transition: transform 1.8s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
