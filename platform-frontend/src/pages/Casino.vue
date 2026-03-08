@@ -137,6 +137,32 @@ function gameLabel(game: string) {
   return labels[game] ?? game
 }
 
+function formatResult(result: string, game: string) {
+  // Handle old JSON-format results from before migration
+  if (result.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(result)
+      if (game === 'coin_flip') {
+        const choiceLabel = parsed.choice === 'heads' ? 'Орёл' : 'Решка'
+        const outcomeLabel = parsed.outcome === 'heads' ? 'Орёл' : 'Решка'
+        return `${choiceLabel} → ${outcomeLabel}`
+      }
+      if (game === 'dice_roll') {
+        return `${parsed.target} ${parsed.direction === 'over' ? '↑' : '↓'} → ${parsed.roll}`
+      }
+      return parsed.outcome ?? parsed.result ?? result
+    }
+    catch {
+      return result
+    }
+  }
+  // New string format results
+  if (game === 'coin_flip') {
+    return result === 'heads' ? 'Орёл' : result === 'tails' ? 'Решка' : result
+  }
+  return result
+}
+
 function gameIcon(game: string) {
   const icons: Record<string, string> = {
     coin_flip: 'coin',
@@ -210,7 +236,7 @@ onMounted(() => fetchData())
               <span class="result-currency">б.</span>
             </div>
             <div class="result-details">
-              {{ gameLabel(lastResult.game) }}: {{ lastResult.result }}
+              {{ gameLabel(lastResult.game) }}: {{ formatResult(lastResult.result, lastResult.game) }}
               <span v-if="lastResult.multiplier > 0" class="result-multi">x{{ lastResult.multiplier }}</span>
             </div>
           </div>
@@ -539,7 +565,7 @@ onMounted(() => fetchData())
                 {{ bet.betAmount }} б.
               </div>
               <div class="history-result-col">
-                {{ bet.result }}
+                {{ formatResult(bet.result, bet.game) }}
               </div>
               <div class="history-profit">
                 <Badge
