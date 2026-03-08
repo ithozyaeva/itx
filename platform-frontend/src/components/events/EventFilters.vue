@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { EventSearchFilters } from '@/services/events'
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
@@ -16,8 +16,13 @@ const filters = reactive<EventSearchFilters>({
 
 const { placeTypes } = useDictionary(['placeTypes'])
 
+const debounceTimer = ref<ReturnType<typeof setTimeout>>()
+
 watch(filters, () => {
-  emit('change', { ...filters })
+  clearTimeout(debounceTimer.value)
+  debounceTimer.value = setTimeout(() => {
+    emit('change', { ...filters })
+  }, 350)
 }, { deep: true })
 </script>
 
