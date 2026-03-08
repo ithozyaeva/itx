@@ -51,6 +51,11 @@ const wheelSegments = [
   { multiplier: 1.5, color: '#22c55e', label: 'x1.5' },
 ]
 
+const coinFlipping = ref(false)
+const coinResult = ref<'heads' | 'tails' | null>(null)
+const diceRolling = ref(false)
+const diceResultValue = ref<number | null>(null)
+
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
 
@@ -100,11 +105,54 @@ async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) 
 }
 
 function playCoinFlip(choice: 'heads' | 'tails') {
-  playGame(() => casinoService.coinFlip(betAmount.value, choice))
+  coinFlipping.value = true
+  coinResult.value = null
+  playGame(async () => {
+    const result = await casinoService.coinFlip(betAmount.value, choice)
+    // Parse result to show correct face
+    const outcome = result.result
+    if (outcome === 'heads' || outcome === 'tails') {
+      coinResult.value = outcome
+    }
+    else {
+      try {
+        const parsed = JSON.parse(result.result)
+        coinResult.value = parsed.outcome as 'heads' | 'tails'
+      }
+      catch {
+        coinResult.value = 'heads'
+      }
+    }
+    // Let flip animation finish
+    await delay(600)
+    coinFlipping.value = false
+    return result
+  })
 }
 
 function playDiceRoll() {
-  playGame(() => casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value))
+  diceRolling.value = true
+  diceResultValue.value = null
+  playGame(async () => {
+    const result = await casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value)
+    // Parse result value
+    const raw = result.result
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw)
+        diceResultValue.value = parsed.roll
+      }
+      catch {
+        diceResultValue.value = Math.floor(Math.random() * 100)
+      }
+    }
+    else {
+      diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
+    }
+    await delay(400)
+    diceRolling.value = false
+    return result
+  })
 }
 
 function playWheel() {
@@ -325,8 +373,28 @@ onMounted(() => fetchData())
             </div>
 
             <div class="coin-visual">
-              <div class="coin-body">
-                <span class="coin-face">?</span>
+              <div class="coin-scene">
+                <div
+                  class="coin-3d"
+                  :class="{
+                    'coin-flipping': coinFlipping,
+                    'coin-show-heads': !coinFlipping && coinResult === 'heads',
+                    'coin-show-tails': !coinFlipping && coinResult === 'tails',
+                  }"
+                >
+                  <div class="coin-face-front">
+                    <div class="coin-inner-ring" />
+                    <span class="coin-symbol">O</span>
+                    <span class="coin-label-text">ОРЁЛ</span>
+                  </div>
+                  <div class="coin-face-back">
+                    <div class="coin-inner-ring" />
+                    <span class="coin-symbol">P</span>
+                    <span class="coin-label-text">РЕШКА</span>
+                  </div>
+                  <div class="coin-edge" />
+                </div>
+                <div class="coin-shadow" :class="{ 'coin-shadow-flip': coinFlipping }" />
               </div>
             </div>
 
@@ -376,6 +444,61 @@ onMounted(() => fetchData())
                   Выбери число и направление
                 </p>
               </div>
+            </div>
+
+            <div class="dice-visual">
+              <div
+                class="dice-cube-scene"
+              >
+                <div
+                  class="dice-cube"
+                  :class="{
+                    'dice-rolling': diceRolling,
+                    'dice-landed': !diceRolling && diceResultValue !== null,
+                  }"
+                >
+                  <div class="dice-face dice-front">
+                    <div class="dice-dot dice-dot-center" />
+                  </div>
+                  <div class="dice-face dice-back">
+                    <div class="dice-dot dice-dot-tl" />
+                    <div class="dice-dot dice-dot-tr" />
+                    <div class="dice-dot dice-dot-cl" />
+                    <div class="dice-dot dice-dot-cr" />
+                    <div class="dice-dot dice-dot-bl" />
+                    <div class="dice-dot dice-dot-br" />
+                  </div>
+                  <div class="dice-face dice-right">
+                    <div class="dice-dot dice-dot-tl" />
+                    <div class="dice-dot dice-dot-center" />
+                    <div class="dice-dot dice-dot-br" />
+                  </div>
+                  <div class="dice-face dice-left">
+                    <div class="dice-dot dice-dot-tl" />
+                    <div class="dice-dot dice-dot-tr" />
+                    <div class="dice-dot dice-dot-bl" />
+                    <div class="dice-dot dice-dot-br" />
+                  </div>
+                  <div class="dice-face dice-top">
+                    <div class="dice-dot dice-dot-tl" />
+                    <div class="dice-dot dice-dot-tr" />
+                    <div class="dice-dot dice-dot-center" />
+                    <div class="dice-dot dice-dot-bl" />
+                    <div class="dice-dot dice-dot-br" />
+                  </div>
+                  <div class="dice-face dice-bottom">
+                    <div class="dice-dot dice-dot-tl" />
+                    <div class="dice-dot dice-dot-br" />
+                  </div>
+                </div>
+              </div>
+              <div
+                v-if="diceResultValue !== null && !diceRolling"
+                class="dice-result-number"
+              >
+                {{ diceResultValue }}
+              </div>
+              <div class="dice-cube-shadow" :class="{ 'dice-shadow-rolling': diceRolling }" />
             </div>
 
             <div class="dice-controls">
@@ -969,41 +1092,186 @@ onMounted(() => fetchData())
   margin-top: auto;
 }
 
-/* ======= COIN FLIP ======= */
+/* ======= COIN FLIP 3D ======= */
 .coin-visual {
   display: flex;
   justify-content: center;
   padding: 1.5rem 0;
 }
 
-.coin-body {
-  width: 80px;
-  height: 80px;
+.coin-scene {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  perspective: 600px;
+}
+
+.coin-3d {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg) rotateX(8deg);
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: coinIdle 3s ease-in-out infinite;
+}
+
+@keyframes coinIdle {
+  0%, 100% { transform: rotateY(0deg) rotateX(8deg) translateY(0px); }
+  50% { transform: rotateY(0deg) rotateX(8deg) translateY(-6px); }
+}
+
+.coin-flipping {
+  animation: coinFlipSpin 1.5s cubic-bezier(0.37, 0, 0.63, 1) !important;
+}
+
+@keyframes coinFlipSpin {
+  0% { transform: rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+  15% { transform: rotateY(180deg) rotateX(20deg) translateY(-40px) scale(1.1); }
+  30% { transform: rotateY(540deg) rotateX(-10deg) translateY(-55px) scale(1.15); }
+  50% { transform: rotateY(900deg) rotateX(15deg) translateY(-50px) scale(1.1); }
+  70% { transform: rotateY(1260deg) rotateX(-5deg) translateY(-25px) scale(1.05); }
+  85% { transform: rotateY(1440deg) rotateX(5deg) translateY(-8px) scale(1); }
+  100% { transform: rotateY(1440deg) rotateX(0deg) translateY(0px) scale(1); }
+}
+
+.coin-show-tails {
+  animation: none !important;
+  transform: rotateY(180deg) rotateX(8deg);
+}
+
+.coin-show-heads {
+  animation: none !important;
+  transform: rotateY(0deg) rotateX(8deg);
+}
+
+.coin-face-front,
+.coin-face-back {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  background: linear-gradient(145deg, hsl(45 70% 55%), hsl(35 80% 45%));
+  backface-visibility: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 4px 16px hsl(45 80% 50% / 0.2),
-    inset 0 2px 4px hsl(45 90% 80% / 0.3),
-    inset 0 -2px 4px hsl(35 80% 30% / 0.3);
-  position: relative;
+  gap: 2px;
 }
 
-.coin-body::after {
+.coin-face-front {
+  background: linear-gradient(145deg, hsl(45 75% 58%), hsl(38 85% 42%));
+  box-shadow:
+    0 4px 20px hsl(45 80% 50% / 0.3),
+    inset 0 2px 6px hsl(45 90% 80% / 0.4),
+    inset 0 -3px 6px hsl(35 80% 30% / 0.3);
+}
+
+.coin-face-front::after {
   content: '';
   position: absolute;
-  inset: 4px;
+  top: 8%;
+  left: 15%;
+  width: 35%;
+  height: 20%;
   border-radius: 50%;
-  border: 2px solid hsl(45 60% 65% / 0.4);
+  background: linear-gradient(180deg, hsl(45 80% 80% / 0.4), transparent);
+  pointer-events: none;
 }
 
-.coin-face {
+.coin-face-back {
+  background: linear-gradient(145deg, hsl(220 15% 50%), hsl(220 12% 38%));
+  box-shadow:
+    0 4px 20px hsl(220 20% 40% / 0.3),
+    inset 0 2px 6px hsl(220 15% 70% / 0.3),
+    inset 0 -3px 6px hsl(220 20% 20% / 0.4);
+  transform: rotateY(180deg);
+}
+
+.coin-face-back::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  left: 15%;
+  width: 35%;
+  height: 20%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, hsl(220 20% 70% / 0.3), transparent);
+  pointer-events: none;
+}
+
+.coin-inner-ring {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.coin-symbol {
   font-size: 1.75rem;
-  font-weight: 800;
-  color: hsl(35 40% 20%);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.coin-face-front .coin-symbol {
+  color: hsl(35 50% 18%);
   text-shadow: 0 1px 0 hsl(45 60% 70% / 0.5);
+}
+
+.coin-face-back .coin-symbol {
+  color: hsl(220 10% 80%);
+  text-shadow: 0 1px 0 hsl(220 20% 30% / 0.5);
+}
+
+.coin-label-text {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.coin-face-front .coin-label-text {
+  color: hsl(35 40% 28%);
+}
+
+.coin-face-back .coin-label-text {
+  color: hsl(220 10% 70%);
+}
+
+.coin-edge {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  transform: translateY(-50%) translateZ(-3px);
+  background: linear-gradient(90deg, hsl(38 60% 35%), hsl(45 70% 50%), hsl(38 60% 35%));
+  border-radius: 50%;
+}
+
+.coin-shadow {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, hsl(0 0% 0% / 0.15), transparent 70%);
+  transition: all 0.3s ease;
+}
+
+.coin-shadow-flip {
+  animation: coinShadowBounce 1.5s cubic-bezier(0.37, 0, 0.63, 1);
+}
+
+@keyframes coinShadowBounce {
+  0% { transform: translateX(-50%) scale(1); opacity: 1; }
+  30% { transform: translateX(-50%) scale(0.5); opacity: 0.3; }
+  50% { transform: translateX(-50%) scale(0.4); opacity: 0.2; }
+  85% { transform: translateX(-50%) scale(0.8); opacity: 0.8; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 
 .coin-actions {
@@ -1057,6 +1325,137 @@ onMounted(() => fetchData())
 .coin-btn-tails:hover:not(:disabled) {
   background: hsl(var(--secondary));
   border-color: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* ======= DICE 3D CUBE ======= */
+.dice-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 0.5rem;
+  position: relative;
+}
+
+.dice-cube-scene {
+  width: 64px;
+  height: 64px;
+  perspective: 400px;
+}
+
+.dice-cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-25deg) rotateY(30deg);
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: diceIdle 4s ease-in-out infinite;
+}
+
+@keyframes diceIdle {
+  0%, 100% { transform: rotateX(-25deg) rotateY(30deg) translateY(0px); }
+  50% { transform: rotateX(-25deg) rotateY(30deg) translateY(-4px); }
+}
+
+.dice-rolling {
+  animation: diceRollTumble 1.4s cubic-bezier(0.36, 0, 0.66, 1) !important;
+}
+
+@keyframes diceRollTumble {
+  0% { transform: rotateX(-25deg) rotateY(30deg) translateY(0) scale(1); }
+  10% { transform: rotateX(60deg) rotateY(-45deg) rotateZ(30deg) translateY(-30px) scale(1.1); }
+  25% { transform: rotateX(200deg) rotateY(120deg) rotateZ(-60deg) translateY(-45px) scale(1.15); }
+  40% { transform: rotateX(380deg) rotateY(-200deg) rotateZ(120deg) translateY(-35px) scale(1.1); }
+  55% { transform: rotateX(520deg) rotateY(300deg) rotateZ(-45deg) translateY(-20px) scale(1.05); }
+  70% { transform: rotateX(640deg) rotateY(-380deg) rotateZ(80deg) translateY(-10px) scale(1.02); }
+  85% { transform: rotateX(700deg) rotateY(400deg) rotateZ(-15deg) translateY(-3px) scale(1); }
+  100% { transform: rotateX(720deg) rotateY(360deg) rotateZ(0deg) translateY(0) scale(1); }
+}
+
+.dice-landed {
+  animation: diceLand 0.3s ease-out !important;
+}
+
+@keyframes diceLand {
+  0% { transform: rotateX(720deg) rotateY(360deg) translateY(-5px); }
+  60% { transform: rotateX(-25deg) rotateY(30deg) translateY(2px); }
+  100% { transform: rotateX(-25deg) rotateY(30deg) translateY(0); }
+}
+
+.dice-face {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, hsl(217 60% 25%), hsl(220 55% 18%));
+  border: 1px solid hsl(217 50% 35% / 0.4);
+  box-shadow: inset 0 1px 3px hsl(217 60% 40% / 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  padding: 10px;
+  gap: 0;
+}
+
+.dice-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, hsl(200 90% 80%), hsl(217 80% 65%));
+  box-shadow: 0 0 6px hsl(217 80% 60% / 0.5), inset 0 -1px 2px hsl(217 60% 40% / 0.3);
+  position: absolute;
+}
+
+.dice-dot-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.dice-dot-tl { top: 12px; left: 12px; }
+.dice-dot-tr { top: 12px; right: 12px; }
+.dice-dot-bl { bottom: 12px; left: 12px; }
+.dice-dot-br { bottom: 12px; right: 12px; }
+.dice-dot-cl { top: 50%; left: 12px; transform: translateY(-50%); }
+.dice-dot-cr { top: 50%; right: 12px; transform: translateY(-50%); }
+
+.dice-front  { transform: rotateY(0deg) translateZ(32px); }
+.dice-back   { transform: rotateY(180deg) translateZ(32px); }
+.dice-right  { transform: rotateY(90deg) translateZ(32px); }
+.dice-left   { transform: rotateY(-90deg) translateZ(32px); }
+.dice-top    { transform: rotateX(90deg) translateZ(32px); }
+.dice-bottom { transform: rotateX(-90deg) translateZ(32px); }
+
+.dice-result-number {
+  margin-top: 8px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: hsl(217 80% 65%);
+  text-shadow: 0 0 20px hsl(217 80% 60% / 0.4);
+  animation: diceNumberPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes diceNumberPop {
+  0% { opacity: 0; transform: scale(0.5) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dice-cube-shadow {
+  width: 50px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, hsl(0 0% 0% / 0.12), transparent 70%);
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.dice-shadow-rolling {
+  animation: diceShadowPulse 1.4s cubic-bezier(0.36, 0, 0.66, 1);
+}
+
+@keyframes diceShadowPulse {
+  0% { transform: scale(1); opacity: 1; }
+  25% { transform: scale(0.4); opacity: 0.2; }
+  50% { transform: scale(0.3); opacity: 0.15; }
+  75% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ======= DICE ======= */
