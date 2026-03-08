@@ -101,6 +101,21 @@ func (r *CasinoRepository) GetHistory(memberId int64, limit, offset int) ([]mode
 	return items, total, nil
 }
 
+func (r *CasinoRepository) GetGlobalFeed(limit int) ([]models.CasinoFeedItem, error) {
+	items := make([]models.CasinoFeedItem, 0)
+	if err := database.DB.Raw(`
+		SELECT cb.id, m.first_name as member_first_name, m.username as member_username,
+			cb.game, cb.bet_amount, cb.bet_choice, cb.result, cb.multiplier, cb.payout, cb.profit, cb.created_at
+		FROM casino_bets cb
+		JOIN members m ON m.id = cb.member_id
+		ORDER BY cb.created_at DESC
+		LIMIT ?
+	`, limit).Scan(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *CasinoRepository) GetStats(memberId int64) (*models.CasinoStats, error) {
 	stats := &models.CasinoStats{}
 	err := database.DB.Raw(`

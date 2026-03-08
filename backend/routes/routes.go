@@ -360,6 +360,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	casino.Post("/dice-roll", casinoHandler.PlayDiceRoll)
 	casino.Post("/wheel", casinoHandler.PlayWheel)
 	casino.Get("/history", casinoHandler.GetHistory)
+	casino.Get("/feed", casinoHandler.GetGlobalFeed)
 	casino.Get("/stats", casinoHandler.GetStats)
 
 	// Маршруты для гильдий

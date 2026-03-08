@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CasinoBetResult, CasinoStats } from '@/models/casino'
+import type { CasinoBetResult, CasinoFeedItem, CasinoStats } from '@/models/casino'
 import { CircleDot, Dices, Loader2, RotateCw, TrendingDown, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +8,7 @@ import { casinoService } from '@/services/casino'
 import { handleError } from '@/services/errorService'
 
 const stats = ref<CasinoStats | null>(null)
-const history = ref<CasinoBetResult[]>([])
+const feed = ref<CasinoFeedItem[]>([])
 const isLoading = ref(true)
 const isPlaying = ref(false)
 const lastResult = ref<CasinoBetResult | null>(null)
@@ -74,12 +74,12 @@ const isWheelSpinning = ref(false)
 async function fetchData() {
   isLoading.value = true
   try {
-    const [s, h] = await Promise.all([
+    const [s, f] = await Promise.all([
       casinoService.getStats(),
-      casinoService.getHistory(),
+      casinoService.getFeed(),
     ])
     stats.value = s
-    history.value = h ?? []
+    feed.value = f ?? []
   }
   catch (error) {
     handleError(error)
@@ -106,7 +106,7 @@ async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) 
     if (stats.value) {
       stats.value.balance = result.balance
     }
-    history.value = [result, ...history.value.slice(0, 19)]
+    casinoService.getFeed().then(f => feed.value = f ?? [])
   }
   catch (error) {
     handleError(error)
@@ -746,7 +746,7 @@ onMounted(() => fetchData())
 
         <!-- History -->
         <div
-          v-if="history.length > 0"
+          v-if="feed.length > 0"
           class="history-section"
         >
           <h3 class="history-title">
@@ -754,7 +754,7 @@ onMounted(() => fetchData())
           </h3>
           <div class="history-list">
             <div
-              v-for="bet in history"
+              v-for="bet in feed"
               :key="bet.id"
               class="history-item"
               :class="{
@@ -777,8 +777,10 @@ onMounted(() => fetchData())
                 />
               </div>
               <div class="history-info">
-                <span class="history-game">{{ gameLabel(bet.game) }}</span>
-                <span class="history-date">{{ formatDate(bet.createdAt) }}</span>
+                <span class="history-game">
+                  {{ bet.memberUsername ? `@${bet.memberUsername}` : bet.memberFirstName }}
+                </span>
+                <span class="history-date">{{ gameLabel(bet.game) }} · {{ formatDate(bet.createdAt) }}</span>
               </div>
               <div class="history-bet">
                 {{ bet.betAmount }} б.
