@@ -109,11 +109,17 @@ function playWheel() {
   isWheelSpinning.value = true
   wheelRotation.value += 1440 + Math.random() * 720
   playGame(async () => {
-    const result = await casinoService.wheelSpin(betAmount.value)
-    setTimeout(() => {
+    try {
+      const result = await casinoService.wheelSpin(betAmount.value)
+      setTimeout(() => {
+        isWheelSpinning.value = false
+      }, 3000)
+      return result
+    }
+    catch (error) {
       isWheelSpinning.value = false
-    }, 3000)
-    return result
+      throw error
+    }
   })
 }
 
@@ -560,7 +566,7 @@ onMounted(() => fetchData())
 }
 
 .casino-bg {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   background:
