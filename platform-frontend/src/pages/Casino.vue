@@ -53,8 +53,14 @@ const wheelSegments = [
 
 const coinFlipping = ref(false)
 const coinResult = ref<'heads' | 'tails' | null>(null)
+const coinRotation = ref(0)
+const coinShowResult = ref(false)
+
 const diceRolling = ref(false)
 const diceResultValue = ref<number | null>(null)
+const diceRotX = ref(0)
+const diceRotY = ref(0)
+const diceRotZ = ref(0)
 
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
@@ -104,28 +110,38 @@ async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) 
   }
 }
 
+function parseCoinOutcome(result: CasinoBetResult): 'heads' | 'tails' {
+  const raw = result.result
+  if (raw === 'heads' || raw === 'tails')
+    return raw
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed.outcome as 'heads' | 'tails'
+  }
+  catch {
+    return 'heads'
+  }
+}
+
 function playCoinFlip(choice: 'heads' | 'tails') {
   coinFlipping.value = true
   coinResult.value = null
+  coinShowResult.value = false
+  // Random number of full spins (3-6) + final position
+  const baseSpins = (3 + Math.floor(Math.random() * 4)) * 360
   playGame(async () => {
     const result = await casinoService.coinFlip(betAmount.value, choice)
-    // Parse result to show correct face
-    const outcome = result.result
-    if (outcome === 'heads' || outcome === 'tails') {
-      coinResult.value = outcome
-    }
-    else {
-      try {
-        const parsed = JSON.parse(result.result)
-        coinResult.value = parsed.outcome as 'heads' | 'tails'
-      }
-      catch {
-        coinResult.value = 'heads'
-      }
-    }
-    // Let flip animation finish
-    await delay(600)
+    const outcome = parseCoinOutcome(result)
+    coinResult.value = outcome
+    // Heads = 0deg, Tails = 180deg offset
+    const finalOffset = outcome === 'tails' ? 180 : 0
+    coinRotation.value += baseSpins + finalOffset
+    // Wait for spin to finish
+    await delay(1800)
     coinFlipping.value = false
+    // Show big result face
+    await delay(200)
+    coinShowResult.value = true
     return result
   })
 }
@@ -133,9 +149,15 @@ function playCoinFlip(choice: 'heads' | 'tails') {
 function playDiceRoll() {
   diceRolling.value = true
   diceResultValue.value = null
+  // Random rotation axes each time for variety
+  const spinsX = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
+  const spinsY = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
+  const spinsZ = Math.floor(Math.random() * 2) * 360 + Math.floor(Math.random() * 90)
+  diceRotX.value += spinsX
+  diceRotY.value += spinsY
+  diceRotZ.value += spinsZ
   playGame(async () => {
     const result = await casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value)
-    // Parse result value
     const raw = result.result
     if (raw.startsWith('{')) {
       try {
@@ -149,10 +171,10 @@ function playDiceRoll() {
     else {
       diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
     }
-    await delay(400)
+    await delay(600)
     diceRolling.value = false
     return result
-  })
+  }, 2500)
 }
 
 function playWheel() {
@@ -323,7 +345,7 @@ onMounted(() => fetchData())
         </div>
 
         <!-- Game selector (mobile) -->
-        <div class="game-nav md:hidden">
+        <div class="game-nav">
           <button
             class="game-nav-btn"
             :class="{ active: activeGame === 'coin' }"
@@ -373,14 +395,14 @@ onMounted(() => fetchData())
             </div>
 
             <div class="coin-visual">
-              <div class="coin-scene">
+              <div
+                class="coin-scene"
+                :class="{ 'coin-scene-mini': coinShowResult }"
+              >
                 <div
                   class="coin-3d"
-                  :class="{
-                    'coin-flipping': coinFlipping,
-                    'coin-show-heads': !coinFlipping && coinResult === 'heads',
-                    'coin-show-tails': !coinFlipping && coinResult === 'tails',
-                  }"
+                  :class="{ 'coin-spinning': coinFlipping }"
+                  :style="{ transform: `rotateY(${coinRotation}deg) rotateX(8deg)` }"
                 >
                   <div class="coin-face-front">
                     <div class="coin-inner-ring" />
@@ -396,6 +418,27 @@ onMounted(() => fetchData())
                 </div>
                 <div class="coin-shadow" :class="{ 'coin-shadow-flip': coinFlipping }" />
               </div>
+
+              <!-- Big result reveal -->
+              <Transition
+                enter-active-class="coin-reveal-enter-active"
+                enter-from-class="coin-reveal-enter-from"
+                leave-active-class="coin-reveal-leave-active"
+                leave-to-class="coin-reveal-leave-to"
+              >
+                <div
+                  v-if="coinShowResult && coinResult"
+                  class="coin-result-reveal"
+                  :class="coinResult === 'heads' ? 'coin-result-heads' : 'coin-result-tails'"
+                  @click="coinShowResult = false"
+                >
+                  <div class="coin-result-face">
+                    <div class="coin-result-ring" />
+                    <span class="coin-result-symbol">{{ coinResult === 'heads' ? 'O' : 'P' }}</span>
+                    <span class="coin-result-label">{{ coinResult === 'heads' ? 'ОРЁЛ' : 'РЕШКА' }}</span>
+                  </div>
+                </div>
+              </Transition>
             </div>
 
             <div class="coin-actions">
@@ -452,10 +495,8 @@ onMounted(() => fetchData())
               >
                 <div
                   class="dice-cube"
-                  :class="{
-                    'dice-rolling': diceRolling,
-                    'dice-landed': !diceRolling && diceResultValue !== null,
-                  }"
+                  :class="{ 'dice-spinning': diceRolling }"
+                  :style="{ transform: `rotateX(${diceRotX}deg) rotateY(${diceRotY}deg) rotateZ(${diceRotZ}deg)` }"
                 >
                   <div class="dice-face dice-front">
                     <div class="dice-dot dice-dot-center" />
@@ -981,6 +1022,12 @@ onMounted(() => fetchData())
   border: 1px solid hsl(var(--border));
 }
 
+@media (min-width: 768px) {
+  .game-nav {
+    display: none;
+  }
+}
+
 .game-nav-btn {
   flex: 1;
   display: flex;
@@ -1095,8 +1142,12 @@ onMounted(() => fetchData())
 /* ======= COIN FLIP 3D ======= */
 .coin-visual {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 1.5rem 0;
+  padding: 1rem 0;
+  position: relative;
+  min-height: 130px;
 }
 
 .coin-scene {
@@ -1104,6 +1155,17 @@ onMounted(() => fetchData())
   width: 96px;
   height: 96px;
   perspective: 600px;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.coin-scene-mini {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .coin-3d {
@@ -1111,38 +1173,11 @@ onMounted(() => fetchData())
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateY(0deg) rotateX(8deg);
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-  animation: coinIdle 3s ease-in-out infinite;
+  transition: transform 1.8s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
-@keyframes coinIdle {
-  0%, 100% { transform: rotateY(0deg) rotateX(8deg) translateY(0px); }
-  50% { transform: rotateY(0deg) rotateX(8deg) translateY(-6px); }
-}
-
-.coin-flipping {
-  animation: coinFlipSpin 1.5s cubic-bezier(0.37, 0, 0.63, 1) !important;
-}
-
-@keyframes coinFlipSpin {
-  0% { transform: rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
-  15% { transform: rotateY(180deg) rotateX(20deg) translateY(-40px) scale(1.1); }
-  30% { transform: rotateY(540deg) rotateX(-10deg) translateY(-55px) scale(1.15); }
-  50% { transform: rotateY(900deg) rotateX(15deg) translateY(-50px) scale(1.1); }
-  70% { transform: rotateY(1260deg) rotateX(-5deg) translateY(-25px) scale(1.05); }
-  85% { transform: rotateY(1440deg) rotateX(5deg) translateY(-8px) scale(1); }
-  100% { transform: rotateY(1440deg) rotateX(0deg) translateY(0px) scale(1); }
-}
-
-.coin-show-tails {
-  animation: none !important;
-  transform: rotateY(180deg) rotateX(8deg);
-}
-
-.coin-show-heads {
-  animation: none !important;
-  transform: rotateY(0deg) rotateX(8deg);
+.coin-spinning {
+  transition: transform 1.8s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
 .coin-face-front,
@@ -1263,15 +1298,105 @@ onMounted(() => fetchData())
 }
 
 .coin-shadow-flip {
-  animation: coinShadowBounce 1.5s cubic-bezier(0.37, 0, 0.63, 1);
+  animation: coinShadowBounce 1.8s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
 @keyframes coinShadowBounce {
   0% { transform: translateX(-50%) scale(1); opacity: 1; }
-  30% { transform: translateX(-50%) scale(0.5); opacity: 0.3; }
-  50% { transform: translateX(-50%) scale(0.4); opacity: 0.2; }
-  85% { transform: translateX(-50%) scale(0.8); opacity: 0.8; }
+  25% { transform: translateX(-50%) scale(0.4); opacity: 0.2; }
+  50% { transform: translateX(-50%) scale(0.35); opacity: 0.15; }
+  80% { transform: translateX(-50%) scale(0.85); opacity: 0.9; }
   100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* ======= COIN RESULT REVEAL ======= */
+.coin-result-reveal {
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.coin-result-face {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.coin-result-heads .coin-result-face {
+  background: linear-gradient(145deg, hsl(45 75% 58%), hsl(38 85% 42%));
+  box-shadow:
+    0 6px 30px hsl(45 80% 50% / 0.4),
+    0 0 40px hsl(45 80% 50% / 0.15),
+    inset 0 2px 6px hsl(45 90% 80% / 0.4),
+    inset 0 -3px 6px hsl(35 80% 30% / 0.3);
+}
+
+.coin-result-tails .coin-result-face {
+  background: linear-gradient(145deg, hsl(220 15% 50%), hsl(220 12% 38%));
+  box-shadow:
+    0 6px 30px hsl(220 20% 40% / 0.4),
+    0 0 40px hsl(220 30% 50% / 0.15),
+    inset 0 2px 6px hsl(220 15% 70% / 0.3),
+    inset 0 -3px 6px hsl(220 20% 20% / 0.4);
+}
+
+.coin-result-ring {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0.2;
+}
+
+.coin-result-symbol {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.coin-result-heads .coin-result-symbol {
+  color: hsl(35 50% 18%);
+  text-shadow: 0 1px 0 hsl(45 60% 70% / 0.5);
+}
+
+.coin-result-tails .coin-result-symbol {
+  color: hsl(220 10% 80%);
+  text-shadow: 0 1px 0 hsl(220 20% 30% / 0.5);
+}
+
+.coin-result-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.coin-result-heads .coin-result-label {
+  color: hsl(35 40% 28%);
+}
+
+.coin-result-tails .coin-result-label {
+  color: hsl(220 10% 70%);
+}
+
+.coin-reveal-enter-active {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.coin-reveal-enter-from {
+  opacity: 0;
+  transform: scale(0.3) rotateY(90deg);
+}
+.coin-reveal-leave-active {
+  transition: all 0.25s ease-in;
+}
+.coin-reveal-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .coin-actions {
@@ -1347,39 +1472,11 @@ onMounted(() => fetchData())
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateX(-25deg) rotateY(30deg);
-  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-  animation: diceIdle 4s ease-in-out infinite;
+  transition: transform 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
-@keyframes diceIdle {
-  0%, 100% { transform: rotateX(-25deg) rotateY(30deg) translateY(0px); }
-  50% { transform: rotateX(-25deg) rotateY(30deg) translateY(-4px); }
-}
-
-.dice-rolling {
-  animation: diceRollTumble 1.4s cubic-bezier(0.36, 0, 0.66, 1) !important;
-}
-
-@keyframes diceRollTumble {
-  0% { transform: rotateX(-25deg) rotateY(30deg) translateY(0) scale(1); }
-  10% { transform: rotateX(60deg) rotateY(-45deg) rotateZ(30deg) translateY(-30px) scale(1.1); }
-  25% { transform: rotateX(200deg) rotateY(120deg) rotateZ(-60deg) translateY(-45px) scale(1.15); }
-  40% { transform: rotateX(380deg) rotateY(-200deg) rotateZ(120deg) translateY(-35px) scale(1.1); }
-  55% { transform: rotateX(520deg) rotateY(300deg) rotateZ(-45deg) translateY(-20px) scale(1.05); }
-  70% { transform: rotateX(640deg) rotateY(-380deg) rotateZ(80deg) translateY(-10px) scale(1.02); }
-  85% { transform: rotateX(700deg) rotateY(400deg) rotateZ(-15deg) translateY(-3px) scale(1); }
-  100% { transform: rotateX(720deg) rotateY(360deg) rotateZ(0deg) translateY(0) scale(1); }
-}
-
-.dice-landed {
-  animation: diceLand 0.3s ease-out !important;
-}
-
-@keyframes diceLand {
-  0% { transform: rotateX(720deg) rotateY(360deg) translateY(-5px); }
-  60% { transform: rotateX(-25deg) rotateY(30deg) translateY(2px); }
-  100% { transform: rotateX(-25deg) rotateY(30deg) translateY(0); }
+.dice-spinning {
+  transition: transform 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
 .dice-face {
@@ -1423,17 +1520,19 @@ onMounted(() => fetchData())
 .dice-bottom { transform: rotateX(-90deg) translateZ(32px); }
 
 .dice-result-number {
-  margin-top: 8px;
-  font-size: 1.5rem;
-  font-weight: 800;
+  margin-top: 10px;
+  font-size: 2.25rem;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: hsl(217 80% 65%);
-  text-shadow: 0 0 20px hsl(217 80% 60% / 0.4);
-  animation: diceNumberPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-shadow: 0 0 30px hsl(217 80% 60% / 0.5), 0 0 60px hsl(217 80% 60% / 0.2);
+  letter-spacing: -0.02em;
+  animation: diceNumberPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes diceNumberPop {
-  0% { opacity: 0; transform: scale(0.5) translateY(8px); }
+  0% { opacity: 0; transform: scale(0.3) translateY(12px); }
+  60% { opacity: 1; transform: scale(1.15) translateY(-2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -1447,14 +1546,14 @@ onMounted(() => fetchData())
 }
 
 .dice-shadow-rolling {
-  animation: diceShadowPulse 1.4s cubic-bezier(0.36, 0, 0.66, 1);
+  animation: diceShadowPulse 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
 }
 
 @keyframes diceShadowPulse {
   0% { transform: scale(1); opacity: 1; }
-  25% { transform: scale(0.4); opacity: 0.2; }
-  50% { transform: scale(0.3); opacity: 0.15; }
-  75% { transform: scale(0.6); opacity: 0.5; }
+  20% { transform: scale(0.4); opacity: 0.2; }
+  40% { transform: scale(0.3); opacity: 0.15; }
+  70% { transform: scale(0.7); opacity: 0.6; }
   100% { transform: scale(1); opacity: 1; }
 }
 
