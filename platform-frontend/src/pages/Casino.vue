@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CasinoBetResult, CasinoStats } from '@/models/casino'
 import { CircleDot, Dices, Loader2, RotateCw, TrendingDown, TrendingUp } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { casinoService } from '@/services/casino'
@@ -62,8 +62,29 @@ const diceShowResult = ref(false)
 const diceResultWin = ref(false)
 const diceResultTarget = ref(0)
 const diceResultDirection = ref<'over' | 'under'>('over')
-const diceDisplayNumber = ref(0)
-let diceSpinInterval: ReturnType<typeof setInterval> | null = null
+
+// Two 3D cubes: tens and units
+const diceTensRotX = ref(0)
+const diceTensRotY = ref(0)
+const diceUnitsRotX = ref(0)
+const diceUnitsRotY = ref(0)
+
+// Each cube face maps to a rotation that shows it:
+// front(0,0) right(0,90) back(0,180) left(0,-90) top(-90,0) bottom(90,0)
+const faceRotations: [number, number][] = [
+  [0, 0], // face 0: front
+  [0, 90], // face 1: right
+  [-90, 0], // face 2: top
+  [90, 0], // face 3: bottom
+  [0, -90], // face 4: left
+  [0, 180], // face 5: back
+]
+
+// We put digits 0-5 on faces 0-5, and 6-9 reuse faces with +360 rotation
+function getTargetRotation(digit: number): [number, number] {
+  const faceIndex = digit % 6
+  return faceRotations[faceIndex]
+}
 
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
@@ -152,19 +173,16 @@ function playCoinFlip(choice: 'heads' | 'tails') {
   })
 }
 
-function startDiceSpinner() {
-  if (diceSpinInterval)
-    clearInterval(diceSpinInterval)
-  diceSpinInterval = setInterval(() => {
-    diceDisplayNumber.value = Math.floor(Math.random() * 100)
-  }, 50)
-}
-
-function stopDiceSpinner() {
-  if (diceSpinInterval) {
-    clearInterval(diceSpinInterval)
-    diceSpinInterval = null
-  }
+function rollDiceCubes(tensDigit: number, unitsDigit: number) {
+  // Add random full spins (2-4 full rotations per axis) then land on correct face
+  const [tensTargetX, tensTargetY] = getTargetRotation(tensDigit)
+  const [unitsTargetX, unitsTargetY] = getTargetRotation(unitsDigit)
+  const randomSpins = () => (2 + Math.floor(Math.random() * 3)) * 360
+  // Offset cubes slightly so they don't spin identically
+  diceTensRotX.value = randomSpins() + tensTargetX + (Math.random() > 0.5 ? 360 : 0)
+  diceTensRotY.value = randomSpins() + tensTargetY
+  diceUnitsRotX.value = randomSpins() + unitsTargetX
+  diceUnitsRotY.value = randomSpins() + unitsTargetY + (Math.random() > 0.5 ? 360 : 0)
 }
 
 function playDiceRoll() {
@@ -173,7 +191,8 @@ function playDiceRoll() {
   diceShowResult.value = false
   diceResultTarget.value = diceTarget.value
   diceResultDirection.value = diceDirection.value
-  startDiceSpinner()
+  // Start cubes spinning with a temporary random target
+  rollDiceCubes(Math.floor(Math.random() * 10), Math.floor(Math.random() * 10))
   playGame(async () => {
     const result = await casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value)
     const raw = result.result
@@ -190,25 +209,48 @@ function playDiceRoll() {
       diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
     }
     diceResultWin.value = result.profit > 0
-    // Slow down the spinner before revealing
-    stopDiceSpinner()
-    diceDisplayNumber.value = diceResultValue.value!
-    await delay(100)
+    // Now roll to the correct faces
+    const val = diceResultValue.value!
+    const tens = Math.floor(val / 10)
+    const units = val % 10
+    rollDiceCubes(tens, units)
+    await delay(2200)
     diceRolling.value = false
     await delay(300)
     diceShowResult.value = true
     return result
-  }, 1800)
+  }, 2800)
+}
+
+function findWheelSegmentAngle(multiplier: number): number {
+  // Find all segments matching this multiplier, pick one randomly
+  const matches = wheelSegments
+    .map((seg, i) => ({ seg, i }))
+    .filter(({ seg }) => seg.multiplier === multiplier)
+  if (matches.length === 0)
+    return 0
+  const picked = matches[Math.floor(Math.random() * matches.length)]
+  // Each segment is 30deg. Center of segment i is at (i * 30 + 15) degrees.
+  // To land pointer (top = 0deg) on this segment, wheel must rotate so that
+  // the segment center aligns with 0. Wheel rotation is clockwise, so:
+  // targetAngle = 360 - (segmentIndex * 30 + 15)
+  return 360 - (picked.i * 30 + 15)
 }
 
 function playWheel() {
   if (isWheelSpinning.value)
     return
   isWheelSpinning.value = true
-  wheelRotation.value += 1440 + Math.random() * 720
+  // Start with a fast initial spin (visual only, will be corrected)
+  const tempRotation = wheelRotation.value + 720
+  wheelRotation.value = tempRotation
   playGame(async () => {
     try {
       const result = await casinoService.wheelSpin(betAmount.value)
+      // Calculate correct landing angle based on server result
+      const targetAngle = findWheelSegmentAngle(result.multiplier)
+      const fullSpins = (3 + Math.floor(Math.random() * 2)) * 360
+      wheelRotation.value = tempRotation + fullSpins + targetAngle - (tempRotation % 360)
       return result
     }
     catch (error) {
@@ -273,7 +315,6 @@ function gameIcon(game: string) {
 }
 
 onMounted(() => fetchData())
-onUnmounted(() => stopDiceSpinner())
 </script>
 
 <template>
@@ -420,8 +461,8 @@ onUnmounted(() => stopDiceSpinner())
 
             <div class="coin-visual">
               <div
+                v-if="!coinShowResult"
                 class="coin-scene"
-                :class="{ 'coin-scene-mini': coinShowResult }"
               >
                 <div
                   class="coin-3d"
@@ -513,28 +554,72 @@ onUnmounted(() => stopDiceSpinner())
             </div>
 
             <div class="dice-visual">
-              <!-- Spinning number display -->
+              <!-- Two 3D cubes -->
               <div
                 v-if="!diceShowResult"
-                class="dice-number-display"
-                :class="{
-                  'dice-number-spinning': diceRolling,
-                  'dice-number-idle': !diceRolling && diceResultValue === null,
-                }"
+                class="dice-cubes-row"
               >
-                <div
-                  v-if="diceRolling"
-                  class="dice-spinner-number"
-                >
-                  {{ String(diceDisplayNumber).padStart(2, '0') }}
+                <!-- Tens cube -->
+                <div class="dice-cube-scene">
+                  <div
+                    class="dice-cube"
+                    :class="{ 'dice-cube-rolling': diceRolling }"
+                    :style="{ transform: `rotateX(${diceTensRotX}deg) rotateY(${diceTensRotY}deg)` }"
+                  >
+                    <div class="dice-face dice-front">
+                      0
+                    </div>
+                    <div class="dice-face dice-right">
+                      1
+                    </div>
+                    <div class="dice-face dice-top">
+                      2
+                    </div>
+                    <div class="dice-face dice-bottom">
+                      3
+                    </div>
+                    <div class="dice-face dice-left">
+                      4
+                    </div>
+                    <div class="dice-face dice-back">
+                      5
+                    </div>
+                  </div>
                 </div>
-                <div
-                  v-else
-                  class="dice-idle-icon"
-                >
-                  <Dices class="h-8 w-8" />
+
+                <!-- Units cube -->
+                <div class="dice-cube-scene">
+                  <div
+                    class="dice-cube"
+                    :class="{ 'dice-cube-rolling': diceRolling }"
+                    :style="{ transform: `rotateX(${diceUnitsRotX}deg) rotateY(${diceUnitsRotY}deg)` }"
+                  >
+                    <div class="dice-face dice-front">
+                      0
+                    </div>
+                    <div class="dice-face dice-right">
+                      1
+                    </div>
+                    <div class="dice-face dice-top">
+                      2
+                    </div>
+                    <div class="dice-face dice-bottom">
+                      3
+                    </div>
+                    <div class="dice-face dice-left">
+                      4
+                    </div>
+                    <div class="dice-face dice-back">
+                      5
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              <div
+                v-if="!diceShowResult && !diceRolling"
+                class="dice-cubes-shadow"
+              />
 
               <!-- Result reveal -->
               <Transition
@@ -1175,16 +1260,6 @@ onUnmounted(() => stopDiceSpinner())
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.coin-scene-mini {
-  width: 48px;
-  height: 48px;
-  opacity: 0.4;
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
 .coin-3d {
   width: 100%;
   height: 100%;
@@ -1465,72 +1540,76 @@ onUnmounted(() => stopDiceSpinner())
   border-color: hsl(var(--muted-foreground) / 0.3);
 }
 
-/* ======= DICE NUMBER DISPLAY ======= */
+/* ======= DICE 3D CUBES ======= */
 .dice-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 0 0.5rem;
+  padding: 0.75rem 0 0.25rem;
   position: relative;
-  min-height: 100px;
+  min-height: 110px;
 }
 
-.dice-number-display {
+.dice-cubes-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.dice-cube-scene {
+  width: 56px;
+  height: 56px;
+  perspective: 300px;
+}
+
+.dice-cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform 2s cubic-bezier(0.12, 0.8, 0.2, 1);
+}
+
+.dice-cube-rolling {
+  transition: transform 2s cubic-bezier(0.12, 0.8, 0.2, 1);
+}
+
+.dice-face {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, hsl(217 55% 28%), hsl(220 50% 20%));
+  border: 1px solid hsl(217 40% 38% / 0.5);
+  box-shadow:
+    inset 0 1px 4px hsl(217 60% 45% / 0.15),
+    inset 0 -1px 3px hsl(220 50% 10% / 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, hsl(217 60% 25%), hsl(220 55% 18%));
-  border: 1px solid hsl(217 50% 35% / 0.4);
-  box-shadow:
-    0 4px 16px hsl(217 60% 20% / 0.3),
-    inset 0 1px 3px hsl(217 60% 40% / 0.2);
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.dice-number-idle {
-  animation: diceIdleFloat 3s ease-in-out infinite;
-}
-
-@keyframes diceIdleFloat {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
-}
-
-.dice-number-spinning {
-  box-shadow:
-    0 4px 16px hsl(217 60% 20% / 0.3),
-    0 0 30px hsl(217 80% 55% / 0.2),
-    inset 0 1px 3px hsl(217 60% 40% / 0.2);
-  animation: diceDisplayPulse 0.3s ease-in-out infinite alternate;
-}
-
-@keyframes diceDisplayPulse {
-  0% { transform: scale(1); border-color: hsl(217 50% 35% / 0.4); }
-  100% { transform: scale(1.03); border-color: hsl(217 70% 55% / 0.6); }
-}
-
-.dice-spinner-number {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: hsl(217 80% 70%);
-  letter-spacing: -0.02em;
-  text-shadow: 0 0 20px hsl(217 80% 60% / 0.5);
-  animation: diceNumberFlicker 0.08s step-end infinite;
+  color: hsl(217 80% 75%);
+  text-shadow: 0 0 12px hsl(217 80% 60% / 0.4);
+  backface-visibility: hidden;
 }
 
-@keyframes diceNumberFlicker {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
-}
+.dice-front  { transform: rotateY(0deg) translateZ(28px); }
+.dice-right  { transform: rotateY(90deg) translateZ(28px); }
+.dice-back   { transform: rotateY(180deg) translateZ(28px); }
+.dice-left   { transform: rotateY(-90deg) translateZ(28px); }
+.dice-top    { transform: rotateX(90deg) translateZ(28px); }
+.dice-bottom { transform: rotateX(-90deg) translateZ(28px); }
 
-.dice-idle-icon {
-  color: hsl(217 50% 50%);
-  opacity: 0.6;
+.dice-cubes-shadow {
+  width: 100px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, hsl(0 0% 0% / 0.1), transparent 70%);
+  margin-top: 6px;
 }
 
 /* ======= DICE RESULT REVEAL ======= */
