@@ -62,9 +62,8 @@ const diceShowResult = ref(false)
 const diceResultWin = ref(false)
 const diceResultTarget = ref(0)
 const diceResultDirection = ref<'over' | 'under'>('over')
-const diceRotX = ref(0)
-const diceRotY = ref(0)
-const diceRotZ = ref(0)
+const diceDisplayNumber = ref(0)
+let diceSpinInterval: ReturnType<typeof setInterval> | null = null
 
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
@@ -150,19 +149,28 @@ function playCoinFlip(choice: 'heads' | 'tails') {
   })
 }
 
+function startDiceSpinner() {
+  if (diceSpinInterval)
+    clearInterval(diceSpinInterval)
+  diceSpinInterval = setInterval(() => {
+    diceDisplayNumber.value = Math.floor(Math.random() * 100)
+  }, 50)
+}
+
+function stopDiceSpinner() {
+  if (diceSpinInterval) {
+    clearInterval(diceSpinInterval)
+    diceSpinInterval = null
+  }
+}
+
 function playDiceRoll() {
   diceRolling.value = true
   diceResultValue.value = null
   diceShowResult.value = false
   diceResultTarget.value = diceTarget.value
   diceResultDirection.value = diceDirection.value
-  // Random rotation axes each time for variety
-  const spinsX = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
-  const spinsY = (2 + Math.floor(Math.random() * 3)) * 360 + Math.floor(Math.random() * 180)
-  const spinsZ = Math.floor(Math.random() * 2) * 360 + Math.floor(Math.random() * 90)
-  diceRotX.value += spinsX
-  diceRotY.value += spinsY
-  diceRotZ.value += spinsZ
+  startDiceSpinner()
   playGame(async () => {
     const result = await casinoService.diceRoll(betAmount.value, diceTarget.value, diceDirection.value)
     const raw = result.result
@@ -179,12 +187,15 @@ function playDiceRoll() {
       diceResultValue.value = Number.parseInt(raw) || Math.floor(Math.random() * 100)
     }
     diceResultWin.value = result.profit > 0
-    await delay(600)
+    // Slow down the spinner before revealing
+    stopDiceSpinner()
+    diceDisplayNumber.value = diceResultValue.value!
+    await delay(100)
     diceRolling.value = false
-    await delay(200)
+    await delay(300)
     diceShowResult.value = true
     return result
-  }, 2500)
+  }, 1800)
 }
 
 function playWheel() {
@@ -500,53 +511,29 @@ onMounted(() => fetchData())
             </div>
 
             <div class="dice-visual">
+              <!-- Spinning number display -->
               <div
-                class="dice-cube-scene"
-                :class="{ 'dice-scene-mini': diceShowResult }"
+                class="dice-number-display"
+                :class="{
+                  'dice-number-spinning': diceRolling,
+                  'dice-number-idle': !diceRolling && diceResultValue === null,
+                }"
               >
                 <div
-                  class="dice-cube"
-                  :class="{ 'dice-spinning': diceRolling }"
-                  :style="{ transform: `rotateX(${diceRotX}deg) rotateY(${diceRotY}deg) rotateZ(${diceRotZ}deg)` }"
+                  v-if="diceRolling"
+                  class="dice-spinner-number"
                 >
-                  <div class="dice-face dice-front">
-                    <div class="dice-dot dice-dot-center" />
-                  </div>
-                  <div class="dice-face dice-back">
-                    <div class="dice-dot dice-dot-tl" />
-                    <div class="dice-dot dice-dot-tr" />
-                    <div class="dice-dot dice-dot-cl" />
-                    <div class="dice-dot dice-dot-cr" />
-                    <div class="dice-dot dice-dot-bl" />
-                    <div class="dice-dot dice-dot-br" />
-                  </div>
-                  <div class="dice-face dice-right">
-                    <div class="dice-dot dice-dot-tl" />
-                    <div class="dice-dot dice-dot-center" />
-                    <div class="dice-dot dice-dot-br" />
-                  </div>
-                  <div class="dice-face dice-left">
-                    <div class="dice-dot dice-dot-tl" />
-                    <div class="dice-dot dice-dot-tr" />
-                    <div class="dice-dot dice-dot-bl" />
-                    <div class="dice-dot dice-dot-br" />
-                  </div>
-                  <div class="dice-face dice-top">
-                    <div class="dice-dot dice-dot-tl" />
-                    <div class="dice-dot dice-dot-tr" />
-                    <div class="dice-dot dice-dot-center" />
-                    <div class="dice-dot dice-dot-bl" />
-                    <div class="dice-dot dice-dot-br" />
-                  </div>
-                  <div class="dice-face dice-bottom">
-                    <div class="dice-dot dice-dot-tl" />
-                    <div class="dice-dot dice-dot-br" />
-                  </div>
+                  {{ String(diceDisplayNumber).padStart(2, '0') }}
+                </div>
+                <div
+                  v-else-if="!diceShowResult && diceResultValue === null"
+                  class="dice-idle-icon"
+                >
+                  <Dices class="h-8 w-8" />
                 </div>
               </div>
-              <div class="dice-cube-shadow" :class="{ 'dice-shadow-rolling': diceRolling }" />
 
-              <!-- Big dice result reveal -->
+              <!-- Result reveal -->
               <Transition
                 enter-active-class="dice-reveal-enter-active"
                 enter-from-class="dice-reveal-enter-from"
@@ -1479,91 +1466,81 @@ onMounted(() => fetchData())
   border-color: hsl(var(--muted-foreground) / 0.3);
 }
 
-/* ======= DICE 3D CUBE ======= */
+/* ======= DICE NUMBER DISPLAY ======= */
 .dice-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 1rem 0 0.5rem;
   position: relative;
+  min-height: 100px;
 }
 
-.dice-cube-scene {
-  width: 64px;
-  height: 64px;
-  perspective: 400px;
-}
-
-.dice-cube {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
-}
-
-.dice-spinning {
-  transition: transform 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
-}
-
-.dice-face {
-  position: absolute;
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
+.dice-number-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
   background: linear-gradient(145deg, hsl(217 60% 25%), hsl(220 55% 18%));
   border: 1px solid hsl(217 50% 35% / 0.4);
-  box-shadow: inset 0 1px 3px hsl(217 60% 40% / 0.2);
-  display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
-  padding: 10px;
-  gap: 0;
-}
-
-.dice-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, hsl(200 90% 80%), hsl(217 80% 65%));
-  box-shadow: 0 0 6px hsl(217 80% 60% / 0.5), inset 0 -1px 2px hsl(217 60% 40% / 0.3);
-  position: absolute;
-}
-
-.dice-dot-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.dice-dot-tl { top: 12px; left: 12px; }
-.dice-dot-tr { top: 12px; right: 12px; }
-.dice-dot-bl { bottom: 12px; left: 12px; }
-.dice-dot-br { bottom: 12px; right: 12px; }
-.dice-dot-cl { top: 50%; left: 12px; transform: translateY(-50%); }
-.dice-dot-cr { top: 50%; right: 12px; transform: translateY(-50%); }
-
-.dice-front  { transform: rotateY(0deg) translateZ(32px); }
-.dice-back   { transform: rotateY(180deg) translateZ(32px); }
-.dice-right  { transform: rotateY(90deg) translateZ(32px); }
-.dice-left   { transform: rotateY(-90deg) translateZ(32px); }
-.dice-top    { transform: rotateX(90deg) translateZ(32px); }
-.dice-bottom { transform: rotateX(-90deg) translateZ(32px); }
-
-.dice-scene-mini {
-  width: 36px;
-  height: 36px;
-  opacity: 0.3;
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  box-shadow:
+    0 4px 16px hsl(217 60% 20% / 0.3),
+    inset 0 1px 3px hsl(217 60% 40% / 0.2);
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+.dice-number-idle {
+  animation: diceIdleFloat 3s ease-in-out infinite;
+}
+
+@keyframes diceIdleFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.dice-number-spinning {
+  box-shadow:
+    0 4px 16px hsl(217 60% 20% / 0.3),
+    0 0 30px hsl(217 80% 55% / 0.2),
+    inset 0 1px 3px hsl(217 60% 40% / 0.2);
+  animation: diceDisplayPulse 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes diceDisplayPulse {
+  0% { transform: scale(1); border-color: hsl(217 50% 35% / 0.4); }
+  100% { transform: scale(1.03); border-color: hsl(217 70% 55% / 0.6); }
+}
+
+.dice-spinner-number {
+  font-size: 2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: hsl(217 80% 70%);
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 20px hsl(217 80% 60% / 0.5);
+  animation: diceNumberFlicker 0.08s step-end infinite;
+}
+
+@keyframes diceNumberFlicker {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.dice-idle-icon {
+  color: hsl(217 50% 50%);
+  opacity: 0.6;
+}
+
+/* ======= DICE RESULT REVEAL ======= */
 .dice-result-reveal {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  animation: diceRevealPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dice-result-win .dice-result-big-number {
@@ -1600,12 +1577,6 @@ onMounted(() => fetchData())
   color: hsl(0 50% 55% / 0.7);
 }
 
-@keyframes diceRevealPop {
-  0% { opacity: 0; transform: scale(0.3) translateY(12px); }
-  60% { opacity: 1; transform: scale(1.08) translateY(-2px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
 .dice-reveal-enter-active {
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1619,27 +1590,6 @@ onMounted(() => fetchData())
 .dice-reveal-leave-to {
   opacity: 0;
   transform: scale(0.8);
-}
-
-.dice-cube-shadow {
-  width: 50px;
-  height: 12px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, hsl(0 0% 0% / 0.12), transparent 70%);
-  margin-top: 8px;
-  transition: all 0.3s ease;
-}
-
-.dice-shadow-rolling {
-  animation: diceShadowPulse 2.2s cubic-bezier(0.12, 0.8, 0.2, 1);
-}
-
-@keyframes diceShadowPulse {
-  0% { transform: scale(1); opacity: 1; }
-  20% { transform: scale(0.4); opacity: 0.2; }
-  40% { transform: scale(0.3); opacity: 0.15; }
-  70% { transform: scale(0.7); opacity: 0.6; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ======= DICE ======= */
