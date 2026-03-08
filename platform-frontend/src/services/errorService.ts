@@ -15,39 +15,52 @@ export interface AppError {
   originalError?: any
 }
 
+const fallbackMessages: Record<string, string> = {
+  401: 'Ошибка аутентификации. Пожалуйста, войдите снова.',
+  403: 'Ошибка аутентификации. Пожалуйста, войдите снова.',
+  500: 'Ошибка сервера. Пожалуйста, попробуйте позже.',
+}
+
 /** Базовый обработчик ошибок */
-export function handleError(error: any): AppError {
+export async function handleError(error: any): Promise<AppError> {
   const { toast } = useToast()
   let appError: AppError
 
   if (error.name === 'HTTPError') {
     const status = error.response?.status
+    let serverMessage: string | undefined
+
+    try {
+      const body = await error.response?.json()
+      serverMessage = body?.error
+    }
+    catch {}
 
     if (status === 401 || status === 403) {
       appError = {
         type: ErrorType.AUTHENTICATION,
-        message: 'Ошибка аутентификации. Пожалуйста, войдите снова.',
+        message: serverMessage || fallbackMessages[401],
         originalError: error,
       }
     }
-    else if (status === 400) {
+    else if (status === 400 || status === 422 || status === 429) {
       appError = {
         type: ErrorType.VALIDATION,
-        message: 'Проверьте правильность введенных данных',
+        message: serverMessage || 'Проверьте правильность введенных данных',
         originalError: error,
       }
     }
     else if (status >= 500) {
       appError = {
         type: ErrorType.SERVER,
-        message: 'Ошибка сервера. Пожалуйста, попробуйте позже.',
+        message: serverMessage || fallbackMessages[500],
         originalError: error,
       }
     }
     else {
       appError = {
         type: ErrorType.UNKNOWN,
-        message: 'Произошла неизвестная ошибка',
+        message: serverMessage || 'Произошла неизвестная ошибка',
         originalError: error,
       }
     }
