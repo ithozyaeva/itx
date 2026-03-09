@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 describe('TaskExchange logic', () => {
   const statusTabs = [
+    { key: 'active', label: 'Активные' },
     { key: 'all', label: 'Все' },
     { key: 'OPEN', label: 'Открытые' },
     { key: 'IN_PROGRESS', label: 'В работе' },
@@ -53,12 +54,12 @@ describe('TaskExchange logic', () => {
   }
 
   describe('statusTabs', () => {
-    it('has 5 tabs', () => {
-      expect(statusTabs).toHaveLength(5)
+    it('has 6 tabs', () => {
+      expect(statusTabs).toHaveLength(6)
     })
 
     it('has correct keys', () => {
-      expect(statusTabs.map(t => t.key)).toEqual(['all', 'OPEN', 'IN_PROGRESS', 'DONE', 'APPROVED'])
+      expect(statusTabs.map(t => t.key)).toEqual(['active', 'all', 'OPEN', 'IN_PROGRESS', 'DONE', 'APPROVED'])
     })
   })
 

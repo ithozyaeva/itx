@@ -11,7 +11,6 @@ import {
   Trash2,
   User,
   Users,
-  X,
   XCircle,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -41,18 +40,23 @@ const editTask = ref<TaskExchange | null>(null)
 const editTitle = ref('')
 const editDescription = ref('')
 const editMaxAssignees = ref(1)
-const activeStatus = ref<TaskExchangeStatus | 'all'>('all')
+const activeStatus = ref<TaskExchangeStatus | 'all' | 'active'>('active')
 
 const user = useUser()
 const isAdmin = isUserAdmin()
 
-const statusTabs: { key: TaskExchangeStatus | 'all', label: string }[] = [
+const statusTabs: { key: TaskExchangeStatus | 'all' | 'active', label: string }[] = [
+  { key: 'active', label: 'Активные' },
   { key: 'all', label: 'Все' },
   { key: 'OPEN', label: 'Открытые' },
   { key: 'IN_PROGRESS', label: 'В работе' },
   { key: 'DONE', label: 'На проверке' },
   { key: 'APPROVED', label: 'Выполненные' },
 ]
+
+const activeTasks = computed(() =>
+  tasks.value.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS' || t.status === 'DONE'),
+)
 
 const statusConfig: Record<TaskExchangeStatus, { label: string, class: string }> = {
   OPEN: { label: 'Открыто', class: 'bg-blue-500/10 text-blue-500' },
@@ -64,6 +68,8 @@ const statusConfig: Record<TaskExchangeStatus, { label: string, class: string }>
 const filteredTasks = computed(() => {
   if (activeStatus.value === 'all')
     return tasks.value
+  if (activeStatus.value === 'active')
+    return activeTasks.value
   return tasks.value.filter(t => t.status === activeStatus.value)
 })
 
@@ -360,7 +366,7 @@ watch(showEditDialog, (open) => {
                 title="Удалить исполнителя"
                 @click="removeAssignee(task.id, assignee.id)"
               >
-                <X class="h-3 w-3" />
+                <Trash2 class="h-3 w-3" />
               </button>
             </div>
           </div>
