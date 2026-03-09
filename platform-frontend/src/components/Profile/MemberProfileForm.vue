@@ -39,6 +39,7 @@ function handleSubmit() {
 }
 
 const avatarSrc = ref(user.value?.avatarUrl || `https://t.me/i/userpic/160/${user.value?.tg}.jpg`)
+const avatarError = ref(false)
 
 async function handleAvatarUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -76,9 +77,15 @@ async function handleAvatarUpload(event: Event) {
           class="relative w-32 h-32 rounded-full border-4 border-border shadow-md overflow-hidden flex items-center justify-center bg-accent/20 group-hover:scale-105 transition-transform"
         >
           <img
+            v-if="!avatarError"
             :src="avatarSrc"
             class="w-full h-full object-cover"
+            @error="avatarError = true"
           >
+          <span
+            v-else
+            class="text-2xl font-bold text-muted-foreground"
+          >{{ user?.firstName?.[0] }}{{ user?.lastName?.[0] }}</span>
           <label
             v-if="isEdit"
             class="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
@@ -113,8 +120,11 @@ async function handleAvatarUpload(event: Event) {
           >
         </template>
         <template v-if="!isEdit">
-          <p class="text-muted-foreground mb-4 mt-2">
-            {{ user?.tg }}
+          <p
+            v-if="user?.tg"
+            class="text-sm text-muted-foreground mt-1"
+          >
+            @{{ user?.tg }}
           </p>
         </template>
         <template v-else>
@@ -127,14 +137,31 @@ async function handleAvatarUpload(event: Event) {
         </template>
         <div
           v-if="pointsBalance !== null"
-          class="flex items-center justify-center gap-1.5 mb-4"
+          class="flex items-center justify-center gap-1.5 mt-3"
         >
           <Star class="h-4 w-4 text-yellow-500" />
           <span class="font-medium text-yellow-500">{{ pointsBalance }} баллов</span>
         </div>
-        <p v-if="!isEdit && (user?.grade || user?.company)" class="text-sm text-muted-foreground mb-4">
-          {{ [user?.grade, user?.company].filter(Boolean).join(' · ') }}
-        </p>
+        <template v-if="!isEdit">
+          <p
+            v-if="user?.grade || user?.company"
+            class="text-sm text-muted-foreground mt-2"
+          >
+            {{ [user?.grade, user?.company].filter(Boolean).join(' · ') }}
+          </p>
+          <p
+            v-if="user?.bio"
+            class="text-sm text-muted-foreground mt-2"
+          >
+            {{ user?.bio }}
+          </p>
+          <p
+            v-if="user?.birthday"
+            class="text-sm text-muted-foreground mt-2"
+          >
+            Дата рождения: {{ new Date(user?.birthday).toLocaleDateString() }}
+          </p>
+        </template>
         <template v-if="isEdit">
           <div class="flex gap-2 mt-2">
             <input
@@ -150,26 +177,16 @@ async function handleAvatarUpload(event: Event) {
               class="w-1/2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
           </div>
-        </template>
-        <p v-if="!isEdit && !!user?.bio" class="text-sm text-muted-foreground mb-4">
-          {{ user?.bio }}
-        </p>
-        <template v-if="isEdit">
           <textarea
             v-model="editedUser.bio"
             placeholder="О себе..."
             rows="3"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            class="w-full mt-2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
-        </template>
-        <p v-if="!isEdit && !!user?.birthday" class="text-muted-foreground mb-4">
-          Дата рождения: {{ new Date(user?.birthday).toLocaleDateString() }}
-        </p>
-        <template v-else-if="isEdit">
           <input
             v-model="editedUser.birthday"
             type="date"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            class="w-full mt-2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
           >
         </template>
         <Button
