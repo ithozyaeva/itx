@@ -1,4 +1,4 @@
-import type { CasinoBetResult, CasinoStats } from '@/models/casino'
+import type { CasinoBetResult, CasinoFeedItem, CasinoStats } from '@/models/casino'
 import { apiClient } from './api'
 
 export const casinoService = {
@@ -16,6 +16,11 @@ export const casinoService = {
 
   async getHistory(limit = 20) {
     const res = await apiClient.get(`casino/history?limit=${limit}`).json<{ items: CasinoBetResult[], total: number }>()
+    return res.items ?? []
+  },
+
+  async getFeed(limit = 20) {
+    const res = await apiClient.get(`casino/feed?limit=${limit}`).json<{ items: CasinoFeedItem[] }>()
     return res.items ?? []
   },
 

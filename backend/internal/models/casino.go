@@ -73,6 +73,20 @@ type CasinoAdminStats struct {
 	UniquePlayers int64 `json:"uniquePlayers"`
 }
 
+type CasinoFeedItem struct {
+	Id              int64     `json:"id"`
+	MemberFirstName string    `json:"memberFirstName"`
+	MemberUsername  string    `json:"memberUsername"`
+	Game            string    `json:"game"`
+	BetAmount       int       `json:"betAmount"`
+	BetChoice       string    `json:"betChoice"`
+	Result          string    `json:"result"`
+	Multiplier      float64   `json:"multiplier"`
+	Payout          int       `json:"payout"`
+	Profit          int       `json:"profit"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
 type CasinoAdminBet struct {
 	Id              int64   `json:"id"`
 	MemberId        int64   `json:"memberId"`

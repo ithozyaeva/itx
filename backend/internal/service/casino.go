@@ -230,6 +230,10 @@ func (s *CasinoService) PlayWheel(memberId int64, req *models.WheelRequest) (*mo
 	}, nil
 }
 
+func (s *CasinoService) GetGlobalFeed(limit int) ([]models.CasinoFeedItem, error) {
+	return s.repo.GetGlobalFeed(limit)
+}
+
 func (s *CasinoService) GetHistory(memberId int64, limit, offset int) ([]models.CasinoHistoryItem, int64, error) {
 	return s.repo.GetHistory(memberId, limit, offset)
 }

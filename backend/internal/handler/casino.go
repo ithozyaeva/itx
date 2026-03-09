@@ -93,6 +93,15 @@ func (h *CasinoHandler) PlayWheel(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+func (h *CasinoHandler) GetGlobalFeed(c *fiber.Ctx) error {
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+	items, err := h.svc.GetGlobalFeed(limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"items": items})
+}
+
 func (h *CasinoHandler) GetHistory(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
