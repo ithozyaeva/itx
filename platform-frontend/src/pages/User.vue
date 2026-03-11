@@ -22,22 +22,31 @@ const isMentor = isUserMentor()
 </script>
 
 <template>
-  <div class="min-h-screen pt-20 pb-10">
-    <div v-if="isLoading" class="flex justify-center py-12">
+  <div class="container mx-auto px-4 py-6 md:py-8">
+    <div
+      v-if="isLoading"
+      class="flex justify-center py-12"
+    >
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
     <div
-      v-else
-      class="container"
-      :class="isMentor ? 'mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-4' : 'mx-auto px-4 max-w-3xl flex flex-col gap-4'"
+      v-else-if="isMentor"
+      class="grid grid-cols-1 md:grid-cols-2 gap-4"
     >
       <MemberProfileCard v-if="user" />
-      <div v-if="isMentor" class="grid grid-cols-1 gap-4">
+      <div class="flex flex-col gap-4">
         <ProfTagsForm />
         <MentorInfoForm />
       </div>
-      <ServicesForm v-if="isMentor" />
-      <ContactsForm v-if="isMentor" />
+      <ServicesForm />
+      <ContactsForm />
+      <NotificationSettingsForm />
+    </div>
+    <div
+      v-else
+      class="max-w-2xl mx-auto flex flex-col gap-4"
+    >
+      <MemberProfileCard v-if="user" />
       <NotificationSettingsForm />
     </div>
   </div>
