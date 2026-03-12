@@ -379,6 +379,23 @@ onMounted(() => {
                 Отменить бронь
               </button>
 
+              <!-- RESERVED: cancel reservation (seller) -->
+              <ConfirmDialog
+                v-if="item.status === 'RESERVED' && isSeller(item)"
+                title="Снять бронь?"
+                :description="`Бронь покупателя ${item.buyer ? displayName(item.buyer) : ''} будет отменена, и объявление вернётся в активные.`"
+                confirm-label="Снять бронь"
+                @confirm="cancelPurchase(item.id)"
+              >
+                <template #trigger>
+                  <button
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Снять бронь
+                  </button>
+                </template>
+              </ConfirmDialog>
+
               <!-- RESERVED: confirm sale (seller) -->
               <button
                 v-if="item.status === 'RESERVED' && isSeller(item)"
