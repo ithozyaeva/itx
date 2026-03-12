@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { onBeforeMount, ref } from 'vue'
+import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import { Toaster } from '@/components/ui/toast'
+import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE } from '@/composables/useSSE'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
 import { handleError } from '@/services/errorService'
 import Layout from './components/layout/Layout.vue'
+
+const { start: startOnboarding } = useOnboarding()
 
 const tg_user = useUser()
 const tg_token = useToken()
@@ -33,6 +37,7 @@ onBeforeMount(() => {
         tg_token.value = authToken
         window.history.replaceState({}, document.title, window.location.pathname)
         startSSE()
+        startOnboarding()
       })
       .catch((error) => {
         handleError(error)
@@ -52,6 +57,7 @@ onBeforeMount(() => {
 
 <template>
   <Toaster />
+  <OnboardingOverlay />
   <div v-if="!isLoading" class="min-h-screen flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">

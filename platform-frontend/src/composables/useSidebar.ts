@@ -7,6 +7,7 @@ export interface SidebarItem {
   path: string
   icon: Component
   indicator?: boolean
+  dataOnboarding?: string
 }
 
 export interface SidebarGroup {
@@ -26,7 +27,7 @@ const state = {
     {
       label: 'Сообщество',
       items: [
-        { title: 'События', path: '/events', icon: Calendar, indicator: true },
+        { title: 'События', path: '/events', icon: Calendar, indicator: true, dataOnboarding: 'events' },
         { title: 'Контент', path: '/content', icon: BookOpen },
         { title: 'Менторы', path: '/mentors', icon: Users },
         { title: 'Благодарности', path: '/kudos', icon: Heart },
@@ -36,7 +37,7 @@ const state = {
     {
       label: 'Активность',
       items: [
-        { title: 'Мои баллы', path: '/points', icon: Star },
+        { title: 'Мои баллы', path: '/points', icon: Star, dataOnboarding: 'points' },
         { title: 'Рейтинг', path: '/leaderboard', icon: Trophy },
         { title: 'Сезоны', path: '/seasons', icon: Calendar },
         { title: 'Достижения', path: '/achievements', icon: Award },

@@ -4,6 +4,8 @@ import type { TelegramUser } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
 import { Heart, Loader2, Send } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import {
   Dialog,
   DialogFooter,
@@ -22,6 +24,7 @@ const items = ref<KudosItem[]>([])
 const total = ref(0)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
+const loadError = ref<string | null>(null)
 const showDialog = ref(false)
 const members = ref<TelegramUser[]>([])
 const selectedMemberId = ref<number | null>(null)
@@ -30,13 +33,14 @@ const user = useUser()
 
 async function fetchKudos() {
   isLoading.value = true
+  loadError.value = null
   try {
     const res = await kudosService.getRecent(50)
     items.value = res.items ?? []
     total.value = res.total
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -125,14 +129,21 @@ onMounted(() => {
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="fetchKudos"
+    />
+
     <template v-else>
-      <div
+      <EmptyState
         v-if="items.length === 0"
-        class="text-center py-12 text-muted-foreground"
-      >
-        <Heart class="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Пока нет благодарностей. Будьте первым!</p>
-      </div>
+        :icon="Heart"
+        title="Благодарностей пока нет"
+        description="Отправьте благодарность участнику сообщества"
+        action-label="Поблагодарить"
+        @action="openDialog"
+      />
 
       <div class="space-y-3">
         <div

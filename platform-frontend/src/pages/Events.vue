@@ -2,8 +2,11 @@
 import type { CommunityEvent } from '@/models/event'
 import type { EventSearchFilters } from '@/services/events'
 import { Typography } from 'itx-ui-kit'
-import { CalendarX, Loader2 } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { Calendar, CalendarX, List, Loader2 } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import CalendarView from '@/components/events/CalendarView.vue'
 import EventCard from '@/components/events/EventCard.vue'
 import EventFilters from '@/components/events/EventFilters.vue'
 import { Button } from '@/components/ui/button'
@@ -24,11 +27,16 @@ const isLoading = ref(false)
 const isLoadingMorePast = ref(false)
 const isLoadingMoreFuture = ref(false)
 const currentFilters = ref<EventSearchFilters>({})
+const viewMode = ref<'list' | 'calendar'>('list')
+const loadError = ref<string | null>(null)
+const calendarEvents = ref<CommunityEvent[]>([])
+const allEvents = computed(() => viewMode.value === 'calendar' ? calendarEvents.value : [...futureEvents.value, ...pastEvents.value])
 
 async function loadEvents(filters?: EventSearchFilters) {
   if (filters)
     currentFilters.value = filters
   isLoading.value = true
+  loadError.value = null
   try {
     const [pastResult, futureResult] = await Promise.all([
       eventsService.searchOld(PAGE_SIZE, 0, currentFilters.value),
@@ -40,7 +48,7 @@ async function loadEvents(filters?: EventSearchFilters) {
     futureTotal.value = futureResult.total
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -77,14 +85,52 @@ async function loadMoreFuture() {
   }
 }
 
+async function loadCalendarEvents() {
+  try {
+    const [past, future] = await Promise.all([
+      eventsService.searchOld(200, 0, currentFilters.value),
+      eventsService.searchNext(200, 0, currentFilters.value),
+    ])
+    calendarEvents.value = [...future.items, ...past.items]
+  }
+  catch {
+    calendarEvents.value = [...futureEvents.value, ...pastEvents.value]
+  }
+}
+
+watch(viewMode, (mode) => {
+  if (mode === 'calendar')
+    loadCalendarEvents()
+})
+
 onMounted(() => loadEvents())
 </script>
 
 <template>
   <div ref="containerRef" class="container mx-auto px-4 py-6 md:py-8">
-    <Typography variant="h2" as="h1" class="mb-4 md:mb-6">
-      События сообщества
-    </Typography>
+    <div class="flex items-center justify-between mb-4 md:mb-6">
+      <Typography variant="h2" as="h1">
+        События сообщества
+      </Typography>
+      <div class="flex gap-1 bg-muted rounded-lg p-0.5">
+        <button
+          class="p-2 rounded-md transition-colors"
+          :class="viewMode === 'list' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+          aria-label="Список"
+          @click="viewMode = 'list'"
+        >
+          <List class="h-4 w-4" />
+        </button>
+        <button
+          class="p-2 rounded-md transition-colors"
+          :class="viewMode === 'calendar' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+          aria-label="Календарь"
+          @click="viewMode = 'calendar'"
+        >
+          <Calendar class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
 
     <EventFilters class="mb-4 md:mb-6" @change="loadEvents" />
 
@@ -92,63 +138,74 @@ onMounted(() => loadEvents())
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
-    <div v-else class="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-8">
-      <div>
-        <Typography variant="h3" as="h2" class="mb-4">
-          Предстоящие события
-        </Typography>
-        <div v-if="futureEvents.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-          <CalendarX class="h-10 w-10" />
-          <p>Нет предстоящих событий</p>
+    <ErrorState v-else-if="loadError" :message="loadError" @retry="loadEvents()" />
+
+    <template v-else-if="viewMode === 'list'">
+      <div class="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-8">
+        <div>
+          <Typography variant="h3" as="h2" class="mb-4">
+            Предстоящие события
+          </Typography>
+          <EmptyState
+            v-if="futureEvents.length === 0"
+            :icon="CalendarX"
+            title="Нет предстоящих событий"
+            description="Следите за обновлениями — новые события появляются регулярно"
+          />
+          <template v-else>
+            <div class="space-y-4">
+              <EventCard
+                v-for="event in futureEvents"
+                :key="event.id"
+                :event="event"
+              />
+            </div>
+            <div v-if="futureEvents.length < futureTotal" class="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                :disabled="isLoadingMoreFuture"
+                @click="loadMoreFuture"
+              >
+                <Loader2 v-if="isLoadingMoreFuture" class="mr-2 h-4 w-4 animate-spin" />
+                Показать ещё
+              </Button>
+            </div>
+          </template>
         </div>
-        <template v-else>
-          <div class="space-y-4">
-            <EventCard
-              v-for="event in futureEvents"
-              :key="event.id"
-              :event="event"
-            />
-          </div>
-          <div v-if="futureEvents.length < futureTotal" class="mt-4 flex justify-center">
-            <Button
-              variant="outline"
-              :disabled="isLoadingMoreFuture"
-              @click="loadMoreFuture"
-            >
-              <Loader2 v-if="isLoadingMoreFuture" class="mr-2 h-4 w-4 animate-spin" />
-              Показать ещё
-            </Button>
-          </div>
-        </template>
-      </div>
-      <div>
-        <Typography variant="h3" as="h2" class="mb-4">
-          Архив событий
-        </Typography>
-        <div v-if="pastEvents.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-          <CalendarX class="h-10 w-10" />
-          <p>Нет архивных событий</p>
+        <div>
+          <Typography variant="h3" as="h2" class="mb-4">
+            Архив событий
+          </Typography>
+          <EmptyState
+            v-if="pastEvents.length === 0"
+            :icon="CalendarX"
+            title="Нет архивных событий"
+          />
+          <template v-else>
+            <div class="space-y-4">
+              <EventCard
+                v-for="event in pastEvents"
+                :key="event.id"
+                :event="event"
+              />
+            </div>
+            <div v-if="pastEvents.length < pastTotal" class="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                :disabled="isLoadingMorePast"
+                @click="loadMorePast"
+              >
+                <Loader2 v-if="isLoadingMorePast" class="mr-2 h-4 w-4 animate-spin" />
+                Показать ещё
+              </Button>
+            </div>
+          </template>
         </div>
-        <template v-else>
-          <div class="space-y-4">
-            <EventCard
-              v-for="event in pastEvents"
-              :key="event.id"
-              :event="event"
-            />
-          </div>
-          <div v-if="pastEvents.length < pastTotal" class="mt-4 flex justify-center">
-            <Button
-              variant="outline"
-              :disabled="isLoadingMorePast"
-              @click="loadMorePast"
-            >
-              <Loader2 v-if="isLoadingMorePast" class="mr-2 h-4 w-4 animate-spin" />
-              Показать ещё
-            </Button>
-          </div>
-        </template>
       </div>
+    </template>
+
+    <div v-else-if="viewMode === 'calendar'" class="rounded-2xl border bg-card border-border p-4">
+      <CalendarView :events="allEvents" />
     </div>
   </div>
 </template>

@@ -2,7 +2,10 @@
 import type { ReferalLink } from '@/models/referals'
 import type { ReferalSearchFilters } from '@/services/referals'
 import { Typography } from 'itx-ui-kit'
+import { Loader2, Share2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import ReferalFilters from '@/components/referals/ReferalFilters.vue'
 import ReferalLinkCard from '@/components/referals/ReferalLinkCard.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
@@ -20,12 +23,16 @@ const totalLinks = ref(0)
 const currentOffset = ref(0)
 const ITEMS_PER_PAGE = 10
 const currentFilters = ref<ReferalSearchFilters>({})
+const isLoading = ref(false)
+const loadError = ref<string | null>(null)
 
 async function fetchReferalLinks(filters?: ReferalSearchFilters) {
   if (filters) {
     currentFilters.value = filters
     currentOffset.value = 0
   }
+  isLoading.value = currentOffset.value === 0
+  loadError.value = null
   try {
     const response = await referalLinkService.search(ITEMS_PER_PAGE, currentOffset.value, currentFilters.value)
     if (currentOffset.value === 0) {
@@ -37,7 +44,10 @@ async function fetchReferalLinks(filters?: ReferalSearchFilters) {
     totalLinks.value = response.total
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
+  }
+  finally {
+    isLoading.value = false
   }
 }
 
@@ -96,7 +106,26 @@ function handleLinkDeleted(deletedLinkId: number) {
 
     <ReferalFilters class="mb-6" @change="fetchReferalLinks" />
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div v-if="isLoading" class="flex justify-center py-12">
+      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="fetchReferalLinks"
+    />
+
+    <EmptyState
+      v-else-if="referalLinks.length === 0 && !showAddForm"
+      :icon="Share2"
+      title="Нет реферальных ссылок"
+      description="Создайте реферальную ссылку и приглашайте новых участников"
+      action-label="Добавить ссылку"
+      @action="toggleAddForm"
+    />
+
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <div class="bg-card rounded-3xl border p-4 shadow-md ">
         <div
           v-if="!showAddForm"
@@ -122,7 +151,7 @@ function handleLinkDeleted(deletedLinkId: number) {
         @deleted="handleLinkDeleted"
       />
 
-      <div v-if="referalLinks.length < totalLinks" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center atems-center cursor-pointer " @click="loadMore">
+      <div v-if="referalLinks.length < totalLinks" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer " @click="loadMore">
         <span variant="ghost" class="m-auto">
           Показать ещё
         </span>

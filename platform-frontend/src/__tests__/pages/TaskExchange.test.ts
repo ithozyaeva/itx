@@ -1,4 +1,198 @@
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { mockGetAll, mockCreate, mockUpdate, mockAssign, mockUnassign, mockRemoveAssignee, mockMarkDone, mockApprove, mockReject, mockRemove } = vi.hoisted(() => ({
+  mockGetAll: vi.fn(),
+  mockCreate: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockAssign: vi.fn(),
+  mockUnassign: vi.fn(),
+  mockRemoveAssignee: vi.fn(),
+  mockMarkDone: vi.fn(),
+  mockApprove: vi.fn(),
+  mockReject: vi.fn(),
+  mockRemove: vi.fn(),
+}))
+
+vi.mock('itx-ui-kit', () => ({
+  Typography: { template: '<div><slot /></div>', props: ['variant', 'as'] },
+}))
+
+vi.mock('lucide-vue-next', () => ({
+  CheckCircle: { template: '<span />' },
+  ClipboardList: { template: '<span />' },
+  Clock: { template: '<span />' },
+  Edit3: { template: '<span />' },
+  Loader2: { template: '<span class="loader" />' },
+  Plus: { template: '<span />' },
+  Trash2: { template: '<span />' },
+  User: { template: '<span />' },
+  Users: { template: '<span />' },
+  XCircle: { template: '<span />' },
+}))
+
+vi.mock('@/components/common/EmptyState.vue', () => ({
+  default: { template: '<div class="empty-state"><slot /></div>', props: ['icon', 'title', 'description', 'actionLabel'] },
+}))
+
+vi.mock('@/components/common/ErrorState.vue', () => ({
+  default: { template: '<div class="error-state"><slot /></div>', props: ['message'], emits: ['retry'] },
+}))
+
+vi.mock('@/components/common/FormField.vue', () => ({
+  default: { template: '<div class="form-field"><slot /></div>', props: ['label', 'error', 'htmlFor', 'required'] },
+}))
+
+vi.mock('@/components/ConfirmDialog.vue', () => ({
+  default: { template: '<div class="confirm-dialog"><slot name="trigger" /></div>', props: ['title', 'description', 'confirmLabel'], emits: ['confirm'] },
+}))
+
+vi.mock('@/components/ui/dialog', () => ({
+  Dialog: { template: '<div class="dialog"><slot /></div>', props: ['open'] },
+  DialogContent: { template: '<div class="dialog-content"><slot /></div>' },
+  DialogHeader: { template: '<div class="dialog-header"><slot /></div>' },
+  DialogTitle: { template: '<div class="dialog-title"><slot /></div>' },
+  DialogDescription: { template: '<div class="dialog-description"><slot /></div>' },
+  DialogFooter: { template: '<div class="dialog-footer"><slot /></div>' },
+}))
+
+vi.mock('@/composables/useFormValidation', () => ({
+  required: () => (v: string) => (!v ? 'Required' : ''),
+  useFormValidation: () => ({
+    errors: {},
+    validateAll: vi.fn(() => true),
+    validateField: vi.fn(() => true),
+    clearErrors: vi.fn(),
+  }),
+}))
+
+vi.mock('@/composables/useSSE', () => ({
+  useSSE: vi.fn(),
+}))
+
+vi.mock('@/composables/useUser', () => ({
+  useUser: () => ({ value: { id: 1, firstName: 'Test', lastName: 'User' } }),
+  isUserAdmin: () => ({ value: false }),
+}))
+
+vi.mock('@/services/errorService', () => ({
+  handleError: vi.fn(async () => ({ message: 'Error occurred' })),
+}))
+
+vi.mock('@/services/taskExchange', () => ({
+  taskExchangeService: {
+    getAll: mockGetAll,
+    create: mockCreate,
+    update: mockUpdate,
+    assign: mockAssign,
+    unassign: mockUnassign,
+    removeAssignee: mockRemoveAssignee,
+    markDone: mockMarkDone,
+    approve: mockApprove,
+    reject: mockReject,
+    remove: mockRemove,
+  },
+}))
+
+import TaskExchange from '@/pages/TaskExchange.vue'
+
+describe('TaskExchange page', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows loading spinner initially', () => {
+    mockGetAll.mockReturnValue(new Promise(() => {}))
+    const wrapper = mount(TaskExchange)
+    expect(wrapper.find('.loader').exists()).toBe(true)
+  })
+
+  it('shows ErrorState when fetch fails', async () => {
+    mockGetAll.mockRejectedValue(new Error('Network error'))
+    const wrapper = mount(TaskExchange)
+    await flushPromises()
+    expect(wrapper.find('.error-state').exists()).toBe(true)
+  })
+
+  it('shows EmptyState when no tasks', async () => {
+    mockGetAll.mockResolvedValue({ items: [], total: 0 })
+    const wrapper = mount(TaskExchange)
+    await flushPromises()
+    expect(wrapper.find('.empty-state').exists()).toBe(true)
+  })
+
+  it('renders task cards when tasks exist', async () => {
+    mockGetAll.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          title: 'Test Task',
+          description: 'A test task',
+          status: 'OPEN',
+          creatorId: 2,
+          creator: { firstName: 'Creator', lastName: 'User', tg: 'creator' },
+          maxAssignees: 3,
+          assignees: [],
+        },
+        {
+          id: 2,
+          title: 'Another Task',
+          description: '',
+          status: 'IN_PROGRESS',
+          creatorId: 1,
+          creator: { firstName: 'Test', lastName: 'User', tg: 'test' },
+          maxAssignees: 1,
+          assignees: [{ id: 3, firstName: 'Worker', lastName: '', tg: 'worker' }],
+        },
+      ],
+      total: 2,
+    })
+    const wrapper = mount(TaskExchange)
+    await flushPromises()
+    expect(wrapper.text()).toContain('Test Task')
+    expect(wrapper.text()).toContain('Another Task')
+  })
+
+  it('shows ConfirmDialog on delete button for creator tasks', async () => {
+    mockGetAll.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          title: 'My Task',
+          description: '',
+          status: 'OPEN',
+          creatorId: 1,
+          creator: { firstName: 'Test', lastName: 'User', tg: 'test' },
+          maxAssignees: 1,
+          assignees: [],
+        },
+      ],
+      total: 1,
+    })
+    const wrapper = mount(TaskExchange)
+    await flushPromises()
+    expect(wrapper.find('.confirm-dialog').exists()).toBe(true)
+  })
+
+  it('shows status tabs', async () => {
+    mockGetAll.mockResolvedValue({ items: [], total: 0 })
+    const wrapper = mount(TaskExchange)
+    await flushPromises()
+    expect(wrapper.text()).toContain('Активные')
+    expect(wrapper.text()).toContain('Все')
+    expect(wrapper.text()).toContain('Открытые')
+    expect(wrapper.text()).toContain('В работе')
+    expect(wrapper.text()).toContain('На проверке')
+    expect(wrapper.text()).toContain('Выполненные')
+  })
+
+  it('calls taskExchangeService.getAll on mount', async () => {
+    mockGetAll.mockResolvedValue({ items: [], total: 0 })
+    mount(TaskExchange)
+    await flushPromises()
+    expect(mockGetAll).toHaveBeenCalledWith({ limit: 100 })
+  })
+})
 
 describe('TaskExchange logic', () => {
   const statusTabs = [
@@ -93,7 +287,10 @@ describe('TaskExchange logic', () => {
   describe('isAssignee', () => {
     it('returns true when user is in assignees', () => {
       const task: Task = {
-        id: 1, status: 'OPEN', creatorId: 10, maxAssignees: 3,
+        id: 1,
+        status: 'OPEN',
+        creatorId: 10,
+        maxAssignees: 3,
         assignees: [{ id: 5, firstName: 'A', lastName: 'B', tg: 'ab' }],
       }
       expect(isAssignee(task, 5)).toBe(true)
@@ -101,7 +298,10 @@ describe('TaskExchange logic', () => {
 
     it('returns false when user is not in assignees', () => {
       const task: Task = {
-        id: 1, status: 'OPEN', creatorId: 10, maxAssignees: 3,
+        id: 1,
+        status: 'OPEN',
+        creatorId: 10,
+        maxAssignees: 3,
         assignees: [{ id: 5, firstName: 'A', lastName: 'B', tg: 'ab' }],
       }
       expect(isAssignee(task, 99)).toBe(false)
@@ -136,7 +336,10 @@ describe('TaskExchange logic', () => {
 
     it('disallows when user is already assigned', () => {
       const task: Task = {
-        id: 1, status: 'OPEN', creatorId: 10, maxAssignees: 2,
+        id: 1,
+        status: 'OPEN',
+        creatorId: 10,
+        maxAssignees: 2,
         assignees: [{ id: 20, firstName: '', lastName: '', tg: '' }],
       }
       expect(canTakeTask(task, 20)).toBe(false)
@@ -144,7 +347,10 @@ describe('TaskExchange logic', () => {
 
     it('disallows when max assignees reached', () => {
       const task: Task = {
-        id: 1, status: 'OPEN', creatorId: 10, maxAssignees: 1,
+        id: 1,
+        status: 'OPEN',
+        creatorId: 10,
+        maxAssignees: 1,
         assignees: [{ id: 30, firstName: '', lastName: '', tg: '' }],
       }
       expect(canTakeTask(task, 20)).toBe(false)

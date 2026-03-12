@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { ReviewOnCommunity } from '@/services/reviews'
 import { Typography } from 'itx-ui-kit'
-import { Loader2, MessageSquareX, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { Loader2, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewModal from '@/components/ReviewModal.vue'
 import { Button } from '@/components/ui/button'
 import { handleError } from '@/services/errorService'
@@ -10,17 +12,19 @@ import { reviewService } from '@/services/reviews'
 
 const reviews = ref<ReviewOnCommunity[]>([])
 const isLoading = ref(false)
+const loadError = ref<string | null>(null)
 const editingId = ref<number | null>(null)
 const editText = ref('')
 const isModalOpen = ref(false)
 
 async function loadReviews() {
   isLoading.value = true
+  loadError.value = null
   try {
     reviews.value = await reviewService.getMyReviews()
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -93,10 +97,20 @@ onMounted(loadReviews)
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
-    <div v-else-if="reviews.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-      <MessageSquareX class="h-10 w-10" />
-      <p>У вас пока нет отзывов</p>
-    </div>
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="loadReviews"
+    />
+
+    <EmptyState
+      v-else-if="reviews.length === 0"
+      :icon="MessageSquare"
+      title="Отзывов пока нет"
+      description="Ваши отзывы о сообществе появятся здесь"
+      action-label="Добавить отзыв"
+      @action="isModalOpen = true"
+    />
 
     <div v-else class="space-y-4">
       <div

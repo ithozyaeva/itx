@@ -14,6 +14,10 @@ import {
   XCircle,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import FormField from '@/components/common/FormField.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { required, useFormValidation } from '@/composables/useFormValidation'
 import { useSSE } from '@/composables/useSSE'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
@@ -30,6 +35,7 @@ import { taskExchangeService } from '@/services/taskExchange'
 const tasks = ref<TaskExchange[]>([])
 const total = ref(0)
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
@@ -44,6 +50,14 @@ const activeStatus = ref<TaskExchangeStatus | 'all' | 'active'>('active')
 
 const user = useUser()
 const isAdmin = isUserAdmin()
+
+const { errors: createErrors, validateAll: validateCreate, clearErrors: clearCreateErrors } = useFormValidation({
+  title: [required('Введите название задания')],
+})
+
+const { errors: editErrors, validateAll: validateEdit, clearErrors: clearEditErrors } = useFormValidation({
+  title: [required('Введите название задания')],
+})
 
 const statusTabs: { key: TaskExchangeStatus | 'all' | 'active', label: string }[] = [
   { key: 'active', label: 'Активные' },
@@ -75,13 +89,15 @@ const filteredTasks = computed(() => {
 
 async function fetchTasks() {
   isLoading.value = true
+  loadError.value = null
   try {
     const res = await taskExchangeService.getAll({ limit: 100 })
     tasks.value = res.items ?? []
     total.value = res.total
   }
   catch (error) {
-    handleError(error)
+    const appError = await handleError(error)
+    loadError.value = appError.message
   }
   finally {
     isLoading.value = false
@@ -89,7 +105,7 @@ async function fetchTasks() {
 }
 
 async function createTask() {
-  if (!newTitle.value.trim())
+  if (!validateCreate({ title: newTitle.value }))
     return
   isSubmitting.value = true
   try {
@@ -118,7 +134,7 @@ function openEditDialog(task: TaskExchange) {
 }
 
 async function updateTask() {
-  if (!editTask.value || !editTitle.value.trim())
+  if (!editTask.value || !validateEdit({ title: editTitle.value }))
     return
   isSubmitting.value = true
   try {
@@ -139,71 +155,109 @@ async function updateTask() {
 }
 
 async function assignTask(id: number) {
+  // Optimistic update
+  const task = tasks.value.find(t => t.id === id)
+  if (task && user.value) {
+    task.assignees = [...(task.assignees ?? []), user.value as any]
+    if (task.assignees.length >= task.maxAssignees)
+      task.status = 'IN_PROGRESS'
+  }
   try {
     await taskExchangeService.assign(id)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function unassignTask(id: number) {
+  // Optimistic update
+  const task = tasks.value.find(t => t.id === id)
+  if (task && user.value) {
+    task.assignees = (task.assignees ?? []).filter(a => a.id !== user.value!.id)
+    task.status = 'OPEN'
+  }
   try {
     await taskExchangeService.unassign(id)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function removeAssignee(taskId: number, memberId: number) {
+  // Optimistic update
+  const task = tasks.value.find(t => t.id === taskId)
+  if (task) {
+    task.assignees = (task.assignees ?? []).filter(a => a.id !== memberId)
+    if (task.assignees.length === 0)
+      task.status = 'OPEN'
+  }
   try {
     await taskExchangeService.removeAssignee(taskId, memberId)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function markDone(id: number) {
+  const task = tasks.value.find(t => t.id === id)
+  if (task)
+    task.status = 'DONE'
   try {
     await taskExchangeService.markDone(id)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function approveTask(id: number) {
+  const task = tasks.value.find(t => t.id === id)
+  if (task)
+    task.status = 'APPROVED'
   try {
     await taskExchangeService.approve(id)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function rejectTask(id: number) {
+  const task = tasks.value.find(t => t.id === id)
+  if (task)
+    task.status = 'OPEN'
   try {
     await taskExchangeService.reject(id)
     await fetchTasks()
   }
   catch (error) {
     handleError(error)
+    await fetchTasks()
   }
 }
 
 async function deleteTask(id: number) {
+  // Optimistic update
+  const snapshot = [...tasks.value]
+  tasks.value = tasks.value.filter(t => t.id !== id)
   try {
     await taskExchangeService.remove(id)
-    await fetchTasks()
   }
   catch (error) {
+    tasks.value = snapshot
     handleError(error)
   }
 }
@@ -251,6 +305,7 @@ watch(showCreateDialog, (open) => {
     newTitle.value = ''
     newDescription.value = ''
     newMaxAssignees.value = 1
+    clearCreateErrors()
   }
 })
 
@@ -260,6 +315,7 @@ watch(showEditDialog, (open) => {
     editTitle.value = ''
     editDescription.value = ''
     editMaxAssignees.value = 1
+    clearEditErrors()
   }
 })
 </script>
@@ -289,6 +345,12 @@ watch(showEditDialog, (open) => {
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="fetchTasks"
+    />
+
     <template v-else>
       <div class="flex gap-2 mb-6 flex-wrap">
         <button
@@ -304,13 +366,14 @@ watch(showEditDialog, (open) => {
         </button>
       </div>
 
-      <div
+      <EmptyState
         v-if="filteredTasks.length === 0"
-        class="text-center py-12 text-muted-foreground"
-      >
-        <ClipboardList class="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Заданий пока нет</p>
-      </div>
+        :icon="ClipboardList"
+        title="Заданий пока нет"
+        description="Предложите задание, полезное сообществу, и заработайте баллы"
+        action-label="Предложить задание"
+        @action="showCreateDialog = true"
+      />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
@@ -338,13 +401,13 @@ watch(showEditDialog, (open) => {
           </p>
 
           <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-            <User class="h-3.5 w-3.5" />
+            <User class="h-3.5 w-3.5" aria-hidden="true" />
             <span>Автор: {{ displayName(task.creator) }}</span>
           </div>
 
           <!-- Assignees progress -->
           <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-            <Users class="h-3.5 w-3.5" />
+            <Users class="h-3.5 w-3.5" aria-hidden="true" />
             <span>Исполнители: {{ task.assignees?.length ?? 0 }}/{{ task.maxAssignees }}</span>
           </div>
 
@@ -358,16 +421,24 @@ watch(showEditDialog, (open) => {
               :key="assignee.id"
               class="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-              <Clock class="h-3 w-3" />
+              <Clock class="h-3 w-3" aria-hidden="true" />
               <span class="truncate">{{ displayName(assignee) }}</span>
-              <button
+              <ConfirmDialog
                 v-if="canRemoveAssignee(task) && task.status !== 'DONE' && task.status !== 'APPROVED'"
-                class="ml-auto shrink-0 p-0.5 rounded hover:bg-red-500/10 text-red-500 transition-colors"
-                title="Удалить исполнителя"
-                @click="removeAssignee(task.id, assignee.id)"
+                title="Удалить исполнителя?"
+                description="Исполнитель будет снят с задания."
+                confirm-label="Удалить"
+                @confirm="removeAssignee(task.id, assignee.id)"
               >
-                <Trash2 class="h-3 w-3" />
-              </button>
+                <template #trigger>
+                  <button
+                    class="ml-auto shrink-0 p-0.5 rounded hover:bg-red-500/10 text-red-500 transition-colors"
+                    aria-label="Удалить исполнителя"
+                  >
+                    <Trash2 class="h-3 w-3" />
+                  </button>
+                </template>
+              </ConfirmDialog>
             </div>
           </div>
 
@@ -403,6 +474,7 @@ watch(showEditDialog, (open) => {
             <button
               v-if="canEdit(task)"
               class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Редактировать задание"
               @click="openEditDialog(task)"
             >
               <Edit3 class="h-3.5 w-3.5" />
@@ -414,7 +486,7 @@ watch(showEditDialog, (open) => {
               class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
               @click="approveTask(task.id)"
             >
-              <CheckCircle class="h-3.5 w-3.5" />
+              <CheckCircle class="h-3.5 w-3.5" aria-hidden="true" />
               Одобрить
             </button>
             <button
@@ -422,18 +494,27 @@ watch(showEditDialog, (open) => {
               class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
               @click="rejectTask(task.id)"
             >
-              <XCircle class="h-3.5 w-3.5" />
+              <XCircle class="h-3.5 w-3.5" aria-hidden="true" />
               Отклонить
             </button>
 
             <!-- Delete (creator if OPEN, or admin) -->
-            <button
+            <ConfirmDialog
               v-if="(task.status === 'OPEN' && isCreator(task)) || isAdmin"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
-              @click="deleteTask(task.id)"
+              title="Удалить задание?"
+              description="Это действие нельзя отменить. Задание будет удалено навсегда."
+              confirm-label="Удалить"
+              @confirm="deleteTask(task.id)"
             >
-              <Trash2 class="h-3.5 w-3.5" />
-            </button>
+              <template #trigger>
+                <button
+                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                  aria-label="Удалить задание"
+                >
+                  <Trash2 class="h-3.5 w-3.5" />
+                </button>
+              </template>
+            </ConfirmDialog>
           </div>
         </div>
       </div>
@@ -455,33 +536,45 @@ watch(showEditDialog, (open) => {
           class="space-y-4"
           @submit.prevent="createTask"
         >
-          <div>
-            <label class="block text-sm font-medium mb-1">Название</label>
+          <FormField
+            label="Название"
+            :error="createErrors.title"
+            html-for="create-title"
+            required
+          >
             <input
+              id="create-title"
               v-model="newTitle"
               type="text"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              :class="{ 'border-destructive': createErrors.title }"
               placeholder="Что нужно сделать?"
             >
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Описание</label>
+          </FormField>
+          <FormField
+            label="Описание"
+            html-for="create-desc"
+          >
             <textarea
+              id="create-desc"
               v-model="newDescription"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
               placeholder="Подробности задания..."
             />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Кол-во исполнителей</label>
+          </FormField>
+          <FormField
+            label="Кол-во исполнителей"
+            html-for="create-assignees"
+          >
             <input
+              id="create-assignees"
               v-model.number="newMaxAssignees"
               type="number"
               min="1"
               max="50"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-          </div>
+          </FormField>
 
           <DialogFooter>
             <button
@@ -516,31 +609,43 @@ watch(showEditDialog, (open) => {
           class="space-y-4"
           @submit.prevent="updateTask"
         >
-          <div>
-            <label class="block text-sm font-medium mb-1">Название</label>
+          <FormField
+            label="Название"
+            :error="editErrors.title"
+            html-for="edit-title"
+            required
+          >
             <input
+              id="edit-title"
               v-model="editTitle"
               type="text"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              :class="{ 'border-destructive': editErrors.title }"
             >
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Описание</label>
+          </FormField>
+          <FormField
+            label="Описание"
+            html-for="edit-desc"
+          >
             <textarea
+              id="edit-desc"
               v-model="editDescription"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
             />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Кол-во исполнителей</label>
+          </FormField>
+          <FormField
+            label="Кол-во исполнителей"
+            html-for="edit-assignees"
+          >
             <input
+              id="edit-assignees"
               v-model.number="editMaxAssignees"
               type="number"
               min="1"
               max="50"
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-          </div>
+          </FormField>
 
           <DialogFooter>
             <button

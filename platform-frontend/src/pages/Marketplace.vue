@@ -9,6 +9,10 @@ import {
   User,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import FormField from '@/components/common/FormField.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   Dialog,
   DialogFooter,
@@ -16,6 +20,7 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { required, useFormValidation } from '@/composables/useFormValidation'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { marketplaceService } from '@/services/marketplace'
@@ -23,12 +28,15 @@ import { marketplaceService } from '@/services/marketplace'
 const items = ref<MarketplaceItem[]>([])
 const total = ref(0)
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
 const showCreateDialog = ref(false)
 const activeStatus = ref<MarketplaceItemStatus | 'all'>('ACTIVE')
 
 const user = useUser()
 const isAdmin = isUserAdmin()
+
+const { errors, validateAll, clearErrors } = useFormValidation({ title: [required('Введите название товара')] })
 
 // Form state
 const newTitle = ref('')
@@ -63,13 +71,14 @@ const filteredItems = computed(() => {
 
 async function fetchItems() {
   isLoading.value = true
+  loadError.value = null
   try {
     const res = await marketplaceService.getAll({ limit: 100 })
     items.value = res.items ?? []
     total.value = res.total
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -77,7 +86,7 @@ async function fetchItems() {
 }
 
 async function createItem() {
-  if (!newTitle.value.trim())
+  if (!validateAll({ title: newTitle.value }))
     return
   isSubmitting.value = true
   try {
@@ -117,6 +126,7 @@ function resetForm() {
   newDefects.value = ''
   newPackageContents.value = ''
   newImage.value = null
+  clearErrors()
 }
 
 async function requestPurchase(id: number) {
@@ -207,6 +217,12 @@ onMounted(() => {
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="fetchItems"
+    />
+
     <template v-else>
       <div class="flex gap-2 mb-6 flex-wrap">
         <button
@@ -222,13 +238,14 @@ onMounted(() => {
         </button>
       </div>
 
-      <div
+      <EmptyState
         v-if="filteredItems.length === 0"
-        class="text-center py-12 text-muted-foreground"
-      >
-        <Package class="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Объявлений пока нет</p>
-      </div>
+        :icon="Package"
+        title="Объявлений пока нет"
+        description="Продайте или обменяйте ненужные вещи с участниками сообщества"
+        action-label="Новое объявление"
+        @action="showCreateDialog = true"
+      />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
@@ -248,7 +265,7 @@ onMounted(() => {
             v-else
             class="w-full h-48 bg-muted flex items-center justify-center rounded-t-2xl"
           >
-            <Package class="h-12 w-12 text-muted-foreground opacity-40" />
+            <Package class="h-12 w-12 text-muted-foreground opacity-40" aria-hidden="true" />
           </div>
 
           <div class="p-4">
@@ -372,13 +389,22 @@ onMounted(() => {
               </button>
 
               <!-- Delete (ACTIVE seller, or admin) -->
-              <button
+              <ConfirmDialog
                 v-if="(item.status === 'ACTIVE' && isSeller(item)) || isAdmin"
-                class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
-                @click="deleteItem(item.id)"
+                title="Удалить объявление?"
+                description="Объявление будет удалено безвозвратно."
+                confirm-label="Удалить"
+                @confirm="deleteItem(item.id)"
               >
-                <Trash2 class="h-3.5 w-3.5" />
-              </button>
+                <template #trigger>
+                  <button
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                    aria-label="Удалить объявление"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </button>
+                </template>
+              </ConfirmDialog>
             </div>
           </div>
         </div>
@@ -396,16 +422,21 @@ onMounted(() => {
           class="space-y-4"
           @submit.prevent="createItem"
         >
-          <div>
-            <label class="block text-sm font-medium mb-1">Название *</label>
+          <FormField
+            label="Название"
+            :error="errors.title"
+            required
+            html-for="create-item-title"
+          >
             <input
+              id="create-item-title"
               v-model="newTitle"
               type="text"
               required
               class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Название товара"
             >
-          </div>
+          </FormField>
 
           <div>
             <label class="block text-sm font-medium mb-1">Описание</label>
