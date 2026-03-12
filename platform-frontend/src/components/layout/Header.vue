@@ -24,6 +24,7 @@ function logout() {
     <div class="container mr-auto ml-auto px-2 flex h-16 items-center justify-between space-x-2">
       <button
         class="p-2 rounded-xl bg-background border border-border md:hidden"
+        aria-label="Открыть меню"
         @click="toggleSidebar"
       >
         <BurgerIcon class="w-6 h-6" />
@@ -62,10 +63,14 @@ function logout() {
         <span class="mr-1 text-sm hidden sm:inline">
           {{ `${user.firstName} ${user.lastName?.[0] ?? ""}` }}
         </span>
-        <LogOut
-          class="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+        <button
+          aria-label="Выйти"
           @click="logout"
-        />
+        >
+          <LogOut
+            class="h-5 w-5 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+          />
+        </button>
       </div>
     </div>
   </header>

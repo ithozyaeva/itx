@@ -105,7 +105,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="dropdownRef" class="relative">
-    <button class="relative p-1 rounded hover:bg-secondary cursor-pointer" @click="toggleDropdown">
+    <button aria-label="Уведомления" class="relative p-1 rounded hover:bg-secondary cursor-pointer" @click="toggleDropdown">
       <Bell class="h-5 w-5" />
       <Badge
         v-if="unreadCount > 0"
@@ -131,7 +131,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="max-h-80 overflow-y-auto">
+      <div class="max-h-80 overflow-y-auto" aria-live="polite">
         <div v-if="notifications.length === 0" class="px-4 py-8 text-center text-sm text-muted-foreground">
           Нет уведомлений
         </div>

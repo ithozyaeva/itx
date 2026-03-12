@@ -42,6 +42,7 @@ async function handleSaveReview(text: string) {
 <template>
   <div>
     <div
+      data-onboarding="sidebar"
       class="fixed md:static h-screen border-r border-border bg-primary text-primary-foreground transition-all duration-300 w-full md:w-56 z-40"
       :class="[
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
@@ -58,6 +59,7 @@ async function handleSaveReview(text: string) {
             </Typography>
             <button
               class="p-2"
+              aria-label="Закрыть меню"
               @click="toggleSidebar"
             >
               <CloseIcon class="w-6 h-6" />
@@ -79,6 +81,7 @@ async function handleSaveReview(text: string) {
                 <li
                   v-for="item in group.items"
                   :key="item.path"
+                  :data-onboarding="item.dataOnboarding"
                 >
                   <Button
                     variant="ghost"
@@ -123,6 +126,7 @@ async function handleSaveReview(text: string) {
           <!-- User profile card -->
           <div
             v-if="user"
+            data-onboarding="profile"
             class="w-full mt-2 border-t border-border/20 pt-3 pb-1 cursor-pointer hover:opacity-80 transition-opacity"
             @click="navigateTo('/me')"
           >

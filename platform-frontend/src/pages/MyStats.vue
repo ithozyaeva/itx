@@ -2,6 +2,8 @@
 import type { ProfileStats } from '@/models/profileStats'
 import { Typography } from 'itx-ui-kit'
 import {
+  ArrowDown,
+  ArrowUp,
   Calendar,
   CheckCircle,
   ClipboardList,
@@ -9,24 +11,48 @@ import {
   Loader2,
   MessageSquare,
   Mic,
+  Minus,
   Share2,
   Star,
   TrendingUp,
+  Trophy,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
+import { pointsService } from '@/services/points'
 import { profileStatsService } from '@/services/profileStats'
+
+const user = useUser()
 
 const stats = ref<ProfileStats | null>(null)
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
+const leaderboardPosition = ref<number | null>(null)
 
 async function fetchStats() {
   isLoading.value = true
+  loadError.value = null
   try {
-    stats.value = await profileStatsService.getMyStats()
+    const [statsData, leaderboard] = await Promise.allSettled([
+      profileStatsService.getMyStats(),
+      pointsService.getLeaderboard(),
+    ])
+
+    if (statsData.status === 'fulfilled')
+      stats.value = statsData.value
+    else
+      throw statsData.reason
+
+    if (leaderboard.status === 'fulfilled' && user.value) {
+      const entries = (leaderboard.value as any).items ?? leaderboard.value
+      const idx = entries.findIndex((e: any) => e.memberId === user.value!.id)
+      leaderboardPosition.value = idx >= 0 ? idx + 1 : null
+    }
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -37,16 +63,36 @@ const statCards = computed(() => {
   if (!stats.value)
     return []
   return [
-    { label: 'Баллы', value: stats.value.pointsBalance, icon: Star, color: 'text-yellow-500' },
-    { label: 'Посещено событий', value: stats.value.eventsAttended, icon: Calendar, color: 'text-blue-500' },
-    { label: 'Проведено событий', value: stats.value.eventsHosted, icon: Mic, color: 'text-purple-500' },
-    { label: 'Отзывов', value: stats.value.reviewsCount, icon: MessageSquare, color: 'text-green-500' },
-    { label: 'Рефералов', value: stats.value.referralsCount, icon: Share2, color: 'text-orange-500' },
-    { label: 'Благодарностей получено', value: stats.value.kudosReceived, icon: Heart, color: 'text-red-500' },
-    { label: 'Благодарностей отправлено', value: stats.value.kudosSent, icon: Heart, color: 'text-pink-400' },
-    { label: 'Заданий создано', value: stats.value.tasksCreated, icon: ClipboardList, color: 'text-cyan-500' },
-    { label: 'Заданий выполнено', value: stats.value.tasksDone, icon: CheckCircle, color: 'text-emerald-500' },
+    { label: 'Баллы', value: stats.value.pointsBalance, icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+    { label: 'Посещено событий', value: stats.value.eventsAttended, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Проведено событий', value: stats.value.eventsHosted, icon: Mic, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Отзывов', value: stats.value.reviewsCount, icon: MessageSquare, color: 'text-green-500', bg: 'bg-green-500/10' },
+    { label: 'Рефералов', value: stats.value.referralsCount, icon: Share2, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: 'Благодарностей получено', value: stats.value.kudosReceived, icon: Heart, color: 'text-red-500', bg: 'bg-red-500/10' },
+    { label: 'Благодарностей отправлено', value: stats.value.kudosSent, icon: Heart, color: 'text-pink-400', bg: 'bg-pink-400/10' },
+    { label: 'Заданий создано', value: stats.value.tasksCreated, icon: ClipboardList, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+    { label: 'Заданий выполнено', value: stats.value.tasksDone, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
   ]
+})
+
+const pointsTrend = computed(() => {
+  const history = stats.value?.pointsHistory
+  if (!history || history.length < 2)
+    return null
+
+  const current = history[history.length - 1]?.total ?? 0
+  const previous = history[history.length - 2]?.total ?? 0
+
+  if (previous === 0)
+    return null
+
+  const change = ((current - previous) / previous) * 100
+  return {
+    value: Math.abs(Math.round(change)),
+    direction: change > 0 ? 'up' : change < 0 ? 'down' : 'same',
+    current,
+    previous,
+  }
 })
 
 const maxHistoryValue = computed(() => {
@@ -54,6 +100,39 @@ const maxHistoryValue = computed(() => {
     return 1
   return Math.max(...stats.value.pointsHistory.map(h => h.total), 1)
 })
+
+const activitySummary = computed(() => {
+  if (!stats.value)
+    return null
+
+  const total = stats.value.eventsAttended
+    + stats.value.eventsHosted
+    + stats.value.reviewsCount
+    + stats.value.kudosSent
+    + stats.value.tasksCreated
+    + stats.value.tasksDone
+
+  return {
+    totalActions: total,
+    mostActive: getMostActiveArea(),
+  }
+})
+
+function getMostActiveArea(): string {
+  if (!stats.value)
+    return ''
+
+  const areas = [
+    { label: 'события', value: stats.value.eventsAttended + stats.value.eventsHosted },
+    { label: 'задания', value: stats.value.tasksCreated + stats.value.tasksDone },
+    { label: 'благодарности', value: stats.value.kudosSent + stats.value.kudosReceived },
+    { label: 'отзывы', value: stats.value.reviewsCount },
+    { label: 'рефералы', value: stats.value.referralsCount },
+  ]
+
+  const sorted = [...areas].sort((a, b) => b.value - a.value)
+  return sorted[0].value > 0 ? sorted[0].label : 'нет активности'
+}
 
 function formatMonth(m: string) {
   const [_, month] = m.split('-')
@@ -65,6 +144,13 @@ function memberSinceFormatted() {
   if (!stats.value?.memberSince)
     return ''
   return new Date(stats.value.memberSince).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function daysSinceMember(): number {
+  if (!stats.value?.memberSince)
+    return 0
+  const diff = Date.now() - new Date(stats.value.memberSince).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
 }
 
 onMounted(() => {
@@ -89,27 +175,73 @@ onMounted(() => {
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="fetchStats"
+    />
+
     <template v-else-if="stats">
-      <p
-        v-if="stats.memberSince"
-        class="text-sm text-muted-foreground mb-6"
-      >
-        Участник с {{ memberSinceFormatted() }}
-      </p>
+      <!-- Summary row -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div class="rounded-2xl border bg-card border-border p-4">
+          <p class="text-xs text-muted-foreground mb-1">
+            Участник с
+          </p>
+          <p class="text-sm font-semibold">
+            {{ memberSinceFormatted() }}
+          </p>
+          <p class="text-xs text-muted-foreground mt-1">
+            {{ daysSinceMember() }} дней в сообществе
+          </p>
+        </div>
+
+        <div class="rounded-2xl border bg-card border-border p-4">
+          <p class="text-xs text-muted-foreground mb-1">
+            Общая активность
+          </p>
+          <p class="text-2xl font-bold tabular-nums">
+            {{ activitySummary?.totalActions ?? 0 }}
+          </p>
+          <p class="text-xs text-muted-foreground mt-1">
+            Больше всего: {{ activitySummary?.mostActive }}
+          </p>
+        </div>
+
+        <div
+          v-if="leaderboardPosition"
+          class="rounded-2xl border bg-card border-border p-4"
+        >
+          <p class="text-xs text-muted-foreground mb-1">
+            Место в рейтинге
+          </p>
+          <div class="flex items-center gap-2">
+            <Trophy class="h-5 w-5 text-yellow-500" />
+            <p class="text-2xl font-bold tabular-nums">
+              #{{ leaderboardPosition }}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <!-- Stat grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <div
           v-for="card in statCards"
           :key="card.label"
           class="rounded-2xl border bg-card border-border p-4"
         >
           <div class="flex items-center gap-2 mb-2">
-            <component
-              :is="card.icon"
-              class="h-4 w-4"
-              :class="card.color"
-            />
+            <div
+              class="flex items-center justify-center w-8 h-8 rounded-lg"
+              :class="card.bg"
+            >
+              <component
+                :is="card.icon"
+                class="h-4 w-4"
+                :class="card.color"
+              />
+            </div>
             <span class="text-xs text-muted-foreground">{{ card.label }}</span>
           </div>
           <p class="text-2xl font-bold tabular-nums">
@@ -121,26 +253,96 @@ onMounted(() => {
       <!-- Points history chart -->
       <div
         v-if="stats.pointsHistory && stats.pointsHistory.length > 0"
-        class="rounded-2xl border bg-card border-border p-4"
+        class="rounded-2xl border bg-card border-border p-4 mb-6"
       >
-        <div class="flex items-center gap-2 mb-4">
-          <TrendingUp class="h-4 w-4 text-primary" />
-          <h3 class="font-semibold text-sm">
-            Баллы по месяцам
-          </h3>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <TrendingUp class="h-4 w-4 text-primary" />
+            <h3 class="font-semibold text-sm">
+              Баллы по месяцам
+            </h3>
+          </div>
+          <!-- Trend indicator -->
+          <div
+            v-if="pointsTrend"
+            class="flex items-center gap-1 text-xs font-medium"
+            :class="{
+              'text-green-500': pointsTrend.direction === 'up',
+              'text-red-500': pointsTrend.direction === 'down',
+              'text-muted-foreground': pointsTrend.direction === 'same',
+            }"
+          >
+            <ArrowUp
+              v-if="pointsTrend.direction === 'up'"
+              class="h-3.5 w-3.5"
+            />
+            <ArrowDown
+              v-else-if="pointsTrend.direction === 'down'"
+              class="h-3.5 w-3.5"
+            />
+            <Minus
+              v-else
+              class="h-3.5 w-3.5"
+            />
+            {{ pointsTrend.value }}% за месяц
+          </div>
         </div>
-        <div class="flex items-end gap-2 h-32">
+
+        <!-- SVG area chart -->
+        <div class="relative h-40">
+          <svg
+            class="w-full h-full"
+            :viewBox="`0 0 ${stats.pointsHistory.length * 100} 160`"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- Area -->
+            <path
+              :d="(() => {
+                const points = stats.pointsHistory.map((m, i) => {
+                  const x = i * 100 + 50
+                  const y = 150 - (m.total / maxHistoryValue) * 130
+                  return `${x},${y}`
+                })
+                const first = stats.pointsHistory.length > 0 ? 50 : 0
+                const last = (stats.pointsHistory.length - 1) * 100 + 50
+                return `M${first},150 L${points.join(' L')} L${last},150 Z`
+              })()"
+              class="fill-primary/10"
+            />
+            <!-- Line -->
+            <polyline
+              :points="stats.pointsHistory.map((m, i) => {
+                const x = i * 100 + 50
+                const y = 150 - (m.total / maxHistoryValue) * 130
+                return `${x},${y}`
+              }).join(' ')"
+              class="stroke-primary"
+              fill="none"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <!-- Dots -->
+            <circle
+              v-for="(m, i) in stats.pointsHistory"
+              :key="m.month"
+              :cx="i * 100 + 50"
+              :cy="150 - (m.total / maxHistoryValue) * 130"
+              r="4"
+              class="fill-primary"
+            />
+          </svg>
+        </div>
+
+        <!-- Labels -->
+        <div class="flex justify-between mt-2 px-1">
           <div
             v-for="month in stats.pointsHistory"
             :key="month.month"
-            class="flex-1 flex flex-col items-center gap-1"
+            class="flex flex-col items-center text-center flex-1"
           >
             <span class="text-xs font-medium tabular-nums">{{ month.total }}</span>
-            <div
-              class="w-full rounded-t-md bg-primary/80 transition-all min-h-1"
-              :style="{ height: `${(month.total / maxHistoryValue) * 100}%` }"
-            />
-            <span class="text-xs text-muted-foreground">{{ formatMonth(month.month) }}</span>
+            <span class="text-[10px] text-muted-foreground">{{ formatMonth(month.month) }}</span>
           </div>
         </div>
       </div>

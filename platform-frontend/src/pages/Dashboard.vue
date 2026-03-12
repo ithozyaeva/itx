@@ -205,6 +205,7 @@ onMounted(async () => {
     <template v-else>
       <!-- Hero Greeting -->
       <div
+        data-onboarding="dashboard"
         class="relative rounded-3xl border bg-card p-6 md:p-8 overflow-hidden"
       >
         <!-- Subtle accent gradient -->

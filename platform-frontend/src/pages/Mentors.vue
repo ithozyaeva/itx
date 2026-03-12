@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
 import { Typography } from 'itx-ui-kit'
-import { Loader2, UserX } from 'lucide-vue-next'
+import { Loader2, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import MentorCard from '@/components/mentors/MentorCard.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCardReveal } from '@/composables/useCardReveal'
+import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
 
 const PAGE_SIZE = 12
@@ -19,15 +22,20 @@ const mentors = ref<Mentor[]>([])
 const total = ref(0)
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
+const loadError = ref<string | null>(null)
 const searchQuery = ref('')
 const selectedTag = ref('')
 
 async function loadMentors() {
   isLoading.value = true
+  loadError.value = null
   try {
     const result = await mentorsService.getAll(PAGE_SIZE, 0)
     mentors.value = result.items
     total.value = result.total
+  }
+  catch (error) {
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -100,11 +108,19 @@ onMounted(loadMentors)
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
+    <ErrorState
+      v-else-if="loadError"
+      :message="loadError"
+      @retry="loadMentors"
+    />
+
     <template v-else>
-      <div v-if="filteredMentors.length === 0" class="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-        <UserX class="h-10 w-10" />
-        <p>Менторы не найдены</p>
-      </div>
+      <EmptyState
+        v-if="filteredMentors.length === 0"
+        :icon="Users"
+        title="Менторов пока нет"
+        description="Скоро здесь появятся менторы сообщества"
+      />
       <template v-else>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <MentorCard

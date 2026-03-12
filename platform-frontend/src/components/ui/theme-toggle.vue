@@ -13,7 +13,7 @@ const mode = useColorMode({
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline" size="icon">
+      <Button variant="outline" size="icon" aria-label="Переключить тему">
         <Sun v-if="mode === 'light'" class="h-[1.2rem] w-[1.2rem]" />
         <Moon v-else-if="mode === 'dark'" class="h-[1.2rem] w-[1.2rem]" />
         <Laptop v-else class="h-[1.2rem] w-[1.2rem]" />
