@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import type { PointsSummary } from '@/models/points'
+import type { PointsSummary, PointTransaction } from '@/models/points'
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
 import { Typography } from 'itx-ui-kit'
 import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageCircle, MessageSquare, Mic, Share2, Star, User } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 
+const PAGE_SIZE = 10
 const { toast } = useToast()
 const data = ref<PointsSummary | null>(null)
 const chatQuests = ref<ChatQuestWithProgress[]>([])
 const isLoading = ref(true)
+const visibleCount = ref(PAGE_SIZE)
 
 const reasonLabels: Record<string, string> = {
   event_attend: 'Участие в событии',
@@ -65,6 +68,22 @@ const completedReasons = computed(() => {
     return new Set<string>()
   return new Set(data.value.transactions.map(tx => tx.reason))
 })
+
+const visibleTransactions = computed<PointTransaction[]>(() => {
+  if (!data.value)
+    return []
+  return data.value.transactions.slice(0, visibleCount.value)
+})
+
+const hasMoreTransactions = computed(() => {
+  if (!data.value)
+    return false
+  return visibleCount.value < data.value.transactions.length
+})
+
+function loadMore() {
+  visibleCount.value += PAGE_SIZE
+}
 
 function isQuestCompleted(reason: string) {
   return completedReasons.value.has(reason)
@@ -402,36 +421,47 @@ onMounted(() => {
       >
         Пока нет транзакций. Выполняйте задания, чтобы зарабатывать баллы!
       </div>
-      <div
-        v-else
-        class="space-y-3"
-      >
-        <div
-          v-for="tx in data.transactions"
-          :key="tx.id"
-          class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl"
-        >
-          <div class="flex-1 min-w-0">
-            <div class="font-medium text-sm">
-              {{ tx.description || reasonLabels[tx.reason] || tx.reason }}
+      <template v-else>
+        <div class="space-y-3">
+          <div
+            v-for="tx in visibleTransactions"
+            :key="tx.id"
+            class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm">
+                {{ tx.description || reasonLabels[tx.reason] || tx.reason }}
+              </div>
+              <div class="text-xs text-muted-foreground mt-0.5">
+                {{ reasonLabels[tx.reason] || tx.reason }}
+              </div>
             </div>
-            <div class="text-xs text-muted-foreground mt-0.5">
-              {{ reasonLabels[tx.reason] || tx.reason }}
-            </div>
-          </div>
-          <div class="shrink-0 text-right">
-            <div
-              class="font-bold"
-              :class="tx.amount > 0 ? 'text-green-500' : 'text-red-500'"
-            >
-              {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount }}
-            </div>
-            <div class="text-xs text-muted-foreground">
-              {{ new Date(tx.createdAt).toLocaleDateString() }}
+            <div class="shrink-0 text-right">
+              <div
+                class="font-bold"
+                :class="tx.amount > 0 ? 'text-green-500' : 'text-red-500'"
+              >
+                {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount }}
+              </div>
+              <div class="text-xs text-muted-foreground">
+                {{ new Date(tx.createdAt).toLocaleDateString() }}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+
+        <div
+          v-if="hasMoreTransactions"
+          class="mt-4 flex justify-center"
+        >
+          <Button
+            variant="outline"
+            @click="loadMore"
+          >
+            Показать ещё
+          </Button>
+        </div>
+      </template>
     </template>
   </div>
 </template>

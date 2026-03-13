@@ -108,10 +108,10 @@ async function loadProfile() {
     if (profile.value) {
       achievementsService.getByMemberId(id).then((res) => {
         achievements.value = res
-      }).catch(() => {})
+      }).catch(err => handleError(err))
       profileStatsService.getMemberStats(id).then((res) => {
         stats.value = res
-      }).catch(() => {})
+      }).catch(err => handleError(err))
     }
   }
   catch (error) {

@@ -5,16 +5,22 @@ import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSSE } from '@/composables/useSSE'
+import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { raffleService } from '@/services/raffles'
 
+const user = useUser()
 const items = ref<RaffleItem[]>([])
 const isLoading = ref(true)
 const buyingId = ref<number | null>(null)
 const ticketCounts = ref<Record<number, number>>({})
+const filterMode = ref<'all' | 'my'>('all')
 
-const activeRaffles = computed(() => items.value.filter(r => r.status === 'ACTIVE'))
-const finishedRaffles = computed(() => items.value.filter(r => r.status === 'FINISHED'))
+const filteredItems = computed(() =>
+  filterMode.value === 'my' ? items.value.filter(r => r.myTickets > 0) : items.value,
+)
+const activeRaffles = computed(() => filteredItems.value.filter(r => r.status === 'ACTIVE'))
+const finishedRaffles = computed(() => filteredItems.value.filter(r => r.status === 'FINISHED'))
 
 async function fetchRaffles() {
   isLoading.value = true
@@ -72,13 +78,33 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
-    <Typography
-      variant="h2"
-      as="h1"
-      class="mb-6"
-    >
-      Розыгрыши
-    </Typography>
+    <div class="flex items-center justify-between mb-6">
+      <Typography
+        variant="h2"
+        as="h1"
+      >
+        Розыгрыши
+      </Typography>
+      <div
+        v-if="user"
+        class="flex gap-1 bg-muted rounded-lg p-0.5"
+      >
+        <button
+          class="px-3 py-1.5 text-sm rounded-md transition-colors"
+          :class="filterMode === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+          @click="filterMode = 'all'"
+        >
+          Все
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm rounded-md transition-colors"
+          :class="filterMode === 'my' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+          @click="filterMode = 'my'"
+        >
+          Мои розыгрыши
+        </button>
+      </div>
+    </div>
 
     <div
       v-if="isLoading"
@@ -89,11 +115,11 @@ onMounted(() => {
 
     <template v-else>
       <div
-        v-if="items.length === 0"
+        v-if="filteredItems.length === 0"
         class="text-center py-12 text-muted-foreground"
       >
         <Gift class="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Розыгрышей пока нет</p>
+        <p>{{ filterMode === 'my' ? 'Вы ещё не участвовали в розыгрышах' : 'Розыгрышей пока нет' }}</p>
       </div>
 
       <!-- Active -->
@@ -219,6 +245,12 @@ onMounted(() => {
             >
               Без участников
             </p>
+            <div
+              v-if="raffle.myTickets > 0"
+              class="text-sm text-muted-foreground mt-1"
+            >
+              Ваших билетов: {{ raffle.myTickets }}
+            </div>
           </div>
         </div>
       </div>

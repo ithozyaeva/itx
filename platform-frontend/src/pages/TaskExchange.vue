@@ -8,6 +8,7 @@ import {
   Edit3,
   Loader2,
   Plus,
+  Search,
   Trash2,
   User,
   Users,
@@ -47,6 +48,7 @@ const editTitle = ref('')
 const editDescription = ref('')
 const editMaxAssignees = ref(1)
 const activeStatus = ref<TaskExchangeStatus | 'all' | 'active'>('active')
+const searchQuery = ref('')
 
 const user = useUser()
 const isAdmin = isUserAdmin()
@@ -80,11 +82,21 @@ const statusConfig: Record<TaskExchangeStatus, { label: string, class: string }>
 }
 
 const filteredTasks = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  let result: TaskExchange[]
   if (activeStatus.value === 'all')
-    return tasks.value
-  if (activeStatus.value === 'active')
-    return activeTasks.value
-  return tasks.value.filter(t => t.status === activeStatus.value)
+    result = tasks.value
+  else if (activeStatus.value === 'active')
+    result = activeTasks.value
+  else
+    result = tasks.value.filter(t => t.status === activeStatus.value)
+  if (query) {
+    result = result.filter(t =>
+      t.title.toLowerCase().includes(query)
+      || t.description?.toLowerCase().includes(query),
+    )
+  }
+  return result
 })
 
 async function fetchTasks() {
@@ -352,18 +364,29 @@ watch(showEditDialog, (open) => {
     />
 
     <template v-else>
-      <div class="flex gap-2 mb-6 flex-wrap">
-        <button
-          v-for="tab in statusTabs"
-          :key="tab.key"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          :class="activeStatus === tab.key
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
-          @click="activeStatus = tab.key"
-        >
-          {{ tab.label }}
-        </button>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        <div class="flex gap-2 flex-wrap">
+          <button
+            v-for="tab in statusTabs"
+            :key="tab.key"
+            class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+            :class="activeStatus === tab.key
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
+            @click="activeStatus = tab.key"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+        <div class="relative sm:ml-auto">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Поиск заданий..."
+            class="w-full sm:w-64 rounded-xl border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+        </div>
       </div>
 
       <EmptyState

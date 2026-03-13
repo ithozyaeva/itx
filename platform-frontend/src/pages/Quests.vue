@@ -10,6 +10,7 @@ import {
   Star,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { useSSE } from '@/composables/useSSE'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 
@@ -70,6 +71,8 @@ async function fetchQuests() {
     isLoading.value = false
   }
 }
+
+useSSE('quests', () => fetchQuests())
 
 onMounted(() => {
   fetchQuests()

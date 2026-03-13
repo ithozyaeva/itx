@@ -25,6 +25,7 @@ const isLoadingMore = ref(false)
 const loadError = ref<string | null>(null)
 const searchQuery = ref('')
 const selectedTag = ref('')
+const sortBy = ref<'name' | 'services'>('name')
 
 async function loadMentors() {
   isLoading.value = true
@@ -49,6 +50,9 @@ async function loadMore() {
     mentors.value.push(...result.items)
     total.value = result.total
   }
+  catch (error) {
+    handleError(error)
+  }
   finally {
     isLoadingMore.value = false
   }
@@ -66,13 +70,25 @@ const allTags = computed(() => {
 
 const hasActiveFilters = computed(() => !!searchQuery.value || !!selectedTag.value)
 
+const sortOptions: { key: 'name' | 'services', label: string }[] = [
+  { key: 'name', label: 'По имени' },
+  { key: 'services', label: 'По количеству услуг' },
+]
+
 const filteredMentors = computed(() => {
-  return mentors.value.filter((mentor) => {
+  const filtered = mentors.value.filter((mentor) => {
     const matchesSearch = !searchQuery.value
       || `${mentor.firstName} ${mentor.lastName}`.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesTag = !selectedTag.value
       || mentor.profTags?.some(tag => tag.id === Number(selectedTag.value))
     return matchesSearch && matchesTag
+  })
+  return filtered.sort((a, b) => {
+    if (sortBy.value === 'services')
+      return (b.services?.length ?? 0) - (a.services?.length ?? 0)
+    const nameA = `${a.firstName} ${a.lastName}`.toLowerCase()
+    const nameB = `${b.firstName} ${b.lastName}`.toLowerCase()
+    return nameA.localeCompare(nameB, 'ru')
   })
 })
 
@@ -85,25 +101,45 @@ onMounted(loadMentors)
       Менторы
     </Typography>
 
-    <div class="flex flex-col sm:flex-row gap-4 mb-6">
-      <Input
-        v-model="searchQuery"
-        placeholder="Поиск по имени..."
-        class="max-w-xs"
-      />
-      <Select v-model="selectedTag" class="max-w-xs">
-        <SelectTrigger class="max-w-xs">
-          <SelectValue placeholder="Все теги" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">
-            Все теги
-          </SelectItem>
-          <SelectItem v-for="tag in allTags" :key="tag.id" :value="String(tag.id)">
-            {{ tag.title }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
+    <div class="flex flex-col gap-4 mb-6">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <Input
+          v-model="searchQuery"
+          placeholder="Поиск по имени..."
+          class="max-w-xs"
+        />
+        <Select v-model="selectedTag" class="max-w-xs">
+          <SelectTrigger class="max-w-xs">
+            <SelectValue placeholder="Все теги" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">
+              Все теги
+            </SelectItem>
+            <SelectItem
+              v-for="tag in allTags"
+              :key="tag.id"
+              :value="String(tag.id)"
+            >
+              {{ tag.title }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div class="flex gap-2 flex-wrap items-center">
+        <span class="text-sm text-muted-foreground">Сортировка:</span>
+        <button
+          v-for="option in sortOptions"
+          :key="option.key"
+          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+          :class="sortBy === option.key
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
+          @click="sortBy = option.key"
+        >
+          {{ option.label }}
+        </button>
+      </div>
     </div>
 
     <div v-if="isLoading" class="flex justify-center py-12">
