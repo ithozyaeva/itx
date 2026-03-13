@@ -16,6 +16,7 @@ import Mentors from '@/pages/Mentors.vue'
 import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
 import MyStats from '@/pages/MyStats.vue'
+import NotificationSettings from '@/pages/NotificationSettings.vue'
 import Quests from '@/pages/Quests.vue'
 import Raffles from '@/pages/Raffles.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
@@ -26,29 +27,30 @@ import Home from '@/pages/User.vue'
 import { useMainStore } from '../store'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: Dashboard, name: 'dashboard' },
-  { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
-  { path: '/events', component: Events, name: 'events', meta: { breadcrumb: [{ label: 'События' }] } },
-  { path: '/content', component: Content, name: 'content', meta: { breadcrumb: [{ label: 'Контент' }] } },
-  { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { breadcrumb: [{ label: 'Профиль участника' }] } },
-  { path: '/mentors', component: Mentors, name: 'mentors', meta: { breadcrumb: [{ label: 'Менторы' }] } },
-  { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile', meta: { breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
-  { path: '/referals', component: ReferalLinks, name: 'referals', meta: { breadcrumb: [{ label: 'Рефералы' }] } },
-  { path: '/resumes', component: Resumes, name: 'resumes', meta: { breadcrumb: [{ label: 'Резюме' }] } },
-  { path: '/my-reviews', component: MyReviews, name: 'myReviews', meta: { breadcrumb: [{ label: 'Мои отзывы' }] } },
-  { path: '/points', component: MyPoints, name: 'myPoints', meta: { breadcrumb: [{ label: 'Мои баллы' }] } },
-  { path: '/leaderboard', component: Leaderboard, name: 'leaderboard', meta: { breadcrumb: [{ label: 'Рейтинг' }] } },
-  { path: '/achievements', component: Achievements, name: 'achievements', meta: { breadcrumb: [{ label: 'Достижения' }] } },
-  { path: '/marketplace', component: Marketplace, name: 'marketplace', meta: { breadcrumb: [{ label: 'Барахолка' }] } },
-  { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }] } },
-  { path: '/quests', component: Quests, name: 'quests', meta: { breadcrumb: [{ label: 'Квесты' }] } },
-  { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }] } },
-  { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }] } },
-  { path: '/seasons', component: Seasons, name: 'seasons', meta: { breadcrumb: [{ label: 'Сезоны' }] } },
-  { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }] } },
-  { path: '/casino', component: Casino, name: 'casino', meta: { breadcrumb: [{ label: 'Казино' }] } },
-  { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
-  { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
+  { path: '/', component: Dashboard, name: 'dashboard', meta: { requiresAuth: true } },
+  { path: '/me', component: Home, name: 'profile', meta: { requiresAuth: true, breadcrumb: [{ label: 'Мой профиль' }] } },
+  { path: '/events', component: Events, name: 'events', meta: { requiresAuth: true, breadcrumb: [{ label: 'События' }] } },
+  { path: '/content', component: Content, name: 'content', meta: { requiresAuth: true, breadcrumb: [{ label: 'Контент' }] } },
+  { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { requiresAuth: true, breadcrumb: [{ label: 'Профиль участника' }] } },
+  { path: '/mentors', component: Mentors, name: 'mentors', meta: { requiresAuth: true, breadcrumb: [{ label: 'Менторы' }] } },
+  { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile', meta: { requiresAuth: true, breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
+  { path: '/referals', component: ReferalLinks, name: 'referals', meta: { requiresAuth: true, breadcrumb: [{ label: 'Рефералы' }] } },
+  { path: '/resumes', component: Resumes, name: 'resumes', meta: { requiresAuth: true, breadcrumb: [{ label: 'Резюме' }] } },
+  { path: '/my-reviews', component: MyReviews, name: 'myReviews', meta: { requiresAuth: true, breadcrumb: [{ label: 'Мои отзывы' }] } },
+  { path: '/points', component: MyPoints, name: 'myPoints', meta: { requiresAuth: true, breadcrumb: [{ label: 'Мои баллы' }] } },
+  { path: '/leaderboard', component: Leaderboard, name: 'leaderboard', meta: { requiresAuth: true, breadcrumb: [{ label: 'Рейтинг' }] } },
+  { path: '/achievements', component: Achievements, name: 'achievements', meta: { requiresAuth: true, breadcrumb: [{ label: 'Достижения' }] } },
+  { path: '/marketplace', component: Marketplace, name: 'marketplace', meta: { requiresAuth: true, breadcrumb: [{ label: 'Барахолка' }] } },
+  { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { requiresAuth: true, breadcrumb: [{ label: 'Биржа заданий' }] } },
+  { path: '/quests', component: Quests, name: 'quests', meta: { requiresAuth: true, breadcrumb: [{ label: 'Квесты' }] } },
+  { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { requiresAuth: true, breadcrumb: [{ label: 'Автоотклики' }] } },
+  { path: '/kudos', component: Kudos, name: 'kudos', meta: { requiresAuth: true, breadcrumb: [{ label: 'Благодарности' }] } },
+  { path: '/seasons', component: Seasons, name: 'seasons', meta: { requiresAuth: true, breadcrumb: [{ label: 'Сезоны' }] } },
+  { path: '/raffles', component: Raffles, name: 'raffles', meta: { requiresAuth: true, breadcrumb: [{ label: 'Розыгрыши' }] } },
+  { path: '/casino', component: Casino, name: 'casino', meta: { requiresAuth: true, breadcrumb: [{ label: 'Казино' }] } },
+  { path: '/guilds', component: Guilds, name: 'guilds', meta: { requiresAuth: true, breadcrumb: [{ label: 'Гильдии' }] } },
+  { path: '/my-stats', component: MyStats, name: 'myStats', meta: { requiresAuth: true, breadcrumb: [{ label: 'Моя статистика' }] } },
+  { path: '/notifications', component: NotificationSettings, name: 'notifications', meta: { requiresAuth: true, breadcrumb: [{ label: 'Уведомления' }] } },
 ]
 
 const router = createRouter({
@@ -63,11 +65,11 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     store.initFromLocalStorage()
   }
 
-  if (to.meta.requiresAuth && !store.user) {
-    next('/login')
+  if (!to.meta.requiresAuth || store.user) {
+    next()
   }
   else {
-    next()
+    next(false)
   }
 })
 

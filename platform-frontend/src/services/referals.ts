@@ -5,7 +5,6 @@ export interface ReferalSearchFilters {
   grade?: string
   company?: string
   status?: string
-  profTagIds?: number[]
 }
 
 function cleanFilters(filters?: ReferalSearchFilters): Record<string, string> {
@@ -18,8 +17,6 @@ function cleanFilters(filters?: ReferalSearchFilters): Record<string, string> {
     result.company = filters.company
   if (filters.status)
     result.status = filters.status
-  if (filters.profTagIds && filters.profTagIds.length > 0)
-    result.profTagIds = filters.profTagIds.join(',')
   return result
 }
 

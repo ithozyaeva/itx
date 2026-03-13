@@ -85,7 +85,10 @@ async function loadMoreFuture() {
   }
 }
 
+const isLoadingCalendar = ref(false)
+
 async function loadCalendarEvents() {
+  isLoadingCalendar.value = true
   try {
     const [past, future] = await Promise.all([
       eventsService.searchOld(200, 0, currentFilters.value),
@@ -93,8 +96,12 @@ async function loadCalendarEvents() {
     ])
     calendarEvents.value = [...future.items, ...past.items]
   }
-  catch {
+  catch (error) {
     calendarEvents.value = [...futureEvents.value, ...pastEvents.value]
+    handleError(error)
+  }
+  finally {
+    isLoadingCalendar.value = false
   }
 }
 
@@ -205,7 +212,10 @@ onMounted(() => loadEvents())
     </template>
 
     <div v-else-if="viewMode === 'calendar'" class="rounded-2xl border bg-card border-border p-4">
-      <CalendarView :events="allEvents" />
+      <div v-if="isLoadingCalendar" class="flex justify-center py-12">
+        <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+      <CalendarView v-else :events="allEvents" />
     </div>
   </div>
 </template>

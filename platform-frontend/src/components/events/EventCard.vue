@@ -109,7 +109,10 @@ async function declineEvent(eventId: number) {
 }
 
 function getICS() {
-  window.open(`${window.location.origin}/api/events/ics?eventId=${event.value.id}`, '_blank')
+  const link = document.createElement('a')
+  link.href = `/api/events/ics?eventId=${event.value.id}`
+  link.download = `${event.value.title}.ics`
+  link.click()
 }
 
 const { placeTypesObject } = useDictionary(['placeTypes'])
@@ -150,7 +153,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
           {{ tag.name }}
         </Tag>
         <template v-if="!isPassedEvent">
-          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="getICS">
+          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" aria-label="Скачать ICS файл" @click="getICS">
             + ICS
           </button>
           <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="openInGoogleCalendar(event)">

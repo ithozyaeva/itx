@@ -184,7 +184,16 @@ function displayName(member: { firstName: string, lastName: string, tg: string }
 
 function onImageChange(event: Event) {
   const target = event.target as HTMLInputElement
-  newImage.value = target.files?.[0] ?? null
+  const file = target.files?.[0] ?? null
+  if (file) {
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      handleError(new Error('Размер файла не должен превышать 5 МБ'))
+      target.value = ''
+      return
+    }
+  }
+  newImage.value = file
 }
 
 onMounted(() => {
@@ -378,6 +387,23 @@ onMounted(() => {
               >
                 Отменить бронь
               </button>
+
+              <!-- RESERVED: cancel reservation (seller) -->
+              <ConfirmDialog
+                v-if="item.status === 'RESERVED' && isSeller(item)"
+                title="Снять бронь?"
+                :description="`Бронь покупателя ${item.buyer ? displayName(item.buyer) : ''} будет отменена, и объявление вернётся в активные.`"
+                confirm-label="Снять бронь"
+                @confirm="cancelPurchase(item.id)"
+              >
+                <template #trigger>
+                  <button
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Снять бронь
+                  </button>
+                </template>
+              </ConfirmDialog>
 
               <!-- RESERVED: confirm sale (seller) -->
               <button

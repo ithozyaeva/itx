@@ -59,28 +59,6 @@ describe('referalLinkService', () => {
       })
     })
 
-    it('should join profTagIds with comma', async () => {
-      const data = { items: [], total: 0 }
-      mockJson.mockResolvedValue(data)
-
-      await referalLinkService.search(10, 0, { profTagIds: [1, 2, 3] })
-
-      expect(mockApiClient.get).toHaveBeenCalledWith('referals', {
-        searchParams: { limit: 10, offset: 0, profTagIds: '1,2,3' },
-      })
-    })
-
-    it('should exclude empty profTagIds array', async () => {
-      const data = { items: [], total: 0 }
-      mockJson.mockResolvedValue(data)
-
-      await referalLinkService.search(10, 0, { profTagIds: [] })
-
-      expect(mockApiClient.get).toHaveBeenCalledWith('referals', {
-        searchParams: { limit: 10, offset: 0 },
-      })
-    })
-
     it('should exclude undefined filter values', async () => {
       const data = { items: [], total: 0 }
       mockJson.mockResolvedValue(data)

@@ -4,15 +4,29 @@ import { Tag, Typography } from 'itx-ui-kit'
 import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
+import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
 
 const route = useRoute()
 const mentor = ref<MentorWithReviews | null>(null)
+const isLoading = ref(true)
+const loadError = ref<string | null>(null)
 
 async function loadMentor() {
-  const id = Number(route.params.id)
-  mentor.value = await mentorsService.getById(id)
+  isLoading.value = true
+  loadError.value = null
+  try {
+    const id = Number(route.params.id)
+    mentor.value = await mentorsService.getById(id)
+  }
+  catch (error) {
+    loadError.value = (await handleError(error)).message
+  }
+  finally {
+    isLoading.value = false
+  }
 }
 
 onMounted(loadMentor)
@@ -25,11 +39,13 @@ onMounted(loadMentor)
       Назад к менторам
     </RouterLink>
 
-    <div v-if="!mentor" class="flex justify-center py-12">
+    <div v-if="isLoading" class="flex justify-center py-12">
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
 
-    <div v-else class="space-y-6">
+    <ErrorState v-else-if="loadError" :message="loadError" @retry="loadMentor" />
+
+    <div v-else-if="mentor" class="space-y-6">
       <div class="bg-card rounded-3xl border p-6">
         <Typography variant="h2" as="h1" class="mb-2">
           {{ mentor.firstName }} {{ mentor.lastName }}
