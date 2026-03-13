@@ -41,6 +41,7 @@ function handleBackdropClick(event: MouseEvent) {
       <Transition name="modal-scale">
         <div v-if="isOpen" class="bg-card text-card-foreground rounded-3xl p-6 w-full max-w-md relative shadow-xl">
           <button
+            type="button"
             class="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer"
             @click="handleClose"
           >
@@ -66,12 +67,14 @@ function handleBackdropClick(event: MouseEvent) {
 
           <div class="flex justify-end gap-3">
             <button
+              type="button"
               class="px-4 py-2 border border-input rounded-full hover:bg-secondary transition duration-300 cursor-pointer"
               @click="handleClose"
             >
               Отменить
             </button>
             <button
+              type="button"
               class="px-4 py-2 bg-accent text-accent-foreground rounded-full hover:bg-accent/90 transition duration-300 cursor-pointer"
               :disabled="!reviewText.trim()"
               @click="handleSave"

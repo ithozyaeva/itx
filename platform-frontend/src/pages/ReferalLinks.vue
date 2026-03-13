@@ -127,14 +127,15 @@ function handleLinkDeleted(deletedLinkId: number) {
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <div class="bg-card rounded-3xl border p-4 shadow-md ">
-        <div
+        <button
           v-if="!showAddForm"
-          class="transition-shadow flex flex-col items-center justify-center gap-2 text-center cursor-pointer min-h-[100px] sm:min-h-[150px]"
+          type="button"
+          class="transition-shadow flex flex-col items-center justify-center gap-2 text-center cursor-pointer min-h-[100px] sm:min-h-[150px] w-full bg-transparent border-none"
           @click="toggleAddForm"
         >
           <span class="text-4xl">+</span>
           <span class="text-lg font-semibold">Добавить ссылку</span>
-        </div>
+        </button>
         <ReferalLinkForm
           v-if="showAddForm"
           :is-saving="isSaving"
@@ -151,11 +152,11 @@ function handleLinkDeleted(deletedLinkId: number) {
         @deleted="handleLinkDeleted"
       />
 
-      <div v-if="referalLinks.length < totalLinks" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer " @click="loadMore">
-        <span variant="ghost" class="m-auto">
+      <button v-if="referalLinks.length < totalLinks" type="button" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer" @click="loadMore">
+        <span class="m-auto">
           Показать ещё
         </span>
-      </div>
+      </button>
     </div>
   </div>
 </template>

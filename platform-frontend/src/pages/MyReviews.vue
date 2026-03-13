@@ -32,9 +32,14 @@ async function loadReviews() {
 }
 
 async function handleCreateReview(text: string) {
-  await reviewService.createReview(text)
-  isModalOpen.value = false
-  await loadReviews()
+  try {
+    await reviewService.createReview(text)
+    isModalOpen.value = false
+    await loadReviews()
+  }
+  catch (error) {
+    handleError(error)
+  }
 }
 
 function startEdit(review: ReviewOnCommunity) {

@@ -105,7 +105,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
           </Badge>
         </div>
         <div v-if="isOwner" class="flex items-center gap-1 shrink-0 ml-2">
-          <button class="p-1.5 rounded-lg hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors" :disabled="isSaving" @click="startEditing">
+          <button type="button" class="p-1.5 rounded-lg hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors" :disabled="isSaving" @click="startEditing">
             <Pencil :size="14" />
           </button>
           <ConfirmDialog
@@ -115,7 +115,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
             @confirm="handleDelete"
           >
             <template #trigger>
-              <button class="p-1.5 rounded-lg hover:bg-destructive/10 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" :disabled="isDeleting">
+              <button type="button" class="p-1.5 rounded-lg hover:bg-destructive/10 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" :disabled="isDeleting">
                 <Loader2 v-if="isDeleting" :size="14" class="animate-spin" />
                 <Trash v-else :size="14" />
               </button>
@@ -155,6 +155,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
 
       <button
         v-if="canConvert"
+        type="button"
         class="mt-3 w-full rounded-xl py-2 px-4 text-sm font-medium transition-colors"
         :class="hasConverted
           ? 'bg-secondary text-muted-foreground cursor-default'

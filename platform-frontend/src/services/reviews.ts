@@ -1,5 +1,4 @@
 import { apiClient } from './api'
-import { handleError } from './errorService'
 
 export interface ReviewOnCommunity {
   id: number
@@ -11,12 +10,7 @@ export interface ReviewOnCommunity {
 
 export const reviewService = {
   async createReview(text: string) {
-    try {
-      await apiClient.post('reviews/add', { json: { text } })
-    }
-    catch (err) {
-      handleError(err)
-    }
+    await apiClient.post('reviews/add', { json: { text } })
   },
 
   async getMyReviews() {

@@ -7,6 +7,8 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { useSSE } from '@/composables/useSSE'
+import { formatShortDate } from '@/lib/utils'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
@@ -143,6 +145,8 @@ async function fetchPoints() {
 }
 
 function questProgress(quest: ChatQuestWithProgress) {
+  if (!quest.targetCount)
+    return 0
   return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
 }
 
@@ -159,6 +163,8 @@ function formatQuestDeadline(dateStr: string) {
     return `Осталось ${diffDays} дн.`
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 }
+
+useSSE('points', () => fetchPoints())
 
 onMounted(() => {
   fetchPoints()
@@ -444,7 +450,7 @@ onMounted(() => {
                 {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount }}
               </div>
               <div class="text-xs text-muted-foreground">
-                {{ new Date(tx.createdAt).toLocaleDateString() }}
+                {{ formatShortDate(tx.createdAt) }}
               </div>
             </div>
           </div>
