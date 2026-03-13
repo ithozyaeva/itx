@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { MarketplaceItem, MarketplaceItemStatus } from '@/models/marketplace'
+import type { MarketplaceItem, MarketplaceItemCondition, MarketplaceItemStatus } from '@/models/marketplace'
 import { Typography } from 'itx-ui-kit'
 import {
   Loader2,
   Package,
   Plus,
+  Search,
   Trash2,
   User,
 } from 'lucide-vue-next'
@@ -32,6 +33,9 @@ const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
 const showCreateDialog = ref(false)
 const activeStatus = ref<MarketplaceItemStatus | 'all'>('ACTIVE')
+const searchQuery = ref('')
+const selectedCondition = ref<MarketplaceItemCondition | 'all'>('all')
+const sortBy = ref<'date' | 'price'>('date')
 
 const user = useUser()
 const isAdmin = isUserAdmin()
@@ -56,6 +60,24 @@ const statusTabs: { key: MarketplaceItemStatus | 'all', label: string }[] = [
   { key: 'SOLD', label: 'Проданные' },
 ]
 
+const conditionTabs: { key: MarketplaceItemCondition | 'all', label: string }[] = [
+  { key: 'all', label: 'Любое' },
+  { key: 'NEW', label: 'Новый' },
+  { key: 'USED', label: 'Б/у' },
+]
+
+const sortOptions: { key: 'date' | 'price', label: string }[] = [
+  { key: 'date', label: 'Сначала новые' },
+  { key: 'price', label: 'Сначала дешёвые' },
+]
+
+function parsePrice(price: string): number {
+  if (!price)
+    return Infinity
+  const num = Number.parseFloat(price.replace(/[^\d.,]/g, '').replace(',', '.'))
+  return Number.isNaN(num) ? Infinity : num
+}
+
 const statusConfig: Record<MarketplaceItemStatus, { label: string, class: string }> = {
   ACTIVE: { label: 'Активно', class: 'bg-blue-500/10 text-blue-500' },
   RESERVED: { label: 'Забронировано', class: 'bg-yellow-500/10 text-yellow-500' },
@@ -64,9 +86,18 @@ const statusConfig: Record<MarketplaceItemStatus, { label: string, class: string
 }
 
 const filteredItems = computed(() => {
-  if (activeStatus.value === 'all')
-    return items.value
-  return items.value.filter(i => i.status === activeStatus.value)
+  const query = searchQuery.value.toLowerCase().trim()
+  const filtered = items.value.filter((i) => {
+    const matchesStatus = activeStatus.value === 'all' || i.status === activeStatus.value
+    const matchesSearch = !query || i.title.toLowerCase().includes(query)
+    const matchesCondition = selectedCondition.value === 'all' || i.condition === selectedCondition.value
+    return matchesStatus && matchesSearch && matchesCondition
+  })
+  return filtered.sort((a, b) => {
+    if (sortBy.value === 'price')
+      return parsePrice(a.price) - parsePrice(b.price)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
 })
 
 async function fetchItems() {
@@ -233,18 +264,61 @@ onMounted(() => {
     />
 
     <template v-else>
-      <div class="flex gap-2 mb-6 flex-wrap">
-        <button
-          v-for="tab in statusTabs"
-          :key="tab.key"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-          :class="activeStatus === tab.key
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
-          @click="activeStatus = tab.key"
-        >
-          {{ tab.label }}
-        </button>
+      <div class="flex flex-col gap-4 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex gap-2 flex-wrap">
+            <button
+              v-for="tab in statusTabs"
+              :key="tab.key"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="activeStatus === tab.key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
+              @click="activeStatus = tab.key"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+          <div class="relative sm:ml-auto">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Поиск по названию..."
+              class="w-full sm:w-64 rounded-xl border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex gap-2 flex-wrap items-center">
+            <span class="text-sm text-muted-foreground">Состояние:</span>
+            <button
+              v-for="tab in conditionTabs"
+              :key="tab.key"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="selectedCondition === tab.key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
+              @click="selectedCondition = tab.key"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+          <div class="flex gap-2 flex-wrap items-center sm:ml-auto">
+            <span class="text-sm text-muted-foreground">Сортировка:</span>
+            <button
+              v-for="option in sortOptions"
+              :key="option.key"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="sortBy === option.key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
+              @click="sortBy = option.key"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <EmptyState

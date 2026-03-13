@@ -6,6 +6,7 @@ import { Heart, Loader2, Send } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogFooter,
@@ -20,9 +21,11 @@ import { apiClient } from '@/services/api'
 import { handleError } from '@/services/errorService'
 import { kudosService } from '@/services/kudos'
 
+const PAGE_SIZE = 20
 const items = ref<KudosItem[]>([])
 const total = ref(0)
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
 const isSubmitting = ref(false)
 const loadError = ref<string | null>(null)
 const showDialog = ref(false)
@@ -35,7 +38,7 @@ async function fetchKudos() {
   isLoading.value = true
   loadError.value = null
   try {
-    const res = await kudosService.getRecent(50)
+    const res = await kudosService.getRecent(PAGE_SIZE, 0)
     items.value = res.items ?? []
     total.value = res.total
   }
@@ -44,6 +47,20 @@ async function fetchKudos() {
   }
   finally {
     isLoading.value = false
+  }
+}
+
+async function loadMore() {
+  isLoadingMore.value = true
+  try {
+    const res = await kudosService.getRecent(PAGE_SIZE, items.value.length)
+    items.value.push(...(res.items ?? []))
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isLoadingMore.value = false
   }
 }
 
@@ -182,6 +199,23 @@ onMounted(() => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div
+        v-if="items.length < total"
+        class="mt-4 flex justify-center"
+      >
+        <Button
+          variant="outline"
+          :disabled="isLoadingMore"
+          @click="loadMore"
+        >
+          <Loader2
+            v-if="isLoadingMore"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
+          Показать ещё
+        </Button>
       </div>
     </template>
 

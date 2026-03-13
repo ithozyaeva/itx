@@ -16,7 +16,6 @@ import {
   FileText,
   Flame,
   Footprints,
-  Loader2,
   Medal,
   MessageCircle,
   MessageSquare,
@@ -194,12 +193,80 @@ onMounted(async () => {
 
 <template>
   <div class="px-4 py-6 md:py-8 max-w-4xl mx-auto">
-    <!-- Loading -->
+    <!-- Loading Skeleton -->
     <div
       v-if="isLoading"
-      class="flex justify-center py-24"
+      class="space-y-5"
     >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      <!-- Greeting card skeleton -->
+      <div class="rounded-3xl border bg-card p-6 md:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div class="space-y-2">
+            <div class="h-8 w-64 animate-pulse rounded-lg bg-muted" />
+            <div class="h-4 w-48 animate-pulse rounded-lg bg-muted" />
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex gap-1">
+              <div
+                v-for="i in 5"
+                :key="i"
+                class="h-2 w-5 animate-pulse rounded-full bg-muted"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+          <div
+            v-for="i in 3"
+            :key="i"
+            class="flex items-center gap-2.5 rounded-2xl bg-muted/50 p-3"
+          >
+            <div class="w-9 h-9 animate-pulse rounded-xl bg-muted" />
+            <div class="space-y-1.5">
+              <div class="h-5 w-12 animate-pulse rounded bg-muted" />
+              <div class="h-3 w-16 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event section skeleton -->
+      <div class="rounded-3xl border bg-card p-5 md:p-6">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="h-4 w-4 animate-pulse rounded bg-muted" />
+          <div class="h-4 w-36 animate-pulse rounded bg-muted" />
+        </div>
+        <div class="h-6 w-3/4 animate-pulse rounded-lg bg-muted mb-2" />
+        <div class="h-4 w-1/2 animate-pulse rounded bg-muted mb-3" />
+        <div class="flex gap-4">
+          <div class="h-4 w-28 animate-pulse rounded bg-muted" />
+          <div class="h-4 w-24 animate-pulse rounded bg-muted" />
+        </div>
+      </div>
+
+      <!-- Two-column grid skeleton -->
+      <div class="grid gap-5 md:grid-cols-2">
+        <div
+          v-for="i in 2"
+          :key="i"
+          class="rounded-3xl border bg-card p-5"
+        >
+          <div class="flex items-center gap-2 mb-4">
+            <div class="h-4 w-4 animate-pulse rounded bg-muted" />
+            <div class="h-4 w-32 animate-pulse rounded bg-muted" />
+          </div>
+          <div class="space-y-3">
+            <div
+              v-for="j in 2"
+              :key="j"
+              class="rounded-2xl bg-muted/40 p-3.5"
+            >
+              <div class="h-4 w-3/4 animate-pulse rounded bg-muted mb-2" />
+              <div class="h-3 w-1/2 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <template v-else>

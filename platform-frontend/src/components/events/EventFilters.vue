@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { EventSearchFilters } from '@/services/events'
-import { reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDictionary } from '@/composables/useDictionary'
@@ -24,6 +24,8 @@ watch(filters, () => {
     emit('change', { ...filters })
   }, 350)
 }, { deep: true })
+
+onBeforeUnmount(() => clearTimeout(debounceTimer.value))
 </script>
 
 <template>

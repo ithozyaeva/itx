@@ -25,6 +25,7 @@ vi.mock('lucide-vue-next', () => ({
   Edit3: { template: '<span />' },
   Loader2: { template: '<span class="loader" />' },
   Plus: { template: '<span />' },
+  Search: { template: '<span />' },
   Trash2: { template: '<span />' },
   User: { template: '<span />' },
   Users: { template: '<span />' },

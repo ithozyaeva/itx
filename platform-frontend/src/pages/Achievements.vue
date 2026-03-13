@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AchievementCategory, AchievementsResponse } from '@/models/achievement'
+import type { AchievementCategory, AchievementsResponse, UserAchievement } from '@/models/achievement'
 import { Typography } from 'itx-ui-kit'
 import {
   Award,
@@ -36,12 +36,26 @@ import {
   Zap,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { achievementsService } from '@/services/achievements'
 import { handleError } from '@/services/errorService'
 
 const data = ref<AchievementsResponse | null>(null)
 const isLoading = ref(true)
 const activeCategory = ref<AchievementCategory | 'all'>('all')
+const selectedAchievement = ref<UserAchievement | null>(null)
+const showDetailDialog = ref(false)
+
+function openDetail(achievement: UserAchievement) {
+  selectedAchievement.value = achievement
+  showDetailDialog.value = true
+}
 
 const iconMap: Record<string, any> = {
   'footprints': Footprints,
@@ -155,10 +169,11 @@ onMounted(() => {
         <div
           v-for="achievement in filteredItems"
           :key="achievement.id"
-          class="rounded-2xl p-4 transition-colors border"
+          class="rounded-2xl p-4 transition-colors border cursor-pointer hover:shadow-md"
           :class="achievement.unlocked
             ? 'bg-green-500/5 border-green-500/30'
             : 'bg-card border-border opacity-60'"
+          @click="openDetail(achievement)"
         >
           <div class="flex items-start gap-3">
             <div
@@ -197,5 +212,73 @@ onMounted(() => {
         </div>
       </div>
     </template>
+
+    <!-- Achievement Detail Dialog -->
+    <Dialog
+      v-model:open="showDetailDialog"
+    >
+      <DialogContent
+        v-if="selectedAchievement"
+        class="sm:max-w-md"
+      >
+        <DialogHeader>
+          <div class="flex justify-center mb-4">
+            <div
+              class="flex items-center justify-center w-16 h-16 rounded-full"
+              :class="selectedAchievement.unlocked ? 'bg-green-500/20' : 'bg-primary/10'"
+            >
+              <component
+                :is="iconMap[selectedAchievement.icon] || Award"
+                class="h-8 w-8"
+                :class="selectedAchievement.unlocked ? 'text-green-500' : 'text-primary'"
+              />
+            </div>
+          </div>
+          <DialogTitle class="text-center">
+            {{ selectedAchievement.title }}
+          </DialogTitle>
+          <DialogDescription class="text-center">
+            {{ selectedAchievement.description }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4 pt-2">
+          <!-- Unlock status -->
+          <div class="flex items-center justify-center gap-2">
+            <span
+              v-if="selectedAchievement.unlocked"
+              class="inline-flex items-center gap-1.5 text-sm font-medium text-green-500"
+            >
+              <CheckCircle class="h-4 w-4" />
+              Получено
+            </span>
+            <span
+              v-else
+              class="text-sm text-muted-foreground"
+            >
+              Ещё не получено
+            </span>
+          </div>
+
+          <!-- Progress bar -->
+          <div>
+            <div class="flex justify-between text-sm text-muted-foreground mb-1.5">
+              <span>Прогресс</span>
+              <span class="font-medium">{{ Math.min(selectedAchievement.progress, selectedAchievement.threshold) }} / {{ selectedAchievement.threshold }}</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all"
+                :class="selectedAchievement.unlocked ? 'bg-green-500' : 'bg-primary'"
+                :style="{ width: `${Math.min(100, (selectedAchievement.progress / selectedAchievement.threshold) * 100)}%` }"
+              />
+            </div>
+            <p class="text-xs text-muted-foreground text-right mt-1">
+              {{ Math.min(100, Math.round((selectedAchievement.progress / selectedAchievement.threshold) * 100)) }}%
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
