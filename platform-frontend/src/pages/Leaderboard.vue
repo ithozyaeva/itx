@@ -24,7 +24,8 @@ const hasMore = computed(() => displayCount.value < allEntries.value.length)
 const currentUserEntry = computed(() => {
   if (!user.value)
     return null
-  const index = allEntries.value.findIndex(e => e.memberId === user.value!.id)
+  const userId = user.value.id
+  const index = allEntries.value.findIndex(e => e.memberId === userId)
   if (index === -1)
     return null
   return { entry: allEntries.value[index], rank: index + 1 }
@@ -60,7 +61,11 @@ onMounted(() => {
 })
 
 function getAvatarSrc(entry: LeaderboardEntry) {
-  return entry.avatarUrl || `https://t.me/i/userpic/160/${entry.tg}.jpg`
+  if (entry.avatarUrl)
+    return entry.avatarUrl
+  if (entry.tg)
+    return `https://t.me/i/userpic/160/${entry.tg}.jpg`
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`
 }
 
 function isCurrentUser(entry: LeaderboardEntry) {
@@ -122,7 +127,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
               loading="lazy"
               class="w-full h-full object-cover transition-opacity duration-300"
               @load="($event.target as HTMLImageElement).style.opacity = '1'"
-              @error="($event.target as HTMLImageElement).style.opacity = '1'"
+              @error="(e: Event) => { const img = e.target as HTMLImageElement; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserEntry!.entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
             >
           </div>
 
@@ -171,7 +176,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
             loading="lazy"
             class="w-full h-full object-cover transition-opacity duration-300"
             @load="($event.target as HTMLImageElement).style.opacity = '1'"
-            @error="($event.target as HTMLImageElement).style.opacity = '1'"
+            @error="(e: Event) => { const img = e.target as HTMLImageElement; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
           >
         </div>
 

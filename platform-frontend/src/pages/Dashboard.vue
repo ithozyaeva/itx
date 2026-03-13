@@ -106,6 +106,8 @@ const activeQuests = computed(() => chatQuests.value.filter(q => !q.completed))
 const completedQuests = computed(() => chatQuests.value.filter(q => q.completed))
 
 function questProgress(quest: ChatQuestWithProgress) {
+  if (!quest.targetCount)
+    return 0
   return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
 }
 
@@ -138,11 +140,11 @@ function isEventLive(event: CommunityEvent) {
 }
 
 function isMemberOfEvent(event: CommunityEvent) {
-  return user.value ? event.members.some(m => m.id === user.value!.id) : false
+  return event.members.some(m => m.id === user.value?.id)
 }
 
 function isHostOfEvent(event: CommunityEvent) {
-  return user.value ? event.hosts.some(h => h.id === user.value!.id) : false
+  return event.hosts.some(h => h.id === user.value?.id)
 }
 
 onMounted(async () => {

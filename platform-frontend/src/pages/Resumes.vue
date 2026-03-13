@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
 
@@ -99,6 +100,10 @@ async function deleteResume(resume: Resume) {
 async function downloadResume(resume: Resume) {
   try {
     const data = await resumeService.download(resume.id)
+    if (!data?.url) {
+      handleError(new Error('Ссылка для скачивания недоступна'))
+      return
+    }
     window.open(data.url, '_blank')
   }
   catch (error) {
@@ -172,7 +177,7 @@ onMounted(loadResumes)
                 {{ resume.fileName }}
               </p>
               <p class="text-sm text-muted-foreground">
-                Загружено {{ new Date(resume.createdAt).toLocaleDateString() }}
+                Загружено {{ formatShortDate(resume.createdAt) }}
               </p>
             </div>
             <div class="flex gap-2 shrink-0">
@@ -233,7 +238,7 @@ onMounted(loadResumes)
                 Дата загрузки
               </dt>
               <dd class="font-medium text-foreground">
-                {{ new Date(resume.createdAt).toLocaleDateString() }}
+                {{ formatShortDate(resume.createdAt) }}
               </dd>
             </div>
           </dl>

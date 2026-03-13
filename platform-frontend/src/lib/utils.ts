@@ -30,3 +30,16 @@ export const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
   minute: '2-digit',
   hour12: false,
 })
+
+export const shortDateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+export function formatShortDate(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (Number.isNaN(d.getTime()))
+    return ''
+  return shortDateFormatter.format(d)
+}
