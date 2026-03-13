@@ -20,6 +20,7 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import { useUser } from '@/composables/useUser'
+import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 import { profileStatsService } from '@/services/profileStats'
@@ -46,8 +47,9 @@ async function fetchStats() {
       throw statsData.reason
 
     if (leaderboard.status === 'fulfilled' && user.value) {
-      const entries = (leaderboard.value as any).items ?? leaderboard.value
-      const idx = entries.findIndex((e: any) => e.memberId === user.value!.id)
+      const entries = leaderboard.value.items ?? []
+      const userId = user.value.id
+      const idx = entries.findIndex(e => e.memberId === userId)
       leaderboardPosition.value = idx >= 0 ? idx + 1 : null
     }
   }
@@ -143,7 +145,7 @@ function formatMonth(m: string) {
 function memberSinceFormatted() {
   if (!stats.value?.memberSince)
     return ''
-  return new Date(stats.value.memberSince).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  return formatShortDate(stats.value.memberSince)
 }
 
 function daysSinceMember(): number {

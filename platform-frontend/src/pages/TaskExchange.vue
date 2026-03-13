@@ -38,6 +38,7 @@ const total = ref(0)
 const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
+const actionInProgress = ref<number | null>(null)
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
 const newTitle = ref('')
@@ -167,6 +168,9 @@ async function updateTask() {
 }
 
 async function assignTask(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   // Optimistic update
   const task = tasks.value.find(t => t.id === id)
   if (task && user.value) {
@@ -182,13 +186,19 @@ async function assignTask(id: number) {
     handleError(error)
     await fetchTasks()
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function unassignTask(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   // Optimistic update
   const task = tasks.value.find(t => t.id === id)
   if (task && user.value) {
-    task.assignees = (task.assignees ?? []).filter(a => a.id !== user.value!.id)
+    task.assignees = (task.assignees ?? []).filter(a => a.id !== user.value?.id)
     task.status = 'OPEN'
   }
   try {
@@ -198,6 +208,9 @@ async function unassignTask(id: number) {
   catch (error) {
     handleError(error)
     await fetchTasks()
+  }
+  finally {
+    actionInProgress.value = null
   }
 }
 
@@ -220,6 +233,9 @@ async function removeAssignee(taskId: number, memberId: number) {
 }
 
 async function markDone(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   const task = tasks.value.find(t => t.id === id)
   if (task)
     task.status = 'DONE'
@@ -231,9 +247,15 @@ async function markDone(id: number) {
     handleError(error)
     await fetchTasks()
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function approveTask(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   const task = tasks.value.find(t => t.id === id)
   if (task)
     task.status = 'APPROVED'
@@ -245,9 +267,15 @@ async function approveTask(id: number) {
     handleError(error)
     await fetchTasks()
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function rejectTask(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   const task = tasks.value.find(t => t.id === id)
   if (task)
     task.status = 'OPEN'
@@ -258,6 +286,9 @@ async function rejectTask(id: number) {
   catch (error) {
     handleError(error)
     await fetchTasks()
+  }
+  finally {
+    actionInProgress.value = null
   }
 }
 
@@ -469,25 +500,30 @@ watch(showEditDialog, (open) => {
             <!-- OPEN: take task (not creator, not already assigned) -->
             <button
               v-if="canTakeTask(task)"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              :disabled="actionInProgress === task.id"
               @click="assignTask(task.id)"
             >
+              <Loader2 v-if="actionInProgress === task.id" class="h-3 w-3 animate-spin inline mr-1" />
               Взять задание
             </button>
 
             <!-- IN_PROGRESS: mark done (creator/admin) -->
             <button
               v-if="canMarkDone(task)"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+              :disabled="actionInProgress === task.id"
               @click="markDone(task.id)"
             >
+              <Loader2 v-if="actionInProgress === task.id" class="h-3 w-3 animate-spin inline mr-1" />
               Выполнено
             </button>
 
             <!-- Unassign self (assignee, while OPEN or IN_PROGRESS) -->
             <button
               v-if="isAssignee(task) && (task.status === 'OPEN' || task.status === 'IN_PROGRESS')"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              :disabled="actionInProgress === task.id"
               @click="unassignTask(task.id)"
             >
               Отказаться
@@ -506,7 +542,8 @@ watch(showEditDialog, (open) => {
             <!-- DONE: approve/reject (admin) -->
             <button
               v-if="task.status === 'DONE' && isAdmin"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+              :disabled="actionInProgress === task.id"
               @click="approveTask(task.id)"
             >
               <CheckCircle class="h-3.5 w-3.5" aria-hidden="true" />
@@ -514,7 +551,8 @@ watch(showEditDialog, (open) => {
             </button>
             <button
               v-if="task.status === 'DONE' && isAdmin"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              :disabled="actionInProgress === task.id"
               @click="rejectTask(task.id)"
             >
               <XCircle class="h-3.5 w-3.5" aria-hidden="true" />

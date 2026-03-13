@@ -31,6 +31,7 @@ const total = ref(0)
 const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
+const actionInProgress = ref<number | null>(null)
 const showCreateDialog = ref(false)
 const activeStatus = ref<MarketplaceItemStatus | 'all'>('ACTIVE')
 const searchQuery = ref('')
@@ -161,6 +162,7 @@ function resetForm() {
 }
 
 async function requestPurchase(id: number) {
+  actionInProgress.value = id
   try {
     await marketplaceService.requestPurchase(id)
     await fetchItems()
@@ -168,9 +170,13 @@ async function requestPurchase(id: number) {
   catch (error) {
     handleError(error)
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function cancelPurchase(id: number) {
+  actionInProgress.value = id
   try {
     await marketplaceService.cancelPurchase(id)
     await fetchItems()
@@ -178,9 +184,13 @@ async function cancelPurchase(id: number) {
   catch (error) {
     handleError(error)
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function markSold(id: number) {
+  actionInProgress.value = id
   try {
     await marketplaceService.markSold(id)
     await fetchItems()
@@ -188,15 +198,22 @@ async function markSold(id: number) {
   catch (error) {
     handleError(error)
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function deleteItem(id: number) {
+  actionInProgress.value = id
   try {
     await marketplaceService.remove(id)
     await fetchItems()
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    actionInProgress.value = null
   }
 }
 
@@ -213,10 +230,17 @@ function displayName(member: { firstName: string, lastName: string, tg: string }
   return name || `@${member.tg}`
 }
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
 function onImageChange(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0] ?? null
   if (file) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      handleError(new Error('Допустимые форматы: JPEG, PNG, WebP, GIF'))
+      target.value = ''
+      return
+    }
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (file.size > maxSize) {
       handleError(new Error('Размер файла не должен превышать 5 МБ'))
@@ -447,18 +471,22 @@ onMounted(() => {
               <!-- ACTIVE: buy (not seller) -->
               <button
                 v-if="item.status === 'ACTIVE' && !isSeller(item)"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                :disabled="actionInProgress === item.id"
                 @click="requestPurchase(item.id)"
               >
+                <Loader2 v-if="actionInProgress === item.id" class="h-3 w-3 animate-spin inline mr-1" />
                 Хочу купить
               </button>
 
               <!-- RESERVED: cancel (buyer) -->
               <button
                 v-if="item.status === 'RESERVED' && isBuyer(item)"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                :disabled="actionInProgress === item.id"
                 @click="cancelPurchase(item.id)"
               >
+                <Loader2 v-if="actionInProgress === item.id" class="h-3 w-3 animate-spin inline mr-1" />
                 Отменить бронь
               </button>
 
@@ -482,9 +510,11 @@ onMounted(() => {
               <!-- RESERVED: confirm sale (seller) -->
               <button
                 v-if="item.status === 'RESERVED' && isSeller(item)"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                :disabled="actionInProgress === item.id"
                 @click="markSold(item.id)"
               >
+                <Loader2 v-if="actionInProgress === item.id" class="h-3 w-3 animate-spin inline mr-1" />
                 Подтвердить продажу
               </button>
 
