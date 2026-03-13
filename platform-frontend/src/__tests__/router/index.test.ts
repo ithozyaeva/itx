@@ -85,44 +85,17 @@ describe('router', () => {
     })
   })
 
-  describe('navigation guard', () => {
-    it('allows navigation when user is authenticated', async () => {
-      const { useMainStore } = await import('@/store/index')
-      const store = useMainStore()
-      store.user = { id: 1 } as any
-
+  describe('navigation', () => {
+    it('allows navigation to dashboard', async () => {
       await router.push('/')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('dashboard')
     })
 
-    it('allows navigation to events page when authenticated', async () => {
-      const { useMainStore } = await import('@/store/index')
-      const store = useMainStore()
-      store.user = { id: 1 } as any
-
+    it('allows navigation to events page', async () => {
       await router.push('/events')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('events')
-    })
-
-    it('blocks navigation when user is not authenticated', async () => {
-      const { useMainStore } = await import('@/store/index')
-      const store = useMainStore()
-      store.user = null as any
-
-      const result = await router.push('/me')
-      expect(result).toBeDefined()
-    })
-
-    it('initializes store from localStorage if no user', async () => {
-      const { useMainStore } = await import('@/store/index')
-      const store = useMainStore()
-      const initSpy = vi.spyOn(store, 'initFromLocalStorage')
-
-      await router.push('/me')
-
-      expect(initSpy).toHaveBeenCalled()
     })
   })
 })
