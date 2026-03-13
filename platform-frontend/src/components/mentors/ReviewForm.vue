@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
 
 const props = defineProps<{
@@ -32,7 +33,7 @@ async function handleSubmit() {
     emit('submitted')
   }
   catch (error) {
-    console.error('Ошибка при отправке отзыва:', error)
+    handleError(error)
   }
   finally {
     isSubmitting.value = false

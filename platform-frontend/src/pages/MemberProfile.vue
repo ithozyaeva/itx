@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AchievementsResponse } from '@/models/achievement'
 import type { PublicProfile } from '@/models/profile'
+import type { ProfileStats } from '@/models/profileStats'
 import { Typography } from 'itx-ui-kit'
 import {
   ArrowLeft,
@@ -31,6 +32,7 @@ import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } 
 import { achievementsService } from '@/services/achievements'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
+import { profileStatsService } from '@/services/profileStats'
 
 const iconMap: Record<string, any> = {
   'footprints': Footprints,
@@ -55,6 +57,7 @@ const route = useRoute()
 const router = useRouter()
 const currentUser = useUser()
 const profile = ref<PublicProfile | null>(null)
+const stats = ref<ProfileStats | null>(null)
 const achievements = ref<AchievementsResponse | null>(null)
 const isLoading = ref(true)
 const avatarError = ref(false)
@@ -105,6 +108,9 @@ async function loadProfile() {
     if (profile.value) {
       achievementsService.getByMemberId(id).then((res) => {
         achievements.value = res
+      }).catch(() => {})
+      profileStatsService.getMemberStats(id).then((res) => {
+        stats.value = res
       }).catch(() => {})
     }
   }
@@ -224,6 +230,44 @@ onMounted(loadProfile)
               class="h-2.5 w-2.5 rounded-full"
               :class="i - 1 <= subscriptionLevelIndex ? 'bg-green-500' : 'bg-muted'"
             />
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="stats"
+        class="grid grid-cols-2 sm:grid-cols-4 gap-4"
+      >
+        <div class="bg-card rounded-3xl border p-4 text-center">
+          <div class="text-2xl font-bold">
+            {{ stats.eventsAttended }}
+          </div>
+          <div class="text-xs text-muted-foreground mt-1">
+            Событий посещено
+          </div>
+        </div>
+        <div class="bg-card rounded-3xl border p-4 text-center">
+          <div class="text-2xl font-bold">
+            {{ stats.tasksCreated + stats.tasksDone }}
+          </div>
+          <div class="text-xs text-muted-foreground mt-1">
+            Заданий
+          </div>
+        </div>
+        <div class="bg-card rounded-3xl border p-4 text-center">
+          <div class="text-2xl font-bold">
+            {{ stats.kudosReceived }}
+          </div>
+          <div class="text-xs text-muted-foreground mt-1">
+            Благодарностей
+          </div>
+        </div>
+        <div class="bg-card rounded-3xl border p-4 text-center">
+          <div class="text-2xl font-bold">
+            {{ stats.reviewsCount }}
+          </div>
+          <div class="text-xs text-muted-foreground mt-1">
+            Отзывов
           </div>
         </div>
       </div>

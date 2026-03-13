@@ -33,9 +33,20 @@ const editedUser = reactive({
   tg: user.value?.tg ?? '',
 })
 
-function handleSubmit() {
-  profileService.updateMe(editedUser)
-  isEdit.value = false
+const isSaving = ref(false)
+
+async function handleSubmit() {
+  isSaving.value = true
+  try {
+    await profileService.updateMe(editedUser)
+    isEdit.value = false
+  }
+  catch (err) {
+    handleError(err)
+  }
+  finally {
+    isSaving.value = false
+  }
 }
 
 const avatarSrc = ref(user.value?.avatarUrl || `https://t.me/i/userpic/160/${user.value?.tg}.jpg`)
@@ -192,8 +203,10 @@ async function handleAvatarUpload(event: Event) {
         <Button
           v-if="isEdit"
           class="mt-5 px-4 py-2 cursor-pointer transition duration-300"
+          :disabled="isSaving"
           @click="handleSubmit"
         >
+          <Loader2 v-if="isSaving" class="h-4 w-4 animate-spin mr-2" />
           Сохранить изменения
         </Button>
       </div>

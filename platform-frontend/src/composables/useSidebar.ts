@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Award, BarChart3, BookOpen, Calendar, ClipboardList, Dices, FileText, Flame, Folder, Gift, Heart, Home, MessageSquare, Shield, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
+import { Award, BarChart3, Bell, BookOpen, Calendar, ClipboardList, Dices, FileText, Flame, Folder, Gift, Heart, Home, MessageSquare, Shield, ShoppingBag, Star, Trophy, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -54,6 +54,7 @@ const state = {
         { title: 'Рефералки', path: '/referals', icon: Folder },
         { title: 'Резюме', path: '/resumes', icon: FileText },
         { title: 'Мои отзывы', path: '/my-reviews', icon: MessageSquare },
+        { title: 'Уведомления', path: '/notifications', icon: Bell },
         { title: 'Барахолка', path: '/marketplace', icon: ShoppingBag },
       ],
     },

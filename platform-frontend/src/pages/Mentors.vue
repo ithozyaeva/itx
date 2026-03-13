@@ -64,6 +64,8 @@ const allTags = computed(() => {
   return Array.from(tags, ([id, title]) => ({ id, title }))
 })
 
+const hasActiveFilters = computed(() => !!searchQuery.value || !!selectedTag.value)
+
 const filteredMentors = computed(() => {
   return mentors.value.filter((mentor) => {
     const matchesSearch = !searchQuery.value
@@ -129,7 +131,7 @@ onMounted(loadMentors)
             :mentor="mentor"
           />
         </div>
-        <div v-if="mentors.length < total" class="mt-6 flex justify-center">
+        <div v-if="mentors.length < total && !hasActiveFilters" class="mt-6 flex justify-center">
           <Button
             variant="outline"
             :disabled="isLoadingMore"

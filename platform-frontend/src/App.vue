@@ -3,7 +3,7 @@ import { onBeforeMount, ref } from 'vue'
 import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import { Toaster } from '@/components/ui/toast'
 import { useOnboarding } from '@/composables/useOnboarding'
-import { startSSE } from '@/composables/useSSE'
+import { startSSE, stopSSE } from '@/composables/useSSE'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { authService } from '@/services/auth'
@@ -40,6 +40,7 @@ onBeforeMount(() => {
         startOnboarding()
       })
       .catch((error) => {
+        stopSSE()
         handleError(error)
       })
       .finally(() => {

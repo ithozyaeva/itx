@@ -25,6 +25,7 @@ vi.mock('@/pages/Seasons.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/TaskExchange.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/User.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Casino.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/pages/NotificationSettings.vue', () => ({ default: { template: '<div />' } }))
 
 describe('router', () => {
   let router: any
@@ -85,16 +86,33 @@ describe('router', () => {
   })
 
   describe('navigation guard', () => {
-    it('allows navigation when route has no requiresAuth meta', async () => {
+    it('allows navigation when user is authenticated', async () => {
+      const { useMainStore } = await import('@/store/index')
+      const store = useMainStore()
+      store.user = { id: 1 } as any
+
       await router.push('/')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('dashboard')
     })
 
-    it('allows navigation to events page', async () => {
+    it('allows navigation to events page when authenticated', async () => {
+      const { useMainStore } = await import('@/store/index')
+      const store = useMainStore()
+      store.user = { id: 1 } as any
+
       await router.push('/events')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('events')
+    })
+
+    it('blocks navigation when user is not authenticated', async () => {
+      const { useMainStore } = await import('@/store/index')
+      const store = useMainStore()
+      store.user = null as any
+
+      const result = await router.push('/me')
+      expect(result).toBeDefined()
     })
 
     it('initializes store from localStorage if no user', async () => {
@@ -103,7 +121,6 @@ describe('router', () => {
       const initSpy = vi.spyOn(store, 'initFromLocalStorage')
 
       await router.push('/me')
-      await router.isReady()
 
       expect(initSpy).toHaveBeenCalled()
     })

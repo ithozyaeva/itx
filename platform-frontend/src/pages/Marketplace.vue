@@ -184,7 +184,16 @@ function displayName(member: { firstName: string, lastName: string, tg: string }
 
 function onImageChange(event: Event) {
   const target = event.target as HTMLInputElement
-  newImage.value = target.files?.[0] ?? null
+  const file = target.files?.[0] ?? null
+  if (file) {
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      handleError(new Error('Размер файла не должен превышать 5 МБ'))
+      target.value = ''
+      return
+    }
+  }
+  newImage.value = file
 }
 
 onMounted(() => {
