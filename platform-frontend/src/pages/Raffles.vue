@@ -90,6 +90,7 @@ onMounted(() => {
         class="flex gap-1 bg-muted rounded-lg p-0.5"
       >
         <button
+          type="button"
           class="px-3 py-1.5 text-sm rounded-md transition-colors"
           :class="filterMode === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
           @click="filterMode = 'all'"
@@ -97,6 +98,7 @@ onMounted(() => {
           Все
         </button>
         <button
+          type="button"
           class="px-3 py-1.5 text-sm rounded-md transition-colors"
           :class="filterMode === 'my' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
           @click="filterMode = 'my'"

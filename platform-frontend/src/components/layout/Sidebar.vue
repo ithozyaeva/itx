@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/composables/useSidebar'
 import { canViewAdminPanel, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
 import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
 
@@ -31,11 +32,15 @@ const isSubscribed = isUserSubscribed()
 const isAdmin = canViewAdminPanel()
 
 async function handleSaveReview(text: string) {
-  await reviewService
-    .createReview(text)
-    .finally(() => {
-      isModalOpen.value = false
-    })
+  try {
+    await reviewService.createReview(text)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isModalOpen.value = false
+  }
 }
 </script>
 

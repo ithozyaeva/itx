@@ -33,6 +33,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useSSE } from '@/composables/useSSE'
 import { useUser, useUserLevel } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
@@ -73,6 +74,17 @@ const chatQuests = ref<ChatQuestWithProgress[]>([])
 const openTasks = ref<TaskExchange[]>([])
 const achievements = ref<{ total: number, unlocked: number, recent: UserAchievement[] }>({ total: 0, unlocked: 0, recent: [] })
 const highlights = ref<ChatHighlight[]>([])
+
+async function refreshPoints() {
+  try {
+    pointsSummary.value = await pointsService.getMyPoints()
+  }
+  catch {
+    // silent refresh
+  }
+}
+
+useSSE('points', () => refreshPoints())
 
 function pluralizeDays(n: number): string {
   if (n % 10 === 1 && n % 100 !== 11)

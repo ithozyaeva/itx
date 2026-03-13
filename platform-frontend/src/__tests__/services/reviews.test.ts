@@ -17,12 +17,7 @@ vi.mock('@/services/api', () => ({
   apiClient: mockApiClient,
 }))
 
-vi.mock('@/services/errorService', () => ({
-  handleError: vi.fn(),
-}))
-
 import { reviewService } from '@/services/reviews'
-import { handleError } from '@/services/errorService'
 
 describe('reviewService', () => {
   beforeEach(() => {
@@ -38,13 +33,11 @@ describe('reviewService', () => {
       expect(mockApiClient.post).toHaveBeenCalledWith('reviews/add', { json: { text: 'Great community!' } })
     })
 
-    it('should call handleError on failure', async () => {
+    it('should throw on failure', async () => {
       const error = new Error('Network error')
       mockApiClient.post.mockImplementation(() => { throw error })
 
-      await reviewService.createReview('Great community!')
-
-      expect(handleError).toHaveBeenCalledWith(error)
+      await expect(reviewService.createReview('Great community!')).rejects.toThrow('Network error')
     })
   })
 
