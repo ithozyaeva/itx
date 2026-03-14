@@ -41,6 +41,8 @@ onBeforeMount(() => {
       })
       .catch((error) => {
         stopSSE()
+        tg_user.value = null
+        tg_token.value = null
         handleError(error)
       })
       .finally(() => {

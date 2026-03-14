@@ -10,6 +10,8 @@ interface SSEMessage {
 const listeners = new Map<SSEEventType, Set<() => void>>()
 let eventSource: EventSource | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let consecutiveErrors = 0
+const MAX_RECONNECT_ATTEMPTS = 3
 const connected = ref(false)
 
 function connect() {
@@ -23,6 +25,7 @@ function connect() {
   eventSource = new EventSource(`/api/platform/sse?token=${encodeURIComponent(token)}`)
 
   eventSource.onmessage = (event) => {
+    consecutiveErrors = 0
     try {
       const msg: SSEMessage = JSON.parse(event.data)
       if (msg.type === 'connected') {
@@ -40,11 +43,13 @@ function connect() {
   }
 
   eventSource.onerror = () => {
+    consecutiveErrors++
     connected.value = false
     eventSource?.close()
     eventSource = null
-    // Reconnect after 5 seconds
-    reconnectTimer = setTimeout(connect, 5000)
+    if (consecutiveErrors < MAX_RECONNECT_ATTEMPTS) {
+      reconnectTimer = setTimeout(connect, 5000)
+    }
   }
 }
 
@@ -57,6 +62,7 @@ function disconnect() {
     eventSource.close()
     eventSource = null
   }
+  consecutiveErrors = 0
   connected.value = false
 }
 
