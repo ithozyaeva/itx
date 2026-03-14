@@ -31,6 +31,10 @@ func (r *KudosRepository) GetRecent(limit, offset int) ([]models.KudosPublic, in
 		LIMIT ? OFFSET ?
 	`, limit, offset).Scan(&items).Error
 
+	for i := range items {
+		items[i].AfterFind(nil)
+	}
+
 	return items, total, err
 }
 
