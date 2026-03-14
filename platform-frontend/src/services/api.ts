@@ -7,6 +7,24 @@ import { handleError } from './errorService'
 const localStorageUser = useUser()
 const localStorageToken = useToken()
 
+let isRefreshing = false
+let refreshPromise: Promise<{ token: string, user: TelegramUser }> | null = null
+
+function doRefresh(): Promise<{ token: string, user: TelegramUser }> {
+  if (!localStorageUser.value) {
+    return Promise.reject(new Error('No user'))
+  }
+  const userId = localStorageUser.value.telegramID
+  if (!userId) {
+    return Promise.reject(new Error('No user id'))
+  }
+  return ky.post('/api/auth/telegram/refresh', {
+    json: {
+      token: btoa(userId.toString()),
+    },
+  }).json<{ token: string, user: TelegramUser }>()
+}
+
 export const apiClient = ky.create({
   prefixUrl: '/api/platform/',
   retry: 1,
@@ -25,18 +43,14 @@ export const apiClient = ky.create({
 
       if (response.status === 401) {
         try {
-          if (!localStorageUser.value) {
-            throw new Error('No user')
+          if (!isRefreshing) {
+            isRefreshing = true
+            refreshPromise = doRefresh().finally(() => {
+              isRefreshing = false
+            })
           }
-          const userId = localStorageUser.value.telegramID
-          if (!userId) {
-            throw new Error('No user id')
-          }
-          const { token, user } = await ky.post('/api/auth/telegram/refresh', {
-            json: {
-              token: btoa(userId.toString()),
-            },
-          }).json<{ token: string, user: TelegramUser }>()
+
+          const { token, user } = await refreshPromise!
 
           localStorageToken.value = token
           localStorageUser.value = user
