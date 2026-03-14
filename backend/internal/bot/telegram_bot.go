@@ -1481,7 +1481,7 @@ func CheckUserInChat(userID int64) (bool, error) {
 	}
 
 	switch result.Result.Status {
-	case "member", "administrator", "creator":
+	case "member", "administrator", "creator", "restricted":
 		return true, nil
 	default:
 		return false, nil
