@@ -40,6 +40,11 @@ func (r *GuildRepository) GetAll(memberId int64) ([]models.GuildPublic, error) {
 		JOIN members m ON m.id = g.owner_id
 		ORDER BY total_points DESC
 	`, memberId).Scan(&items).Error
+
+	for i := range items {
+		items[i].AfterFind(nil)
+	}
+
 	return items, err
 }
 
@@ -105,5 +110,10 @@ func (r *GuildRepository) GetGuildMembers(guildId int64) ([]models.MemberPointsB
 		GROUP BY m.id, m.first_name, m.last_name, m.username, m.avatar_url
 		ORDER BY total DESC
 	`, guildId).Scan(&members).Error
+
+	for i := range members {
+		members[i].AfterFind(nil)
+	}
+
 	return members, err
 }

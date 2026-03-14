@@ -37,6 +37,11 @@ func (r *RaffleRepository) GetAll(memberId int64) ([]models.RafflePublic, error)
 		LEFT JOIN members w ON w.id = r.winner_id
 		ORDER BY r.status ASC, r.ends_at ASC
 	`, memberId).Scan(&items).Error
+
+	for i := range items {
+		items[i].AfterFind(nil)
+	}
+
 	return items, err
 }
 

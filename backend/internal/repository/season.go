@@ -63,6 +63,11 @@ func (r *SeasonRepository) GetLeaderboard(seasonId int64, limit int) ([]models.S
 		LIMIT ?
 	`, season.StartDate, season.EndDate, limit).Scan(&entries).Error
 
+	// Scan() does not trigger GORM hooks, resolve S3 URLs manually
+	for i := range entries {
+		entries[i].AfterFind(nil)
+	}
+
 	return entries, err
 }
 
