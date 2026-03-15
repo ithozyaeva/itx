@@ -3,6 +3,7 @@ import type { GuildMemberEntry, GuildPublic } from '@/models/guild'
 import { Typography } from 'itx-ui-kit'
 import { Loader2, LogOut, Plus, Shield, Trash2, Users } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import GuildCardSkeleton from '@/components/guilds/GuildCardSkeleton.vue'
 import {
   Dialog,
   DialogFooter,
@@ -146,9 +147,9 @@ onMounted(() => {
 
     <div
       v-if="isLoading"
-      class="flex justify-center py-12"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
     >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      <GuildCardSkeleton v-for="i in 6" :key="i" />
     </div>
 
     <template v-else>

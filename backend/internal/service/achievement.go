@@ -97,6 +97,21 @@ func (s *AchievementService) GetUserAchievements(memberId int64) (*models.Achiev
 		return nil, err
 	}
 
+	return s.buildAchievements(reasonCounts, balance), nil
+}
+
+// GetAchievementCounts returns only the unlocked/total counts using a pre-computed balance.
+func (s *AchievementService) GetAchievementCounts(memberId int64, balance int) (earned int, total int, err error) {
+	reasonCounts, err := s.repo.GetReasonCounts(memberId)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	resp := s.buildAchievements(reasonCounts, balance)
+	return resp.UnlockedCount, resp.TotalCount, nil
+}
+
+func (s *AchievementService) buildAchievements(reasonCounts map[models.PointReason]int, balance int) *models.AchievementsResponse {
 	// Also count reviews on services
 	reviewCount := reasonCounts[models.PointReasonReviewCommunity] + reasonCounts[models.PointReasonReviewService]
 
@@ -134,5 +149,5 @@ func (s *AchievementService) GetUserAchievements(memberId int64) (*models.Achiev
 		Items:         items,
 		TotalCount:    len(items),
 		UnlockedCount: unlockedCount,
-	}, nil
+	}
 }

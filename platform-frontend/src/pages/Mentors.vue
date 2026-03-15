@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import MentorCard from '@/components/mentors/MentorCard.vue'
+import MentorCardSkeleton from '@/components/mentors/MentorCardSkeleton.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -142,8 +143,8 @@ onMounted(loadMentors)
       </div>
     </div>
 
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <MentorCardSkeleton v-for="i in 6" :key="i" />
     </div>
 
     <ErrorState

@@ -3,19 +3,33 @@ package handler
 import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"ithozyeva/internal/service"
+	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type ProfileStatsHandler struct {
-	repo *repository.ProfileStatsRepository
+	repo           *repository.ProfileStatsRepository
+	achievementSvc *service.AchievementService
 }
 
 func NewProfileStatsHandler() *ProfileStatsHandler {
 	return &ProfileStatsHandler{
-		repo: repository.NewProfileStatsRepository(),
+		repo:           repository.NewProfileStatsRepository(),
+		achievementSvc: service.NewAchievementService(),
 	}
+}
+
+func (h *ProfileStatsHandler) enrichAchievements(stats *repository.ProfileStats, memberId int64) {
+	earned, total, err := h.achievementSvc.GetAchievementCounts(memberId, stats.PointsBalance)
+	if err != nil {
+		log.Printf("enrichAchievements: failed for member %d: %v", memberId, err)
+		return
+	}
+	stats.AchievementsEarned = earned
+	stats.AchievementsTotal = total
 }
 
 func (h *ProfileStatsHandler) GetMyStats(c *fiber.Ctx) error {
@@ -24,6 +38,7 @@ func (h *ProfileStatsHandler) GetMyStats(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+	h.enrichAchievements(stats, member.Id)
 	return c.JSON(stats)
 }
 
@@ -36,5 +51,6 @@ func (h *ProfileStatsHandler) GetMemberStats(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+	h.enrichAchievements(stats, id)
 	return c.JSON(stats)
 }

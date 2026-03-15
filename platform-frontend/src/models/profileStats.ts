@@ -3,6 +3,16 @@ export interface PointsMonth {
   total: number
 }
 
+export interface PointsSource {
+  reason: string
+  total: number
+}
+
+export interface ActivityDay {
+  date: string
+  count: number
+}
+
 export interface ProfileStats {
   eventsAttended: number
   eventsHosted: number
@@ -15,4 +25,8 @@ export interface ProfileStats {
   pointsBalance: number
   memberSince: string
   pointsHistory: PointsMonth[]
+  pointsBySource: PointsSource[]
+  achievementsEarned: number
+  achievementsTotal: number
+  activityHistory: ActivityDay[]
 }

@@ -8,7 +8,6 @@ import {
   CheckCircle,
   ClipboardList,
   Heart,
-  Loader2,
   MessageSquare,
   Mic,
   Minus,
@@ -155,6 +154,134 @@ function daysSinceMember(): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24))
 }
 
+// Points by source
+const reasonLabels: Record<string, string> = {
+  event_attend: 'Посещение событий',
+  event_host: 'Проведение событий',
+  review_community: 'Отзывы (сообщество)',
+  review_service: 'Отзывы (услуги)',
+  resume_upload: 'Загрузка резюме',
+  referal_create: 'Создание рефералов',
+  referal_conversion: 'Конверсия рефералов',
+  profile_complete: 'Заполнение профиля',
+  weekly_activity: 'Еженедельная активность',
+  monthly_active: 'Ежемесячная активность',
+  streak_4weeks: 'Серия 4 недели',
+  admin_manual: 'Начисление вручную',
+  task_create: 'Создание заданий',
+  task_execute: 'Выполнение заданий',
+  marketplace_create: 'Публикация объявлений',
+  marketplace_buy: 'Покупки',
+  chat_quest: 'Квесты в чатах',
+  chatter_of_week: 'Чаттер недели',
+  kudos_received: 'Благодарности',
+  raffle_spend: 'Розыгрыши',
+  casino_bet: 'Ставки казино',
+  casino_win: 'Выигрыши казино',
+}
+
+const topSources = computed(() => {
+  if (!stats.value?.pointsBySource?.length)
+    return []
+  const positive = stats.value.pointsBySource.filter(s => s.total > 0)
+  const totalPositive = positive.reduce((sum, s) => sum + s.total, 0)
+  return positive.slice(0, 5).map(s => ({
+    reason: s.reason,
+    label: reasonLabels[s.reason] || s.reason,
+    total: s.total,
+    percent: totalPositive > 0 ? Math.round((s.total / totalPositive) * 100) : 0,
+  }))
+})
+
+const maxSourceValue = computed(() => {
+  if (!topSources.value.length)
+    return 1
+  return Math.max(...topSources.value.map(s => s.total), 1)
+})
+
+// Contribution graph
+const contributionWeeks = computed(() => {
+  const weeks: { date: string, count: number, dayOfWeek: number }[][] = []
+  const activityMap = new Map<string, number>()
+
+  for (const day of stats.value?.activityHistory ?? []) {
+    activityMap.set(day.date, day.count)
+  }
+
+  const today = new Date()
+  const todayTime = today.getTime()
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() - 83) // 12 weeks = 84 days
+  // Align to Monday
+  startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7))
+
+  let currentWeek: { date: string, count: number, dayOfWeek: number }[] = []
+  const d = new Date(startDate)
+
+  while (d.getTime() <= todayTime) {
+    const dateStr = d.toISOString().slice(0, 10)
+    const dayOfWeek = (d.getDay() + 6) % 7 // Monday=0
+    currentWeek.push({
+      date: dateStr,
+      count: activityMap.get(dateStr) ?? 0,
+      dayOfWeek,
+    })
+    if (dayOfWeek === 6) {
+      weeks.push([...currentWeek])
+      currentWeek = []
+    }
+    d.setDate(d.getDate() + 1)
+  }
+
+  if (currentWeek.length > 0)
+    weeks.push(currentWeek)
+
+  return weeks
+})
+
+const maxActivityCount = computed(() => {
+  let max = 0
+  for (const week of contributionWeeks.value) {
+    for (const day of week) {
+      if (day.count > max)
+        max = day.count
+    }
+  }
+  return Math.max(max, 1)
+})
+
+function activityLevel(count: number): number {
+  if (count === 0)
+    return 0
+  const ratio = count / maxActivityCount.value
+  if (ratio <= 0.25)
+    return 1
+  if (ratio <= 0.5)
+    return 2
+  if (ratio <= 0.75)
+    return 3
+  return 4
+}
+
+const activityLevelClasses: Record<number, string> = {
+  0: 'bg-muted',
+  1: 'bg-primary/20',
+  2: 'bg-primary/40',
+  3: 'bg-primary/70',
+  4: 'bg-primary',
+}
+
+const totalActivityDays = computed(() => {
+  let count = 0
+  for (const week of contributionWeeks.value) {
+    for (const day of week) {
+      if (day.count > 0)
+        count++
+    }
+  }
+  return count
+})
+
 onMounted(() => {
   fetchStats()
 })
@@ -170,11 +297,31 @@ onMounted(() => {
       Моя статистика
     </Typography>
 
-    <div
-      v-if="isLoading"
-      class="flex justify-center py-12"
-    >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    <!-- Skeleton loading state -->
+    <div v-if="isLoading" class="space-y-6">
+      <!-- Summary row skeleton -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div v-for="i in 3" :key="i" class="rounded-2xl border bg-card border-border p-4">
+          <div class="h-3 w-20 animate-pulse rounded bg-muted mb-2" />
+          <div class="h-7 w-24 animate-pulse rounded-lg bg-muted mb-1" />
+          <div class="h-3 w-32 animate-pulse rounded bg-muted" />
+        </div>
+      </div>
+      <!-- Stat grid skeleton -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div v-for="i in 9" :key="i" class="rounded-2xl border bg-card border-border p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 animate-pulse rounded-lg bg-muted" />
+            <div class="h-3 w-20 animate-pulse rounded bg-muted" />
+          </div>
+          <div class="h-8 w-12 animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
+      <!-- Chart skeleton -->
+      <div class="rounded-2xl border bg-card border-border p-4">
+        <div class="h-5 w-40 animate-pulse rounded bg-muted mb-4" />
+        <div class="h-40 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
     </div>
 
     <ErrorState
@@ -249,6 +396,70 @@ onMounted(() => {
           <p class="text-2xl font-bold tabular-nums">
             {{ card.value }}
           </p>
+        </div>
+      </div>
+
+      <!-- Points by source -->
+      <div
+        v-if="topSources.length > 0"
+        class="rounded-2xl border bg-card border-border p-4 mb-6"
+      >
+        <div class="flex items-center gap-2 mb-4">
+          <Star class="h-4 w-4 text-yellow-500" />
+          <h3 class="font-semibold text-sm">
+            Баллы по источникам
+          </h3>
+        </div>
+        <div class="space-y-3">
+          <div
+            v-for="source in topSources"
+            :key="source.reason"
+            class="space-y-1"
+          >
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-muted-foreground">{{ source.label }}</span>
+              <span class="font-medium tabular-nums">{{ source.total }} ({{ source.percent }}%)</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                class="h-full rounded-full bg-primary transition-all"
+                :style="{ width: `${(source.total / maxSourceValue) * 100}%` }"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Achievements progress -->
+      <div
+        v-if="stats.achievementsTotal > 0"
+        class="rounded-2xl border bg-card border-border p-4 mb-6"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <Trophy class="h-4 w-4 text-yellow-500" />
+            <h3 class="font-semibold text-sm">
+              Достижения
+            </h3>
+          </div>
+          <RouterLink
+            to="/achievements"
+            class="text-xs text-primary hover:underline"
+          >
+            Все достижения
+          </RouterLink>
+        </div>
+        <div class="flex items-center gap-3 mb-2">
+          <p class="text-2xl font-bold tabular-nums">
+            {{ stats.achievementsEarned }}
+          </p>
+          <span class="text-sm text-muted-foreground">из {{ stats.achievementsTotal }}</span>
+        </div>
+        <div class="w-full h-2.5 rounded-full bg-muted overflow-hidden">
+          <div
+            class="h-full rounded-full bg-yellow-500 transition-all"
+            :style="{ width: `${(stats.achievementsEarned / stats.achievementsTotal) * 100}%` }"
+          />
         </div>
       </div>
 
@@ -346,6 +557,51 @@ onMounted(() => {
             <span class="text-xs font-medium tabular-nums">{{ month.total }}</span>
             <span class="text-[10px] text-muted-foreground">{{ formatMonth(month.month) }}</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Contribution graph -->
+      <div
+        v-if="contributionWeeks.length > 0"
+        class="rounded-2xl border bg-card border-border p-4"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <Calendar class="h-4 w-4 text-primary" />
+            <h3 class="font-semibold text-sm">
+              Активность за 12 недель
+            </h3>
+          </div>
+          <span class="text-xs text-muted-foreground">
+            {{ totalActivityDays }} активных дней
+          </span>
+        </div>
+
+        <div class="flex gap-1 overflow-x-auto pb-1">
+          <div
+            v-for="(week, wi) in contributionWeeks"
+            :key="wi"
+            class="flex flex-col gap-1"
+          >
+            <div
+              v-for="day in week"
+              :key="day.date"
+              class="w-3 h-3 rounded-sm transition-colors"
+              :class="activityLevelClasses[activityLevel(day.count)]"
+              :title="`${day.date}: ${day.count} действий`"
+            />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-1.5 mt-2">
+          <span class="text-[10px] text-muted-foreground">Меньше</span>
+          <div
+            v-for="level in [0, 1, 2, 3, 4]"
+            :key="level"
+            class="w-3 h-3 rounded-sm"
+            :class="activityLevelClasses[level]"
+          />
+          <span class="text-[10px] text-muted-foreground">Больше</span>
         </div>
       </div>
     </template>

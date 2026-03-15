@@ -14,6 +14,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FormField from '@/components/common/FormField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import MarketplaceItemSkeleton from '@/components/marketplace/MarketplaceItemSkeleton.vue'
 import {
   Dialog,
   DialogFooter,
@@ -276,9 +277,9 @@ onMounted(() => {
 
     <div
       v-if="isLoading"
-      class="flex justify-center py-12"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      <MarketplaceItemSkeleton v-for="i in 6" :key="i" />
     </div>
 
     <ErrorState
