@@ -19,6 +19,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FormField from '@/components/common/FormField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import TaskCardSkeleton from '@/components/tasks/TaskCardSkeleton.vue'
 import {
   Dialog,
   DialogContent,
@@ -383,9 +384,9 @@ watch(showEditDialog, (open) => {
 
     <div
       v-if="isLoading"
-      class="flex justify-center py-12"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      <TaskCardSkeleton v-for="i in 4" :key="i" />
     </div>
 
     <ErrorState

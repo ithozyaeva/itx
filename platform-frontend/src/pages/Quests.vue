@@ -5,11 +5,11 @@ import {
   Calendar,
   CheckCircle,
   Flame,
-  Loader2,
   MessageCircle,
   Star,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import QuestCardSkeleton from '@/components/quests/QuestCardSkeleton.vue'
 import { useSSE } from '@/composables/useSSE'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
@@ -100,9 +100,9 @@ onMounted(() => {
 
     <div
       v-if="isLoading"
-      class="flex justify-center py-12"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      <QuestCardSkeleton v-for="i in 3" :key="i" />
     </div>
 
     <template v-else>

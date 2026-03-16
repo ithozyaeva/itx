@@ -8,8 +8,10 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import CalendarView from '@/components/events/CalendarView.vue'
 import EventCard from '@/components/events/EventCard.vue'
+import EventCardSkeleton from '@/components/events/EventCardSkeleton.vue'
 import EventFilters from '@/components/events/EventFilters.vue'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
@@ -182,8 +184,15 @@ onMounted(() => loadEvents())
       </div>
     </div>
 
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    <div v-if="isLoading" class="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-8">
+      <div class="space-y-4">
+        <Skeleton class="h-7 w-48 rounded-lg mb-4" />
+        <EventCardSkeleton v-for="i in 2" :key="`f-${i}`" />
+      </div>
+      <div class="space-y-4">
+        <Skeleton class="h-7 w-36 rounded-lg mb-4" />
+        <EventCardSkeleton v-for="i in 2" :key="`p-${i}`" />
+      </div>
     </div>
 
     <ErrorState v-else-if="loadError" :message="loadError" @retry="loadEvents()" />
