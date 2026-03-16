@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   class?: string
 }>()
 </script>
@@ -7,6 +7,6 @@ defineProps<{
 <template>
   <div
     class="animate-pulse rounded-md bg-muted"
-    :class="$props.class"
+    :class="props.class"
   />
 </template>

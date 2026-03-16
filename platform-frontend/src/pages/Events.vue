@@ -11,6 +11,7 @@ import EventCard from '@/components/events/EventCard.vue'
 import EventCardSkeleton from '@/components/events/EventCardSkeleton.vue'
 import EventFilters from '@/components/events/EventFilters.vue'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
@@ -185,11 +186,11 @@ onMounted(() => loadEvents())
 
     <div v-if="isLoading" class="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-8">
       <div class="space-y-4">
-        <div class="h-7 w-48 animate-pulse rounded-lg bg-muted mb-4" />
+        <Skeleton class="h-7 w-48 rounded-lg mb-4" />
         <EventCardSkeleton v-for="i in 2" :key="`f-${i}`" />
       </div>
       <div class="space-y-4">
-        <div class="h-7 w-36 animate-pulse rounded-lg bg-muted mb-4" />
+        <Skeleton class="h-7 w-36 rounded-lg mb-4" />
         <EventCardSkeleton v-for="i in 2" :key="`p-${i}`" />
       </div>
     </div>

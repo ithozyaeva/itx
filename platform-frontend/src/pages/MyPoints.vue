@@ -8,6 +8,7 @@ import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { useSSE } from '@/composables/useSSE'
+import { reasonLabels } from '@/lib/reasonLabels'
 import { formatShortDate } from '@/lib/utils'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
@@ -19,21 +20,6 @@ const data = ref<PointsSummary | null>(null)
 const chatQuests = ref<ChatQuestWithProgress[]>([])
 const isLoading = ref(true)
 const visibleCount = ref(PAGE_SIZE)
-
-const reasonLabels: Record<string, string> = {
-  event_attend: 'Участие в событии',
-  event_host: 'Проведение события',
-  review_community: 'Отзыв на сообщество',
-  review_service: 'Отзыв на услугу',
-  resume_upload: 'Загрузка резюме',
-  referal_create: 'Создание реферала',
-  referal_conversion: 'Конверсия реферала',
-  profile_complete: 'Заполнение профиля',
-  weekly_activity: 'Еженедельная активность',
-  monthly_active: 'Месячная активность',
-  streak_4weeks: 'Серия 4 недели',
-  admin_manual: 'Ручное начисление',
-}
 
 const rewards = [
   { action: 'Участие в событии', points: 10 },

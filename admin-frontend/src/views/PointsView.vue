@@ -11,25 +11,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { reasonLabels } from '@/lib/reasonLabels'
 import { pointsService } from '@/services/pointsService'
 
 const isAwardModalOpen = ref(false)
 const usernameFilter = ref('')
-
-const reasonLabels: Record<string, string> = {
-  event_attend: 'Участие в событии',
-  event_host: 'Проведение события',
-  review_community: 'Отзыв на сообщество',
-  review_service: 'Отзыв на услугу',
-  resume_upload: 'Загрузка резюме',
-  referal_create: 'Создание реферала',
-  referal_conversion: 'Конверсия реферала',
-  profile_complete: 'Заполнение профиля',
-  weekly_activity: 'Еженедельная активность',
-  monthly_active: 'Месячная активность',
-  streak_4weeks: 'Серия 4 недели',
-  admin_manual: 'Ручное начисление',
-}
 
 function applyMemberFilter() {
   pointsService.applyFilters({ username: usernameFilter.value || undefined })

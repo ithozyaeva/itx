@@ -18,7 +18,9 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/composables/useUser'
+import { reasonLabels } from '@/lib/reasonLabels'
 import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
@@ -154,32 +156,6 @@ function daysSinceMember(): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24))
 }
 
-// Points by source
-const reasonLabels: Record<string, string> = {
-  event_attend: 'Посещение событий',
-  event_host: 'Проведение событий',
-  review_community: 'Отзывы (сообщество)',
-  review_service: 'Отзывы (услуги)',
-  resume_upload: 'Загрузка резюме',
-  referal_create: 'Создание рефералов',
-  referal_conversion: 'Конверсия рефералов',
-  profile_complete: 'Заполнение профиля',
-  weekly_activity: 'Еженедельная активность',
-  monthly_active: 'Ежемесячная активность',
-  streak_4weeks: 'Серия 4 недели',
-  admin_manual: 'Начисление вручную',
-  task_create: 'Создание заданий',
-  task_execute: 'Выполнение заданий',
-  marketplace_create: 'Публикация объявлений',
-  marketplace_buy: 'Покупки',
-  chat_quest: 'Квесты в чатах',
-  chatter_of_week: 'Чаттер недели',
-  kudos_received: 'Благодарности',
-  raffle_spend: 'Розыгрыши',
-  casino_bet: 'Ставки казино',
-  casino_win: 'Выигрыши казино',
-}
-
 const topSources = computed(() => {
   if (!stats.value?.pointsBySource?.length)
     return []
@@ -200,7 +176,7 @@ const maxSourceValue = computed(() => {
 })
 
 // Contribution graph
-const contributionWeeks = computed(() => {
+const contributionData = computed(() => {
   const weeks: { date: string, count: number, dayOfWeek: number }[][] = []
   const activityMap = new Map<string, number>()
 
@@ -211,21 +187,23 @@ const contributionWeeks = computed(() => {
   const today = new Date()
   const todayTime = today.getTime()
   const startDate = new Date(today)
-  startDate.setDate(startDate.getDate() - 83) // 12 weeks = 84 days
-  // Align to Monday
+  startDate.setDate(startDate.getDate() - 83)
   startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7))
 
   let currentWeek: { date: string, count: number, dayOfWeek: number }[] = []
   const d = new Date(startDate)
+  let maxCount = 0
+  let activeDays = 0
 
   while (d.getTime() <= todayTime) {
     const dateStr = d.toISOString().slice(0, 10)
-    const dayOfWeek = (d.getDay() + 6) % 7 // Monday=0
-    currentWeek.push({
-      date: dateStr,
-      count: activityMap.get(dateStr) ?? 0,
-      dayOfWeek,
-    })
+    const dayOfWeek = (d.getDay() + 6) % 7
+    const count = activityMap.get(dateStr) ?? 0
+    if (count > maxCount)
+      maxCount = count
+    if (count > 0)
+      activeDays++
+    currentWeek.push({ date: dateStr, count, dayOfWeek })
     if (dayOfWeek === 6) {
       weeks.push([...currentWeek])
       currentWeek = []
@@ -236,19 +214,11 @@ const contributionWeeks = computed(() => {
   if (currentWeek.length > 0)
     weeks.push(currentWeek)
 
-  return weeks
+  return { weeks, maxCount: Math.max(maxCount, 1), activeDays }
 })
 
-const maxActivityCount = computed(() => {
-  let max = 0
-  for (const week of contributionWeeks.value) {
-    for (const day of week) {
-      if (day.count > max)
-        max = day.count
-    }
-  }
-  return Math.max(max, 1)
-})
+const contributionWeeks = computed(() => contributionData.value.weeks)
+const maxActivityCount = computed(() => contributionData.value.maxCount)
 
 function activityLevel(count: number): number {
   if (count === 0)
@@ -271,16 +241,7 @@ const activityLevelClasses: Record<number, string> = {
   4: 'bg-primary',
 }
 
-const totalActivityDays = computed(() => {
-  let count = 0
-  for (const week of contributionWeeks.value) {
-    for (const day of week) {
-      if (day.count > 0)
-        count++
-    }
-  }
-  return count
-})
+const totalActivityDays = computed(() => contributionData.value.activeDays)
 
 onMounted(() => {
   fetchStats()
@@ -302,25 +263,25 @@ onMounted(() => {
       <!-- Summary row skeleton -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div v-for="i in 3" :key="i" class="rounded-2xl border bg-card border-border p-4">
-          <div class="h-3 w-20 animate-pulse rounded bg-muted mb-2" />
-          <div class="h-7 w-24 animate-pulse rounded-lg bg-muted mb-1" />
-          <div class="h-3 w-32 animate-pulse rounded bg-muted" />
+          <Skeleton class="h-3 w-20 rounded mb-2" />
+          <Skeleton class="h-7 w-24 rounded-lg mb-1" />
+          <Skeleton class="h-3 w-32 rounded" />
         </div>
       </div>
       <!-- Stat grid skeleton -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div v-for="i in 9" :key="i" class="rounded-2xl border bg-card border-border p-4">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-8 h-8 animate-pulse rounded-lg bg-muted" />
-            <div class="h-3 w-20 animate-pulse rounded bg-muted" />
+            <Skeleton class="w-8 h-8 rounded-lg" />
+            <Skeleton class="h-3 w-20 rounded" />
           </div>
-          <div class="h-8 w-12 animate-pulse rounded-lg bg-muted" />
+          <Skeleton class="h-8 w-12 rounded-lg" />
         </div>
       </div>
       <!-- Chart skeleton -->
       <div class="rounded-2xl border bg-card border-border p-4">
-        <div class="h-5 w-40 animate-pulse rounded bg-muted mb-4" />
-        <div class="h-40 w-full animate-pulse rounded-lg bg-muted" />
+        <Skeleton class="h-5 w-40 rounded mb-4" />
+        <Skeleton class="h-40 w-full rounded-lg" />
       </div>
     </div>
 
