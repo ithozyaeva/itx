@@ -1,12 +1,14 @@
 import type { CommunityEvent } from '@/services/events'
 
+const RE_DATE_SEPARATORS = /[-:]/g
+
 export function useGoogleCalendar() {
   // convert date for the GC format YYYYMMDDTHHmmssZ
   const formatDateForGoogle = (date: Date): string => {
     return `${date
       .toISOString()
       .split('.')[0]
-      .replace(/[-:]/g, '')}Z`
+      .replace(RE_DATE_SEPARATORS, '')}Z`
   }
 
   const buildGoogleCalendarUrl = (event: CommunityEvent, durationMinutes: number = 60): string => {

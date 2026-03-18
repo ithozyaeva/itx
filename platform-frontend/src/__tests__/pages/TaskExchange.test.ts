@@ -32,6 +32,10 @@ vi.mock('lucide-vue-next', () => ({
   XCircle: { template: '<span />' },
 }))
 
+vi.mock('@/components/tasks/TaskCardSkeleton.vue', () => ({
+  default: { template: '<div class="skeleton" />' },
+}))
+
 vi.mock('@/components/common/EmptyState.vue', () => ({
   default: { template: '<div class="empty-state"><slot /></div>', props: ['icon', 'title', 'description', 'actionLabel'] },
 }))
@@ -105,7 +109,7 @@ describe('TaskExchange page', () => {
   it('shows loading spinner initially', () => {
     mockGetAll.mockReturnValue(new Promise(() => {}))
     const wrapper = mount(TaskExchange)
-    expect(wrapper.find('.loader').exists()).toBe(true)
+    expect(wrapper.find('.skeleton').exists()).toBe(true)
   })
 
   it('shows ErrorState when fetch fails', async () => {

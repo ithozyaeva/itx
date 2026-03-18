@@ -6,20 +6,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+const RE_AMP = /&/g
+const RE_LT = /</g
+const RE_GT = />/g
+const RE_QUOT = /"/g
+const RE_APOS = /'/g
+
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+    .replace(RE_AMP, '&amp;')
+    .replace(RE_LT, '&lt;')
+    .replace(RE_GT, '&gt;')
+    .replace(RE_QUOT, '&quot;')
+    .replace(RE_APOS, '&#039;')
 }
 
+const RE_URL = /(https?:\/\/\S+)/g
+
 export function wrapLinks(text: string): string {
-  const urlRegex = /(https?:\/\/\S+)/g
   const escaped = escapeHtml(text)
 
-  return escaped.replace(urlRegex, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" >$1</a>')
+  return escaped.replace(RE_URL, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" >$1</a>')
 }
 
 export const dateFormatter = new Intl.DateTimeFormat('ru-RU', {

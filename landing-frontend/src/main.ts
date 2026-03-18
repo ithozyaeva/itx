@@ -1,7 +1,7 @@
 import { VueQueryPlugin } from '@tanstack/vue-query'
 
 import { createHead } from '@unhead/vue/client'
-import MasonryWall from '@yeger/vue-masonry-wall'
+import { MasonryWall } from '@yeger/vue-masonry-wall'
 import { createApp } from 'vue'
 import { initYandexMetrika } from 'yandex-metrika-vue3'
 import App from './App.vue'
@@ -34,7 +34,7 @@ if (metrikaId && metrikaEnabled) {
   })
 }
 
-app.use(MasonryWall)
+app.component('MasonryWall', MasonryWall)
 app.use(router)
 app.use(VueQueryPlugin, { queryClient })
 app.mount('#app')

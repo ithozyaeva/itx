@@ -83,7 +83,7 @@ const pointsTrend = computed(() => {
   if (!history || history.length < 2)
     return null
 
-  const current = history[history.length - 1]?.total ?? 0
+  const current = history.at(-1)?.total ?? 0
   const previous = history[history.length - 2]?.total ?? 0
 
   if (previous === 0)

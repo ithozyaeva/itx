@@ -19,10 +19,12 @@ export type DeepPartial<T> = T extends object ? {
 /**
  * Парсит строку таймзоны вида "UTC", "UTC+3", "UTC-5" в смещение в минутах.
  */
+const RE_UTC_OFFSET = /^UTC([+-])(\d+)$/
+
 export function parseTimezoneOffsetMinutes(tz: string): number {
   if (!tz || tz === 'UTC')
     return 0
-  const match = tz.match(/^UTC([+-])(\d+)$/)
+  const match = tz.match(RE_UTC_OFFSET)
   if (!match)
     return 0
   const sign = match[1] === '+' ? 1 : -1

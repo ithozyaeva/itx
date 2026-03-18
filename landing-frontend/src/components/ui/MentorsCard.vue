@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Briefcase, MessageSquare } from 'lucide-vue-next'
-import { computed, defineProps } from 'vue'
+import { computed } from 'vue'
 import MailIcon from '~icons/mdi/email-variant'
 import PhoneIcon from '~icons/mdi/phone'
 import TgIcon from '~icons/mdi/telegram'
