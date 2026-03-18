@@ -1,5 +1,5 @@
-import type { Component, HTMLAttributes, VNode } from 'vue'
 import type { VariantProps } from 'class-variance-authority'
+import type { Component, HTMLAttributes, VNode } from 'vue'
 import type { toastVariants } from '.'
 import { computed, shallowRef } from 'vue'
 
