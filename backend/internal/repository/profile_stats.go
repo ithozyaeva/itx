@@ -62,7 +62,7 @@ func (r *ProfileStatsRepository) GetStats(memberId int64) (*ProfileStats, error)
 	}
 
 	// Referrals
-	if err := database.DB.Raw(`SELECT COUNT(*) FROM referal_links WHERE member_id = ?`, memberId).Scan(&stats.ReferralsCount).Error; err != nil {
+	if err := database.DB.Raw(`SELECT COUNT(*) FROM referal_links WHERE author_id = ?`, memberId).Scan(&stats.ReferralsCount).Error; err != nil {
 		return nil, err
 	}
 
@@ -80,7 +80,7 @@ func (r *ProfileStatsRepository) GetStats(memberId int64) (*ProfileStats, error)
 	}
 	if err := database.DB.Raw(`
 		SELECT COUNT(*) FROM task_exchange_assignees tea
-		JOIN task_exchanges te ON te.id = tea.task_exchange_id
+		JOIN task_exchanges te ON te.id = tea.task_id
 		WHERE tea.member_id = ? AND te.status = 'APPROVED'
 	`, memberId).Scan(&stats.TasksDone).Error; err != nil {
 		return nil, err
