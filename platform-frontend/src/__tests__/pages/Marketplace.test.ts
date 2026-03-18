@@ -23,6 +23,10 @@ vi.mock('lucide-vue-next', () => ({
   User: { template: '<span />' },
 }))
 
+vi.mock('@/components/marketplace/MarketplaceItemSkeleton.vue', () => ({
+  default: { template: '<div class="skeleton" />' },
+}))
+
 vi.mock('@/components/common/EmptyState.vue', () => ({
   default: { template: '<div class="empty-state"><slot /></div>', props: ['icon', 'title', 'description', 'actionLabel'] },
 }))
@@ -89,7 +93,7 @@ describe('Marketplace page', () => {
   it('shows loading spinner initially', () => {
     mockGetAll.mockReturnValue(new Promise(() => {}))
     const wrapper = mount(Marketplace)
-    expect(wrapper.find('.loader').exists()).toBe(true)
+    expect(wrapper.find('.skeleton').exists()).toBe(true)
   })
 
   it('shows ErrorState when fetch fails', async () => {

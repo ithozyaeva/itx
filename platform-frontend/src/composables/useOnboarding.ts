@@ -11,6 +11,7 @@ const STORAGE_KEY = 'onboarding_completed'
 
 const isActive = ref(false)
 const currentStepIndex = ref(0)
+const _completedFlag = ref(localStorage.getItem(STORAGE_KEY) === 'true')
 
 const steps: OnboardingStep[] = [
   {
@@ -46,7 +47,7 @@ const steps: OnboardingStep[] = [
 ]
 
 export function useOnboarding() {
-  const isCompleted = computed(() => localStorage.getItem(STORAGE_KEY) === 'true')
+  const isCompleted = computed(() => _completedFlag.value)
   const currentStep = computed(() => steps[currentStepIndex.value])
   const totalSteps = steps.length
 
@@ -79,10 +80,12 @@ export function useOnboarding() {
   function complete() {
     isActive.value = false
     localStorage.setItem(STORAGE_KEY, 'true')
+    _completedFlag.value = true
   }
 
   function reset() {
     localStorage.removeItem(STORAGE_KEY)
+    _completedFlag.value = false
     isActive.value = false
     currentStepIndex.value = 0
   }

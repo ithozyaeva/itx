@@ -27,6 +27,10 @@ vi.mock('lucide-vue-next', () => ({
   Trophy: { template: '<span />' },
 }))
 
+vi.mock('@/components/ui/skeleton', () => ({
+  Skeleton: { template: '<div class="skeleton" />' },
+}))
+
 vi.mock('@/components/common/ErrorState.vue', () => ({
   default: { template: '<div class="error-state"><slot /></div>', props: ['message'], emits: ['retry'] },
 }))
@@ -80,7 +84,7 @@ describe('MyStats page', () => {
     mockGetMyStats.mockReturnValue(new Promise(() => {}))
     mockGetLeaderboard.mockReturnValue(new Promise(() => {}))
     const wrapper = mount(MyStats)
-    expect(wrapper.find('.loader').exists()).toBe(true)
+    expect(wrapper.find('.skeleton').exists()).toBe(true)
   })
 
   it('shows ErrorState when fetch fails', async () => {
