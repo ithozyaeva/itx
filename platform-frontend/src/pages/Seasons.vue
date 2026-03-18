@@ -57,6 +57,14 @@ function displayName(firstName: string, lastName: string) {
   return [firstName, lastName].filter(Boolean).join(' ')
 }
 
+function getAvatarSrc(entry: SeasonWithLeaderboard['leaderboard'][number]) {
+  if (entry.avatarUrl)
+    return entry.avatarUrl
+  if (entry.tg)
+    return `https://t.me/i/userpic/160/${entry.tg}.jpg`
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`
+}
+
 onMounted(() => {
   fetchActive()
 })
@@ -162,11 +170,17 @@ onMounted(() => {
                 class="text-sm text-muted-foreground font-medium"
               >{{ entry.rank }}</span>
             </div>
-            <img
-              :src="entry.avatarUrl || `https://ui-avatars.com/api/?name=${entry.firstName}`"
-              :alt="displayName(entry.firstName, entry.lastName)"
-              class="h-8 w-8 rounded-full shrink-0 object-cover"
-            >
+            <div class="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-accent/20">
+              <img
+                :src="getAvatarSrc(entry)"
+                :alt="displayName(entry.firstName, entry.lastName)"
+                :style="{ opacity: 0 }"
+                loading="lazy"
+                class="w-full h-full object-cover transition-opacity duration-300"
+                @load="($event.target as HTMLImageElement).style.opacity = '1'"
+                @error="(e: Event) => { const img = e.target as HTMLImageElement; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
+              >
+            </div>
             <router-link
               :to="`/members/${entry.memberId}`"
               class="flex-1 text-sm font-medium hover:underline truncate"
