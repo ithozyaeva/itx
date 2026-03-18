@@ -73,10 +73,12 @@ const sortOptions: { key: 'date' | 'price', label: string }[] = [
   { key: 'price', label: 'Сначала дешёвые' },
 ]
 
+const RE_NON_NUMERIC = /[^\d.,]/g
+
 function parsePrice(price: string): number {
   if (!price)
     return Infinity
-  const num = Number.parseFloat(price.replace(/[^\d.,]/g, '').replace(',', '.'))
+  const num = Number.parseFloat(price.replace(RE_NON_NUMERIC, '').replace(',', '.'))
   return Number.isNaN(num) ? Infinity : num
 }
 
