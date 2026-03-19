@@ -17,21 +17,7 @@ services:
       - itx-network
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - itx-network
-    restart: unless-stopped
-
-  database:
+  database: 
     image: postgres:15
     container_name: database
     restart: always
@@ -51,14 +37,12 @@ services:
     networks:
       - itx-network
 
-  backend:
+  backend: 
     build:
       context: ./backend
     container_name: backend
     depends_on:
       database:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     env_file: ./backend/.env
     networks:

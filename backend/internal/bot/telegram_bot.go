@@ -19,7 +19,6 @@ import (
 	"ithozyeva/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -110,10 +109,9 @@ type TelegramBot struct {
 	chatActivityService         *service.ChatActivityService
 	notificationSettingsService *service.NotificationSettingsService
 	chatHighlightService        *service.ChatHighlightService
-	subscriptionService         *service.SubscriptionService
 }
 
-func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
+func NewTelegramBot() (*TelegramBot, error) {
 
 	botToken := config.CFG.TelegramToken
 	if botToken == "" {
@@ -137,7 +135,6 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 	chatActivityService := service.NewChatActivityService()
 	notificationSettingsService := service.NewNotificationSettingsService()
 	chatHighlightService := service.NewChatHighlightService()
-	subscriptionService := service.NewSubscriptionService(redisClient)
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -148,7 +145,6 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 		chatActivityService:         chatActivityService,
 		notificationSettingsService: notificationSettingsService,
 		chatHighlightService:        chatHighlightService,
-		subscriptionService:         subscriptionService,
 	}, nil
 }
 
@@ -162,28 +158,12 @@ func (b *TelegramBot) Start() {
 	// Start event alerts scheduler
 	go b.startEventAlertsScheduler()
 
-	// Start subscription checker
-	go b.startSubscriptionChecker()
-
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	u.AllowedUpdates = []string{"message", "callback_query", "chat_member", "my_chat_member"}
 
 	updates := b.bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		// Обработка изменений участников чатов (подписки)
-		if update.ChatMember != nil {
-			go b.handleChatMemberUpdated(update.ChatMember)
-			continue
-		}
-
-		// Обработка изменений бота в чатах
-		if update.MyChatMember != nil {
-			go b.handleMyChatMemberUpdated(update.MyChatMember)
-			continue
-		}
-
 		// Обработка callback кнопок
 		if update.CallbackQuery != nil {
 			b.handleCallbackQuery(update.CallbackQuery)
@@ -236,31 +216,6 @@ func (b *TelegramBot) Start() {
 				b.handleMyPointsCommand(update.Message)
 			case "events":
 				b.handleEventsCommand(update.Message)
-			case "sub":
-				b.handleSubCommand(update.Message)
-			case "substatus":
-				b.handleSubStatusCommand(update.Message)
-			// Admin subscription commands
-			case "subchats":
-				b.handleSubChatsCommand(update.Message)
-			case "subtiers":
-				b.handleSubTiersCommand(update.Message)
-			case "subaddchat":
-				b.handleSubAddChatCommand(update.Message)
-			case "subsetanchor":
-				b.handleSubSetAnchorCommand(update.Message)
-			case "subremovechat":
-				b.handleSubRemoveChatCommand(update.Message)
-			case "subusers":
-				b.handleSubUsersCommand(update.Message)
-			case "subuserinfo":
-				b.handleSubUserInfoCommand(update.Message)
-			case "suboverride":
-				b.handleSubOverrideCommand(update.Message)
-			case "subcheckall":
-				b.handleSubCheckAllCommand(update.Message)
-			case "substats":
-				b.handleSubStatsCommand(update.Message)
 			case "help":
 				b.handleHelpCommand(update.Message)
 			}
@@ -325,25 +280,8 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"/start - Авторизация на платформе\n" +
 		"/mypoints - Посмотреть баланс баллов\n" +
 		"/events - Ближайшие события\n" +
-		"/sub - Проверить подписку и получить доступ к чатам\n" +
-		"/substatus - Статус подписки\n" +
 		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
 		"/help - Помощь"
-
-	if b.isAdmin(message.From.ID) {
-		text += "\n\nАдмин-команды подписок:\n" +
-			"/subtiers - Список тиров\n" +
-			"/subchats - Зарегистрированные чаты\n" +
-			"/subaddchat <chat_id> <tier_slug> [anchor] - Добавить чат\n" +
-			"/subsetanchor <chat_id> <tier_slug|clear> - Установить anchor\n" +
-			"/subremovechat <chat_id> - Удалить чат\n" +
-			"/subusers [page] - Список пользователей\n" +
-			"/subuserinfo <user_id> - Инфо о пользователе\n" +
-			"/suboverride <user_id> <tier_slug|clear> - Ручной тир\n" +
-			"/subcheckall - Проверить всех\n" +
-			"/substats - Статистика"
-	}
-
 	b.sendMessage(message.Chat.ID, text)
 }
 

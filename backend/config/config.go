@@ -2,10 +2,7 @@ package config
 
 import (
 	"log"
-	"strconv"
-	"strings"
 	"time"
-
 	"github.com/spf13/viper"
 )
 
@@ -17,32 +14,17 @@ type DatabaseConfig struct {
 	Name     string
 }
 
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
-}
-
-func (r RedisConfig) Addr() string {
-	return r.Host + ":" + r.Port
-}
-
 type Config struct {
 	Database           DatabaseConfig
-	Redis              RedisConfig
 	JwtSecret          []byte
 	Port               string
 	TelegramToken      string
 	TelegramMainChatID int64
-	TelegramAdminIDs   []int64
 	PublicDomain       string
 	BackendDomain      string
 	AllowedOrigins     string
 	BotSharedSecret    string
 	S3                 S3Config
-
-	SubscriptionCheckIntervalHours int
 
 	AlertReminderIntervalMinutes       int64
 	AlertReminderFirstIntervalMinutes  int64
@@ -125,34 +107,6 @@ func LoadConfig() {
 		log.Println("WARNING: BOT_SHARED_SECRET not set. /telegram-from-bot endpoint will reject all requests.")
 	}
 
-	// Redis config
-	redisHost := viper.GetString("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = "localhost"
-	}
-	redisPort := viper.GetString("REDIS_PORT")
-	if redisPort == "" {
-		redisPort = "6379"
-	}
-	redisDB := viper.GetInt("REDIS_DB")
-
-	// Telegram admin IDs
-	var adminIDs []int64
-	adminIDsStr := viper.GetString("TELEGRAM_ADMIN_IDS")
-	if adminIDsStr != "" {
-		for _, idStr := range strings.Split(adminIDsStr, ",") {
-			idStr = strings.TrimSpace(idStr)
-			if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-				adminIDs = append(adminIDs, id)
-			}
-		}
-	}
-
-	subCheckInterval := viper.GetInt("SUBSCRIPTION_CHECK_INTERVAL_HOURS")
-	if subCheckInterval == 0 {
-		subCheckInterval = 4
-	}
-
 	CFG = &Config{
 		Database: DatabaseConfig{
 			Host:     viper.GetString("DB_HOST"),
@@ -161,22 +115,14 @@ func LoadConfig() {
 			Password: viper.GetString("DB_PASSWORD"),
 			Name:     viper.GetString("DB_NAME"),
 		},
-		Redis: RedisConfig{
-			Host:     redisHost,
-			Port:     redisPort,
-			Password: viper.GetString("REDIS_PASSWORD"),
-			DB:       redisDB,
-		},
 		JwtSecret:          []byte(jwtSecret),
 		Port:               viper.GetString("PORT"),
 		TelegramToken:      viper.GetString("TELEGRAM_BOT_TOKEN"),
 		TelegramMainChatID: viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
-		TelegramAdminIDs:   adminIDs,
 		PublicDomain:       viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,
-		SubscriptionCheckIntervalHours: subCheckInterval,
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,
