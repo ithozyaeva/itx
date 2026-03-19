@@ -4,6 +4,7 @@ import (
 	"ithozyeva/internal/handler"
 	"ithozyeva/internal/middleware"
 	"ithozyeva/internal/models"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -16,7 +17,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 }
 func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	// Инициализация сервисов и репозиториев
-	telegramAuthHandler := handler.NewTelegramAuthHandler()
+	telegramAuthHandler, err := handler.NewTelegramAuthHandler()
+	if err != nil {
+		log.Fatalf("Failed to create TelegramAuthHandler: %v", err)
+	}
 
 	api := app.Group("/api")
 
