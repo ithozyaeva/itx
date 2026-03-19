@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
@@ -36,6 +37,11 @@ func main() {
 		AllowOrigins: config.CFG.AllowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Telegram-User-Token",
 		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+	}))
+
+	app.Use(limiter.New(limiter.Config{
+		Max:        100,
+		Expiration: 60 * time.Second,
 	}))
 
 	// Настраиваем маршруты

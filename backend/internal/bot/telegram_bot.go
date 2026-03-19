@@ -521,7 +521,11 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	log.Printf("Final redirect URL: %s", redirectUrl)
 
 	// Генерируем токен для пользователя
-	token := b.tg_service.GenerateAuthToken(message.From.ID)
+	token, err := b.tg_service.GenerateAuthToken(message.From.ID)
+	if err != nil {
+		log.Printf("Error generating auth token for user %d: %v", message.From.ID, err)
+		return
+	}
 
 	log.Printf("Generated token for user %d: %s", message.From.ID, token)
 

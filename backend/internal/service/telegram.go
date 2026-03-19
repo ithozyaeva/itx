@@ -22,8 +22,11 @@ func NewTelegramService() (*TelegramService, error) {
 }
 
 // GenerateAuthToken генерирует токен для авторизации
-func (s *TelegramService) GenerateAuthToken(userID int64) string {
-	token := utils.HashToken(fmt.Sprintf("%d", userID))
+func (s *TelegramService) GenerateAuthToken(userID int64) (string, error) {
+	token, err := utils.HashToken(fmt.Sprintf("%d", userID))
+	if err != nil {
+		return "", err
+	}
 
-	return token
+	return token, nil
 }

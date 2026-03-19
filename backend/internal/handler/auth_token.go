@@ -19,18 +19,18 @@ type TelegramAuthHandler struct {
 	memberService   *service.MemberService
 }
 
-func NewTelegramAuthHandler() *TelegramAuthHandler {
+func NewTelegramAuthHandler() (*TelegramAuthHandler, error) {
 	tgService, err := service.NewTelegramService()
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &TelegramAuthHandler{
 		telegramService: tgService,
 		authService:     service.NewAuthTokenService(),
 		memberService:   service.NewMemberService(),
-	}
+	}, nil
 }
 
 type AuthRequest struct {
