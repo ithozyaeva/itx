@@ -36,7 +36,8 @@ func (h *ProfileStatsHandler) GetMyStats(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	stats, err := h.repo.GetStats(member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get my profile stats error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики профиля"})
 	}
 	h.enrichAchievements(stats, member.Id)
 	return c.JSON(stats)
@@ -49,7 +50,8 @@ func (h *ProfileStatsHandler) GetMemberStats(c *fiber.Ctx) error {
 	}
 	stats, err := h.repo.GetStats(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get member profile stats error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики профиля"})
 	}
 	h.enrichAchievements(stats, id)
 	return c.JSON(stats)

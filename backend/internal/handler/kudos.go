@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"log"
+	"strconv"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -28,7 +30,8 @@ func (h *KudosHandler) Send(c *fiber.Ctx) error {
 
 	kudos, err := h.svc.Send(member.Id, req.ToId, req.Message)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("send kudos error (from=%d, to=%d): %v", member.Id, req.ToId, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отправить благодарность"})
 	}
 
 	BroadcastEvent("kudos")
@@ -42,7 +45,8 @@ func (h *KudosHandler) GetRecent(c *fiber.Ctx) error {
 
 	items, total, err := h.svc.GetRecent(limit, offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get recent kudos error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки благодарностей"})
 	}
 
 	return c.JSON(fiber.Map{

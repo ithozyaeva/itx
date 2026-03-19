@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -81,7 +82,8 @@ func (h *ReferalLinkHandler) AddLink(c *fiber.Ctx) error {
 
 	result, err := h.svc.AddLink(req, member)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("add referral link error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания реферальной ссылки"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "referal_link", result.Id, result.Company)
@@ -101,7 +103,8 @@ func (h *ReferalLinkHandler) UpdateLink(c *fiber.Ctx) error {
 
 	existedLink, err := h.service.GetById(req.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get referral link error (id=%d): %v", req.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Реферальная ссылка не найдена"})
 	}
 
 	if member.Id != existedLink.Author.Id {
@@ -110,7 +113,8 @@ func (h *ReferalLinkHandler) UpdateLink(c *fiber.Ctx) error {
 
 	result, err := h.svc.UpdateLink(req, member)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update referral link error (id=%d): %v", req.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления реферальной ссылки"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "referal_link", result.Id, result.Company)
@@ -133,10 +137,12 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 	err := h.svc.TrackConversion(req.ReferralLinkId, member.Id)
 	if err != nil {
 		// Handle unique constraint violation (duplicate conversion) as idempotent success
-		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "referral_conversions_unique") {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "referral_conversions_unique") {
 			return c.SendStatus(fiber.StatusOK)
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("track conversion error (link=%d, member=%d): %v", req.ReferralLinkId, member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка отслеживания конверсии"})
 	}
 
 	// Начисляем баллы автору реферальной ссылки за конверсию и отправляем уведомление
@@ -172,7 +178,8 @@ func (h *ReferalLinkHandler) AdminSearch(c *fiber.Ctx) error {
 
 	result, err := h.service.Search(req.Limit, req.Offset, &filter, nil)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("admin search referral links error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска реферальных ссылок"})
 	}
 
 	return c.JSON(result)
@@ -200,7 +207,8 @@ func (h *ReferalLinkHandler) AdminDelete(c *fiber.Ctx) error {
 
 	err = h.svc.Delete(&models.ReferalLink{Id: id})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("admin delete referral link error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления реферальной ссылки"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "referal_link", id, "admin delete")
@@ -218,7 +226,8 @@ func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {
 
 	existedLink, err := h.service.GetById(req.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get referral link error (id=%d): %v", req.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Реферальная ссылка не найдена"})
 	}
 
 	if member.Id != existedLink.Author.Id {
@@ -227,7 +236,8 @@ func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {
 
 	err = h.svc.Delete(&models.ReferalLink{Id: req.Id})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete referral link error (id=%d): %v", req.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления реферальной ссылки"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "referal_link", req.Id, "")

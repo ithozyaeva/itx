@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 
 	"ithozyeva/internal/service"
@@ -30,7 +31,8 @@ func (h *ChatHighlightHandler) GetRecent(c *fiber.Ctx) error {
 
 	highlights, err := h.svc.GetRecent(limit)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("GetRecent highlights error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки дайджеста"})
 	}
 
 	return c.JSON(highlights)
@@ -52,7 +54,8 @@ func (h *ChatHighlightHandler) Search(c *fiber.Ctx) error {
 
 	highlights, total, err := h.svc.Search(limit, offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("Search highlights error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска дайджеста"})
 	}
 
 	return c.JSON(fiber.Map{

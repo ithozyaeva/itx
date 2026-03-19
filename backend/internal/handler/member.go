@@ -219,7 +219,8 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	result, err := h.svc.Update(member)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update profile error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления профиля"})
 	}
 
 	go h.pointsSvc.CheckProfileComplete(result)
@@ -256,13 +257,15 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("failed to open avatar file: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка открытия файла"})
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("failed to read avatar file: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка чтения файла"})
 	}
 
 	// Определяем Content-Type по содержимому файла, а не по заголовку клиента
@@ -296,7 +299,8 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 
 	result, err := h.svc.Update(member)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update member after avatar upload error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка сохранения аватара"})
 	}
 
 	go h.pointsSvc.CheckProfileComplete(result)
@@ -344,7 +348,8 @@ func (h *MembersHandler) GetPermissions(c *fiber.Ctx) error {
 
 	permissions, err := h.svc.GetPermissions(member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get permissions error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения разрешений"})
 	}
 
 	return c.JSON(permissions)

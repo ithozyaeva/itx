@@ -71,7 +71,8 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 		Order:    "DESC",
 	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("events search error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска событий"})
 	}
 
 	return c.JSON(result)
@@ -86,7 +87,8 @@ func (h *EventsHandler) GetOld(c *fiber.Ctx) error {
 		Order:    "DESC",
 	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get old events error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки событий"})
 	}
 
 	return c.JSON(result)
@@ -100,7 +102,8 @@ func (h *EventsHandler) GetNext(c *fiber.Ctx) error {
 		Order:    "ASC",
 	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get next events error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки событий"})
 	}
 
 	return c.JSON(result)
@@ -117,9 +120,10 @@ func (h *EventsHandler) AddMember(c *fiber.Ctx) error {
 	result, err := h.svc.AddMember(req.EventId, int(member.Id))
 	if err != nil {
 		if errors.Is(err, service.ErrParticipantLimitReached) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Достигнут лимит участников"})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("add member to event error (event=%d, member=%d): %v", req.EventId, member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка регистрации на событие"})
 	}
 
 	return c.JSON(result)
@@ -139,7 +143,8 @@ func (h *EventsHandler) RemoveMember(c *fiber.Ctx) error {
 
 	result, err := h.svc.RemoveMember(req.EventId, int(member.Id))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("remove member from event error (event=%d, member=%d): %v", req.EventId, member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка отмены регистрации"})
 	}
 
 	return c.JSON(result)
@@ -175,7 +180,8 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 
 	result, err := h.service.Create(event)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create event error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания события"})
 	}
 
 	// Отправляем инициализирующие алерты в фоне
@@ -207,7 +213,8 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 
 	result, err := h.service.Update(event)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update event error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления события"})
 	}
 
 	// Отправляем уведомления об изменении события в фоне
@@ -245,7 +252,8 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	memberIds := GetEventMemberIds(int64(id))
 
 	if err := h.service.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete event error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления события"})
 	}
 
 	// Send notifications after delete using pre-snapshotted member IDs

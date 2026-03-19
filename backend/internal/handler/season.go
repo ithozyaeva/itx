@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"log"
+	"strconv"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,7 +23,8 @@ func NewSeasonHandler() *SeasonHandler {
 func (h *SeasonHandler) GetAll(c *fiber.Ctx) error {
 	seasons, err := h.svc.GetAll()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get all seasons error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки сезонов"})
 	}
 	return c.JSON(seasons)
 }
@@ -55,7 +58,8 @@ func (h *SeasonHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 	if err := h.svc.Create(season); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create season error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания сезона"})
 	}
 	return c.Status(fiber.StatusCreated).JSON(season)
 }
@@ -66,7 +70,8 @@ func (h *SeasonHandler) Finish(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 	if err := h.svc.Finish(id); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("finish season error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка завершения сезона"})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }

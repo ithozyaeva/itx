@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 
@@ -45,7 +47,8 @@ func (h *AuditLogHandler) Search(c *fiber.Ctx) error {
 
 	result, err := h.svc.Search(req.Limit, req.Offset, &filter)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("audit log search error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска записей аудита"})
 	}
 
 	return c.JSON(result)

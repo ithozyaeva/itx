@@ -159,34 +159,17 @@ func (r *CasinoRepository) SearchBets(username *string, game *string, limit, off
 		return nil, 0, err
 	}
 
-	baseQuery := `SELECT cb.id, cb.member_id, m.first_name as member_first_name, m.last_name as member_last_name,
-		m.username as member_username, cb.game, cb.bet_amount, cb.bet_choice, cb.result, cb.multiplier, cb.payout, cb.profit, cb.created_at
-		FROM casino_bets cb
-		JOIN members m ON m.id = cb.member_id`
-
-	var args []interface{}
-	var where []string
+	query := database.DB.Table("casino_bets cb").
+		Select(`cb.id, cb.member_id, m.first_name as member_first_name, m.last_name as member_last_name,
+			m.username as member_username, cb.game, cb.bet_amount, cb.bet_choice, cb.result, cb.multiplier, cb.payout, cb.profit, cb.created_at`).
+		Joins("JOIN members m ON m.id = cb.member_id")
 	if username != nil {
-		where = append(where, "m.username ILIKE ?")
-		args = append(args, "%"+*username+"%")
+		query = query.Where("m.username ILIKE ?", "%"+*username+"%")
 	}
 	if game != nil {
-		where = append(where, "cb.game = ?")
-		args = append(args, *game)
+		query = query.Where("cb.game = ?", *game)
 	}
-	if len(where) > 0 {
-		baseQuery += " WHERE "
-		for i, w := range where {
-			if i > 0 {
-				baseQuery += " AND "
-			}
-			baseQuery += w
-		}
-	}
-	baseQuery += ` ORDER BY cb.created_at DESC LIMIT ? OFFSET ?`
-	args = append(args, limit, offset)
-
-	if err := database.DB.Raw(baseQuery, args...).Scan(&items).Error; err != nil {
+	if err := query.Order("cb.created_at DESC").Limit(limit).Offset(offset).Scan(&items).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"log"
+	"strconv"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -22,7 +24,8 @@ func (h *RaffleHandler) GetAll(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	items, err := h.svc.GetAll(member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get raffles error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки розыгрышей"})
 	}
 	return c.JSON(items)
 }
@@ -30,7 +33,8 @@ func (h *RaffleHandler) GetAll(c *fiber.Ctx) error {
 func (h *RaffleHandler) GetAllAdmin(c *fiber.Ctx) error {
 	items, err := h.svc.GetAllAdmin()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get admin raffles error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки розыгрышей"})
 	}
 	return c.JSON(items)
 }
@@ -48,7 +52,8 @@ func (h *RaffleHandler) BuyTickets(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.BuyTickets(id, member.Id, req.Count); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("buy raffle tickets error (raffle=%d, member=%d): %v", id, member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось купить билеты"})
 	}
 
 	BroadcastEvent("raffles")
@@ -61,7 +66,8 @@ func (h *RaffleHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 	if err := h.svc.Create(raffle); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create raffle error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания розыгрыша"})
 	}
 	return c.Status(fiber.StatusCreated).JSON(raffle)
 }
@@ -72,7 +78,8 @@ func (h *RaffleHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 	if err := h.svc.Delete(id); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete raffle error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления розыгрыша"})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }

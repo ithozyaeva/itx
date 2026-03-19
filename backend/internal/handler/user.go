@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"ithozyeva/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,7 +39,8 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	token, err := h.svc.Login(req.Login, req.Password)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("login error (login=%s): %v", req.Login, err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Неверный логин или пароль"})
 	}
 
 	return c.JSON(TokenResponse{Token: token})
@@ -51,7 +54,8 @@ func (h *UserHandler) RefreshToken(c *fiber.Ctx) error {
 
 	newToken, err := h.svc.RefreshToken(req.Token)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("refresh token error: %v", err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Недействительный токен"})
 	}
 
 	return c.JSON(TokenResponse{Token: newToken})

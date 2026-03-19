@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"log"
+	"strconv"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -33,7 +35,8 @@ func (h *ReviewOnCommunityHandler) GetAllWithAuthor(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetAllWithAuthor(req.Limit, req.Offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get reviews with author error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки отзывов"})
 	}
 
 	return c.JSON(result)
@@ -50,7 +53,8 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 	err := h.svc.CreateReviewOnCommunityByMemberId(author.Id, review.Text, nil)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("add review error (member=%d): %v", author.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка добавления отзыва"})
 	}
 
 	return c.SendStatus(fiber.StatusOK)
@@ -64,7 +68,8 @@ func (h *ReviewOnCommunityHandler) CreateReview(c *fiber.Ctx) error {
 
 	err := h.svc.CreateReviewOnCommunity(review)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create review error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания отзыва"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_community", 0, review.AuthorTg)
@@ -77,7 +82,8 @@ func (h *ReviewOnCommunityHandler) GetMyReviews(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	reviews, err := h.svc.GetByAuthorId(member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get my reviews error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки отзывов"})
 	}
 	return c.JSON(reviews)
 }
@@ -106,7 +112,8 @@ func (h *ReviewOnCommunityHandler) UpdateMyReview(c *fiber.Ctx) error {
 	review.Status = models.ReviewOnCommunityStatusDraft
 	result, err := h.svc.Update(review)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update review error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления отзыва"})
 	}
 	return c.JSON(result)
 }
@@ -127,7 +134,8 @@ func (h *ReviewOnCommunityHandler) DeleteMyReview(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(review); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete my review error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления отзыва"})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -135,7 +143,8 @@ func (h *ReviewOnCommunityHandler) DeleteMyReview(c *fiber.Ctx) error {
 func (h *ReviewOnCommunityHandler) GetApproved(c *fiber.Ctx) error {
 	result, err := h.svc.GetApproved()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get approved reviews error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки отзывов"})
 	}
 
 	return c.JSON(result)
@@ -149,7 +158,8 @@ func (h *ReviewOnCommunityHandler) Approve(c *fiber.Ctx) error {
 
 	result, err := h.svc.Approve(int64(id))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("approve review error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка одобрения отзыва"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionApprove, "review_on_community", int64(id), result.Text)
@@ -172,7 +182,8 @@ func (h *ReviewOnCommunityHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete review error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления отзыва"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "review_on_community", int64(id), entity.Text)
