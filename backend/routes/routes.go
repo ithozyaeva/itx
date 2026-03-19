@@ -11,13 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient ...*redis.Client) {
+func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	SetupPublicRoutes(app, db)
-	var rc *redis.Client
-	if len(redisClient) > 0 {
-		rc = redisClient[0]
-	}
-	SetupAdminRoutes(app, db, rc)
+	SetupAdminRoutes(app, db, redisClient)
 	SetupPlatformRoutes(app, db)
 }
 func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {

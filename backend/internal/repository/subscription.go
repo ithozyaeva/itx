@@ -250,6 +250,64 @@ func (r *SubscriptionRepository) CountUsersByTier(tierID uint) (int64, error) {
 	return count, err
 }
 
+// CountAllUsersByTier returns user counts for all tiers in a single query.
+func (r *SubscriptionRepository) CountAllUsersByTier() (map[uint]int64, error) {
+	type result struct {
+		TierID uint
+		Count  int64
+	}
+	var results []result
+	err := r.db.Raw(`
+		SELECT tier_id, COUNT(*) as count FROM (
+			SELECT COALESCE(manual_tier_id, resolved_tier_id) as tier_id
+			FROM subscription_users
+			WHERE is_active = true AND COALESCE(manual_tier_id, resolved_tier_id) IS NOT NULL
+		) t GROUP BY tier_id
+	`).Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[uint]int64, len(results))
+	for _, r := range results {
+		m[r.TierID] = r.Count
+	}
+	return m, nil
+}
+
+// CountUsersWithAccessToChat returns the number of users with active access to a chat.
+func (r *SubscriptionRepository) CountUsersWithAccessToChat(chatID int64) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.SubscriptionUserChatAccess{}).
+		Where("chat_id = ? AND revoked_at IS NULL", chatID).
+		Count(&count).Error
+	return count, err
+}
+
+// CountActiveAccessByUsers returns active access counts for multiple users in a single query.
+func (r *SubscriptionRepository) CountActiveAccessByUsers(userIDs []int64) (map[int64]int64, error) {
+	if len(userIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	type result struct {
+		UserID int64
+		Count  int64
+	}
+	var results []result
+	err := r.db.Model(&models.SubscriptionUserChatAccess{}).
+		Select("user_id, COUNT(*) as count").
+		Where("user_id IN ? AND revoked_at IS NULL", userIDs).
+		Group("user_id").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int64]int64, len(results))
+	for _, r := range results {
+		m[r.UserID] = r.Count
+	}
+	return m, nil
+}
+
 func (r *SubscriptionRepository) GetPaginatedUsers(offset, limit int) ([]models.SubscriptionUser, error) {
 	var users []models.SubscriptionUser
 	err := r.db.Order("id").Offset(offset).Limit(limit).Find(&users).Error

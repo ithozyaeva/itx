@@ -309,6 +309,18 @@ func (s *SubscriptionService) CountUsersByTier(tierID uint) (int64, error) {
 	return s.repo.CountUsersByTier(tierID)
 }
 
+func (s *SubscriptionService) CountAllUsersByTier() (map[uint]int64, error) {
+	return s.repo.CountAllUsersByTier()
+}
+
+func (s *SubscriptionService) CountUsersWithAccessToChat(chatID int64) (int64, error) {
+	return s.repo.CountUsersWithAccessToChat(chatID)
+}
+
+func (s *SubscriptionService) CountActiveAccessByUsers(userIDs []int64) (map[int64]int64, error) {
+	return s.repo.CountActiveAccessByUsers(userIDs)
+}
+
 func (s *SubscriptionService) GetPaginatedUsers(offset, limit int) ([]models.SubscriptionUser, error) {
 	return s.repo.GetPaginatedUsers(offset, limit)
 }

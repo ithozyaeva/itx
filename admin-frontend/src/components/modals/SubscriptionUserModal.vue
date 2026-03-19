@@ -22,8 +22,12 @@ const selectedTierSlug = ref('')
 watch(() => props.isOpen, async (open) => {
   if (open && props.userId) {
     isLoading.value = true
-    user.value = await subscriptionService.getUser(props.userId)
-    isLoading.value = false
+    try {
+      user.value = await subscriptionService.getUser(props.userId)
+    }
+    finally {
+      isLoading.value = false
+    }
   }
   else {
     user.value = null

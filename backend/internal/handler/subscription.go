@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
 
@@ -18,20 +19,30 @@ func NewSubscriptionHandler(redisClient *redis.Client) *SubscriptionHandler {
 	}
 }
 
+// tierMap loads all tiers once and returns a map by ID.
+func (h *SubscriptionHandler) tierMap() map[uint]models.SubscriptionTier {
+	tiers, _ := h.svc.GetAllTiers()
+	m := make(map[uint]models.SubscriptionTier, len(tiers))
+	for _, t := range tiers {
+		m[t.ID] = t
+	}
+	return m
+}
+
 func (h *SubscriptionHandler) GetStats(c *fiber.Ctx) error {
 	totalUsers, _ := h.svc.CountAllUsers()
 	tiers, _ := h.svc.GetAllTiers()
 	chats, _ := h.svc.GetAllChats()
+	tierCounts, _ := h.svc.CountAllUsersByTier()
 
 	tierStats := make([]fiber.Map, 0, len(tiers))
 	for _, t := range tiers {
-		count, _ := h.svc.CountUsersByTier(t.ID)
 		tierStats = append(tierStats, fiber.Map{
 			"id":    t.ID,
 			"slug":  t.Slug,
 			"name":  t.Name,
 			"level": t.Level,
-			"users": count,
+			"users": tierCounts[t.ID],
 		})
 	}
 
@@ -60,15 +71,16 @@ func (h *SubscriptionHandler) GetTiers(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить тиры"})
 	}
 
+	tierCounts, _ := h.svc.CountAllUsersByTier()
+
 	items := make([]fiber.Map, 0, len(tiers))
 	for _, t := range tiers {
-		count, _ := h.svc.CountUsersByTier(t.ID)
 		items = append(items, fiber.Map{
 			"id":    t.ID,
 			"slug":  t.Slug,
 			"name":  t.Name,
 			"level": t.Level,
-			"users": count,
+			"users": tierCounts[t.ID],
 		})
 	}
 
@@ -81,6 +93,8 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить чаты"})
 	}
 
+	tm := h.tierMap()
+
 	items := make([]fiber.Map, 0, len(chats))
 	for _, ch := range chats {
 		item := fiber.Map{
@@ -90,13 +104,12 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 		}
 		if ch.AnchorForTierID != nil {
 			item["anchorForTierID"] = *ch.AnchorForTierID
-			tier, err := h.svc.GetTier(*ch.AnchorForTierID)
-			if err == nil {
+			if tier, ok := tm[*ch.AnchorForTierID]; ok {
 				item["anchorTierName"] = tier.Name
 			}
 		}
-		users, _ := h.svc.GetUsersWithAccessToChat(ch.ID)
-		item["activeUsers"] = len(users)
+		count, _ := h.svc.CountUsersWithAccessToChat(ch.ID)
+		item["activeUsers"] = count
 		items = append(items, item)
 	}
 
@@ -119,19 +132,28 @@ func (h *SubscriptionHandler) GetUsers(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить пользователей"})
 	}
 
+	// Batch load tiers and access counts
+	tm := h.tierMap()
+	userIDs := make([]int64, len(users))
+	for i, u := range users {
+		userIDs[i] = u.ID
+	}
+	accessCounts, _ := h.svc.CountActiveAccessByUsers(userIDs)
+
 	items := make([]fiber.Map, 0, len(users))
 	for _, u := range users {
 		item := fiber.Map{
-			"id":       u.ID,
-			"username": u.Username,
-			"fullName": u.FullName,
-			"isActive": u.IsActive,
+			"id":          u.ID,
+			"username":    u.Username,
+			"fullName":    u.FullName,
+			"isActive":    u.IsActive,
+			"activeChats": accessCounts[u.ID],
+			"createdAt":   u.CreatedAt,
 		}
 
 		effTierID := u.EffectiveTierID()
 		if effTierID != nil {
-			tier, err := h.svc.GetTier(*effTierID)
-			if err == nil {
+			if tier, ok := tm[*effTierID]; ok {
 				item["tierName"] = tier.Name
 				item["tierSlug"] = tier.Slug
 			}
@@ -145,10 +167,6 @@ func (h *SubscriptionHandler) GetUsers(c *fiber.Ctx) error {
 		if u.LastCheckAt != nil {
 			item["lastCheckAt"] = u.LastCheckAt
 		}
-
-		access, _ := h.svc.GetActiveAccess(u.ID)
-		item["activeChats"] = len(access)
-		item["createdAt"] = u.CreatedAt
 
 		items = append(items, item)
 	}
@@ -167,6 +185,9 @@ func (h *SubscriptionHandler) GetUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Пользователь не найден"})
 	}
 
+	// Load all tiers once for name resolution
+	tm := h.tierMap()
+
 	result := fiber.Map{
 		"id":       user.ID,
 		"username": user.Username,
@@ -176,23 +197,18 @@ func (h *SubscriptionHandler) GetUser(c *fiber.Ctx) error {
 
 	if user.ResolvedTierID != nil {
 		result["resolvedTierID"] = *user.ResolvedTierID
-		tier, err := h.svc.GetTier(*user.ResolvedTierID)
-		if err == nil {
+		if tier, ok := tm[*user.ResolvedTierID]; ok {
 			result["resolvedTierName"] = tier.Name
 		}
 	}
 	if user.ManualTierID != nil {
 		result["manualTierID"] = *user.ManualTierID
-		tier, err := h.svc.GetTier(*user.ManualTierID)
-		if err == nil {
+		if tier, ok := tm[*user.ManualTierID]; ok {
 			result["manualTierName"] = tier.Name
 		}
 	}
-
-	effTierID := user.EffectiveTierID()
-	if effTierID != nil {
-		tier, err := h.svc.GetTier(*effTierID)
-		if err == nil {
+	if effTierID := user.EffectiveTierID(); effTierID != nil {
+		if tier, ok := tm[*effTierID]; ok {
 			result["effectiveTierName"] = tier.Name
 		}
 	}
@@ -202,16 +218,22 @@ func (h *SubscriptionHandler) GetUser(c *fiber.Ctx) error {
 	}
 	result["createdAt"] = user.CreatedAt
 
+	// Load access and batch-resolve chat titles
 	access, _ := h.svc.GetActiveAccess(userID)
+	allChats, _ := h.svc.GetAllChats()
+	chatMap := make(map[int64]string, len(allChats))
+	for _, ch := range allChats {
+		chatMap[ch.ID] = ch.Title
+	}
+
 	chatAccess := make([]fiber.Map, 0, len(access))
 	for _, a := range access {
 		chatItem := fiber.Map{
 			"chatID":    a.ChatID,
 			"grantedAt": a.GrantedAt,
 		}
-		chat, err := h.svc.GetChat(a.ChatID)
-		if err == nil {
-			chatItem["chatTitle"] = chat.Title
+		if title, ok := chatMap[a.ChatID]; ok {
+			chatItem["chatTitle"] = title
 		}
 		chatAccess = append(chatAccess, chatItem)
 	}
