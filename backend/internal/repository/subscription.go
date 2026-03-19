@@ -241,6 +241,15 @@ func (r *SubscriptionRepository) GetUsersByTier(tierID uint) ([]models.Subscript
 	return users, err
 }
 
+func (r *SubscriptionRepository) CountUsersByTier(tierID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.SubscriptionUser{}).Where(
+		"is_active = ? AND ((manual_tier_id = ?) OR (manual_tier_id IS NULL AND resolved_tier_id = ?))",
+		true, tierID, tierID,
+	).Count(&count).Error
+	return count, err
+}
+
 func (r *SubscriptionRepository) GetPaginatedUsers(offset, limit int) ([]models.SubscriptionUser, error) {
 	var users []models.SubscriptionUser
 	err := r.db.Order("id").Offset(offset).Limit(limit).Find(&users).Error

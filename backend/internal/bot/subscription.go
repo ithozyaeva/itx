@@ -14,6 +14,26 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const msgAccessRevoked = "Уровень вашей подписки изменился. Доступ к некоторым чатам был отозван."
+
+// strPtr returns a pointer to s if non-empty, nil otherwise.
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// notifyUserOfSyncResult sends links for granted chats and revocation message for revoked ones.
+func (b *TelegramBot) notifyUserOfSyncResult(userID int64, result *service.SyncResult) {
+	if len(result.Granted) > 0 {
+		b.sendSubscriptionLinks(userID, result)
+	}
+	if len(result.Revoked) > 0 {
+		b.SendDirectMessage(userID, msgAccessRevoked)
+	}
+}
+
 // isAdmin checks if a Telegram user ID is in the admin list.
 func (b *TelegramBot) isAdmin(userID int64) bool {
 	for _, id := range config.CFG.TelegramAdminIDs {
@@ -38,8 +58,7 @@ func (b *TelegramBot) isChatMember(chatID, userID int64) bool {
 		log.Printf("Failed to check membership: chat=%d user=%d: %v", chatID, userID, err)
 		return false
 	}
-	status := member.Status
-	return status == "creator" || status == "administrator" || status == "member"
+	return isActiveMemberStatus(member.Status)
 }
 
 // createOneTimeInviteLink creates a single-use invite link for a chat.
@@ -110,14 +129,8 @@ func (b *TelegramBot) kickUserFunc() func(int64, int64) {
 // handleSubCommand checks subscription and grants access.
 func (b *TelegramBot) handleSubCommand(message *tgbotapi.Message) {
 	user := message.From
-	username := user.UserName
-	var usernamePtr *string
-	if username != "" {
-		usernamePtr = &username
-	}
-
 	result, err := b.subscriptionService.OnboardUser(
-		user.ID, usernamePtr, user.FirstName+" "+user.LastName,
+		user.ID, strPtr(user.UserName), user.FirstName+" "+user.LastName,
 		b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
 	)
 	if err != nil {
@@ -175,9 +188,7 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 		}
 	}
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 // sendSubscriptionLinks sends invite links as inline keyboard buttons.
@@ -223,34 +234,18 @@ func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated
 	// Invalidate membership cache
 	b.subscriptionService.InvalidateMemberCache(update.Chat.ID, userID)
 
-	// Ensure user exists
+	// Ensure user exists and sync access
 	tgUser := update.NewChatMember.User
-	username := tgUser.UserName
-	var usernamePtr *string
-	if username != "" {
-		usernamePtr = &username
-	}
-	b.subscriptionService.OnboardUser(
+	usernamePtr := strPtr(tgUser.UserName)
+	result, err := b.subscriptionService.OnboardUser(
 		userID, usernamePtr, tgUser.FirstName+" "+tgUser.LastName,
 		b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
-	)
-
-	// Re-sync and notify
-	result, err := b.subscriptionService.CheckAndSyncUser(
-		userID, b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
 	)
 	if err != nil {
 		return
 	}
 
-	if len(result.Granted) > 0 {
-		b.sendSubscriptionLinks(userID, result)
-	}
-
-	if len(result.Revoked) > 0 {
-		b.SendDirectMessage(userID,
-			"Уровень вашей подписки изменился. Доступ к некоторым чатам был отозван.")
-	}
+	b.notifyUserOfSyncResult(userID, result)
 }
 
 // handleMyChatMemberUpdated handles bot being added/removed from chats.
@@ -295,7 +290,7 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 }
 
 func isActiveMemberStatus(status string) bool {
-	return status == "creator" || status == "administrator" || status == "member"
+	return status == "creator" || status == "administrator" || status == "member" || status == "restricted"
 }
 
 // --- Periodic subscription checker ---
@@ -310,15 +305,7 @@ func (b *TelegramBot) startSubscriptionChecker() {
 			b.botCheckFunc(),
 			b.createInviteLinkFunc(),
 			b.kickUserFunc(),
-			func(userID int64, result *service.SyncResult) {
-				if len(result.Granted) > 0 {
-					b.sendSubscriptionLinks(userID, result)
-				}
-				if len(result.Revoked) > 0 {
-					b.SendDirectMessage(userID,
-						"Уровень вашей подписки изменился. Доступ к некоторым чатам был отозван.")
-				}
-			},
+			b.notifyUserOfSyncResult,
 			50*time.Millisecond,
 		)
 	}
@@ -338,13 +325,11 @@ func (b *TelegramBot) handleSubTiersCommand(message *tgbotapi.Message) {
 
 	text := "<b>Тиры подписок:</b>\n\n"
 	for _, t := range tiers {
-		users, _ := b.subscriptionService.GetUsersByTier(t.ID)
-		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, t.Name, t.Slug, len(users))
+		count, _ := b.subscriptionService.CountUsersByTier(t.ID)
+		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, t.Name, t.Slug, count)
 	}
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 func (b *TelegramBot) handleSubChatsCommand(message *tgbotapi.Message) {
@@ -369,9 +354,7 @@ func (b *TelegramBot) handleSubChatsCommand(message *tgbotapi.Message) {
 		text += fmt.Sprintf("<code>%d</code> — %s%s\n", c.ID, c.Title, role)
 	}
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
@@ -517,9 +500,7 @@ func (b *TelegramBot) handleSubUsersCommand(message *tgbotapi.Message) {
 		text += fmt.Sprintf("%s <code>%d</code> @%s%s\n", active, u.ID, usernameStr, tierInfo)
 	}
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
@@ -577,9 +558,7 @@ func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
 		user.ResolvedTierID, user.ManualTierID, effTierName,
 		lastCheck, len(access))
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 func (b *TelegramBot) handleSubOverrideCommand(message *tgbotapi.Message) {
@@ -629,14 +608,8 @@ func (b *TelegramBot) handleSubOverrideCommand(message *tgbotapi.Message) {
 	result, err := b.subscriptionService.CheckAndSyncUser(
 		userID, b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
 	)
-	if err == nil && (len(result.Granted) > 0 || len(result.Revoked) > 0) {
-		if len(result.Granted) > 0 {
-			b.sendSubscriptionLinks(userID, result)
-		}
-		if len(result.Revoked) > 0 {
-			b.SendDirectMessage(userID,
-				"Уровень вашей подписки был изменён администратором. Доступ к некоторым чатам был отозван.")
-		}
+	if err == nil {
+		b.notifyUserOfSyncResult(userID, result)
 	}
 }
 
@@ -652,15 +625,7 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 			b.botCheckFunc(),
 			b.createInviteLinkFunc(),
 			b.kickUserFunc(),
-			func(userID int64, result *service.SyncResult) {
-				if len(result.Granted) > 0 {
-					b.sendSubscriptionLinks(userID, result)
-				}
-				if len(result.Revoked) > 0 {
-					b.SendDirectMessage(userID,
-						"Уровень вашей подписки изменился. Доступ к некоторым чатам был отозван.")
-				}
-			},
+			b.notifyUserOfSyncResult,
 			50*time.Millisecond,
 		)
 		b.SendDirectMessage(message.Chat.ID, "Проверка подписок завершена.")
@@ -677,13 +642,11 @@ func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {
 
 	text := fmt.Sprintf("<b>Статистика подписок</b>\n\nВсего пользователей: %d\n\n", total)
 	for _, t := range tiers {
-		users, _ := b.subscriptionService.GetUsersByTier(t.ID)
-		text += fmt.Sprintf("%s: %d\n", t.Name, len(users))
+		count, _ := b.subscriptionService.CountUsersByTier(t.ID)
+		text += fmt.Sprintf("%s: %d\n", t.Name, count)
 	}
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, text)
-	msg.ParseMode = "HTML"
-	b.bot.Send(msg)
+	b.SendDirectMessage(message.Chat.ID, text)
 }
 
 // parseAPIResponse parses the Telegram API response into the target struct.

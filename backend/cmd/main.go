@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"ithozyeva/config"
 	"ithozyeva/database"
 	"ithozyeva/internal/bot"
@@ -33,6 +34,10 @@ func main() {
 		Password: config.CFG.Redis.Password,
 		DB:       config.CFG.Redis.DB,
 	})
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	log.Println("Redis connected successfully")
 
 	// Создаем экземпляр Fiber
 	app := fiber.New(fiber.Config{

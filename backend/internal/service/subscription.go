@@ -125,10 +125,9 @@ func (s *SubscriptionService) CheckAndSyncUser(
 			"old_tier_id": oldTierID,
 			"new_tier_id": newTierID,
 		})
+		user.ResolvedTierID = newTierID
 	}
 
-	// Reload user
-	user, _ = s.repo.GetUser(userID)
 	effectiveTierID := user.EffectiveTierID()
 
 	// Determine entitled chats
@@ -304,6 +303,10 @@ func (s *SubscriptionService) CountAllUsers() (int64, error) {
 
 func (s *SubscriptionService) GetUsersByTier(tierID uint) ([]models.SubscriptionUser, error) {
 	return s.repo.GetUsersByTier(tierID)
+}
+
+func (s *SubscriptionService) CountUsersByTier(tierID uint) (int64, error) {
+	return s.repo.CountUsersByTier(tierID)
 }
 
 func (s *SubscriptionService) GetPaginatedUsers(offset, limit int) ([]models.SubscriptionUser, error) {
