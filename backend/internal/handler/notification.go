@@ -24,7 +24,8 @@ func (h *NotificationHandler) GetMy(c *fiber.Ctx) error {
 		Order("created_at DESC").
 		Limit(50).
 		Find(&notifications).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get notifications error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки уведомлений"})
 	}
 
 	return c.JSON(notifications)
@@ -37,7 +38,8 @@ func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
 	if err := database.DB.Model(&models.Notification{}).
 		Where("member_id = ? AND read = false", member.Id).
 		Count(&count).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get unread count error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения количества уведомлений"})
 	}
 
 	return c.JSON(fiber.Map{"count": count})
@@ -55,7 +57,8 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 		Update("read", true)
 
 	if result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": result.Error.Error()})
+		log.Printf("mark notification as read error (id=%d, member=%d): %v", id, member.Id, result.Error)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления уведомления"})
 	}
 
 	if result.RowsAffected == 0 {
@@ -71,7 +74,8 @@ func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
 	if err := database.DB.Model(&models.Notification{}).
 		Where("member_id = ? AND read = false", member.Id).
 		Update("read", true).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("mark all notifications as read error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления уведомлений"})
 	}
 
 	return c.SendStatus(fiber.StatusOK)

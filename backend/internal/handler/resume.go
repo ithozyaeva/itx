@@ -2,6 +2,7 @@ package handler
 
 import (
 	"io"
+	"log"
 	"mime"
 	"path/filepath"
 	"strconv"
@@ -45,13 +46,15 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("failed to open resume file: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка открытия файла")
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("failed to read resume file: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка чтения файла")
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
@@ -77,7 +80,8 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 
 	resume, parsed, err := h.svc.UploadResume(member, fileHeader.Filename, contentType, data, req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		log.Printf("upload resume error (member=%d): %v", member.Id, err)
+		return fiber.NewError(fiber.StatusBadRequest, "Ошибка загрузки резюме")
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "resume", resume.Id, fileHeader.Filename)
@@ -98,7 +102,8 @@ func (h *ResumeHandler) ListMy(c *fiber.Ctx) error {
 
 	resumes, err := h.svc.ListByTelegramID(member.TelegramID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("list resumes error (member=%d): %v", member.TelegramID, err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка загрузки резюме")
 	}
 	return c.JSON(resumes)
 }
@@ -130,7 +135,8 @@ func (h *ResumeHandler) UpdateMy(c *fiber.Ctx) error {
 
 	resume, err := h.svc.UpdateResume(id, member.TelegramID, payload)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		log.Printf("update resume error (id=%d, member=%d): %v", id, member.TelegramID, err)
+		return fiber.NewError(fiber.StatusBadRequest, "Ошибка обновления резюме")
 	}
 	return c.JSON(resume)
 }
@@ -148,7 +154,8 @@ func (h *ResumeHandler) DeleteMy(c *fiber.Ctx) error {
 
 	resume, err := h.svc.DeleteResume(id, member.TelegramID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		log.Printf("delete resume error (id=%d, member=%d): %v", id, member.TelegramID, err)
+		return fiber.NewError(fiber.StatusBadRequest, "Ошибка удаления резюме")
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "resume", id, resume.FileName)
@@ -169,7 +176,8 @@ func (h *ResumeHandler) DownloadMy(c *fiber.Ctx) error {
 
 	resume, err := h.svc.GetByIdForMember(id, member.TelegramID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, err.Error())
+		log.Printf("download resume error (id=%d, member=%d): %v", id, member.TelegramID, err)
+		return fiber.NewError(fiber.StatusNotFound, "Резюме не найдено")
 	}
 
 	return c.JSON(fiber.Map{"url": resume.FilePath})
@@ -183,7 +191,8 @@ func (h *ResumeHandler) AdminList(c *fiber.Ctx) error {
 
 	result, err := h.svc.SearchForAdmin(limit, offset, filter)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("admin list resumes error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка поиска резюме")
 	}
 	return c.JSON(result)
 }
@@ -192,7 +201,8 @@ func (h *ResumeHandler) AdminDownload(c *fiber.Ctx) error {
 	filter := parseAdminResumeFilter(c)
 	data, err := h.svc.GenerateArchive(filter)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("admin download resumes error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка генерации архива")
 	}
 
 	c.Set("Content-Type", "application/zip")
@@ -208,7 +218,8 @@ func (h *ResumeHandler) AdminGet(c *fiber.Ctx) error {
 
 	resume, err := h.svc.GetByIdWithMember(id)
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, err.Error())
+		log.Printf("admin get resume error (id=%d): %v", id, err)
+		return fiber.NewError(fiber.StatusNotFound, "Резюме не найдено")
 	}
 
 	return c.JSON(resume)

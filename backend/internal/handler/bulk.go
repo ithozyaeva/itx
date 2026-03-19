@@ -35,7 +35,8 @@ func (h *BulkHandler) BulkDeleteEvents(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Where("id IN ?", req.Ids).Delete(&models.Event{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("bulk delete events error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка массового удаления событий"})
 	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
@@ -55,7 +56,8 @@ func (h *BulkHandler) BulkDeleteMentors(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Where("id IN ?", req.Ids).Delete(&models.MentorDbShortModel{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("bulk delete mentors error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка массового удаления менторов"})
 	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
@@ -75,7 +77,8 @@ func (h *BulkHandler) BulkDeleteMembers(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Where("id IN ?", req.Ids).Delete(&models.Member{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("bulk delete members error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка массового удаления участников"})
 	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
@@ -95,7 +98,8 @@ func (h *BulkHandler) BulkDeleteReviews(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Where("id IN ?", req.Ids).Delete(&models.ReviewOnCommunity{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("bulk delete reviews error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка массового удаления отзывов"})
 	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)
@@ -185,7 +189,8 @@ func (h *BulkHandler) BulkDeleteMentorsReviews(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Where("id IN ?", req.Ids).Delete(&models.ReviewOnService{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("bulk delete mentor reviews error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка массового удаления отзывов"})
 	}
 
 	actorId, actorName, actorType := getActorId(c), getActorName(c), getActorType(c)

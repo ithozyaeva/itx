@@ -114,7 +114,7 @@ func (h *TaskExchangeHandler) Update(c *fiber.Ctx) error {
 	task, err := h.svc.Update(id, member.Id, isAdmin, req)
 	if err != nil {
 		log.Printf("Task update error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось обновить задание"})
 	}
 
 	BroadcastEvent("tasks")
@@ -131,7 +131,7 @@ func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
 	task, err := h.svc.Assign(id, member.Id)
 	if err != nil {
 		log.Printf("Task assign error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось назначить задание"})
 	}
 
 	BroadcastEvent("tasks")
@@ -148,7 +148,7 @@ func (h *TaskExchangeHandler) Unassign(c *fiber.Ctx) error {
 	task, err := h.svc.Unassign(id, member.Id)
 	if err != nil {
 		log.Printf("Task unassign error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отменить назначение"})
 	}
 
 	return c.JSON(task)
@@ -177,7 +177,7 @@ func (h *TaskExchangeHandler) RemoveAssignee(c *fiber.Ctx) error {
 	task, err := h.svc.RemoveAssignee(id, memberId, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Task removeAssignee error (task=%d, assignee=%d, requester=%d): %v", id, memberId, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось удалить исполнителя"})
 	}
 
 	return c.JSON(task)
@@ -201,7 +201,7 @@ func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
 	task, err := h.svc.MarkDone(id, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Task markDone error (task=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отметить задание как выполненное"})
 	}
 
 	// Notify creator that task is done

@@ -1,11 +1,13 @@
 package handler
 
 import (
-	"ithozyeva/internal/models"
-	"ithozyeva/internal/service"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"ithozyeva/internal/models"
+	"ithozyeva/internal/service"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -61,7 +63,8 @@ func (h *BaseHandler[T]) Search(c *fiber.Ctx) error {
 	// Передаем указатели в сервис
 	result, err := h.service.Search(req.Limit, req.Offset, nil, nil)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("search error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска"})
 	}
 
 	return c.JSON(result)
@@ -76,7 +79,8 @@ func (h *BaseHandler[T]) Create(c *fiber.Ctx) error {
 
 	result, err := h.service.Create(entity)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания"})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(result)
@@ -91,7 +95,8 @@ func (h *BaseHandler[T]) Update(c *fiber.Ctx) error {
 
 	result, err := h.service.Update(entity)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления"})
 	}
 
 	return c.JSON(result)
@@ -125,7 +130,8 @@ func (h *BaseHandler[T]) Delete(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления"})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -46,7 +47,8 @@ func (h *CasinoHandler) PlayCoinFlip(c *fiber.Ctx) error {
 
 	result, err := h.svc.PlayCoinFlip(member.Id, req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("PlayCoinFlip error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
 	BroadcastEvent("casino")
@@ -66,7 +68,8 @@ func (h *CasinoHandler) PlayDiceRoll(c *fiber.Ctx) error {
 
 	result, err := h.svc.PlayDiceRoll(member.Id, req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("PlayDiceRoll error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
 	BroadcastEvent("casino")
@@ -86,7 +89,8 @@ func (h *CasinoHandler) PlayWheel(c *fiber.Ctx) error {
 
 	result, err := h.svc.PlayWheel(member.Id, req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("PlayWheel error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
 	BroadcastEvent("casino")
@@ -97,7 +101,8 @@ func (h *CasinoHandler) GetGlobalFeed(c *fiber.Ctx) error {
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	items, err := h.svc.GetGlobalFeed(limit)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("GetGlobalFeed error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки ленты"})
 	}
 	return c.JSON(fiber.Map{"items": items})
 }
@@ -109,7 +114,8 @@ func (h *CasinoHandler) GetHistory(c *fiber.Ctx) error {
 
 	items, total, err := h.svc.GetHistory(member.Id, limit, offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("GetHistory error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки истории"})
 	}
 
 	return c.JSON(fiber.Map{"items": items, "total": total})
@@ -119,7 +125,8 @@ func (h *CasinoHandler) GetStats(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
 	stats, err := h.svc.GetStats(member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("GetStats error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики"})
 	}
 	return c.JSON(stats)
 }
@@ -127,7 +134,8 @@ func (h *CasinoHandler) GetStats(c *fiber.Ctx) error {
 func (h *CasinoHandler) GetAdminStats(c *fiber.Ctx) error {
 	stats, err := h.svc.GetAdminStats()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("GetAdminStats error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки статистики"})
 	}
 	return c.JSON(stats)
 }
@@ -146,7 +154,8 @@ func (h *CasinoHandler) GetAdminBets(c *fiber.Ctx) error {
 
 	items, total, err := h.svc.SearchBets(username, game, limit, offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("SearchBets error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска ставок"})
 	}
 
 	return c.JSON(fiber.Map{"items": items, "total": total})

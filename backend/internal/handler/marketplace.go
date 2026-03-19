@@ -150,7 +150,7 @@ func (h *MarketplaceHandler) Update(c *fiber.Ctx) error {
 	item, err := h.svc.Update(id, &req, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Marketplace update error (item=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось обновить объявление"})
 	}
 
 	return c.JSON(item)
@@ -166,7 +166,7 @@ func (h *MarketplaceHandler) RequestPurchase(c *fiber.Ctx) error {
 	item, err := h.svc.RequestPurchase(id, member.Id)
 	if err != nil {
 		log.Printf("Marketplace requestPurchase error (item=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось оформить заявку на покупку"})
 	}
 
 	go func() {
@@ -197,7 +197,7 @@ func (h *MarketplaceHandler) CancelPurchase(c *fiber.Ctx) error {
 	item, err := h.svc.CancelPurchase(id, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Marketplace cancelPurchase error (item=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отменить покупку"})
 	}
 
 	return c.JSON(item)
@@ -221,7 +221,7 @@ func (h *MarketplaceHandler) MarkSold(c *fiber.Ctx) error {
 	item, err := h.svc.MarkSold(id, member.Id, isAdmin)
 	if err != nil {
 		log.Printf("Marketplace markSold error (item=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось отметить как проданное"})
 	}
 
 	if item.BuyerId != nil {
@@ -249,7 +249,7 @@ func (h *MarketplaceHandler) Delete(c *fiber.Ctx) error {
 
 	if err := h.svc.Delete(id, member.Id, isAdmin); err != nil {
 		log.Printf("Marketplace delete error (item=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось удалить объявление"})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

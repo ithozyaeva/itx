@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 
@@ -35,7 +37,8 @@ func (h *NotificationSettingsHandler) GetMy(c *fiber.Ctx) error {
 
 	settings, err := h.svc.GetByMemberId(memberId)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get notification settings error (member=%d): %v", memberId, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки настроек уведомлений"})
 	}
 
 	return c.JSON(settings)
@@ -64,7 +67,8 @@ func (h *NotificationSettingsHandler) UpdateMy(c *fiber.Ctx) error {
 
 	result, err := h.svc.Update(memberId, settings)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update notification settings error (member=%d): %v", memberId, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления настроек уведомлений"})
 	}
 
 	return c.JSON(result)

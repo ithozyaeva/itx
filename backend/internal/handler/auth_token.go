@@ -3,12 +3,14 @@ package handler
 import (
 	"crypto/subtle"
 	"encoding/base64"
+	"log"
+	"strconv"
+
 	"ithozyeva/config"
 	"ithozyeva/internal/bot"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -56,8 +58,9 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 
 	isSubcriber, err := bot.CheckUserInChat(existingUser.TelegramID)
 	if err != nil {
+		log.Printf("failed to check user %d in chat: %v", existingUser.TelegramID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Failed to verify chat subscription",
 		})
 	}
 

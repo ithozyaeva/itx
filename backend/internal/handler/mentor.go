@@ -2,10 +2,12 @@ package handler
 
 import (
 	"fmt"
+	"log"
+	"strconv"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -53,7 +55,8 @@ func (h *MentorHandler) AddReviewToService(c *fiber.Ctx) error {
 
 	result, err := h.svc.AddReviewToService(review)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("add review to service error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка добавления отзыва"})
 	}
 
 	return c.JSON(result)
@@ -85,7 +88,8 @@ func (h *MentorHandler) AddReviewFromPlatform(c *fiber.Ctx) error {
 
 	result, err := h.svc.AddReviewToService(review)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("add review from platform error (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка добавления отзыва"})
 	}
 
 	return c.JSON(result)
@@ -100,7 +104,8 @@ func (h *MentorHandler) Create(c *fiber.Ctx) error {
 
 	result, err := h.svc.CreateWithRelations(request)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("create mentor error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания ментора"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "mentor", result.Id, fmt.Sprintf("%s %s", result.FirstName, result.LastName))
@@ -122,7 +127,8 @@ func (h *MentorHandler) Update(c *fiber.Ctx) error {
 
 	result, err := h.svc.UpdateWithRelations(request)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor error (id=%d): %v", request.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления ментора"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "mentor", result.Id, fmt.Sprintf("%s %s", result.FirstName, result.LastName))
@@ -150,7 +156,8 @@ func (h *MentorHandler) Delete(c *fiber.Ctx) error {
 	entityName := fmt.Sprintf("%s %s", fullEntity.FirstName, fullEntity.LastName)
 
 	if err := h.service.Delete(entity); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("delete mentor error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка удаления ментора"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionDelete, "mentor", int64(id), entityName)
@@ -181,7 +188,8 @@ func (h *MentorHandler) GetAllWithRelations(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetAllWithRelations(req.Limit, req.Offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get all mentors error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки менторов"})
 	}
 
 	return c.JSON(result)
@@ -201,7 +209,8 @@ func (h *MentorHandler) UpdateInfo(c *fiber.Ctx) error {
 	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get mentor by member ID error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения данных ментора"})
 	}
 
 	existedMentor.Occupation = req.Occupation
@@ -209,7 +218,8 @@ func (h *MentorHandler) UpdateInfo(c *fiber.Ctx) error {
 
 	result, err := h.svc.UpdateWithRelations(existedMentor)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor info error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления информации ментора"})
 	}
 
 	return c.JSON(result)
@@ -228,14 +238,16 @@ func (h *MentorHandler) UpdateProfTags(c *fiber.Ctx) error {
 	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get mentor by member ID error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения данных ментора"})
 	}
 
 	existedMentor.ProfTags = req.ProfTags
 
 	result, err := h.svc.UpdateWithRelations(existedMentor)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor prof tags error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления тегов ментора"})
 	}
 
 	return c.JSON(result)
@@ -254,14 +266,16 @@ func (h *MentorHandler) UpdateContacts(c *fiber.Ctx) error {
 	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get mentor by member ID error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения данных ментора"})
 	}
 
 	existedMentor.Contacts = req.Contacts
 
 	result, err := h.svc.UpdateWithRelations(existedMentor)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor contacts error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления контактов ментора"})
 	}
 
 	return c.JSON(result)
@@ -283,7 +297,8 @@ func (h *MentorHandler) UpdateOrder(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Model(&models.MentorDbShortModel{}).Where("id = ?", id).Update("order", req.Order).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor order error (id=%d): %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления порядка ментора"})
 	}
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "mentor", id, fmt.Sprintf("order=%d", req.Order))
@@ -304,14 +319,16 @@ func (h *MentorHandler) UpdateServices(c *fiber.Ctx) error {
 	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("get mentor by member ID error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения данных ментора"})
 	}
 
 	existedMentor.Services = req.Services
 
 	result, err := h.svc.UpdateWithRelations(existedMentor)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("update mentor services error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления услуг ментора"})
 	}
 
 	return c.JSON(result)
