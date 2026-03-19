@@ -58,7 +58,7 @@ func main() {
 	}))
 
 	// Настраиваем маршруты
-	routes.SetupRoutes(app, database.DB)
+	routes.SetupRoutes(app, database.DB, redisClient)
 
 	// Запускаем фоновую задачу для автозамораживания реферальных ссылок
 	go func() {

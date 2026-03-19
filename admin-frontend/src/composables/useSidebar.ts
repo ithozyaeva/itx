@@ -5,6 +5,7 @@ import Award from '~icons/lucide/award'
 import BarChart3 from '~icons/lucide/bar-chart-3'
 import Calendar from '~icons/lucide/calendar'
 import ClipboardList from '~icons/lucide/clipboard-list'
+import CreditCard from '~icons/lucide/credit-card'
 import Dice5 from '~icons/lucide/dice-5'
 import FileText from '~icons/lucide/file-text'
 import Gift from '~icons/lucide/gift'
@@ -109,6 +110,12 @@ export function useSidebar() {
       title: 'Казино',
       path: '/casino',
       icon: Dice5,
+    },
+    {
+      title: 'Подписки',
+      path: '/subscriptions',
+      icon: CreditCard,
+      requiredPermission: 'can_view_admin_subscriptions',
     },
     {
       title: 'Журнал действий',
