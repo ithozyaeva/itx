@@ -323,10 +323,10 @@ func (b *TelegramBot) handleSubTiersCommand(message *tgbotapi.Message) {
 		return
 	}
 
+	tierCounts, _ := b.subscriptionService.CountAllUsersByTier()
 	text := "<b>Тиры подписок:</b>\n\n"
 	for _, t := range tiers {
-		count, _ := b.subscriptionService.CountUsersByTier(t.ID)
-		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, t.Name, t.Slug, count)
+		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, t.Name, t.Slug, tierCounts[t.ID])
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -640,10 +640,10 @@ func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {
 	total, _ := b.subscriptionService.CountAllUsers()
 	tiers, _ := b.subscriptionService.GetAllTiers()
 
+	tierCounts, _ := b.subscriptionService.CountAllUsersByTier()
 	text := fmt.Sprintf("<b>Статистика подписок</b>\n\nВсего пользователей: %d\n\n", total)
 	for _, t := range tiers {
-		count, _ := b.subscriptionService.CountUsersByTier(t.ID)
-		text += fmt.Sprintf("%s: %d\n", t.Name, count)
+		text += fmt.Sprintf("%s: %d\n", t.Name, tierCounts[t.ID])
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)

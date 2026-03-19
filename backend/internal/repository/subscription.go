@@ -268,8 +268,8 @@ func (r *SubscriptionRepository) CountAllUsersByTier() (map[uint]int64, error) {
 		return nil, err
 	}
 	m := make(map[uint]int64, len(results))
-	for _, r := range results {
-		m[r.TierID] = r.Count
+	for _, v := range results {
+		m[v.TierID] = v.Count
 	}
 	return m, nil
 }
@@ -281,6 +281,31 @@ func (r *SubscriptionRepository) CountUsersWithAccessToChat(chatID int64) (int64
 		Where("chat_id = ? AND revoked_at IS NULL", chatID).
 		Count(&count).Error
 	return count, err
+}
+
+// CountActiveAccessByChats returns active user counts per chat in a single query.
+func (r *SubscriptionRepository) CountActiveAccessByChats(chatIDs []int64) (map[int64]int64, error) {
+	if len(chatIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	type row struct {
+		ChatID int64
+		Count  int64
+	}
+	var rows []row
+	err := r.db.Model(&models.SubscriptionUserChatAccess{}).
+		Select("chat_id, COUNT(*) as count").
+		Where("chat_id IN ? AND revoked_at IS NULL", chatIDs).
+		Group("chat_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int64]int64, len(rows))
+	for _, v := range rows {
+		m[v.ChatID] = v.Count
+	}
+	return m, nil
 }
 
 // CountActiveAccessByUsers returns active access counts for multiple users in a single query.
@@ -302,8 +327,8 @@ func (r *SubscriptionRepository) CountActiveAccessByUsers(userIDs []int64) (map[
 		return nil, err
 	}
 	m := make(map[int64]int64, len(results))
-	for _, r := range results {
-		m[r.UserID] = r.Count
+	for _, v := range results {
+		m[v.UserID] = v.Count
 	}
 	return m, nil
 }

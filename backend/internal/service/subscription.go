@@ -321,6 +321,10 @@ func (s *SubscriptionService) CountActiveAccessByUsers(userIDs []int64) (map[int
 	return s.repo.CountActiveAccessByUsers(userIDs)
 }
 
+func (s *SubscriptionService) CountActiveAccessByChats(chatIDs []int64) (map[int64]int64, error) {
+	return s.repo.CountActiveAccessByChats(chatIDs)
+}
+
 func (s *SubscriptionService) GetPaginatedUsers(offset, limit int) ([]models.SubscriptionUser, error) {
 	return s.repo.GetPaginatedUsers(offset, limit)
 }

@@ -95,12 +95,19 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 
 	tm := h.tierMap()
 
+	chatIDs := make([]int64, len(chats))
+	for i, ch := range chats {
+		chatIDs[i] = ch.ID
+	}
+	accessCounts, _ := h.svc.CountActiveAccessByChats(chatIDs)
+
 	items := make([]fiber.Map, 0, len(chats))
 	for _, ch := range chats {
 		item := fiber.Map{
-			"id":       ch.ID,
-			"title":    ch.Title,
-			"chatType": ch.ChatType,
+			"id":          ch.ID,
+			"title":       ch.Title,
+			"chatType":    ch.ChatType,
+			"activeUsers": accessCounts[ch.ID],
 		}
 		if ch.AnchorForTierID != nil {
 			item["anchorForTierID"] = *ch.AnchorForTierID
@@ -108,8 +115,6 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 				item["anchorTierName"] = tier.Name
 			}
 		}
-		count, _ := h.svc.CountUsersWithAccessToChat(ch.ID)
-		item["activeUsers"] = count
 		items = append(items, item)
 	}
 
