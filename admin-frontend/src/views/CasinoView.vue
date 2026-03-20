@@ -53,7 +53,7 @@ onUnmounted(casinoService.clearPagination)
         variant="h2"
         as="h1"
       >
-        Казино
+        Мини-игры
       </Typography>
 
       <div

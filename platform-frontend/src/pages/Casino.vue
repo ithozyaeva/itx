@@ -304,10 +304,10 @@ onMounted(() => fetchData())
       <div class="flex items-center justify-between mb-8">
         <div>
           <h1 class="casino-title">
-            Казино
+            Мини-игры
           </h1>
           <p class="text-sm text-muted-foreground mt-1">
-            Испытай удачу в мини-играх
+            Испытай удачу
           </p>
         </div>
         <div

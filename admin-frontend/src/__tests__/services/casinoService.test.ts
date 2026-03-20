@@ -37,7 +37,7 @@ describe('casinoService', () => {
 
       await casinoService.getStats()
 
-      expect(mockApi.get).toHaveBeenCalledWith('casino/stats')
+      expect(mockApi.get).toHaveBeenCalledWith('minigames/stats')
       expect(casinoService.stats.value).toEqual(mockStats)
     })
 
@@ -61,7 +61,7 @@ describe('casinoService', () => {
 
       await casinoService.searchBets()
 
-      expect(mockApi.get).toHaveBeenCalledWith('casino/bets', {
+      expect(mockApi.get).toHaveBeenCalledWith('minigames/bets', {
         searchParams: { limit: 20, offset: 0 },
       })
       expect(casinoService.items.value).toEqual(mockResponse)
@@ -73,7 +73,7 @@ describe('casinoService', () => {
 
       await casinoService.searchBets()
 
-      expect(mockApi.get).toHaveBeenCalledWith('casino/bets', {
+      expect(mockApi.get).toHaveBeenCalledWith('minigames/bets', {
         searchParams: { limit: 20, offset: 0, username: 'testuser', game: 'wheel' },
       })
     })

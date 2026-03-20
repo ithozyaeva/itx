@@ -46,7 +46,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }] } },
   { path: '/seasons', component: Seasons, name: 'seasons', meta: { breadcrumb: [{ label: 'Сезоны' }] } },
   { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }] } },
-  { path: '/casino', component: Casino, name: 'casino', meta: { breadcrumb: [{ label: 'Казино' }] } },
+  { path: '/minigames', component: Casino, name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }] } },
   { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
   { path: '/notifications', component: NotificationSettings, name: 'notifications', meta: { breadcrumb: [{ label: 'Уведомления' }] } },

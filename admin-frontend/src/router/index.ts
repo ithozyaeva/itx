@@ -118,8 +118,8 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/casino',
-      name: 'casino',
+      path: '/minigames',
+      name: 'minigames',
       component: CasinoView,
       meta: { requiresAuth: true },
     },
