@@ -28,7 +28,7 @@ class CasinoService {
 
   getStats = async () => {
     try {
-      const response = await api.get('casino/stats').json<CasinoAdminStats>()
+      const response = await api.get('minigames/stats').json<CasinoAdminStats>()
       this.stats.value = response
     }
     catch (error) {
@@ -44,7 +44,7 @@ class CasinoService {
         offset: this.pagination.value.offset,
         ...this.filters.value,
       })
-      const response = await api.get('casino/bets', { searchParams }).json<Registry<CasinoBet>>()
+      const response = await api.get('minigames/bets', { searchParams }).json<Registry<CasinoBet>>()
       this.items.value = response
     }
     catch (error) {

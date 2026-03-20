@@ -44,7 +44,7 @@ const state = {
         { title: 'Биржа заданий', path: '/tasks', icon: ClipboardList },
         { title: 'Задания в чатах', path: '/quests', icon: Flame },
         { title: 'Розыгрыши', path: '/raffles', icon: Gift },
-        { title: 'Казино', path: '/casino', icon: Dices },
+        { title: 'Мини-игры', path: '/minigames', icon: Dices },
       ],
     },
     {

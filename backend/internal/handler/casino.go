@@ -51,7 +51,7 @@ func (h *CasinoHandler) PlayCoinFlip(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
-	BroadcastEvent("casino")
+	BroadcastEvent("minigames")
 	return c.JSON(result)
 }
 
@@ -72,7 +72,7 @@ func (h *CasinoHandler) PlayDiceRoll(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
-	BroadcastEvent("casino")
+	BroadcastEvent("minigames")
 	return c.JSON(result)
 }
 
@@ -93,7 +93,7 @@ func (h *CasinoHandler) PlayWheel(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось выполнить ставку"})
 	}
 
-	BroadcastEvent("casino")
+	BroadcastEvent("minigames")
 	return c.JSON(result)
 }
 

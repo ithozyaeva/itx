@@ -106,8 +106,8 @@ export function useSidebar() {
       icon: Gift,
     },
     {
-      title: 'Казино',
-      path: '/casino',
+      title: 'Мини-игры',
+      path: '/minigames',
       icon: Dice5,
     },
     {

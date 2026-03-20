@@ -3,28 +3,28 @@ import { apiClient } from './api'
 
 export const casinoService = {
   async coinFlip(betAmount: number, choice: 'heads' | 'tails') {
-    return apiClient.post('casino/coin-flip', { json: { betAmount, choice } }).json<CasinoBetResult>()
+    return apiClient.post('minigames/coin-flip', { json: { betAmount, choice } }).json<CasinoBetResult>()
   },
 
   async diceRoll(betAmount: number, target: number, direction: 'over' | 'under') {
-    return apiClient.post('casino/dice-roll', { json: { betAmount, target, direction } }).json<CasinoBetResult>()
+    return apiClient.post('minigames/dice-roll', { json: { betAmount, target, direction } }).json<CasinoBetResult>()
   },
 
   async wheelSpin(betAmount: number) {
-    return apiClient.post('casino/wheel', { json: { betAmount } }).json<CasinoBetResult>()
+    return apiClient.post('minigames/wheel', { json: { betAmount } }).json<CasinoBetResult>()
   },
 
   async getHistory(limit = 20) {
-    const res = await apiClient.get(`casino/history?limit=${limit}`).json<{ items: CasinoBetResult[], total: number }>()
+    const res = await apiClient.get(`minigames/history?limit=${limit}`).json<{ items: CasinoBetResult[], total: number }>()
     return res.items ?? []
   },
 
   async getFeed(limit = 20) {
-    const res = await apiClient.get(`casino/feed?limit=${limit}`).json<{ items: CasinoFeedItem[] }>()
+    const res = await apiClient.get(`minigames/feed?limit=${limit}`).json<{ items: CasinoFeedItem[] }>()
     return res.items ?? []
   },
 
   async getStats() {
-    return apiClient.get('casino/stats').json<CasinoStats>()
+    return apiClient.get('minigames/stats').json<CasinoStats>()
   },
 }
