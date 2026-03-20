@@ -2,8 +2,6 @@ package config
 
 import (
 	"log"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -35,7 +33,6 @@ type Config struct {
 	Port               string
 	TelegramToken      string
 	TelegramMainChatID int64
-	TelegramAdminIDs   []int64
 	PublicDomain       string
 	BackendDomain      string
 	AllowedOrigins     string
@@ -136,18 +133,6 @@ func LoadConfig() {
 	}
 	redisDB := viper.GetInt("REDIS_DB")
 
-	// Telegram admin IDs
-	var adminIDs []int64
-	adminIDsStr := viper.GetString("TELEGRAM_ADMIN_IDS")
-	if adminIDsStr != "" {
-		for _, idStr := range strings.Split(adminIDsStr, ",") {
-			idStr = strings.TrimSpace(idStr)
-			if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-				adminIDs = append(adminIDs, id)
-			}
-		}
-	}
-
 	subCheckInterval := viper.GetInt("SUBSCRIPTION_CHECK_INTERVAL_HOURS")
 	if subCheckInterval == 0 {
 		subCheckInterval = 4
@@ -171,7 +156,6 @@ func LoadConfig() {
 		Port:               viper.GetString("PORT"),
 		TelegramToken:      viper.GetString("TELEGRAM_BOT_TOKEN"),
 		TelegramMainChatID: viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
-		TelegramAdminIDs:   adminIDs,
 		PublicDomain:       viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,

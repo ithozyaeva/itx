@@ -34,14 +34,9 @@ func (b *TelegramBot) notifyUserOfSyncResult(userID int64, result *service.SyncR
 	}
 }
 
-// isAdmin checks if a Telegram user ID is in the admin list.
+// isAdmin checks if a Telegram user ID belongs to a member with the ADMIN role.
 func (b *TelegramBot) isAdmin(userID int64) bool {
-	for _, id := range config.CFG.TelegramAdminIDs {
-		if id == userID {
-			return true
-		}
-	}
-	return false
+	return b.member.IsAdminByTelegramID(userID)
 }
 
 // --- Telegram API helpers for subscription system ---
@@ -272,7 +267,7 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 		log.Printf("Bot added to chat %d (%s), registered in DB", chat.ID, title)
 
 		// Notify admins
-		for _, adminID := range config.CFG.TelegramAdminIDs {
+		for _, adminID := range b.member.GetAdminTelegramIDs() {
 			b.SendDirectMessage(adminID, fmt.Sprintf(
 				"Бот добавлен в чат:\nID: <code>%d</code>\nНазвание: %s\n\n"+
 					"Настройте роль через:\n"+
