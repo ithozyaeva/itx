@@ -2,6 +2,7 @@
 import type { CommunityEvent } from '@/models/event'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import { getOccurrencesInMonth } from '@/composables/useEventOccurrence'
 import EventCard from './EventCard.vue'
 
 const props = defineProps<{
@@ -104,11 +105,22 @@ const calendarDays = computed<CalendarDay[]>(() => {
 const eventsByDate = computed(() => {
   const map = new Map<string, CommunityEvent[]>()
   for (const event of props.events) {
-    const date = new Date(event.date)
-    const key = formatDateKey(date.getFullYear(), date.getMonth(), date.getDate())
-    if (!map.has(key))
-      map.set(key, [])
-    map.get(key)!.push(event)
+    if (event.isRepeating && event.repeatPeriod) {
+      const occurrences = getOccurrencesInMonth(event, currentYear.value, currentMonth.value)
+      for (const date of occurrences) {
+        const key = formatDateKey(date.getFullYear(), date.getMonth(), date.getDate())
+        if (!map.has(key))
+          map.set(key, [])
+        map.get(key)!.push({ ...event, date: date.toISOString() })
+      }
+    }
+    else {
+      const date = new Date(event.date)
+      const key = formatDateKey(date.getFullYear(), date.getMonth(), date.getDate())
+      if (!map.has(key))
+        map.set(key, [])
+      map.get(key)!.push(event)
+    }
   }
   return map
 })
