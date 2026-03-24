@@ -15,9 +15,13 @@ func NewPointsRepository() *PointsRepository {
 func (r *PointsRepository) AwardPoints(tx *models.PointTransaction) error {
 	result := database.DB.Exec(
 		`INSERT INTO point_transactions (member_id, amount, reason, source_type, source_id, description)
-		 VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT (member_id, reason, source_type, source_id) DO NOTHING`,
+		 SELECT ?, ?, ?, ?, ?, ?
+		 WHERE NOT EXISTS (
+		     SELECT 1 FROM point_transactions
+		     WHERE member_id = ? AND reason = ? AND source_type = ? AND source_id = ?
+		 )`,
 		tx.MemberId, tx.Amount, tx.Reason, tx.SourceType, tx.SourceId, tx.Description,
+		tx.MemberId, tx.Reason, tx.SourceType, tx.SourceId,
 	)
 	return result.Error
 }

@@ -5,6 +5,7 @@ import { ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useDictionary } from '@/composables/useDictionary'
+import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter, wrapLinks } from '@/lib/utils'
@@ -20,12 +21,18 @@ const event = ref(props.event)
 const user = useUser()
 const isMembersExpanded = ref(false)
 
-const formattedDate = computed(() => dateFormatter.format(new Date(props.event.date)))
+const nextOccurrenceDate = computed(() => getNextOccurrenceDate(props.event))
+const formattedDate = computed(() => dateFormatter.format(nextOccurrenceDate.value))
 
 const isExclusive = computed(() => !!props.event.exclusiveChatId)
 const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
 const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
-const isPassedEvent = computed(() => new Date(props.event.date) < new Date())
+const isPassedEvent = computed(() => {
+  if (props.event.isRepeating && props.event.repeatPeriod) {
+    return !!(props.event.repeatEndDate && new Date(props.event.repeatEndDate) < new Date())
+  }
+  return new Date(props.event.date) < new Date()
+})
 const isFull = computed(() => event.value.maxParticipants > 0 && event.value.members.length >= event.value.maxParticipants)
 
 // Форматирование информации о повторениях

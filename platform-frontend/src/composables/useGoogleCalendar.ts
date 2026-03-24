@@ -29,6 +29,15 @@ export function useGoogleCalendar() {
     url.searchParams.set('details', details)
     url.searchParams.set('location', `${event.videoLink || ''} ${event.place || ''}`.trim())
 
+    if (event.isRepeating && event.repeatPeriod) {
+      const interval = event.repeatInterval ?? 1
+      let rrule = `RRULE:FREQ=${event.repeatPeriod};INTERVAL=${interval}`
+      if (event.repeatEndDate) {
+        rrule += `;UNTIL=${formatDateForGoogle(new Date(event.repeatEndDate))}`
+      }
+      url.searchParams.set('recur', rrule)
+    }
+
     return url.toString()
   }
 

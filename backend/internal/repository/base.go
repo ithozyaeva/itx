@@ -57,7 +57,11 @@ func (r *baseRepository[T]) Search(limit *int, offset *int, filter *SearchFilter
 
 	if filter != nil {
 		for key, value := range *filter {
-			query = query.Where(key, value)
+			if args, ok := value.([]interface{}); ok {
+				query = query.Where(key, args...)
+			} else {
+				query = query.Where(key, value)
+			}
 		}
 	}
 

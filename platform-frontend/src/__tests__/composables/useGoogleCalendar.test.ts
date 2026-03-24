@@ -108,6 +108,62 @@ describe('useGoogleCalendar', () => {
 
       expect(url.searchParams.get('location')).toBe('https://zoom.us/456 Office #5')
     })
+
+    it('adds RRULE for weekly repeating event', () => {
+      const { buildGoogleCalendarUrl } = useGoogleCalendar()
+      const event = createEvent({
+        isRepeating: true,
+        repeatPeriod: 'WEEKLY',
+        repeatInterval: 1,
+      })
+      const url = new URL(buildGoogleCalendarUrl(event))
+
+      expect(url.searchParams.get('recur')).toBe('RRULE:FREQ=WEEKLY;INTERVAL=1')
+    })
+
+    it('adds RRULE with custom interval for repeating event', () => {
+      const { buildGoogleCalendarUrl } = useGoogleCalendar()
+      const event = createEvent({
+        isRepeating: true,
+        repeatPeriod: 'DAILY',
+        repeatInterval: 3,
+      })
+      const url = new URL(buildGoogleCalendarUrl(event))
+
+      expect(url.searchParams.get('recur')).toBe('RRULE:FREQ=DAILY;INTERVAL=3')
+    })
+
+    it('adds RRULE with UNTIL when repeatEndDate is set', () => {
+      const { buildGoogleCalendarUrl } = useGoogleCalendar()
+      const event = createEvent({
+        isRepeating: true,
+        repeatPeriod: 'MONTHLY',
+        repeatInterval: 1,
+        repeatEndDate: '2024-12-31T23:59:00.000Z',
+      })
+      const url = new URL(buildGoogleCalendarUrl(event))
+
+      expect(url.searchParams.get('recur')).toBe('RRULE:FREQ=MONTHLY;INTERVAL=1;UNTIL=20241231T235900Z')
+    })
+
+    it('defaults repeatInterval to 1 when not set', () => {
+      const { buildGoogleCalendarUrl } = useGoogleCalendar()
+      const event = createEvent({
+        isRepeating: true,
+        repeatPeriod: 'YEARLY',
+      })
+      const url = new URL(buildGoogleCalendarUrl(event))
+
+      expect(url.searchParams.get('recur')).toBe('RRULE:FREQ=YEARLY;INTERVAL=1')
+    })
+
+    it('does not add recur param for non-repeating event', () => {
+      const { buildGoogleCalendarUrl } = useGoogleCalendar()
+      const event = createEvent({ isRepeating: false })
+      const url = new URL(buildGoogleCalendarUrl(event))
+
+      expect(url.searchParams.get('recur')).toBeNull()
+    })
   })
 
   describe('openInGoogleCalendar', () => {

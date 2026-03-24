@@ -54,10 +54,14 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 	// *filter = make(map[string]interface{})
 
 	if req.DateFrom != nil {
-		filter[EventsSearchFields["dateFrom"]] = *req.DateFrom
+		// Предстоящие: обычные события с датой >= now ИЛИ повторяющиеся с активными будущими вхождениями
+		filter["(date >= ? OR (is_repeating = TRUE AND (repeat_end_date IS NULL OR repeat_end_date >= ?)))"] =
+			[]interface{}{*req.DateFrom, *req.DateFrom}
 	}
 	if req.DateTo != nil {
-		filter[EventsSearchFields["dateTo"]] = *req.DateTo
+		// Архив: обычные прошедшие события И повторяющиеся, у которых больше нет будущих вхождений
+		filter["(date < ? AND NOT (is_repeating = TRUE AND (repeat_end_date IS NULL OR repeat_end_date >= ?)))"] =
+			[]interface{}{*req.DateTo, *req.DateTo}
 	}
 	if req.Title != nil && *req.Title != "" {
 		filter["title ILIKE ?"] = "%" + *req.Title + "%"
