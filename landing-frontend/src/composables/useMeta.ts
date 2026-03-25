@@ -2,7 +2,7 @@ import { useHead, useSeoMeta } from '@unhead/vue'
 
 const SITE_BASE = {
   name: 'IT-ХОЗЯЕВА',
-  description: 'Закрытое сообщество IT-специалистов, в котором ценят опыт, юмор и профессионализм',
+  description: 'Закрытое сообщество IT-специалистов на стыке технологий и AI, в котором ценят опыт, юмор и профессионализм',
   url: 'https://ithozyaeva.ru',
   image: 'https://ithozyaeva.ru/og-image.png',
   locale: 'ru_RU',
@@ -25,7 +25,7 @@ export function usePageMeta(meta: PageMeta) {
     : SITE_BASE.name
 
   const description = meta.description || SITE_BASE.description
-  const keywords = meta.keywords || 'IT сообщество, программисты, разработчики, IT специалисты, закрытое сообщество, менторство, карьера в IT'
+  const keywords = meta.keywords || 'IT сообщество, программисты, разработчики, IT специалисты, закрытое сообщество, менторство, карьера в IT, AI, искусственный интеллект, AI-инженер'
   const image = meta.image || SITE_BASE.image
   const url = meta.url || SITE_BASE.url
   const type = meta.type || 'website'

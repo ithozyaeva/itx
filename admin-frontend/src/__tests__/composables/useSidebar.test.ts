@@ -33,11 +33,11 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Сезоны, Розыгрыши, Казино
+      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Сезоны, Розыгрыши, Мини-игры
       const itemsWithoutPermission = sidebarItems.value
       expect(itemsWithoutPermission.length).toBe(6)
       expect(itemsWithoutPermission.map(i => i.path)).toEqual(
-        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/seasons', '/raffles', '/casino']),
+        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/seasons', '/raffles', '/minigames']),
       )
     })
 
@@ -78,7 +78,7 @@ describe('useSidebar', () => {
       const expectedPaths = [
         '/dashboard', '/mentors', '/members', '/reviews', '/mentor-reviews',
         '/events', '/resumes', '/referrals', '/points', '/chat-activity',
-        '/chat-quests', '/seasons', '/raffles', '/casino', '/subscriptions', '/audit-logs',
+        '/chat-quests', '/seasons', '/raffles', '/minigames', '/subscriptions', '/audit-logs',
       ]
       const actualPaths = sidebarItems.value.map(i => i.path)
       expect(actualPaths).toEqual(expectedPaths)

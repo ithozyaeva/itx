@@ -19,6 +19,6 @@ export const reasonLabels: Record<string, string> = {
   chatter_of_week: 'Чаттер недели',
   kudos_received: 'Благодарности',
   raffle_spend: 'Розыгрыши',
-  casino_bet: 'Ставки казино',
-  casino_win: 'Выигрыши казино',
+  casino_bet: 'Ставки мини-игр',
+  casino_win: 'Выигрыши мини-игр',
 }

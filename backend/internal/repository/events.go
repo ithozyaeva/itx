@@ -25,7 +25,11 @@ func (e *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, 
 
 	if filter != nil {
 		for key, value := range *filter {
-			query = query.Where(key, value)
+			if args, ok := value.([]interface{}); ok {
+				query = query.Where(key, args...)
+			} else {
+				query = query.Where(key, value)
+			}
 		}
 	}
 
@@ -33,7 +37,11 @@ func (e *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, 
 	countQuery := database.DB.Model(&models.Event{})
 	if filter != nil {
 		for key, value := range *filter {
-			countQuery = countQuery.Where(key, value)
+			if args, ok := value.([]interface{}); ok {
+				countQuery = countQuery.Where(key, args...)
+			} else {
+				countQuery = countQuery.Where(key, value)
+			}
 		}
 	}
 	if err := countQuery.Count(&count).Error; err != nil {

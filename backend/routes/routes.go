@@ -199,9 +199,9 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	adminRaffles.Post("/", raffleHandler.Create)
 	adminRaffles.Delete("/:id", raffleHandler.Delete)
 
-	// Маршруты для казино (админ)
+	// Маршруты для мини-игр (админ)
 	casinoHandler := handler.NewCasinoHandler()
-	adminCasino := protected.Group("/casino")
+	adminCasino := protected.Group("/minigames")
 	adminCasino.Get("/stats", casinoHandler.GetAdminStats)
 	adminCasino.Get("/bets", casinoHandler.GetAdminBets)
 
@@ -374,7 +374,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 
 	// Маршруты для казино
 	casinoHandler := handler.NewCasinoHandler()
-	casino := protected.Group("/casino")
+	casino := protected.Group("/minigames")
 	casino.Post("/coin-flip", casinoHandler.PlayCoinFlip)
 	casino.Post("/dice-roll", casinoHandler.PlayDiceRoll)
 	casino.Post("/wheel", casinoHandler.PlayWheel)
