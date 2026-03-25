@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { PriceCard, Typography } from 'itx-ui-kit'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
-import CountdownTimer from '@/components/ui/CountdownTimer.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
-
-const PROMO_DEADLINE = '2026-04-01T00:00:00+03:00'
 
 interface Tariff {
   name: string
@@ -99,13 +96,9 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
         <div
           v-for="(tariff, index) in tariffs"
           :key="tariff.name"
-          class="flex flex-col gap-4"
+          class="contents"
           @click="handleSubscriptionClick(tariff.name, tariff.link)"
         >
-          <CountdownTimer
-            v-if="tariff.isPopular"
-            :deadline="PROMO_DEADLINE"
-          />
           <PriceCard
             :name="tariff.name"
             :price="tariff.price"
