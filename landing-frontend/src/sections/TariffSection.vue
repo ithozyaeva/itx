@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { PriceCard, Typography } from 'itx-ui-kit'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import CountdownTimer from '@/components/ui/CountdownTimer.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
+
+const PROMO_DEADLINE = '2026-04-01T00:00:00+03:00'
 
 interface Tariff {
   name: string
@@ -38,13 +41,15 @@ const tariffs: Tariff[] = [
   {
     name: 'ХОЗЯИН',
     description: 'Максимум возможностей для роста в IT',
-    price: 2000,
+    price: 1000,
+    oldPrice: 2000,
     isPopular: true,
     features: [
       'Все возможности тарифа «Бригадир»',
       'Приоритетная поддержка и ревью резюме',
       'Влияние на темы встреч и контент',
       'Доступ к базе менторов и таблице экспертов',
+      'Закрытые AI-беседы: AI-X и База стародубцева',
     ],
     link: 'https://boosty.to/jointime/purchase/3150814',
   },
@@ -94,9 +99,13 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
         <div
           v-for="(tariff, index) in tariffs"
           :key="tariff.name"
-          class="contents"
+          class="flex flex-col gap-4"
           @click="handleSubscriptionClick(tariff.name, tariff.link)"
         >
+          <CountdownTimer
+            v-if="tariff.isPopular"
+            :deadline="PROMO_DEADLINE"
+          />
           <PriceCard
             :name="tariff.name"
             :price="tariff.price"
