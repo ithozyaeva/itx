@@ -39,6 +39,14 @@ func (b *TelegramBot) isAdmin(userID int64) bool {
 	return b.member.IsAdminByTelegramID(userID)
 }
 
+// subscriptionAdminID is the only Telegram user allowed to manage subscriptions via bot.
+const subscriptionAdminID int64 = 931916742
+
+// isSubscriptionAdmin checks if the user is allowed to manage subscriptions.
+func (b *TelegramBot) isSubscriptionAdmin(userID int64) bool {
+	return userID == subscriptionAdminID
+}
+
 // --- Telegram API helpers for subscription system ---
 
 // isChatMember checks if a user is in a specific chat via Telegram API.
@@ -309,7 +317,7 @@ func (b *TelegramBot) startSubscriptionChecker() {
 // --- Admin commands ---
 
 func (b *TelegramBot) handleSubTiersCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 	tiers, err := b.subscriptionService.GetAllTiers()
@@ -328,7 +336,7 @@ func (b *TelegramBot) handleSubTiersCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubChatsCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 	chats, err := b.subscriptionService.GetAllChats()
@@ -353,7 +361,7 @@ func (b *TelegramBot) handleSubChatsCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -401,7 +409,7 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubSetAnchorCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -435,7 +443,7 @@ func (b *TelegramBot) handleSubSetAnchorCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubRemoveChatCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -456,7 +464,7 @@ func (b *TelegramBot) handleSubRemoveChatCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubUsersCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -499,7 +507,7 @@ func (b *TelegramBot) handleSubUsersCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -557,7 +565,7 @@ func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubOverrideCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -609,7 +617,7 @@ func (b *TelegramBot) handleSubOverrideCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
@@ -628,7 +636,7 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {
-	if !b.isAdmin(message.From.ID) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
 		return
 	}
 
