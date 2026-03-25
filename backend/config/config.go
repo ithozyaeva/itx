@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -14,8 +15,20 @@ type DatabaseConfig struct {
 	Name     string
 }
 
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
+}
+
+func (r RedisConfig) Addr() string {
+	return r.Host + ":" + r.Port
+}
+
 type Config struct {
 	Database           DatabaseConfig
+	Redis              RedisConfig
 	JwtSecret          []byte
 	Port               string
 	TelegramToken      string
@@ -25,6 +38,8 @@ type Config struct {
 	AllowedOrigins     string
 	BotSharedSecret    string
 	S3                 S3Config
+
+	SubscriptionCheckIntervalHours int
 
 	AlertReminderIntervalMinutes       int64
 	AlertReminderFirstIntervalMinutes  int64
@@ -107,6 +122,22 @@ func LoadConfig() {
 		log.Println("WARNING: BOT_SHARED_SECRET not set. /telegram-from-bot endpoint will reject all requests.")
 	}
 
+	// Redis config
+	redisHost := viper.GetString("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "localhost"
+	}
+	redisPort := viper.GetString("REDIS_PORT")
+	if redisPort == "" {
+		redisPort = "6379"
+	}
+	redisDB := viper.GetInt("REDIS_DB")
+
+	subCheckInterval := viper.GetInt("SUBSCRIPTION_CHECK_INTERVAL_HOURS")
+	if subCheckInterval == 0 {
+		subCheckInterval = 4
+	}
+
 	CFG = &Config{
 		Database: DatabaseConfig{
 			Host:     viper.GetString("DB_HOST"),
@@ -114,6 +145,12 @@ func LoadConfig() {
 			User:     viper.GetString("DB_USER"),
 			Password: viper.GetString("DB_PASSWORD"),
 			Name:     viper.GetString("DB_NAME"),
+		},
+		Redis: RedisConfig{
+			Host:     redisHost,
+			Port:     redisPort,
+			Password: viper.GetString("REDIS_PASSWORD"),
+			DB:       redisDB,
 		},
 		JwtSecret:          []byte(jwtSecret),
 		Port:               viper.GetString("PORT"),
@@ -123,6 +160,7 @@ func LoadConfig() {
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,
+		SubscriptionCheckIntervalHours: subCheckInterval,
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,

@@ -7,12 +7,13 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, db *gorm.DB) {
+func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	SetupPublicRoutes(app, db)
-	SetupAdminRoutes(app, db)
+	SetupAdminRoutes(app, db, redisClient)
 	SetupPlatformRoutes(app, db)
 }
 func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
@@ -59,7 +60,7 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	api.Get("/dictionaries", dictionaryHandler.GetDictionaries)
 }
 
-func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
+func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	authMiddleware := middleware.NewAuthMiddleware(db)
 
 	// Защищенные маршруты
@@ -212,6 +213,20 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB) {
 	eventTags.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminEvents), eventTagHandler.Create)
 	eventTags.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminEvents), eventTagHandler.Update)
 	eventTags.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminEvents), eventTagHandler.Delete)
+
+	// Маршруты для подписок
+	if redisClient != nil {
+		subscriptionHandler := handler.NewSubscriptionHandler(redisClient)
+		subs := protected.Group("/subscriptions", authMiddleware.RequirePermission(models.PermissionCanViewAdminSubscriptions))
+		subs.Get("/stats", subscriptionHandler.GetStats)
+		subs.Get("/tiers", subscriptionHandler.GetTiers)
+		subs.Get("/chats", subscriptionHandler.GetChats)
+		subs.Get("/users", subscriptionHandler.GetUsers)
+		subs.Get("/users/:id", subscriptionHandler.GetUser)
+		subs.Put("/users/:id/override", authMiddleware.RequirePermission(models.PermissionCanEditAdminSubscriptions), subscriptionHandler.SetOverride)
+		subs.Delete("/users/:id/override", authMiddleware.RequirePermission(models.PermissionCanEditAdminSubscriptions), subscriptionHandler.ClearOverride)
+		subs.Delete("/users/:id/access/:chatId", authMiddleware.RequirePermission(models.PermissionCanEditAdminSubscriptions), subscriptionHandler.RevokeAccess)
+	}
 }
 
 func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {

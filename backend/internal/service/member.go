@@ -3,6 +3,7 @@ package service
 import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"ithozyeva/internal/utils"
 )
 
 // MemberRepoAdapter адаптер для репозитория участников
@@ -63,4 +64,28 @@ func (s *MemberService) GetByUsername(username string) (*models.Member, error) {
 
 func (s *MemberService) GetSubscribedMembersWithTelegram() ([]models.Member, error) {
 	return s.repo.GetSubscribedMembersWithTelegram()
+}
+
+// IsAdminByTelegramID checks if a user with the given Telegram ID has the ADMIN role.
+func (s *MemberService) IsAdminByTelegramID(telegramID int64) bool {
+	member, err := s.repo.GetByTelegramID(telegramID)
+	if err != nil {
+		return false
+	}
+	return utils.HasRole(member.Roles, models.MemberRoleAdmin)
+}
+
+// GetAdminTelegramIDs returns Telegram IDs of all members with the ADMIN role.
+func (s *MemberService) GetAdminTelegramIDs() []int64 {
+	members, err := s.repo.GetMembersByRole(models.MemberRoleAdmin)
+	if err != nil {
+		return nil
+	}
+	var ids []int64
+	for _, m := range members {
+		if m.TelegramID != 0 {
+			ids = append(ids, m.TelegramID)
+		}
+	}
+	return ids
 }

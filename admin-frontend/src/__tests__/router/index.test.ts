@@ -41,8 +41,8 @@ describe('router', () => {
   })
 
   describe('route definitions', () => {
-    it('has 17 routes defined', () => {
-      expect(router.getRoutes()).toHaveLength(17)
+    it('has 18 routes defined', () => {
+      expect(router.getRoutes()).toHaveLength(18)
     })
 
     it('has a login route', () => {
@@ -72,6 +72,7 @@ describe('router', () => {
       ['chat-quests', '/chat-quests'],
       ['seasons', '/seasons'],
       ['raffles', '/raffles'],
+      ['subscriptions', '/subscriptions'],
     ])('has route "%s" at path "%s" requiring auth', (name, path) => {
       const route = router.getRoutes().find(r => r.name === name)
       expect(route).toBeDefined()

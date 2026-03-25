@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"ithozyeva/config"
 	"ithozyeva/database"
 	"ithozyeva/internal/bot"
@@ -14,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -25,6 +27,17 @@ func main() {
 
 	// Инициализируем глобальный S3 клиент для presigned URL
 	utils.InitGlobalS3()
+
+	// Инициализируем Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.CFG.Redis.Addr(),
+		Password: config.CFG.Redis.Password,
+		DB:       config.CFG.Redis.DB,
+	})
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	log.Println("Redis connected successfully")
 
 	// Создаем экземпляр Fiber
 	app := fiber.New(fiber.Config{
@@ -45,7 +58,7 @@ func main() {
 	}))
 
 	// Настраиваем маршруты
-	routes.SetupRoutes(app, database.DB)
+	routes.SetupRoutes(app, database.DB, redisClient)
 
 	// Запускаем фоновую задачу для автозамораживания реферальных ссылок
 	go func() {
@@ -132,7 +145,7 @@ func main() {
 
 	// Запускаем Telegram бота в отдельной горутине
 	go func() {
-		telegramBot, err := bot.NewTelegramBot()
+		telegramBot, err := bot.NewTelegramBot(redisClient)
 		if err != nil {
 			log.Printf("Error creating bot: %v", err)
 			return

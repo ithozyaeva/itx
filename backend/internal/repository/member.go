@@ -262,6 +262,18 @@ func (r *MemberRepository) GetAllPermissions() ([]models.Permission, error) {
 	return permissions, nil
 }
 
+// GetMembersByRole returns all members that have the given role.
+func (r *MemberRepository) GetMembersByRole(role models.Role) ([]models.Member, error) {
+	var members []models.Member
+	err := database.DB.
+		Table("members").
+		Joins("INNER JOIN member_roles ON members.id = member_roles.member_id").
+		Where("member_roles.role = ?", role).
+		Preload("MemberRoles").
+		Find(&members).Error
+	return members, err
+}
+
 // GetSubscribedMembersWithTelegram получает всех подписанных пользователей (SUBSCRIBER) с telegram_id
 func (r *MemberRepository) GetSubscribedMembersWithTelegram() ([]models.Member, error) {
 	var members []models.Member
