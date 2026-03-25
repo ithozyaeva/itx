@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import StructuredData from '@/components/StructuredData.vue'
+import CountdownTimer from '@/components/ui/CountdownTimer.vue'
 import { usePageMeta } from '@/composables/useMeta'
 import CalendarSection from '@/sections/CalendarSection.vue'
 import FAQSection from '@/sections/FAQSection.vue'
@@ -50,6 +51,7 @@ const structuredData = computed(() => [
 
 <template>
   <StructuredData :data="structuredData" />
+  <CountdownTimer deadline="2026-04-01T00:00:00+03:00" />
   <PromoteSection />
   <WhySection />
   <MentorsSection />
