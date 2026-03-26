@@ -17,11 +17,22 @@ import (
 
 const summarizeMessageLimit = 200
 
-var openAIClient = &http.Client{Timeout: 60 * time.Second}
+var openAIClient = &http.Client{Timeout: 120 * time.Second}
+
+// fallbackModels — цепочка моделей для retry: от лучшей к запасным.
+var fallbackModels = []string{
+	"Qwen/Qwen3-235B-A22B-Instruct-2507", // 235B, самая умная
+	"Qwen/Qwen3-Coder-480B-A35B-Instruct", // 480B coder
+	"GigaChat/GigaChat-2-Max",              // GigaChat flagship
+	"ai-sage/GigaChat3-10B-A1.8B",          // лёгкая, дешёвая
+	"zai-org/GLM-4.7-Flash",                // бесплатная
+}
 
 type openAIRequest struct {
-	Model    string          `json:"model"`
-	Messages []openAIMessage `json:"messages"`
+	Model       string          `json:"model"`
+	Messages    []openAIMessage `json:"messages"`
+	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Temperature float64         `json:"temperature,omitempty"`
 }
 
 type openAIMessage struct {
@@ -72,30 +83,61 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 	// Отправляем уведомление пользователю
 	b.SendDirectMessage(message.From.ID, fmt.Sprintf("⏳ Суммаризирую последние %d сообщений из чата <b>%s</b>...", len(messages), message.Chat.Title))
 
-	// Вызываем OpenAI API
-	summary, err := callOpenAI(sb.String())
+	// Вызываем AI с retry по fallback-моделям
+	summary, usedModel, err := callOpenAIWithRetry(sb.String())
 	if err != nil {
-		log.Printf("Error calling OpenAI for summarize: %v", err)
-		b.SendDirectMessage(message.From.ID, "Ошибка при обращении к AI.")
+		log.Printf("Error calling OpenAI for summarize (all models failed): %v", err)
+		b.SendDirectMessage(message.From.ID, "Ошибка: все AI-модели недоступны.")
 		return
 	}
 
-	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений)\n\n%s", message.Chat.Title, len(messages), summary)
+	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений, модель: %s)\n\n%s", message.Chat.Title, len(messages), usedModel, summary)
 	b.SendDirectMessage(message.From.ID, result)
 }
 
-func callOpenAI(chatLog string) (string, error) {
+// callOpenAIWithRetry пробует модели по цепочке: сначала из конфига, потом fallback.
+func callOpenAIWithRetry(chatLog string) (summary string, model string, err error) {
+	models := buildModelChain()
+
+	var lastErr error
+	for _, m := range models {
+		summary, err := callOpenAI(chatLog, m)
+		if err == nil {
+			return summary, m, nil
+		}
+		log.Printf("Model %s failed: %v, trying next...", m, err)
+		lastErr = err
+	}
+
+	return "", "", fmt.Errorf("all %d models failed, last error: %w", len(models), lastErr)
+}
+
+// buildModelChain строит цепочку моделей: конфиг-модель первая, затем fallback (без дублей).
+func buildModelChain() []string {
+	primary := config.CFG.OpenAIModel
+	if primary == "" {
+		return fallbackModels
+	}
+
+	chain := []string{primary}
+	for _, m := range fallbackModels {
+		if m != primary {
+			chain = append(chain, m)
+		}
+	}
+	return chain
+}
+
+func callOpenAI(chatLog string, model string) (string, error) {
 	baseURL := config.CFG.OpenAIBaseURL
 	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
-	model := config.CFG.OpenAIModel
-	if model == "" {
-		model = "gpt-4o-mini"
+		baseURL = "https://foundation-models.api.cloud.ru/v1"
 	}
 
 	reqBody := openAIRequest{
-		Model: model,
+		Model:       model,
+		MaxTokens:   2500,
+		Temperature: 0.5,
 		Messages: []openAIMessage{
 			{
 				Role: "system",
@@ -135,7 +177,7 @@ func callOpenAI(chatLog string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("OpenAI API error %d: %s", resp.StatusCode, string(respBody))
+		return "", fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var result openAIResponse
