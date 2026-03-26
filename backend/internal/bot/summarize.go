@@ -22,10 +22,11 @@ var openAIClient = &http.Client{Timeout: 120 * time.Second}
 // fallbackModels — цепочка моделей для retry: от лучшей к запасным.
 var fallbackModels = []string{
 	"Qwen/Qwen3-235B-A22B-Instruct-2507", // 235B, лучшая для суммаризации (20.7/61)
-	"t-tech/T-pro-it-2.1",                 // T-Pro, хороший русский (бесплатная)
 	"zai-org/GLM-4.7",                     // GLM 4.7 (бесплатная)
 	"ai-sage/GigaChat3-10B-A1.8B",         // GigaChat лёгкая (12.2/12.2)
 	"zai-org/GLM-4.7-Flash",               // GLM Flash (бесплатная)
+	"t-tech/T-pro-it-2.0",                 // T-Pro 2.0 (26.84/52.46)
+	"t-tech/T-pro-it-2.1",                 // T-Pro 2.1 (бесплатная, последний fallback)
 }
 
 type openAIRequest struct {
