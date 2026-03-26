@@ -8,14 +8,16 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"ithozyeva/config"
-	"ithozyeva/internal/repository"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const summarizeMessageLimit = 200
+
+var openAIClient = &http.Client{Timeout: 60 * time.Second}
 
 type openAIRequest struct {
 	Model    string          `json:"model"`
@@ -44,8 +46,7 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 	}
 
 	// Получаем последние сообщения из чата
-	repo := repository.NewChatActivityRepository()
-	messages, err := repo.GetRecentMessages(message.Chat.ID, summarizeMessageLimit)
+	messages, err := b.chatActivityService.GetRecentMessages(message.Chat.ID, summarizeMessageLimit)
 	if err != nil {
 		log.Printf("Error fetching messages for summarize: %v", err)
 		b.SendDirectMessage(message.From.ID, "Ошибка при получении сообщений.")
@@ -122,7 +123,7 @@ func callOpenAI(chatLog string) (string, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+config.CFG.OpenAIKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := openAIClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("do request: %w", err)
 	}

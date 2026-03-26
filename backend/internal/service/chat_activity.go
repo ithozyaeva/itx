@@ -108,6 +108,11 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 	go s.questService.ProcessMessage(message, memberID)
 }
 
+// GetRecentMessages возвращает последние N сообщений с текстом из чата
+func (s *ChatActivityService) GetRecentMessages(chatID int64, limit int) ([]models.ChatMessage, error) {
+	return s.repo.GetRecentMessages(chatID, limit)
+}
+
 // GetMemberIDsByChatID возвращает member_id участников конкретного чата
 func (s *ChatActivityService) GetMemberIDsByChatID(chatID int64) ([]int64, error) {
 	return s.repo.GetMemberIDsByChatID(chatID)
