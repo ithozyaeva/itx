@@ -95,6 +95,7 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 		TelegramUsername:  message.From.UserName,
 		TelegramFirstName: message.From.FirstName,
 		MemberID:          memberID,
+		MessageText:       message.Text,
 		SentAt:            time.Unix(int64(message.Date), 0),
 	}
 
