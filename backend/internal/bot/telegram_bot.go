@@ -211,6 +211,12 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Команда /summarize — суммаризация чата через AI
+		if update.Message.IsCommand() && update.Message.Command() == "summarize" {
+			go b.handleSummarizeCommand(update.Message)
+			continue
+		}
+
 		// Команда /highlight — сохранение сообщения как хайлайт
 		if update.Message.IsCommand() && update.Message.Command() == "highlight" {
 			b.handleHighlightCommand(update.Message)

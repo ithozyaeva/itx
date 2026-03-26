@@ -39,6 +39,10 @@ type Config struct {
 	BotSharedSecret    string
 	S3                 S3Config
 
+	OpenAIKey     string
+	OpenAIBaseURL string
+	OpenAIModel   string
+
 	SubscriptionCheckIntervalHours int
 
 	AlertReminderIntervalMinutes       int64
@@ -160,6 +164,10 @@ func LoadConfig() {
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,
+		OpenAIKey:     viper.GetString("OPENAI_API_KEY"),
+		OpenAIBaseURL: viper.GetString("OPENAI_BASE_URL"),
+		OpenAIModel:   viper.GetString("OPENAI_MODEL"),
+
 		SubscriptionCheckIntervalHours: subCheckInterval,
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,

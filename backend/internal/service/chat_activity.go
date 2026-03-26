@@ -95,6 +95,7 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 		TelegramUsername:  message.From.UserName,
 		TelegramFirstName: message.From.FirstName,
 		MemberID:          memberID,
+		MessageText:       message.Text,
 		SentAt:            time.Unix(int64(message.Date), 0),
 	}
 
@@ -105,6 +106,11 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 
 	// Обрабатываем квесты
 	go s.questService.ProcessMessage(message, memberID)
+}
+
+// GetRecentMessages возвращает последние N сообщений с текстом из чата
+func (s *ChatActivityService) GetRecentMessages(chatID int64, limit int) ([]models.ChatMessage, error) {
+	return s.repo.GetRecentMessages(chatID, limit)
 }
 
 // GetMemberIDsByChatID возвращает member_id участников конкретного чата
