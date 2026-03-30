@@ -36,3 +36,6 @@ pgdata
 # Claude Code / OMC
 .claude/
 .omc/
+autoresearch-results.tsv
+seo-score.sh
+learn/

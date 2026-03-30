@@ -24,12 +24,12 @@ const structuredData = computed(() => [
     '@type': 'WebSite',
     'name': 'IT-ХОЗЯЕВА',
     'url': 'https://ithozyaeva.ru',
-    'description': 'Закрытое сообщество IT-специалистов',
+    'description': 'IT-сообщество на стыке технологий и искусственного интеллекта: менторство, вайбкодинг, нетворкинг',
   },
   {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    'serviceType': 'IT Сообщество',
+    'serviceType': 'IT-сообщество с AI и менторством',
     'provider': {
       '@type': 'Organization',
       'name': 'IT-ХОЗЯЕВА',
@@ -38,7 +38,7 @@ const structuredData = computed(() => [
       '@type': 'Country',
       'name': 'Россия',
     },
-    'description': 'Закрытое сообщество IT-специалистов с менторством, встречами, обсуждениями и помощью в карьере',
+    'description': 'IT-комьюнити: менторство, вайбкодинг (vibe coding), нетворкинг, AI-практики, подготовка к собеседованиям',
     'offers': {
       '@type': 'Offer',
       'priceCurrency': 'RUB',
