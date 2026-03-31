@@ -50,6 +50,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
   { path: '/notifications', component: NotificationSettings, name: 'notifications', meta: { breadcrumb: [{ label: 'Уведомления' }] } },
+  { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
 const router = createRouter({

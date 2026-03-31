@@ -93,8 +93,10 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+const canPlay = computed(() => betAmount.value >= 10 && betAmount.value <= 200 && !isPlaying.value)
+
 async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) {
-  if (isPlaying.value)
+  if (!canPlay.value)
     return
   isPlaying.value = true
   showResult.value = false
@@ -485,7 +487,7 @@ onMounted(() => fetchData())
             <div class="coin-actions">
               <button
                 class="coin-btn coin-btn-heads"
-                :disabled="isPlaying"
+                :disabled="!canPlay"
                 @click="playCoinFlip('heads')"
               >
                 <Loader2
@@ -497,7 +499,7 @@ onMounted(() => fetchData())
               </button>
               <button
                 class="coin-btn coin-btn-tails"
-                :disabled="isPlaying"
+                :disabled="!canPlay"
                 @click="playCoinFlip('tails')"
               >
                 <Loader2
@@ -651,7 +653,7 @@ onMounted(() => fetchData())
             <Button
               size="lg"
               class="w-full game-play-btn"
-              :disabled="isPlaying"
+              :disabled="!canPlay"
               @click="playDiceRoll"
             >
               <Loader2
@@ -732,7 +734,7 @@ onMounted(() => fetchData())
             <Button
               size="lg"
               class="w-full game-play-btn"
-              :disabled="isPlaying || isWheelSpinning"
+              :disabled="!canPlay || isWheelSpinning"
               @click="playWheel"
             >
               <RotateCw

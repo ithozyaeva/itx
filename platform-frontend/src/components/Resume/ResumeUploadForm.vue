@@ -134,7 +134,7 @@ async function handleUpload() {
 
       <Button
         class="w-full mt-2 gap-2"
-        :disabled="isUploading"
+        :disabled="!selectedFile || isUploading"
         @click="handleUpload"
       >
         <Loader2

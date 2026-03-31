@@ -21,23 +21,23 @@ const event = ref(props.event)
 const user = useUser()
 const isMembersExpanded = ref(false)
 
-const nextOccurrenceDate = computed(() => getNextOccurrenceDate(props.event))
+const nextOccurrenceDate = computed(() => getNextOccurrenceDate(event.value))
 const formattedDate = computed(() => dateFormatter.format(nextOccurrenceDate.value))
 
-const isExclusive = computed(() => !!props.event.exclusiveChatId)
+const isExclusive = computed(() => !!event.value.exclusiveChatId)
 const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
 const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
 const isPassedEvent = computed(() => {
-  if (props.event.isRepeating && props.event.repeatPeriod) {
-    return !!(props.event.repeatEndDate && new Date(props.event.repeatEndDate) < new Date())
+  if (event.value.isRepeating && event.value.repeatPeriod) {
+    return !!(event.value.repeatEndDate && new Date(event.value.repeatEndDate) < new Date())
   }
-  return new Date(props.event.date) < new Date()
+  return new Date(event.value.date) < new Date()
 })
 const isFull = computed(() => event.value.maxParticipants > 0 && event.value.members.length >= event.value.maxParticipants)
 
 // Форматирование информации о повторениях
 const repeatInfo = computed(() => {
-  if (!props.event.isRepeating || !props.event.repeatPeriod) {
+  if (!event.value.isRepeating || !event.value.repeatPeriod) {
     return null
   }
 
@@ -48,13 +48,13 @@ const repeatInfo = computed(() => {
     YEARLY: 'год',
   }
 
-  const periodLabel = periodLabels[props.event.repeatPeriod] || props.event.repeatPeriod.toLowerCase()
-  const interval = props.event.repeatInterval || 1
+  const periodLabel = periodLabels[event.value.repeatPeriod] || event.value.repeatPeriod.toLowerCase()
+  const interval = event.value.repeatInterval || 1
 
   let info = `Повторяется каждые ${interval} ${interval === 1 ? periodLabel : getPluralForm(periodLabel, interval)}`
 
-  if (props.event.repeatEndDate) {
-    const endDate = new Date(props.event.repeatEndDate)
+  if (event.value.repeatEndDate) {
+    const endDate = new Date(event.value.repeatEndDate)
     info += ` до ${dateFormatter.format(endDate)}`
   }
 

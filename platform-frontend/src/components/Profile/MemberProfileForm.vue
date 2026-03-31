@@ -49,7 +49,7 @@ async function handleSubmit() {
   }
 }
 
-const avatarSrc = ref(user.value?.avatarUrl || `https://t.me/i/userpic/160/${user.value?.tg}.jpg`)
+const avatarSrc = ref(user.value?.avatarUrl || (user.value?.tg ? `https://t.me/i/userpic/160/${user.value.tg}.jpg` : ''))
 const avatarError = ref(false)
 
 async function handleAvatarUpload(event: Event) {

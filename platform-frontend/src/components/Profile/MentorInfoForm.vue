@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 
 const user = useUser<Mentor>()
 const isEdit = ref<boolean>(false)
+const isSaving = ref(false)
 
 const editedUser = reactive({
   occupation: user.value?.occupation,
@@ -22,9 +24,18 @@ watchEffect(() => {
   editedUser.experience = user.value?.experience
 })
 
-function handleSubmit() {
-  profileService.updateMentorInfo(editedUser)
-  isEdit.value = false
+async function handleSubmit() {
+  isSaving.value = true
+  try {
+    await profileService.updateMentorInfo(editedUser)
+    isEdit.value = false
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    isSaving.value = false
+  }
 }
 </script>
 
@@ -53,7 +64,7 @@ function handleSubmit() {
           max-length="255"
         />
       </div>
-      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300" @click="handleSubmit">
+      <Button v-if="isEdit" class="mt-1 px-4 py-2 cursor-pointer transition duration-300" :disabled="isSaving" @click="handleSubmit">
         Сохранить изменения
       </Button>
     </div>

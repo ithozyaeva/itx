@@ -370,7 +370,7 @@ onMounted(() => {
       >
         За что начисляются баллы
       </Typography>
-      <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8 overflow-x-auto">
+      <div class="bg-card border border-border rounded-2xl overflow-x-auto mb-8">
         <table class="w-full text-sm min-w-[320px]">
           <thead>
             <tr class="border-b border-border">

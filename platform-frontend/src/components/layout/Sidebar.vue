@@ -151,7 +151,7 @@ async function handleSaveReview(text: string) {
                 </span>
               </div>
               <div class="flex flex-col min-w-0">
-                <span class="text-sm font-medium truncate">{{ user.firstName }} {{ user.lastName?.[0] ?? '' }}</span>
+                <span class="text-sm font-medium truncate">{{ [user.firstName, user.lastName?.[0]].filter(Boolean).join(' ') }}</span>
                 <span class="text-xs text-primary-foreground/60">{{ level }}</span>
               </div>
             </div>
