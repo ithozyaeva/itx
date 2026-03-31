@@ -6,22 +6,35 @@ import { Typography } from 'itx-ui-kit'
 import {
   ArrowLeft,
   Award,
+  BookOpen,
+  Briefcase,
   CalendarCheck,
+  CheckCircle,
+  ClipboardList,
   Crown,
   FileText,
   Flame,
   Footprints,
+  GraduationCap,
+  HardHat,
+  History,
+  ListChecks,
   Loader2,
   Medal,
   MessageSquare,
   MessagesSquare,
   Mic,
+  Package,
   Presentation,
   Share2,
+  ShoppingCart,
   Star,
+  Swords,
+  Target,
   Trophy,
   UserCheck,
   UserPlus,
+  Users,
   UserX,
   Zap,
 } from 'lucide-vue-next'
@@ -44,13 +57,27 @@ const iconMap: Record<string, any> = {
   'star': Star,
   'trophy': Trophy,
   'crown': Crown,
+  'gem': Award,
   'message-square': MessageSquare,
   'messages-square': MessagesSquare,
+  'book-open': BookOpen,
   'share-2': Share2,
+  'users': Users,
   'user-plus': UserPlus,
   'user-check': UserCheck,
   'zap': Zap,
   'file-text': FileText,
+  'package': Package,
+  'shopping-cart': ShoppingCart,
+  'clipboard-list': ClipboardList,
+  'list-checks': ListChecks,
+  'check-circle': CheckCircle,
+  'hard-hat': HardHat,
+  'briefcase': Briefcase,
+  'target': Target,
+  'swords': Swords,
+  'history': History,
+  'graduation-cap': GraduationCap,
 }
 
 const route = useRoute()
@@ -158,7 +185,7 @@ onMounted(loadProfile)
             <span
               v-else
               class="text-2xl font-bold text-muted-foreground"
-            >{{ profile.member.firstName[0] }}{{ profile.member.lastName[0] }}</span>
+            >{{ profile.member.firstName?.[0] }}{{ profile.member.lastName?.[0] }}</span>
           </div>
           <div class="min-w-0">
             <Typography

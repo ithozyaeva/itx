@@ -75,7 +75,8 @@ async function handleConvert() {
     await referalLinkService.trackConversion(props.link.id)
     hasConverted.value = true
     emit('converted', props.link.id)
-    window.open(`https://t.me/${props.link.author.tg}`, '_blank')
+    if (props.link.author.tg)
+      window.open(`https://t.me/${props.link.author.tg}`, '_blank')
   }
   catch (error) {
     handleError(error)
@@ -124,7 +125,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
         </div>
       </div>
       <p class="text-sm text-muted-foreground">
-        Автор: <a :href="`https://t.me/${link.author.tg}`" target="_blank" class="underline">{{ link.author.firstName }} {{ link.author.lastName }}</a>
+        Автор: <a v-if="link.author.tg" :href="`https://t.me/${link.author.tg}`" target="_blank" class="underline">{{ link.author.firstName }} {{ link.author.lastName }}</a><span v-else>{{ link.author.firstName }} {{ link.author.lastName }}</span>
       </p>
       <div class="space-y-1 text-sm">
         <div class="space-x-2">

@@ -381,7 +381,7 @@ onMounted(() => {
           <div class="p-4">
             <!-- Title + status -->
             <div class="flex items-start justify-between gap-2 mb-2">
-              <h3 class="font-medium text-sm leading-tight">
+              <h3 class="font-medium text-sm leading-tight line-clamp-2">
                 {{ item.title }}
               </h3>
               <span

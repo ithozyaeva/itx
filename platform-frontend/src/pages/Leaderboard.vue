@@ -127,7 +127,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
               loading="lazy"
               class="w-full h-full object-cover transition-opacity duration-300"
               @load="($event.target as HTMLImageElement).style.opacity = '1'"
-              @error="(e: Event) => { const img = e.target as HTMLImageElement; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserEntry!.entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
+              @error="(e: Event) => { const img = e.target as HTMLImageElement; if (img.dataset.fallback) return; img.dataset.fallback = '1'; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserEntry!.entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
             >
           </div>
 
@@ -176,7 +176,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
             loading="lazy"
             class="w-full h-full object-cover transition-opacity duration-300"
             @load="($event.target as HTMLImageElement).style.opacity = '1'"
-            @error="(e: Event) => { const img = e.target as HTMLImageElement; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
+            @error="(e: Event) => { const img = e.target as HTMLImageElement; if (img.dataset.fallback) return; img.dataset.fallback = '1'; img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.firstName || '?')}&background=random`; img.style.opacity = '1' }"
           >
         </div>
 

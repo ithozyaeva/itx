@@ -205,7 +205,7 @@ onMounted(() => {
               <div
                 class="h-full rounded-full transition-all"
                 :class="achievement.unlocked ? 'bg-green-500' : 'bg-primary'"
-                :style="{ width: `${Math.min(100, (achievement.progress / achievement.threshold) * 100)}%` }"
+                :style="{ width: `${achievement.threshold > 0 ? Math.min(100, (achievement.progress / achievement.threshold) * 100) : 0}%` }"
               />
             </div>
           </div>
@@ -270,11 +270,11 @@ onMounted(() => {
               <div
                 class="h-full rounded-full transition-all"
                 :class="selectedAchievement.unlocked ? 'bg-green-500' : 'bg-primary'"
-                :style="{ width: `${Math.min(100, (selectedAchievement.progress / selectedAchievement.threshold) * 100)}%` }"
+                :style="{ width: `${selectedAchievement.threshold > 0 ? Math.min(100, (selectedAchievement.progress / selectedAchievement.threshold) * 100) : 0}%` }"
               />
             </div>
             <p class="text-xs text-muted-foreground text-right mt-1">
-              {{ Math.min(100, Math.round((selectedAchievement.progress / selectedAchievement.threshold) * 100)) }}%
+              {{ selectedAchievement.threshold > 0 ? Math.min(100, Math.round((selectedAchievement.progress / selectedAchievement.threshold) * 100)) : 0 }}%
             </p>
           </div>
         </div>

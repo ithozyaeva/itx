@@ -24,6 +24,7 @@ const currentOffset = ref(0)
 const ITEMS_PER_PAGE = 10
 const currentFilters = ref<ReferalSearchFilters>({})
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const loadError = ref<string | null>(null)
 
 async function fetchReferalLinks(filters?: ReferalSearchFilters) {
@@ -52,8 +53,16 @@ async function fetchReferalLinks(filters?: ReferalSearchFilters) {
 }
 
 async function loadMore() {
-  currentOffset.value += ITEMS_PER_PAGE
-  await fetchReferalLinks()
+  if (isLoadingMore.value)
+    return
+  isLoadingMore.value = true
+  try {
+    currentOffset.value += ITEMS_PER_PAGE
+    await fetchReferalLinks()
+  }
+  finally {
+    isLoadingMore.value = false
+  }
 }
 
 onMounted(() => {
@@ -152,8 +161,9 @@ function handleLinkDeleted(deletedLinkId: number) {
         @deleted="handleLinkDeleted"
       />
 
-      <button v-if="referalLinks.length < totalLinks" type="button" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer" @click="loadMore">
-        <span class="m-auto">
+      <button v-if="referalLinks.length < totalLinks" type="button" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" :disabled="isLoadingMore" @click="loadMore">
+        <Loader2 v-if="isLoadingMore" class="h-5 w-5 animate-spin" />
+        <span v-else class="m-auto">
           Показать ещё
         </span>
       </button>

@@ -61,7 +61,7 @@ function logout() {
         <ThemeToggle />
         <NotificationDropdown />
         <span class="mr-1 text-sm hidden sm:inline">
-          {{ `${user.firstName} ${user.lastName?.[0] ?? ""}` }}
+          {{ [user.firstName, user.lastName?.[0]].filter(Boolean).join(' ') }}
         </span>
         <button
           aria-label="Выйти"

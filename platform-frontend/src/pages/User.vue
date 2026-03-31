@@ -8,14 +8,24 @@ import NotificationSettingsForm from '@/components/Profile/NotificationSettingsF
 import ProfTagsForm from '@/components/Profile/ProfTagsForm.vue'
 import ServicesForm from '@/components/Profile/ServicesForm.vue'
 import { isUserMentor, useUser } from '@/composables/useUser'
+import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
 
 const user = useUser()
 const isLoading = ref(true)
+const loadError = ref(false)
 
 onMounted(async () => {
-  await profileService.getMe()
-  isLoading.value = false
+  try {
+    await profileService.getMe()
+  }
+  catch (err) {
+    handleError(err)
+    loadError.value = true
+  }
+  finally {
+    isLoading.value = false
+  }
 })
 
 const isMentor = isUserMentor()
@@ -28,6 +38,12 @@ const isMentor = isUserMentor()
       class="flex justify-center py-12"
     >
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+    <div
+      v-else-if="loadError"
+      class="flex flex-col items-center justify-center py-12 text-muted-foreground"
+    >
+      <p>Не удалось загрузить профиль</p>
     </div>
     <div
       v-else-if="isMentor"

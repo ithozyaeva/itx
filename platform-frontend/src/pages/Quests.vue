@@ -33,6 +33,8 @@ const filteredQuests = computed(() => {
 })
 
 function questProgress(quest: ChatQuestWithProgress) {
+  if (quest.targetCount === 0)
+    return 0
   return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
 }
 
