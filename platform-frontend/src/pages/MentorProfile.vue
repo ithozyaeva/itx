@@ -19,6 +19,8 @@ async function loadMentor() {
   loadError.value = null
   try {
     const id = Number(route.params.id)
+    if (Number.isNaN(id))
+      throw new Error('Некорректный ID ментора')
     mentor.value = await mentorsService.getById(id)
   }
   catch (error) {

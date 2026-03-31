@@ -90,6 +90,7 @@ async function handleAvatarUpload(event: Event) {
           <img
             v-if="!avatarError"
             :src="avatarSrc"
+            :alt="user?.firstName ?? 'Аватар'"
             class="w-full h-full object-cover"
             @error="avatarError = true"
           >

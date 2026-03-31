@@ -37,10 +37,10 @@ async function fetchReferalLinks(filters?: ReferalSearchFilters) {
   try {
     const response = await referalLinkService.search(ITEMS_PER_PAGE, currentOffset.value, currentFilters.value)
     if (currentOffset.value === 0) {
-      referalLinks.value = response.items
+      referalLinks.value = response.items ?? []
     }
     else {
-      referalLinks.value = [...referalLinks.value, ...response.items]
+      referalLinks.value = [...referalLinks.value, ...(response.items ?? [])]
     }
     totalLinks.value = response.total
   }

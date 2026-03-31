@@ -1,9 +1,9 @@
 import { reactive } from 'vue'
 
-type Validator = (value: any) => string | null
+type Validator = (value: unknown) => string | null
 
 export function required(message = 'Обязательное поле'): Validator {
-  return (value: any) => {
+  return (value: unknown) => {
     if (typeof value === 'string' && !value.trim())
       return message
     if (value === null || value === undefined)
@@ -13,7 +13,7 @@ export function required(message = 'Обязательное поле'): Validat
 }
 
 export function minLength(min: number, message?: string): Validator {
-  return (value: any) => {
+  return (value: unknown) => {
     if (typeof value === 'string' && value.trim().length < min)
       return message || `Минимум ${min} символов`
     return null
@@ -21,7 +21,7 @@ export function minLength(min: number, message?: string): Validator {
 }
 
 export function maxLength(max: number, message?: string): Validator {
-  return (value: any) => {
+  return (value: unknown) => {
     if (typeof value === 'string' && value.trim().length > max)
       return message || `Максимум ${max} символов`
     return null
@@ -37,7 +37,7 @@ export function useFormValidation(rules: FieldRules) {
     Object.fromEntries(Object.keys(rules).map(k => [k, undefined])),
   )
 
-  function validateField(field: string, value: any): boolean {
+  function validateField(field: string, value: unknown): boolean {
     const fieldRules = rules[field]
     if (!fieldRules)
       return true

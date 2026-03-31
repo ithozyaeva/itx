@@ -19,6 +19,7 @@ const resumes = ref<Resume[]>([])
 const isLoading = ref(false)
 const loadError = ref<string | null>(null)
 const isSavingEdit = ref(false)
+const deletingId = ref<number | null>(null)
 
 const editingId = ref<number | null>(null)
 const editForm = ref({
@@ -88,12 +89,18 @@ async function saveEdit(resume: Resume) {
 }
 
 async function deleteResume(resume: Resume) {
+  if (deletingId.value)
+    return
+  deletingId.value = resume.id
   try {
     await resumeService.delete(resume.id)
     resumes.value = resumes.value.filter(item => item.id !== resume.id)
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    deletingId.value = null
   }
 }
 

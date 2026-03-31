@@ -128,6 +128,8 @@ async function loadProfile() {
   avatarError.value = false
   try {
     const id = Number(route.params.id)
+    if (Number.isNaN(id))
+      throw new Error('Некорректный ID участника')
     profile.value = await profileService.getMemberById(id)
     if (profile.value && currentUser.value && profile.value.member.id === currentUser.value.id) {
       router.replace('/me')
@@ -179,6 +181,7 @@ onMounted(loadProfile)
             <img
               v-if="!avatarError"
               :src="getAvatarSrc(profile.member.tg, profile.member.avatarUrl)"
+              :alt="profile.member.firstName ?? 'Аватар'"
               class="w-full h-full object-cover"
               @error="avatarError = true"
             >

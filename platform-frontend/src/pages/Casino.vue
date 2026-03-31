@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CasinoBetResult, CasinoFeedItem, CasinoStats } from '@/models/casino'
 import { CircleDot, Dices, Loader2, RotateCw, TrendingDown, TrendingUp } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { casinoService } from '@/services/casino'
@@ -70,6 +70,7 @@ const diceUnitsAngle = ref(0)
 
 const wheelRotation = ref(0)
 const isWheelSpinning = ref(false)
+let wheelTimer: ReturnType<typeof setTimeout> | null = null
 
 async function fetchData() {
   isLoading.value = true
@@ -108,7 +109,7 @@ async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) 
     if (stats.value) {
       stats.value.balance = result.balance
     }
-    casinoService.getFeed().then(f => feed.value = f ?? [])
+    casinoService.getFeed().then(f => feed.value = f ?? []).catch(() => {})
   }
   catch (error) {
     handleError(error)
@@ -190,7 +191,7 @@ function playDiceRoll() {
     }
     diceResultWin.value = result.profit > 0
     // Roll reels to correct digits
-    const val = diceResultValue.value!
+    const val = diceResultValue.value ?? 0
     diceTensAngle.value = rollReelTo(Math.floor(val / 10))
     diceUnitsAngle.value = rollReelTo(val % 10)
     await delay(2200)
@@ -237,7 +238,7 @@ function playWheel() {
       throw error
     }
     finally {
-      setTimeout(() => {
+      wheelTimer = setTimeout(() => {
         isWheelSpinning.value = false
       }, 4000)
     }
@@ -294,6 +295,11 @@ function gameIcon(game: string) {
 }
 
 onMounted(() => fetchData())
+
+onBeforeUnmount(() => {
+  if (wheelTimer)
+    clearTimeout(wheelTimer)
+})
 </script>
 
 <template>

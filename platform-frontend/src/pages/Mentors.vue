@@ -33,7 +33,7 @@ async function loadMentors() {
   loadError.value = null
   try {
     const result = await mentorsService.getAll(PAGE_SIZE, 0)
-    mentors.value = result.items
+    mentors.value = result.items ?? []
     total.value = result.total
   }
   catch (error) {
@@ -48,7 +48,7 @@ async function loadMore() {
   isLoadingMore.value = true
   try {
     const result = await mentorsService.getAll(PAGE_SIZE, mentors.value.length)
-    mentors.value.push(...result.items)
+    mentors.value.push(...(result.items ?? []))
     total.value = result.total
   }
   catch (error) {

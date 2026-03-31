@@ -138,7 +138,10 @@ function getMostActiveArea(): string {
 }
 
 function formatMonth(m: string) {
-  const [_, month] = m.split('-')
+  const parts = m.split('-')
+  const month = parts[1]
+  if (!month)
+    return m
   const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
   return months[Number.parseInt(month) - 1] || m
 }

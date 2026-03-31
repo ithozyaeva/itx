@@ -25,15 +25,15 @@ const nextOccurrenceDate = computed(() => getNextOccurrenceDate(event.value))
 const formattedDate = computed(() => dateFormatter.format(nextOccurrenceDate.value))
 
 const isExclusive = computed(() => !!event.value.exclusiveChatId)
-const isHost = computed(() => user.value ? event.value.hosts.map(item => item.id).includes(user.value.id) : false)
-const isMember = computed(() => user.value ? event.value.members.map(item => item.id).includes(user.value.id) : false)
+const isHost = computed(() => user.value ? (event.value.hosts ?? []).map(item => item.id).includes(user.value.id) : false)
+const isMember = computed(() => user.value ? (event.value.members ?? []).map(item => item.id).includes(user.value.id) : false)
 const isPassedEvent = computed(() => {
   if (event.value.isRepeating && event.value.repeatPeriod) {
     return !!(event.value.repeatEndDate && new Date(event.value.repeatEndDate) < new Date())
   }
   return new Date(event.value.date) < new Date()
 })
-const isFull = computed(() => event.value.maxParticipants > 0 && event.value.members.length >= event.value.maxParticipants)
+const isFull = computed(() => event.value.maxParticipants > 0 && (event.value.members?.length ?? 0) >= event.value.maxParticipants)
 
 // Форматирование информации о повторениях
 const repeatInfo = computed(() => {

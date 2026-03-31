@@ -170,7 +170,7 @@ onMounted(() => {
         >
           <div class="flex items-start gap-3">
             <img
-              :src="item.fromAvatarUrl || `https://ui-avatars.com/api/?name=${item.fromFirstName}`"
+              :src="item.fromAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.fromFirstName || '?')}&background=random`"
               :alt="displayName(item.fromFirstName, item.fromLastName)"
               class="h-10 w-10 rounded-full shrink-0 object-cover"
             >
@@ -243,7 +243,7 @@ onMounted(() => {
                   :key="m.id"
                   :value="String(m.id)"
                 >
-                  {{ m.firstName }} {{ m.lastName }} (@{{ m.tg }})
+                  {{ m.firstName }} {{ m.lastName }}{{ m.tg ? ` (@${m.tg})` : '' }}
                 </SelectItem>
               </SelectContent>
             </Select>

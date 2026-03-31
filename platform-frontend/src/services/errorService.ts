@@ -12,7 +12,7 @@ export enum ErrorType {
 export interface AppError {
   type: ErrorType
   message: string
-  originalError?: any
+  originalError?: unknown
 }
 
 const fallbackMessages: Record<string, string> = {
@@ -22,17 +22,20 @@ const fallbackMessages: Record<string, string> = {
 }
 
 /** Базовый обработчик ошибок */
-export async function handleError(error: any): Promise<AppError> {
+export async function handleError(error: unknown): Promise<AppError> {
   const { toast } = useToast()
   let appError: AppError
 
-  if (error.name === 'HTTPError') {
-    const status = error.response?.status
+  const err = error as Record<string, unknown>
+
+  if (err?.name === 'HTTPError') {
+    const response = err.response as { status?: number, json?: () => Promise<unknown> } | undefined
+    const status = response?.status
     let serverMessage: string | undefined
 
     try {
-      const body = await error.response?.json()
-      serverMessage = body?.error
+      const body = await response?.json?.() as Record<string, unknown> | undefined
+      serverMessage = body?.error as string | undefined
     }
     catch {}
 
@@ -65,7 +68,7 @@ export async function handleError(error: any): Promise<AppError> {
       }
     }
   }
-  else if (error.name === 'NetworkError') {
+  else if (err?.name === 'NetworkError') {
     appError = {
       type: ErrorType.NETWORK,
       message: 'Проблемы с сетевым подключением',
@@ -75,7 +78,7 @@ export async function handleError(error: any): Promise<AppError> {
   else {
     appError = {
       type: ErrorType.UNKNOWN,
-      message: error.message || 'Произошла неизвестная ошибка',
+      message: (err?.message as string) || 'Произошла неизвестная ошибка',
       originalError: error,
     }
   }

@@ -175,7 +175,7 @@ async function assignTask(id: number) {
   // Optimistic update
   const task = tasks.value.find(t => t.id === id)
   if (task && user.value) {
-    task.assignees = [...(task.assignees ?? []), user.value as any]
+    task.assignees = [...(task.assignees ?? []), user.value]
     if (task.assignees.length >= task.maxAssignees)
       task.status = 'IN_PROGRESS'
   }
@@ -335,7 +335,7 @@ function canRemoveAssignee(task: TaskExchange) {
 
 function displayName(member: { firstName: string, lastName: string, tg: string }) {
   const name = [member.firstName, member.lastName].filter(Boolean).join(' ')
-  return name || `@${member.tg}`
+  return name || (member.tg ? `@${member.tg}` : 'Аноним')
 }
 
 useSSE('tasks', () => fetchTasks())
