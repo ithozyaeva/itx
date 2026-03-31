@@ -72,6 +72,13 @@ func (s *ChatActivityService) resolveMemberID(telegramUserID int64) *int64 {
 	return &member.Id
 }
 
+// IsTrackedChat проверяет, является ли чат отслеживаемым (группа ITX)
+func (s *ChatActivityService) IsTrackedChat(chatID int64) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.trackedChatIDs[chatID]
+}
+
 // TrackMessage проверяет, что чат отслеживается, и сохраняет сообщение
 func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 	if message == nil || message.From == nil {
