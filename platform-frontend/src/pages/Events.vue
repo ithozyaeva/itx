@@ -64,9 +64,9 @@ async function loadEvents(filters?: EventSearchFilters) {
       eventsService.searchOld(PAGE_SIZE, 0, currentFilters.value),
       eventsService.searchNext(PAGE_SIZE, 0, currentFilters.value),
     ])
-    pastEvents.value = pastResult.items
+    pastEvents.value = pastResult.items ?? []
     pastTotal.value = pastResult.total
-    futureEvents.value = futureResult.items
+    futureEvents.value = futureResult.items ?? []
     futureTotal.value = futureResult.total
   }
   catch (error) {
@@ -81,7 +81,7 @@ async function loadMorePast() {
   isLoadingMorePast.value = true
   try {
     const result = await eventsService.searchOld(PAGE_SIZE, pastEvents.value.length, currentFilters.value)
-    pastEvents.value.push(...result.items)
+    pastEvents.value.push(...(result.items ?? []))
     pastTotal.value = result.total
   }
   catch (error) {
@@ -96,7 +96,7 @@ async function loadMoreFuture() {
   isLoadingMoreFuture.value = true
   try {
     const result = await eventsService.searchNext(PAGE_SIZE, futureEvents.value.length, currentFilters.value)
-    futureEvents.value.push(...result.items)
+    futureEvents.value.push(...(result.items ?? []))
     futureTotal.value = result.total
   }
   catch (error) {
@@ -116,7 +116,7 @@ async function loadCalendarEvents() {
       eventsService.searchOld(200, 0, currentFilters.value),
       eventsService.searchNext(200, 0, currentFilters.value),
     ])
-    calendarEvents.value = [...future.items, ...past.items]
+    calendarEvents.value = [...(future.items ?? []), ...(past.items ?? [])]
   }
   catch (error) {
     calendarEvents.value = [...futureEvents.value, ...pastEvents.value]

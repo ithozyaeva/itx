@@ -16,6 +16,7 @@ const loadError = ref<string | null>(null)
 const editingId = ref<number | null>(null)
 const editText = ref('')
 const isModalOpen = ref(false)
+const isSaving = ref(false)
 
 async function loadReviews() {
   isLoading.value = true
@@ -32,6 +33,9 @@ async function loadReviews() {
 }
 
 async function handleCreateReview(text: string) {
+  if (isSaving.value)
+    return
+  isSaving.value = true
   try {
     await reviewService.createReview(text)
     isModalOpen.value = false
@@ -39,6 +43,9 @@ async function handleCreateReview(text: string) {
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    isSaving.value = false
   }
 }
 
@@ -53,6 +60,9 @@ function cancelEdit() {
 }
 
 async function saveEdit(id: number) {
+  if (isSaving.value)
+    return
+  isSaving.value = true
   try {
     await reviewService.updateReview(id, editText.value)
     cancelEdit()
@@ -60,6 +70,9 @@ async function saveEdit(id: number) {
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    isSaving.value = false
   }
 }
 
@@ -144,6 +157,7 @@ onMounted(loadReviews)
           <div class="flex gap-2 mt-2">
             <Button
               size="sm"
+              :disabled="isSaving"
               @click="saveEdit(review.id)"
             >
               Сохранить

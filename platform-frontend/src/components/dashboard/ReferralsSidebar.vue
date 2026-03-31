@@ -13,7 +13,7 @@ async function loadReferrals() {
   isLoading.value = true
   try {
     const result = await referalLinkService.search(5, 0, { status: 'active' })
-    referrals.value = result.items
+    referrals.value = result.items ?? []
   }
   catch (error) {
     handleError(error)

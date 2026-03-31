@@ -38,7 +38,7 @@ async function loadEvents() {
   isLoading.value = true
   try {
     const result = await eventsService.searchNext(PAGE_SIZE, initialOffset.value)
-    events.value = result.items
+    events.value = result.items ?? []
     total.value = result.total
   }
   catch (error) {
@@ -53,7 +53,7 @@ async function loadMore() {
   isLoadingMore.value = true
   try {
     const result = await eventsService.searchNext(PAGE_SIZE, events.value.length)
-    events.value.push(...result.items)
+    events.value.push(...(result.items ?? []))
     total.value = result.total
   }
   catch (error) {

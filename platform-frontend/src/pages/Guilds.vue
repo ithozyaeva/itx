@@ -25,6 +25,7 @@ const selectedGuildMembers = ref<GuildMemberEntry[]>([])
 const selectedGuildName = ref('')
 
 const user = useUser()
+const actionInProgress = ref<number | null>(null)
 
 const newName = ref('')
 const newDescription = ref('')
@@ -71,6 +72,9 @@ async function createGuild() {
 }
 
 async function joinGuild(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   try {
     await guildService.join(id)
     await fetchGuilds()
@@ -78,9 +82,15 @@ async function joinGuild(id: number) {
   catch (error) {
     handleError(error)
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function leaveGuild(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   try {
     await guildService.leave(id)
     await fetchGuilds()
@@ -88,15 +98,24 @@ async function leaveGuild(id: number) {
   catch (error) {
     handleError(error)
   }
+  finally {
+    actionInProgress.value = null
+  }
 }
 
 async function deleteGuild(id: number) {
+  if (actionInProgress.value)
+    return
+  actionInProgress.value = id
   try {
     await guildService.remove(id)
     await fetchGuilds()
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    actionInProgress.value = null
   }
 }
 
@@ -206,7 +225,7 @@ onMounted(() => {
 
             <div class="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
               <img
-                :src="guild.ownerAvatarUrl || `https://ui-avatars.com/api/?name=${guild.ownerFirstName}`"
+                :src="guild.ownerAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(guild.ownerFirstName || '?')}&background=random`"
                 :alt="displayName(guild.ownerFirstName, guild.ownerLastName)"
                 class="h-5 w-5 rounded-full object-cover"
               >
@@ -216,14 +235,16 @@ onMounted(() => {
             <div class="flex gap-2">
               <button
                 v-if="!guild.isMember && !isInAnyGuild()"
-                class="flex-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                class="flex-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                :disabled="actionInProgress === guild.id"
                 @click="joinGuild(guild.id)"
               >
                 Вступить
               </button>
               <button
                 v-if="guild.isMember && guild.ownerId !== user?.id"
-                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                :disabled="actionInProgress === guild.id"
                 @click="leaveGuild(guild.id)"
               >
                 <LogOut class="h-3.5 w-3.5" />
@@ -231,7 +252,8 @@ onMounted(() => {
               </button>
               <button
                 v-if="guild.ownerId === user?.id"
-                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto disabled:opacity-50"
+                :disabled="actionInProgress === guild.id"
                 @click="deleteGuild(guild.id)"
               >
                 <Trash2 class="h-3.5 w-3.5" />
@@ -314,7 +336,7 @@ onMounted(() => {
             class="flex items-center gap-3 p-2 rounded-xl"
           >
             <img
-              :src="member.avatarUrl || `https://ui-avatars.com/api/?name=${member.firstName}`"
+              :src="member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.firstName || '?')}&background=random`"
               :alt="displayName(member.firstName, member.lastName)"
               class="h-8 w-8 rounded-full object-cover"
             >

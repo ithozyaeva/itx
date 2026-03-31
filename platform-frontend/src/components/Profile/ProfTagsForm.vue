@@ -132,9 +132,9 @@ function toggleEdit() {
               <ComboboxGroup>
                 <ComboboxItem
                   v-for="profTag in filteredProfTags" :key="profTag.title" :value="profTag"
-                  @select.prevent="(ev: any) => {
+                  @select.prevent="(ev: CustomEvent<{ value?: ProfTag; originalEvent: PointerEvent }>) => {
                     searchProfTag = ''
-                    pushTag(ev.detail.value)
+                    pushTag(ev.detail.value as ProfTag)
 
                     if (filteredProfTags.length === 0) {
                       openCombobox = false

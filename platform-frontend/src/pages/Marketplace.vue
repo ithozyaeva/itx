@@ -165,6 +165,8 @@ function resetForm() {
 }
 
 async function requestPurchase(id: number) {
+  if (actionInProgress.value)
+    return
   actionInProgress.value = id
   try {
     await marketplaceService.requestPurchase(id)
@@ -179,6 +181,8 @@ async function requestPurchase(id: number) {
 }
 
 async function cancelPurchase(id: number) {
+  if (actionInProgress.value)
+    return
   actionInProgress.value = id
   try {
     await marketplaceService.cancelPurchase(id)
@@ -193,6 +197,8 @@ async function cancelPurchase(id: number) {
 }
 
 async function markSold(id: number) {
+  if (actionInProgress.value)
+    return
   actionInProgress.value = id
   try {
     await marketplaceService.markSold(id)
@@ -207,6 +213,8 @@ async function markSold(id: number) {
 }
 
 async function deleteItem(id: number) {
+  if (actionInProgress.value)
+    return
   actionInProgress.value = id
   try {
     await marketplaceService.remove(id)
@@ -230,7 +238,7 @@ function isBuyer(item: MarketplaceItem) {
 
 function displayName(member: { firstName: string, lastName: string, tg: string }) {
   const name = [member.firstName, member.lastName].filter(Boolean).join(' ')
-  return name || `@${member.tg}`
+  return name || (member.tg ? `@${member.tg}` : 'Аноним')
 }
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']

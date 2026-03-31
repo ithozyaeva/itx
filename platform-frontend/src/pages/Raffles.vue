@@ -40,6 +40,8 @@ function getTicketCount(id: number) {
 }
 
 async function buyTickets(id: number) {
+  if (buyingId.value)
+    return
   buyingId.value = id
   try {
     await raffleService.buyTickets(id, getTicketCount(id))

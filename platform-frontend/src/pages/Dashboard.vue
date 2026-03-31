@@ -206,7 +206,7 @@ onMounted(async () => {
     if (results[3].status === 'fulfilled') {
       const [openRes, inProgressRes] = results[3].value
       const open = openRes?.items ?? []
-      const inProgress = (inProgressRes?.items ?? []).filter(t => t.assignees.length < t.maxAssignees)
+      const inProgress = (inProgressRes?.items ?? []).filter(t => (t.assignees?.length ?? 0) < t.maxAssignees)
       openTasks.value = [...open, ...inProgress].slice(0, 3)
     }
     if (results[4].status === 'fulfilled') {
@@ -633,7 +633,7 @@ onMounted(async () => {
                   class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
                   :class="task.status === 'IN_PROGRESS' ? 'text-orange-500 bg-orange-500/10' : 'text-blue-500 bg-blue-500/10'"
                 >
-                  {{ task.status === 'IN_PROGRESS' ? `${task.assignees.length}/${task.maxAssignees}` : 'Открыто' }}
+                  {{ task.status === 'IN_PROGRESS' ? `${task.assignees?.length ?? 0}/${task.maxAssignees}` : 'Открыто' }}
                 </span>
               </div>
               <div class="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -668,7 +668,7 @@ onMounted(async () => {
             <div class="flex items-center gap-2 mb-1.5">
               <div class="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 shrink-0">
                 <span class="text-xs font-bold text-accent">
-                  {{ (hl.authorFirstName || hl.authorUsername || '?')[0].toUpperCase() }}
+                  {{ (hl.authorFirstName || hl.authorUsername || '?').charAt(0).toUpperCase() }}
                 </span>
               </div>
               <span class="text-sm font-medium truncate">
