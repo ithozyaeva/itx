@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"ithozyeva/config"
 	"log"
 	"os"
 	"os/exec"
@@ -38,8 +39,8 @@ func (b *TelegramBot) handleVideoURLs(message *tgbotapi.Message, urls []string) 
 		return
 	}
 
-	// Работает только в группах ITX (tracked chats)
-	if !b.chatActivityService.IsTrackedChat(message.Chat.ID) {
+	// Работает только в группах ITX (основной чат + tracked chats)
+	if message.Chat.ID != config.CFG.TelegramMainChatID && !b.chatActivityService.IsTrackedChat(message.Chat.ID) {
 		return
 	}
 
