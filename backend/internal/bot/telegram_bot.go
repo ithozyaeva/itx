@@ -197,6 +197,13 @@ func (b *TelegramBot) Start() {
 		// Трекинг активности чатов — для каждого сообщения (асинхронно, чтобы не блокировать обработку)
 		go b.chatActivityService.TrackMessage(update.Message)
 
+		// Обработка ссылок на короткие видео (Reels, TikTok, Shorts)
+		if update.Message.Text != "" {
+			if urls := extractVideoURLs(update.Message.Text); len(urls) > 0 {
+				go b.handleVideoURLs(update.Message, urls)
+			}
+		}
+
 		// Обработка новых участников чата
 		if update.Message.NewChatMembers != nil {
 			for _, newMember := range update.Message.NewChatMembers {
