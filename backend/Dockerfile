@@ -15,10 +15,8 @@ RUN GOARCH=amd64 CGO_ENABLED=0 GOOS=linux go build -o backend ./cmd
 
 FROM alpine
 
-RUN apk add --no-cache tzdata ffmpeg curl \
-    && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-       -o /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
+RUN apk add --no-cache tzdata ffmpeg python3 py3-pip \
+    && pip3 install --break-system-packages yt-dlp
 
 WORKDIR /app
 

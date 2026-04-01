@@ -43,6 +43,8 @@ type Config struct {
 	OpenAIBaseURL string
 	OpenAIModel   string
 
+	AppMode string // "full", "api", "bot"
+
 	SubscriptionCheckIntervalHours int
 
 	AlertReminderIntervalMinutes       int64
@@ -137,6 +139,14 @@ func LoadConfig() {
 	}
 	redisDB := viper.GetInt("REDIS_DB")
 
+	appMode := viper.GetString("APP_MODE")
+	if appMode == "" {
+		appMode = "full"
+	}
+	if appMode != "full" && appMode != "api" && appMode != "bot" {
+		log.Fatalf("FATAL: Invalid APP_MODE=%s. Must be 'full', 'api', or 'bot'", appMode)
+	}
+
 	subCheckInterval := viper.GetInt("SUBSCRIPTION_CHECK_INTERVAL_HOURS")
 	if subCheckInterval == 0 {
 		subCheckInterval = 4
@@ -176,6 +186,7 @@ func LoadConfig() {
 		AlertScheduledTime:                 alertScheduledTime,
 		AlertScheduledHour:                 alertScheduledHour,
 		AlertScheduledMinute:               alertScheduledMinute,
+		AppMode: appMode,
 		S3: S3Config{
 			Endpoint:  viper.GetString("S3_ENDPOINT"),
 			Region:    viper.GetString("S3_REGION"),
