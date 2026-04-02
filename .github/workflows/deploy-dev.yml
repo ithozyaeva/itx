@@ -30,7 +30,7 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Build new images while old containers still serve traffic
-            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml build --no-cache
             # Restart services one by one (nginx stays up, serves cached static)
             docker compose -f docker-compose.prod.yml up -d --no-deps backend
             docker compose -f docker-compose.prod.yml up -d --no-deps landing-frontend
