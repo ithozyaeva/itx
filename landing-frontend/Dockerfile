@@ -21,5 +21,5 @@ RUN npm run build
 # Создаем директорию для статики
 RUN mkdir -p /app/dist
 
-# Копируем собранные файлы в dist
-CMD ["sh", "-c", "cp -r /app/dist/* /static/landing-frontend/"] 
+# Очищаем старую статику и копируем свежую сборку
+CMD ["sh", "-c", "rm -rf /static/landing-frontend/* && cp -r /app/dist/* /static/landing-frontend/"] 
