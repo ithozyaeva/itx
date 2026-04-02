@@ -349,7 +349,6 @@ onUnmounted(subscriptionService.clearPagination)
       <template v-if="activeTab === 'chats'">
         <div class="flex justify-end">
           <Button
-            v-permission="'can_edit_admin_subscriptions'"
             size="sm"
             @click="openChatModal(null)"
           >
@@ -413,7 +412,6 @@ onUnmounted(subscriptionService.clearPagination)
                   </TableCell>
                   <TableCell class="text-right space-x-1">
                     <Button
-                      v-permission="'can_edit_admin_subscriptions'"
                       variant="ghost"
                       size="sm"
                       @click="openChatModal(chat.id)"
@@ -428,7 +426,6 @@ onUnmounted(subscriptionService.clearPagination)
                     >
                       <template #trigger>
                         <Button
-                          v-permission="'can_edit_admin_subscriptions'"
                           variant="ghost"
                           size="sm"
                           class="text-destructive"
