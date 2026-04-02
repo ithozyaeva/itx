@@ -14,12 +14,10 @@ COPY package*.json ./
 
 RUN npm install
 
+ARG CACHEBUST=1
 COPY . .
 
 RUN npm run build
 
-# Создаем директорию для статики
-RUN mkdir -p /app/dist
-
 # Очищаем старую статику и копируем свежую сборку
-CMD ["sh", "-c", "rm -rf /static/landing-frontend/* && cp -r /app/dist/* /static/landing-frontend/"] 
+CMD ["sh", "-c", "rm -rf /static/landing-frontend/* && cp -r /app/dist/* /static/landing-frontend/"]
