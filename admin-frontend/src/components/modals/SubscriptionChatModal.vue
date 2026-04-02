@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SubscriptionChatDetail } from '@/services/subscriptionService'
 import { ref, watch } from 'vue'
+import Loader2 from '~icons/lucide/loader-2'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -18,10 +19,42 @@ const emit = defineEmits(['update:isOpen', 'saved'])
 const isLoading = ref(false)
 const isSaving = ref(false)
 const isCreateMode = ref(false)
+const isResolving = ref(false)
+const resolveError = ref('')
 
 const formId = ref('')
 const formTitle = ref('')
 const formChatType = ref('supergroup')
+
+let resolveTimeout: ReturnType<typeof setTimeout> | null = null
+
+function onIdInput() {
+  resolveError.value = ''
+  if (resolveTimeout)
+    clearTimeout(resolveTimeout)
+
+  const id = Number(formId.value)
+  if (!id || !isCreateMode.value)
+    return
+
+  resolveTimeout = setTimeout(async () => {
+    isResolving.value = true
+    resolveError.value = ''
+    try {
+      const result = await subscriptionService.resolveChat(id)
+      if (result) {
+        formTitle.value = result.title
+        formChatType.value = result.chatType
+      }
+      else {
+        resolveError.value = 'Бот не в чате или чат не найден'
+      }
+    }
+    finally {
+      isResolving.value = false
+    }
+  }, 500)
+}
 const formRole = ref<'anchor' | 'content'>('content')
 const formAnchorTierID = ref<number | null>(null)
 const formTierIDs = ref<number[]>([])
@@ -151,11 +184,24 @@ async function handleSave() {
       >
         <div class="space-y-2">
           <Label>Telegram Chat ID</Label>
-          <Input
-            v-model="formId"
-            :disabled="!isCreateMode"
-            placeholder="-1001234567890"
-          />
+          <div class="relative">
+            <Input
+              v-model="formId"
+              :disabled="!isCreateMode"
+              placeholder="-1001234567890"
+              @input="onIdInput"
+            />
+            <Loader2
+              v-if="isResolving"
+              class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground"
+            />
+          </div>
+          <p
+            v-if="resolveError"
+            class="text-xs text-muted-foreground"
+          >
+            {{ resolveError }}
+          </p>
         </div>
 
         <div class="space-y-2">
