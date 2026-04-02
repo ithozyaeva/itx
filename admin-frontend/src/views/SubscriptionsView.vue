@@ -1,17 +1,21 @@
 <script setup lang="ts">
+import type { SubscriptionChatDetail } from '@/services/subscriptionService'
 import { Typography } from 'itx-ui-kit'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import Anchor from '~icons/lucide/anchor'
+import ChevronDown from '~icons/lucide/chevron-down'
 import Eye from '~icons/lucide/eye'
-import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import ShieldX from '~icons/lucide/shield-x'
 import Trash2 from '~icons/lucide/trash-2'
+import XIcon from '~icons/lucide/x'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import SubscriptionChatModal from '@/components/modals/SubscriptionChatModal.vue'
 import SubscriptionUserModal from '@/components/modals/SubscriptionUserModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { subscriptionService } from '@/services/subscriptionService'
@@ -23,6 +27,13 @@ const selectedUserId = ref<number | null>(null)
 const isUserModalOpen = ref(false)
 const selectedChatId = ref<number | null>(null)
 const isChatModalOpen = ref(false)
+
+const expandedChatId = ref<number | null>(null)
+const expandedChatDetail = ref<SubscriptionChatDetail | null>(null)
+const expandedLoading = ref(false)
+const expandedSaving = ref(false)
+const editAnchorTierID = ref<number | null>(null)
+const editTierIDs = ref<number[]>([])
 
 const stats = computed(() => subscriptionService.stats.value)
 
@@ -36,9 +47,79 @@ function openChatModal(chatId: number | null) {
   isChatModalOpen.value = true
 }
 
+async function toggleChatExpand(chatId: number) {
+  if (expandedChatId.value === chatId) {
+    expandedChatId.value = null
+    expandedChatDetail.value = null
+    return
+  }
+
+  expandedChatId.value = chatId
+  expandedLoading.value = true
+  try {
+    const detail = await subscriptionService.getChatDetail(chatId)
+    expandedChatDetail.value = detail
+    if (detail) {
+      editAnchorTierID.value = detail.anchorForTierID ?? null
+      editTierIDs.value = detail.tierIDs ?? []
+    }
+  }
+  finally {
+    expandedLoading.value = false
+  }
+}
+
+async function saveAnchor(chatId: number, tierID: number | null) {
+  expandedSaving.value = true
+  try {
+    const success = await subscriptionService.updateChat(chatId, {
+      anchorForTierID: tierID ?? undefined,
+      clearAnchor: tierID === null,
+      tierIDs: tierID !== null ? [] : undefined,
+    })
+    if (success) {
+      editAnchorTierID.value = tierID
+      if (tierID !== null)
+        editTierIDs.value = []
+      await subscriptionService.fetchChats()
+      await subscriptionService.fetchStats()
+    }
+  }
+  finally {
+    expandedSaving.value = false
+  }
+}
+
+function toggleContentTier(tierId: number) {
+  const idx = editTierIDs.value.indexOf(tierId)
+  if (idx >= 0)
+    editTierIDs.value.splice(idx, 1)
+  else
+    editTierIDs.value.push(tierId)
+}
+
+async function saveContentTiers(chatId: number) {
+  expandedSaving.value = true
+  try {
+    const success = await subscriptionService.updateChat(chatId, {
+      clearAnchor: true,
+      tierIDs: editTierIDs.value,
+    })
+    if (success) {
+      editAnchorTierID.value = null
+      await subscriptionService.fetchChats()
+    }
+  }
+  finally {
+    expandedSaving.value = false
+  }
+}
+
 async function handleDeleteChat(chatId: number) {
   const success = await subscriptionService.deleteChat(chatId)
   if (success) {
+    if (expandedChatId.value === chatId)
+      expandedChatId.value = null
     await subscriptionService.fetchChats()
     await subscriptionService.fetchStats()
   }
@@ -362,14 +443,13 @@ onUnmounted(subscriptionService.clearPagination)
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead class="w-8" />
                   <TableHead>Название</TableHead>
-                  <TableHead>Тип</TableHead>
                   <TableHead>Роль</TableHead>
                   <TableHead class="text-right">
                     Пользователей
                   </TableHead>
-                  <TableHead />
+                  <TableHead class="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -378,64 +458,155 @@ onUnmounted(subscriptionService.clearPagination)
                   class="h-24"
                 >
                   <TableCell
-                    colspan="6"
+                    colspan="5"
                     class="text-center"
                   >
                     Чаты не найдены
                   </TableCell>
                 </TableRow>
-                <TableRow
+                <template
                   v-for="chat in subscriptionService.chats.value"
                   :key="chat.id"
                 >
-                  <TableCell>
-                    <code class="text-xs">{{ chat.id }}</code>
-                  </TableCell>
-                  <TableCell class="font-medium">
-                    {{ chat.title }}
-                  </TableCell>
-                  <TableCell>{{ chat.chatType }}</TableCell>
-                  <TableCell>
-                    <span
-                      v-if="chat.anchorTierName"
-                      class="inline-flex items-center gap-1 text-blue-500 text-xs font-medium"
+                  <TableRow
+                    class="cursor-pointer hover:bg-muted/50"
+                    @click="toggleChatExpand(chat.id)"
+                  >
+                    <TableCell class="w-8 pr-0">
+                      <ChevronDown
+                        class="h-4 w-4 text-muted-foreground transition-transform"
+                        :class="{ 'rotate-180': expandedChatId === chat.id }"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div class="font-medium">
+                        {{ chat.title }}
+                      </div>
+                      <div class="text-xs text-muted-foreground">
+                        {{ chat.chatType }} &middot; {{ chat.id }}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        v-if="chat.anchorTierName"
+                        class="inline-flex items-center gap-1.5 text-blue-500 text-xs font-medium bg-blue-500/10 px-2 py-1 rounded-full"
+                      >
+                        <Anchor class="h-3 w-3" />
+                        {{ chat.anchorTierName }}
+                      </span>
+                      <span
+                        v-else
+                        class="text-xs text-muted-foreground"
+                      >content</span>
+                    </TableCell>
+                    <TableCell class="text-right">
+                      {{ chat.activeUsers }}
+                    </TableCell>
+                    <TableCell
+                      class="w-10"
+                      @click.stop
                     >
-                      ANCHOR &rarr; {{ chat.anchorTierName }}
-                    </span>
-                    <span
-                      v-else
-                      class="text-xs text-muted-foreground"
-                    >content</span>
-                  </TableCell>
-                  <TableCell class="text-right">
-                    {{ chat.activeUsers }}
-                  </TableCell>
-                  <TableCell class="text-right space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      @click="openChatModal(chat.id)"
+                      <ConfirmDialog
+                        title="Удалить чат?"
+                        description="Чат будет удалён из системы подписок. Все привязки и доступы будут удалены."
+                        confirm-label="Удалить"
+                        @confirm="handleDeleteChat(chat.id)"
+                      >
+                        <template #trigger>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            class="text-destructive"
+                          >
+                            <Trash2 class="h-4 w-4" />
+                          </Button>
+                        </template>
+                      </ConfirmDialog>
+                    </TableCell>
+                  </TableRow>
+
+                  <!-- Expanded panel -->
+                  <TableRow v-if="expandedChatId === chat.id">
+                    <TableCell
+                      colspan="5"
+                      class="bg-muted/30 p-0"
                     >
-                      <Pencil class="h-4 w-4" />
-                    </Button>
-                    <ConfirmDialog
-                      title="Удалить чат?"
-                      description="Чат будет удалён из системы подписок. Все привязки и доступы будут удалены."
-                      confirm-label="Удалить"
-                      @confirm="handleDeleteChat(chat.id)"
-                    >
-                      <template #trigger>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          class="text-destructive"
-                        >
-                          <Trash2 class="h-4 w-4" />
-                        </Button>
-                      </template>
-                    </ConfirmDialog>
-                  </TableCell>
-                </TableRow>
+                      <div
+                        v-if="expandedLoading"
+                        class="px-6 py-4 text-sm text-muted-foreground"
+                      >
+                        Загрузка...
+                      </div>
+                      <div
+                        v-else-if="expandedChatDetail"
+                        class="px-6 py-4 space-y-4"
+                      >
+                        <!-- Anchor section -->
+                        <div>
+                          <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                            Якорь для тира
+                          </div>
+                          <div class="flex flex-wrap gap-2">
+                            <Button
+                              v-for="tier in subscriptionService.tiers.value"
+                              :key="tier.id"
+                              size="sm"
+                              :variant="editAnchorTierID === tier.id ? 'default' : 'outline'"
+                              :disabled="expandedSaving"
+                              @click="saveAnchor(chat.id, editAnchorTierID === tier.id ? null : tier.id)"
+                            >
+                              <Anchor
+                                v-if="editAnchorTierID === tier.id"
+                                class="h-3.5 w-3.5 mr-1.5"
+                              />
+                              {{ tier.name }}
+                              <span class="text-xs text-muted-foreground ml-1">(lvl {{ tier.level }})</span>
+                            </Button>
+                            <Button
+                              v-if="editAnchorTierID !== null"
+                              size="sm"
+                              variant="ghost"
+                              class="text-muted-foreground"
+                              :disabled="expandedSaving"
+                              @click="saveAnchor(chat.id, null)"
+                            >
+                              <XIcon class="h-3.5 w-3.5 mr-1" />
+                              Снять якорь
+                            </Button>
+                          </div>
+                        </div>
+
+                        <!-- Content tiers section -->
+                        <div v-if="editAnchorTierID === null">
+                          <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                            Доступен для тиров (content)
+                          </div>
+                          <div class="flex flex-wrap items-center gap-3">
+                            <label
+                              v-for="tier in subscriptionService.tiers.value"
+                              :key="tier.id"
+                              class="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Checkbox
+                                :checked="editTierIDs.includes(tier.id)"
+                                :disabled="expandedSaving"
+                                @update:checked="toggleContentTier(tier.id)"
+                              />
+                              <span class="text-sm">{{ tier.name }}</span>
+                            </label>
+                            <Button
+                              size="sm"
+                              :disabled="expandedSaving"
+                              @click="saveContentTiers(chat.id)"
+                            >
+                              {{ expandedSaving ? 'Сохранение...' : 'Сохранить' }}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </template>
               </TableBody>
             </Table>
           </CardContent>
