@@ -389,13 +389,22 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 
 	isAnchor := len(args) > 3 && args[3] == "anchor"
 
-	// Ensure chat exists in DB
-	chat, _ := b.subscriptionService.GetChat(chatID)
+	// Ensure chat exists in DB, fetch real title from Telegram
 	title := fmt.Sprintf("Chat %d", chatID)
-	if chat != nil {
+	chatType := "supergroup"
+	chatConfig := tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: chatID}}
+	if tgChat, err := b.bot.GetChat(chatConfig); err == nil {
+		if tgChat.Title != "" {
+			title = tgChat.Title
+		}
+		if tgChat.Type != "" {
+			chatType = tgChat.Type
+		}
+	} else if chat, err := b.subscriptionService.GetChat(chatID); err == nil {
 		title = chat.Title
+		chatType = chat.ChatType
 	}
-	b.subscriptionService.UpsertChat(chatID, title, "supergroup")
+	b.subscriptionService.UpsertChat(chatID, title, chatType)
 
 	if isAnchor {
 		b.subscriptionService.SetAnchor(chatID, &tier.ID)
