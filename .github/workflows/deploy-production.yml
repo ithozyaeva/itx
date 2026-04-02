@@ -46,9 +46,8 @@ jobs:
           envs: VITE_YANDEX_METRIKA_ID,VITE_YANDEX_METRIKA_ENABLED
           script: |
             cd ${{ secrets.PROJECT_PROD_PATH }}
-            export CACHEBUST=$(date +%s)
-            # Build new images, CACHEBUST invalidates layer cache after COPY
-            docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST=$CACHEBUST
+            # Build new images with legacy builder (BuildKit ignores --no-cache)
+            DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache
             # Restart services one by one (nginx stays up, serves cached static)
             docker compose -f docker-compose.prod.yml up -d --no-deps backend
             docker compose -f docker-compose.prod.yml up -d --no-deps landing-frontend
