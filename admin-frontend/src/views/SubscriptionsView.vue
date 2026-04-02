@@ -2,9 +2,13 @@
 import { Typography } from 'itx-ui-kit'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Eye from '~icons/lucide/eye'
+import Pencil from '~icons/lucide/pencil'
+import Plus from '~icons/lucide/plus'
 import ShieldX from '~icons/lucide/shield-x'
+import Trash2 from '~icons/lucide/trash-2'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import SubscriptionChatModal from '@/components/modals/SubscriptionChatModal.vue'
 import SubscriptionUserModal from '@/components/modals/SubscriptionUserModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,12 +21,32 @@ type Tab = 'overview' | 'users' | 'chats'
 const activeTab = ref<Tab>('overview')
 const selectedUserId = ref<number | null>(null)
 const isUserModalOpen = ref(false)
+const selectedChatId = ref<number | null>(null)
+const isChatModalOpen = ref(false)
 
 const stats = computed(() => subscriptionService.stats.value)
 
 function openUserModal(userId: number) {
   selectedUserId.value = userId
   isUserModalOpen.value = true
+}
+
+function openChatModal(chatId: number | null) {
+  selectedChatId.value = chatId
+  isChatModalOpen.value = true
+}
+
+async function handleDeleteChat(chatId: number) {
+  const success = await subscriptionService.deleteChat(chatId)
+  if (success) {
+    await subscriptionService.fetchChats()
+    await subscriptionService.fetchStats()
+  }
+}
+
+async function handleChatSaved() {
+  await subscriptionService.fetchChats()
+  await subscriptionService.fetchStats()
 }
 
 async function handleClearOverride(userId: number) {
@@ -323,6 +347,17 @@ onUnmounted(subscriptionService.clearPagination)
 
       <!-- Chats Tab -->
       <template v-if="activeTab === 'chats'">
+        <div class="flex justify-end">
+          <Button
+            v-permission="'can_edit_admin_subscriptions'"
+            size="sm"
+            @click="openChatModal(null)"
+          >
+            <Plus class="h-4 w-4 mr-1" />
+            Добавить чат
+          </Button>
+        </div>
+
         <Card>
           <CardContent>
             <Table>
@@ -335,6 +370,7 @@ onUnmounted(subscriptionService.clearPagination)
                   <TableHead class="text-right">
                     Пользователей
                   </TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -343,7 +379,7 @@ onUnmounted(subscriptionService.clearPagination)
                   class="h-24"
                 >
                   <TableCell
-                    colspan="5"
+                    colspan="6"
                     class="text-center"
                   >
                     Чаты не найдены
@@ -375,6 +411,33 @@ onUnmounted(subscriptionService.clearPagination)
                   <TableCell class="text-right">
                     {{ chat.activeUsers }}
                   </TableCell>
+                  <TableCell class="text-right space-x-1">
+                    <Button
+                      v-permission="'can_edit_admin_subscriptions'"
+                      variant="ghost"
+                      size="sm"
+                      @click="openChatModal(chat.id)"
+                    >
+                      <Pencil class="h-4 w-4" />
+                    </Button>
+                    <ConfirmDialog
+                      title="Удалить чат?"
+                      description="Чат будет удалён из системы подписок. Все привязки и доступы будут удалены."
+                      confirm-label="Удалить"
+                      @confirm="handleDeleteChat(chat.id)"
+                    >
+                      <template #trigger>
+                        <Button
+                          v-permission="'can_edit_admin_subscriptions'"
+                          variant="ghost"
+                          size="sm"
+                          class="text-destructive"
+                        >
+                          <Trash2 class="h-4 w-4" />
+                        </Button>
+                      </template>
+                    </ConfirmDialog>
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -387,6 +450,12 @@ onUnmounted(subscriptionService.clearPagination)
       v-model:is-open="isUserModalOpen"
       :user-id="selectedUserId"
       @saved="subscriptionService.searchUsers(); subscriptionService.fetchStats()"
+    />
+
+    <SubscriptionChatModal
+      v-model:is-open="isChatModalOpen"
+      :chat-id="selectedChatId"
+      @saved="handleChatSaved"
     />
   </AdminLayout>
 </template>

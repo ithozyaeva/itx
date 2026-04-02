@@ -30,6 +30,14 @@ export interface SubscriptionChat {
   activeUsers: number
 }
 
+export interface SubscriptionChatDetail {
+  id: number
+  title: string
+  chatType: string
+  anchorForTierID?: number
+  tierIDs: number[]
+}
+
 export interface SubscriptionUser {
   id: number
   username: string | null
@@ -150,6 +158,52 @@ class SubscriptionService {
     try {
       await api.delete(`subscriptions/users/${userId}/override`).json()
       this.toast.toast({ title: 'Успешно', description: 'Ручной тир снят' })
+      return true
+    }
+    catch (error) {
+      handleError(error)
+      return false
+    }
+  }
+
+  getChatDetail = async (chatId: number): Promise<SubscriptionChatDetail | null> => {
+    try {
+      return await api.get(`subscriptions/chats/${chatId}`).json<SubscriptionChatDetail>()
+    }
+    catch (error) {
+      handleError(error)
+      return null
+    }
+  }
+
+  createChat = async (data: { id: number, title: string, chatType: string, anchorForTierID?: number, tierIDs?: number[] }): Promise<boolean> => {
+    try {
+      await api.post('subscriptions/chats', { json: data }).json()
+      this.toast.toast({ title: 'Успешно', description: 'Чат добавлен' })
+      return true
+    }
+    catch (error) {
+      handleError(error)
+      return false
+    }
+  }
+
+  updateChat = async (chatId: number, data: { title?: string, anchorForTierID?: number, clearAnchor?: boolean, tierIDs?: number[] }): Promise<boolean> => {
+    try {
+      await api.put(`subscriptions/chats/${chatId}`, { json: data }).json()
+      this.toast.toast({ title: 'Успешно', description: 'Чат обновлён' })
+      return true
+    }
+    catch (error) {
+      handleError(error)
+      return false
+    }
+  }
+
+  deleteChat = async (chatId: number): Promise<boolean> => {
+    try {
+      await api.delete(`subscriptions/chats/${chatId}`).json()
+      this.toast.toast({ title: 'Успешно', description: 'Чат удалён' })
       return true
     }
     catch (error) {

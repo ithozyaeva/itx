@@ -269,6 +269,14 @@ func (s *SubscriptionService) AddChatToTier(chatID int64, tierID uint) error {
 	return s.repo.AddChatToTier(chatID, tierID)
 }
 
+func (s *SubscriptionService) GetTierIDsForChat(chatID int64) ([]uint, error) {
+	return s.repo.GetTierIDsForChat(chatID)
+}
+
+func (s *SubscriptionService) SetChatTiers(chatID int64, tierIDs []uint) error {
+	return s.repo.SetChatTiers(chatID, tierIDs)
+}
+
 func (s *SubscriptionService) DeleteChat(chatID int64) error {
 	return s.repo.DeleteChat(chatID)
 }

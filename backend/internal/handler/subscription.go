@@ -293,6 +293,128 @@ func (h *SubscriptionHandler) ClearOverride(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
+func (h *SubscriptionHandler) CreateChat(c *fiber.Ctx) error {
+	var req struct {
+		ID       int64  `json:"id"`
+		Title    string `json:"title"`
+		ChatType string `json:"chatType"`
+		AnchorForTierID *uint  `json:"anchorForTierID"`
+		TierIDs  []uint `json:"tierIDs"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
+	}
+	if req.ID == 0 || req.Title == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID и название обязательны"})
+	}
+	if req.ChatType == "" {
+		req.ChatType = "supergroup"
+	}
+
+	if err := h.svc.UpsertChat(req.ID, req.Title, req.ChatType); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось создать чат"})
+	}
+
+	if req.AnchorForTierID != nil {
+		if err := h.svc.SetAnchor(req.ID, req.AnchorForTierID); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось установить anchor"})
+		}
+	}
+
+	if len(req.TierIDs) > 0 {
+		if err := h.svc.SetChatTiers(req.ID, req.TierIDs); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось привязать тиры"})
+		}
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
+	chatID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	existing, err := h.svc.GetChat(chatID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Чат не найден"})
+	}
+
+	var req struct {
+		Title           *string `json:"title"`
+		AnchorForTierID *uint   `json:"anchorForTierID"`
+		ClearAnchor     bool    `json:"clearAnchor"`
+		TierIDs         *[]uint `json:"tierIDs"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
+	}
+
+	if req.Title != nil && *req.Title != "" {
+		if err := h.svc.UpsertChat(chatID, *req.Title, existing.ChatType); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось обновить чат"})
+		}
+	}
+
+	if req.ClearAnchor {
+		if err := h.svc.SetAnchor(chatID, nil); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось снять anchor"})
+		}
+	} else if req.AnchorForTierID != nil {
+		if err := h.svc.SetAnchor(chatID, req.AnchorForTierID); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось установить anchor"})
+		}
+	}
+
+	if req.TierIDs != nil {
+		if err := h.svc.SetChatTiers(chatID, *req.TierIDs); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось обновить тиры"})
+		}
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (h *SubscriptionHandler) DeleteChat(c *fiber.Ctx) error {
+	chatID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	if err := h.svc.DeleteChat(chatID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось удалить чат"})
+	}
+
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (h *SubscriptionHandler) GetChatDetail(c *fiber.Ctx) error {
+	chatID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	chat, err := h.svc.GetChat(chatID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Чат не найден"})
+	}
+
+	tierIDs, _ := h.svc.GetTierIDsForChat(chatID)
+
+	result := fiber.Map{
+		"id":       chat.ID,
+		"title":    chat.Title,
+		"chatType": chat.ChatType,
+		"tierIDs":  tierIDs,
+	}
+	if chat.AnchorForTierID != nil {
+		result["anchorForTierID"] = *chat.AnchorForTierID
+	}
+
+	return c.JSON(result)
+}
+
 func (h *SubscriptionHandler) RevokeAccess(c *fiber.Ctx) error {
 	userID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {

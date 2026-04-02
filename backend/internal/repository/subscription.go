@@ -118,6 +118,28 @@ func (r *SubscriptionRepository) AddChatToTier(chatID int64, tierID uint) error 
 	}).Error
 }
 
+func (r *SubscriptionRepository) GetTierIDsForChat(chatID int64) ([]uint, error) {
+	var tierChats []models.SubscriptionTierChat
+	if err := r.db.Where("chat_id = ?", chatID).Find(&tierChats).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]uint, len(tierChats))
+	for i, tc := range tierChats {
+		ids[i] = tc.TierID
+	}
+	return ids, nil
+}
+
+func (r *SubscriptionRepository) SetChatTiers(chatID int64, tierIDs []uint) error {
+	r.db.Where("chat_id = ?", chatID).Delete(&models.SubscriptionTierChat{})
+	for _, tierID := range tierIDs {
+		if err := r.db.Create(&models.SubscriptionTierChat{TierID: tierID, ChatID: chatID}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *SubscriptionRepository) DeleteChat(chatID int64) error {
 	r.db.Where("chat_id = ?", chatID).Delete(&models.SubscriptionTierChat{})
 	r.db.Where("chat_id = ?", chatID).Delete(&models.SubscriptionUserChatAccess{})
