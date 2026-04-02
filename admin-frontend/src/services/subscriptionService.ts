@@ -27,6 +27,8 @@ export interface SubscriptionChat {
   chatType: string
   anchorForTierID?: number
   anchorTierName?: string
+  tierIDs?: number[]
+  tierNames?: string[]
   activeUsers: number
 }
 

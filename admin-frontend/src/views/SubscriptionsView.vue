@@ -445,9 +445,9 @@ onUnmounted(subscriptionService.clearPagination)
                 <TableRow>
                   <TableHead class="w-8" />
                   <TableHead>Название</TableHead>
-                  <TableHead>Роль</TableHead>
+                  <TableHead>Привязка</TableHead>
                   <TableHead class="text-right">
-                    Пользователей
+                    Участников
                   </TableHead>
                   <TableHead class="w-10" />
                 </TableRow>
@@ -487,17 +487,26 @@ onUnmounted(subscriptionService.clearPagination)
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span
-                        v-if="chat.anchorTierName"
-                        class="inline-flex items-center gap-1.5 text-blue-500 text-xs font-medium bg-blue-500/10 px-2 py-1 rounded-full"
-                      >
-                        <Anchor class="h-3 w-3" />
-                        {{ chat.anchorTierName }}
-                      </span>
-                      <span
-                        v-else
-                        class="text-xs text-muted-foreground"
-                      >content</span>
+                      <div class="flex flex-wrap gap-1">
+                        <span
+                          v-if="chat.anchorTierName"
+                          class="inline-flex items-center gap-1 text-blue-500 text-xs font-medium bg-blue-500/10 px-2 py-0.5 rounded-full"
+                        >
+                          <Anchor class="h-3 w-3" />
+                          {{ chat.anchorTierName }}
+                        </span>
+                        <span
+                          v-for="name in (chat.tierNames || [])"
+                          :key="name"
+                          class="text-xs bg-muted px-2 py-0.5 rounded-full"
+                        >
+                          {{ name }}
+                        </span>
+                        <span
+                          v-if="!chat.anchorTierName && (!chat.tierNames || chat.tierNames.length === 0)"
+                          class="text-xs text-muted-foreground italic"
+                        >не привязан</span>
+                      </div>
                     </TableCell>
                     <TableCell class="text-right">
                       {{ chat.activeUsers }}
