@@ -159,6 +159,7 @@ services:
         - VITE_YANDEX_METRIKA_ID=${VITE_YANDEX_METRIKA_ID}
         - VITE_YANDEX_METRIKA_ENABLED=${VITE_YANDEX_METRIKA_ENABLED}
         - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
+        - CACHEBUST=${CACHEBUST:-1}
     volumes:
       - ./static/landing-frontend:/static/landing-frontend
     networks:
@@ -170,6 +171,7 @@ services:
       context: ./platform-frontend
       args:
         - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
+        - CACHEBUST=${CACHEBUST:-1}
     volumes:
       - ./static/platform-frontend:/static/platform-frontend
     networks:
@@ -181,6 +183,7 @@ services:
       context: ./admin-frontend
       args:
         - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
+        - CACHEBUST=${CACHEBUST:-1}
     volumes:
       - ./static/admin-frontend:/static/admin-frontend
     depends_on:
