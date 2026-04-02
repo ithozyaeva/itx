@@ -31,11 +31,11 @@ jobs:
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Build new images with legacy builder (BuildKit ignores --no-cache)
             DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache
-            # Restart services one by one (nginx stays up, serves cached static)
-            docker compose -f docker-compose.prod.yml up -d --no-deps backend
-            docker compose -f docker-compose.prod.yml up -d --no-deps landing-frontend
-            docker compose -f docker-compose.prod.yml up -d --no-deps platform-frontend
-            docker compose -f docker-compose.prod.yml up -d --no-deps admin-frontend
+            # Restart services with forced recreation to pick up new images
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate landing-frontend
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate platform-frontend
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate admin-frontend
             # Reload nginx to pick up any config changes (graceful, no downtime)
             docker compose -f docker-compose.prod.yml exec nginx nginx -s reload || true
             # Clean up old images
