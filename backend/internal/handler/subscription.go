@@ -1,8 +1,12 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
+	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
+	"net/http"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -424,6 +428,42 @@ func (h *SubscriptionHandler) GetChatDetail(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
+}
+
+func (h *SubscriptionHandler) ResolveChat(c *fiber.Ctx) error {
+	chatID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/getChat?chat_id=%d", config.CFG.TelegramToken, chatID)
+	resp, err := http.Get(url) //nolint:gosec
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Не удалось связаться с Telegram"})
+	}
+	defer resp.Body.Close()
+
+	var tgResp struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			Title string `json:"title"`
+			Type  string `json:"type"`
+		} `json:"result"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tgResp); err != nil || !tgResp.OK {
+		desc := tgResp.Description
+		if desc == "" {
+			desc = "Чат не найден или бот не является участником"
+		}
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": desc})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":       chatID,
+		"title":    tgResp.Result.Title,
+		"chatType": tgResp.Result.Type,
+	})
 }
 
 func (h *SubscriptionHandler) RevokeAccess(c *fiber.Ctx) error {

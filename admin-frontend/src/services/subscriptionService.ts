@@ -168,6 +168,15 @@ class SubscriptionService {
     }
   }
 
+  resolveChat = async (chatId: number): Promise<{ id: number, title: string, chatType: string } | null> => {
+    try {
+      return await api.get(`subscriptions/chats/resolve/${chatId}`).json()
+    }
+    catch {
+      return null
+    }
+  }
+
   getChatDetail = async (chatId: number): Promise<SubscriptionChatDetail | null> => {
     try {
       return await api.get(`subscriptions/chats/${chatId}`).json<SubscriptionChatDetail>()

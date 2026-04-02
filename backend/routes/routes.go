@@ -221,6 +221,7 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 		subs.Get("/stats", subscriptionHandler.GetStats)
 		subs.Get("/tiers", subscriptionHandler.GetTiers)
 		subs.Get("/chats", subscriptionHandler.GetChats)
+		subs.Get("/chats/resolve/:id", subscriptionHandler.ResolveChat)
 		subs.Get("/chats/:id", subscriptionHandler.GetChatDetail)
 		subs.Post("/chats", subscriptionHandler.CreateChat)
 		subs.Put("/chats/:id", subscriptionHandler.UpdateChat)
