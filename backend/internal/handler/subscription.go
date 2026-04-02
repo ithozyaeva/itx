@@ -100,6 +100,7 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 		chatIDs[i] = ch.ID
 	}
 	accessCounts, _ := h.svc.CountActiveAccessByChats(chatIDs)
+	allTierChats, _ := h.svc.GetAllTierChats()
 
 	items := make([]fiber.Map, 0, len(chats))
 	for _, ch := range chats {
@@ -114,6 +115,16 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 			if tier, ok := tm[*ch.AnchorForTierID]; ok {
 				item["anchorTierName"] = tier.Name
 			}
+		}
+		if tierIDs, ok := allTierChats[ch.ID]; ok && len(tierIDs) > 0 {
+			item["tierIDs"] = tierIDs
+			names := make([]string, 0, len(tierIDs))
+			for _, tid := range tierIDs {
+				if tier, ok := tm[tid]; ok {
+					names = append(names, tier.Name)
+				}
+			}
+			item["tierNames"] = names
 		}
 		items = append(items, item)
 	}
