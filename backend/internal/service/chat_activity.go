@@ -120,6 +120,11 @@ func (s *ChatActivityService) GetRecentMessages(chatID int64, limit int) ([]mode
 	return s.repo.GetRecentMessages(chatID, limit)
 }
 
+// GetMessagesSince возвращает сообщения из чата начиная с указанного времени
+func (s *ChatActivityService) GetMessagesSince(chatID int64, since time.Time) ([]models.ChatMessage, error) {
+	return s.repo.GetMessagesSince(chatID, since)
+}
+
 // GetMemberIDsByChatID возвращает member_id участников конкретного чата
 func (s *ChatActivityService) GetMemberIDsByChatID(chatID int64) ([]int64, error) {
 	return s.repo.GetMemberIDsByChatID(chatID)

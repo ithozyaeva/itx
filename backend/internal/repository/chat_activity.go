@@ -237,6 +237,16 @@ func (r *ChatActivityRepository) GetRecentMessages(chatID int64, limit int) ([]m
 	return messages, err
 }
 
+// GetMessagesSince возвращает сообщения из чата начиная с указанного времени
+func (r *ChatActivityRepository) GetMessagesSince(chatID int64, since time.Time) ([]models.ChatMessage, error) {
+	var messages []models.ChatMessage
+	err := database.DB.
+		Where("chat_id = ? AND message_text != '' AND sent_at >= ?", chatID, since).
+		Order("sent_at DESC").
+		Find(&messages).Error
+	return messages, err
+}
+
 // DeleteOldMessages удаляет сообщения старше указанной даты
 func (r *ChatActivityRepository) DeleteOldMessages(beforeDate time.Time) (int64, error) {
 	result := database.DB.Where("sent_at < ?", beforeDate).Delete(&models.ChatMessage{})
