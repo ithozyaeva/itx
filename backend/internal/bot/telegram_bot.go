@@ -602,11 +602,10 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	log.Printf("Generated token for user %d: %s", message.From.ID, token)
+	log.Printf("Generated token for user %d", message.From.ID)
 
 	// Формируем URL для перенаправления с токеном
 	authUrl := fmt.Sprintf("%s?token=%s", redirectUrl, token)
-	log.Printf("Final auth URL: %s", authUrl)
 
 	sendAuthToBackend(token, message.From)
 
