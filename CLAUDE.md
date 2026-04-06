@@ -97,7 +97,7 @@ Path alias: `@/*` → `./src/*`
 
 ## Environment Variables
 
-**Backend:** DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, PORT, JWT_SECRET, JWT_EXPIRATION, TELEGRAM_BOT_TOKEN, TELEGRAM_MAIN_CHAT_ID, S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET
+**Backend:** DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, PORT, JWT_SECRET, JWT_EXPIRATION, TELEGRAM_BOT_TOKEN, TELEGRAM_MAIN_CHAT_ID, S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, APP_MODE (full/api/bot), BACKEND_DOMAIN, BOT_SHARED_SECRET
 
 **Frontend:** VITE_YANDEX_METRIKA_ID, VITE_YANDEX_METRIKA_ENABLED, VITE_TELEGRAM_BOT_NAME
 
@@ -110,9 +110,22 @@ Path alias: `@/*` → `./src/*`
 
 ## Deployment
 
-- Dev деплой автоматически при push в master
-- Продакшн деплой через GitHub Actions (manual trigger с подтверждением)
-- SSH на сервер → git pull → docker-compose rebuild
+### Серверы
+- **Основной (РФ)** (`176.109.110.192`, user: `joindev`): API + БД + Redis + фронтенды + Nginx. `APP_MODE=api` — бот здесь НЕ запускается (Telegram API блокируется из РФ).
+- **NL** (`147.45.114.193`, user: `root`): Telegram-бот (`platform-bot`), а также другие проекты (itx-tg-bot, vacancy-parser, monitoring). **Не трогать чужие контейнеры!**
+
+### Архитектура бота
+- Бот запущен на NL как контейнер `platform-bot` (`/opt/itx-bot/`), `APP_MODE=bot`
+- Подключается к PostgreSQL и Redis **основного сервера** напрямую по IP (порты 5432/6379 открыты в файрволе хостера только для NL IP `147.45.114.193/32`)
+- `BACKEND_DOMAIN=https://ithozyaeva.ru` — для HTTP-вызова сохранения auth-токена
+- CI/CD: `.github/workflows/deploy-bot.yml` — деплоит при push в master (paths: backend/**)
+
+### Процесс деплоя
+- **Dev**: автоматически при push в master (GitHub Actions SSH на основной сервер)
+- **Prod**: через GitHub Actions (manual trigger с подтверждением)
+- **Bot**: автоматически при push в master, если изменения в `backend/**`
+- После деплоя фронтенды пересобираются в Docker (`DOCKER_BUILDKIT=0 --no-cache` + `CACHEBUST` ARG)
+- Фронтенд-контейнеры — одноразовые: собирают статику и копируют в volume (`rm -rf` старой + `cp -r` новой)
 - SSL через Certbot с автообновлением
 
 ## Key Domain Concepts
@@ -125,3 +138,4 @@ Path alias: `@/*` → `./src/*`
 - Resumes — резюме
 - Referral system — реферальная система
 - Telegram OAuth — авторизация через Telegram
+- Subscription system — якорные чаты определяют уровень подписки (beginner/foreman/master)
