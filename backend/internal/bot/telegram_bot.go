@@ -286,6 +286,7 @@ func (b *TelegramBot) registerCommands() {
 		{Command: "start", Description: "Авторизация на платформе"},
 		{Command: "mypoints", Description: "Мои баллы"},
 		{Command: "events", Description: "Ближайшие события"},
+		{Command: "summarize", Description: "Саммари чата за последние сообщения"},
 		{Command: "whois", Description: "Кто этот участник"},
 		{Command: "help", Description: "Помощь"},
 	}
