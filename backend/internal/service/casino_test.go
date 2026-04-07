@@ -17,8 +17,9 @@ func TestValidateBet(t *testing.T) {
 		{"too low", 5, true},
 		{"min boundary", 10, false},
 		{"normal", 50, false},
-		{"max boundary", 200, false},
-		{"too high", 201, true},
+		{"old max", 200, false},
+		{"max boundary", 1000, false},
+		{"too high", 1001, true},
 		{"zero", 0, true},
 		{"negative", -10, true},
 	}
@@ -105,7 +106,7 @@ func TestCoinFlipValidation(t *testing.T) {
 		{"invalid choice", &models.CoinFlipRequest{BetAmount: 50, Choice: "edge"}},
 		{"empty choice", &models.CoinFlipRequest{BetAmount: 50, Choice: ""}},
 		{"bet too low", &models.CoinFlipRequest{BetAmount: 5, Choice: "heads"}},
-		{"bet too high", &models.CoinFlipRequest{BetAmount: 500, Choice: "heads"}},
+		{"bet too high", &models.CoinFlipRequest{BetAmount: 1500, Choice: "heads"}},
 	}
 
 	for _, tt := range tests {
@@ -131,7 +132,7 @@ func TestDiceRollValidation(t *testing.T) {
 		{"invalid direction", &models.DiceRollRequest{BetAmount: 50, Target: 50, Direction: "sideways"}},
 		{"empty direction", &models.DiceRollRequest{BetAmount: 50, Target: 50, Direction: ""}},
 		{"bet too low", &models.DiceRollRequest{BetAmount: 5, Target: 50, Direction: "over"}},
-		{"bet too high", &models.DiceRollRequest{BetAmount: 500, Target: 50, Direction: "over"}},
+		{"bet too high", &models.DiceRollRequest{BetAmount: 1500, Target: 50, Direction: "over"}},
 	}
 
 	for _, tt := range tests {
@@ -152,7 +153,7 @@ func TestWheelValidation(t *testing.T) {
 		t.Error("PlayWheel() expected error for bet too low")
 	}
 
-	_, err = svc.PlayWheel(1, &models.WheelRequest{BetAmount: 500})
+	_, err = svc.PlayWheel(1, &models.WheelRequest{BetAmount: 1500})
 	if err == nil {
 		t.Error("PlayWheel() expected error for bet too high")
 	}
