@@ -21,10 +21,6 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-type contextKey string
-
-const contentSha256Key contextKey = "contentSha256"
-
 type S3Client struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
@@ -198,13 +194,6 @@ func (m loggingMiddleware) HandleFinalize(ctx context.Context, in middleware.Fin
 	}
 
 	return next.HandleFinalize(ctx, in)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (c *S3Client) Upload(ctx context.Context, key string, content []byte, contentType string) error {
