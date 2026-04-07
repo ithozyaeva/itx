@@ -7,26 +7,77 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ithozyeva/config"
+	"ithozyeva/internal/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const summarizeMessageLimit = 200
+const (
+	summarizeDefaultLimit = 200
+	summarizeDailyLimit   = 5
+)
 
 var openAIClient = &http.Client{Timeout: 120 * time.Second}
 
 // fallbackModels — цепочка моделей для retry: от лучшей к запасным.
 var fallbackModels = []string{
-	"Qwen/Qwen3-235B-A22B-Instruct-2507", // 235B, лучшая для суммаризации (20.7/61)
-	"zai-org/GLM-4.7",                     // GLM 4.7 (бесплатная)
-	"ai-sage/GigaChat3-10B-A1.8B",         // GigaChat лёгкая (12.2/12.2)
-	"zai-org/GLM-4.7-Flash",               // GLM Flash (бесплатная)
-	"t-tech/T-pro-it-2.0",                 // T-Pro 2.0 (26.84/52.46)
-	"t-tech/T-pro-it-2.1",                 // T-Pro 2.1 (бесплатная, последний fallback)
+	"Qwen/Qwen3-235B-A22B-Instruct-2507",
+	"zai-org/GLM-4.7",
+	"ai-sage/GigaChat3-10B-A1.8B",
+	"zai-org/GLM-4.7-Flash",
+	"t-tech/T-pro-it-2.0",
+	"t-tech/T-pro-it-2.1",
+}
+
+// userSummarizeCount — лимит суммаризаций на пользователя в день
+var (
+	userSummarizeCount = make(map[int64]map[string]int) // userID -> date -> count
+	summarizeMu        sync.Mutex
+)
+
+func checkAndIncrementLimit(userID int64) bool {
+	summarizeMu.Lock()
+	defer summarizeMu.Unlock()
+
+	today := time.Now().Format("2006-01-02")
+	if userSummarizeCount[userID] == nil {
+		userSummarizeCount[userID] = make(map[string]int)
+	}
+
+	if userSummarizeCount[userID][today] >= summarizeDailyLimit {
+		return false
+	}
+	userSummarizeCount[userID][today]++
+
+	// Очищаем старые даты
+	for date := range userSummarizeCount[userID] {
+		if date != today {
+			delete(userSummarizeCount[userID], date)
+		}
+	}
+	return true
+}
+
+func getRemainingLimit(userID int64) int {
+	summarizeMu.Lock()
+	defer summarizeMu.Unlock()
+
+	today := time.Now().Format("2006-01-02")
+	if userSummarizeCount[userID] == nil {
+		return summarizeDailyLimit
+	}
+	used := userSummarizeCount[userID][today]
+	remaining := summarizeDailyLimit - used
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
 }
 
 type openAIRequest struct {
@@ -47,8 +98,8 @@ type openAIResponse struct {
 	} `json:"choices"`
 }
 
+// handleSummarizeCommand — /summarize [N|day|week|3d]
 func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
-	// Удаляем команду из чата
 	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
 	b.bot.Request(deleteMsg)
 
@@ -57,8 +108,13 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	// Получаем последние сообщения из чата
-	messages, err := b.chatActivityService.GetRecentMessages(message.Chat.ID, summarizeMessageLimit)
+	if !checkAndIncrementLimit(message.From.ID) {
+		b.SendDirectMessage(message.From.ID, fmt.Sprintf("Лимит суммаризаций исчерпан (%d/%d в день). Попробуйте завтра.", summarizeDailyLimit, summarizeDailyLimit))
+		return
+	}
+
+	arg := strings.TrimSpace(message.CommandArguments())
+	messages, label, err := b.fetchMessages(message.Chat.ID, arg)
 	if err != nil {
 		log.Printf("Error fetching messages for summarize: %v", err)
 		b.SendDirectMessage(message.From.ID, "Ошибка при получении сообщений.")
@@ -66,11 +122,14 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 	}
 
 	if len(messages) == 0 {
-		b.SendDirectMessage(message.From.ID, "Нет сообщений для суммаризации в этом чате.")
+		b.SendDirectMessage(message.From.ID, "Нет сообщений для суммаризации за указанный период.")
 		return
 	}
 
-	// Формируем текст для суммаризации (в хронологическом порядке)
+	remaining := getRemainingLimit(message.From.ID)
+	b.SendDirectMessage(message.From.ID, fmt.Sprintf("⏳ Суммаризирую %d сообщений (%s) из чата <b>%s</b>...\nОсталось запросов: %d/%d",
+		len(messages), label, message.Chat.Title, remaining, summarizeDailyLimit))
+
 	var sb strings.Builder
 	for i := len(messages) - 1; i >= 0; i-- {
 		m := messages[i]
@@ -81,10 +140,6 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 		sb.WriteString(fmt.Sprintf("[%s] %s: %s\n", m.SentAt.Format("02.01 15:04"), name, m.MessageText))
 	}
 
-	// Отправляем уведомление пользователю
-	b.SendDirectMessage(message.From.ID, fmt.Sprintf("⏳ Суммаризирую последние %d сообщений из чата <b>%s</b>...", len(messages), message.Chat.Title))
-
-	// Вызываем AI с retry по fallback-моделям
 	summary, usedModel, err := callOpenAIWithRetry(sb.String())
 	if err != nil {
 		log.Printf("Error calling OpenAI for summarize (all models failed): %v", err)
@@ -92,8 +147,46 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений, модель: %s)\n\n%s", message.Chat.Title, len(messages), usedModel, summary)
+	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений, %s, модель: %s)\n\n%s",
+		message.Chat.Title, len(messages), label, usedModel, summary)
 	b.SendDirectMessage(message.From.ID, result)
+}
+
+// fetchMessages возвращает сообщения в зависимости от аргумента:
+// "" — последние 200
+// "day" — за сутки
+// "week" — за неделю
+// "3d" — за 3 дня
+// число (50, 100, 500) — последние N (макс 1000)
+func (b *TelegramBot) fetchMessages(chatID int64, arg string) ([]models.ChatMessage, string, error) {
+	switch strings.ToLower(arg) {
+	case "day", "today", "сегодня", "день":
+		since := time.Now().Add(-24 * time.Hour)
+		msgs, err := b.chatActivityService.GetMessagesSince(chatID, since)
+		return msgs, "за сутки", err
+
+	case "week", "неделя":
+		since := time.Now().Add(-7 * 24 * time.Hour)
+		msgs, err := b.chatActivityService.GetMessagesSince(chatID, since)
+		return msgs, "за неделю", err
+
+	case "3d", "3дня":
+		since := time.Now().Add(-3 * 24 * time.Hour)
+		msgs, err := b.chatActivityService.GetMessagesSince(chatID, since)
+		return msgs, "за 3 дня", err
+
+	default:
+		if n, err := strconv.Atoi(arg); err == nil && n > 0 {
+			if n > 1000 {
+				n = 1000
+			}
+			msgs, err := b.chatActivityService.GetRecentMessages(chatID, n)
+			return msgs, fmt.Sprintf("последние %d", n), err
+		}
+
+		msgs, err := b.chatActivityService.GetRecentMessages(chatID, summarizeDefaultLimit)
+		return msgs, fmt.Sprintf("последние %d", summarizeDefaultLimit), err
+	}
 }
 
 // callOpenAIWithRetry пробует модели по цепочке: сначала из конфига, потом fallback.
@@ -113,7 +206,6 @@ func callOpenAIWithRetry(chatLog string) (summary string, model string, err erro
 	return "", "", fmt.Errorf("all %d models failed, last error: %w", len(models), lastErr)
 }
 
-// buildModelChain строит цепочку моделей: конфиг-модель первая, затем fallback (без дублей).
 func buildModelChain() []string {
 	primary := config.CFG.OpenAIModel
 	if primary == "" {

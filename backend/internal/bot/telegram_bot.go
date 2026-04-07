@@ -286,7 +286,7 @@ func (b *TelegramBot) registerCommands() {
 		{Command: "start", Description: "Авторизация на платформе"},
 		{Command: "mypoints", Description: "Мои баллы"},
 		{Command: "events", Description: "Ближайшие события"},
-		{Command: "summarize", Description: "Саммари чата за последние сообщения"},
+		{Command: "summarize", Description: "Саммари чата (day/week/3d/число)"},
 		{Command: "whois", Description: "Кто этот участник"},
 		{Command: "help", Description: "Помощь"},
 	}
@@ -339,6 +339,13 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"/start - Авторизация на платформе\n" +
 		"/mypoints - Посмотреть баланс баллов\n" +
 		"/events - Ближайшие события\n" +
+		"/summarize - AI-саммари чата\n" +
+		"  • /summarize — последние 200 сообщений\n" +
+		"  • /summarize day — за сутки\n" +
+		"  • /summarize week — за неделю\n" +
+		"  • /summarize 3d — за 3 дня\n" +
+		"  • /summarize 500 — последние 500 сообщений\n" +
+		"  Лимит: 5 запросов в день\n" +
 		"/sub - Проверить подписку и получить доступ к чатам\n" +
 		"/substatus - Статус подписки\n" +
 		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
