@@ -18,11 +18,11 @@ func NewReferalLinkRepository() *ReferalLinkRepository {
 	}
 }
 
-func (e *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.ReferalLink, int64, error) {
-	return e.SearchWithMember(limit, offset, filter, order, 0)
+func (r *ReferalLinkRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.ReferalLink, int64, error) {
+	return r.SearchWithMember(limit, offset, filter, order, 0)
 }
 
-func (e *ReferalLinkRepository) SearchWithMember(limit *int, offset *int, filter *SearchFilter, order *Order, memberId int64) ([]models.ReferalLink, int64, error) {
+func (r *ReferalLinkRepository) SearchWithMember(limit *int, offset *int, filter *SearchFilter, order *Order, memberId int64) ([]models.ReferalLink, int64, error) {
 	var links []models.ReferalLink
 	var count int64
 
@@ -54,9 +54,9 @@ func (e *ReferalLinkRepository) SearchWithMember(limit *int, offset *int, filter
 		return nil, 0, err
 	}
 
-	e.LoadConversionsCounts(links)
+	r.LoadConversionsCounts(links)
 	if memberId != 0 {
-		e.LoadHasConverted(links, memberId)
+		r.LoadHasConverted(links, memberId)
 	}
 
 	return links, count, nil

@@ -142,7 +142,7 @@ func (r *MemberRepository) GetTodayBirthdays() ([]string, error) {
 	return usernames, nil
 }
 
-func (e *MemberRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.Member, int64, error) {
+func (r *MemberRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.Member, int64, error) {
 	var members []models.Member
 	var count int64
 
