@@ -16,7 +16,7 @@ const showResult = ref(false)
 const activeGame = ref<'coin' | 'dice' | 'wheel'>('coin')
 
 const betAmount = ref(50)
-const quickBets = [10, 25, 50, 100, 200]
+const quickBets = [10, 50, 100, 250, 500, 1000]
 
 const diceTarget = ref(50)
 const diceDirection = ref<'over' | 'under'>('over')
@@ -94,7 +94,7 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-const canPlay = computed(() => betAmount.value >= 10 && betAmount.value <= 200 && !isPlaying.value)
+const canPlay = computed(() => betAmount.value >= 10 && betAmount.value <= 1000 && !isPlaying.value)
 
 async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) {
   if (!canPlay.value)
@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
               v-model.number="betAmount"
               type="number"
               :min="10"
-              :max="200"
+              :max="1000"
               class="bet-input"
             >
             <span class="bet-input-suffix">б.</span>

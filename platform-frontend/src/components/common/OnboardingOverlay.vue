@@ -18,13 +18,24 @@ const tooltipStyle = ref<Record<string, string>>({})
 const highlightStyle = ref<Record<string, string>>({})
 const arrowClass = ref('')
 
-function positionTooltip() {
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+function positionTooltip(retries = 5) {
+  if (retryTimer) {
+    clearTimeout(retryTimer)
+    retryTimer = null
+  }
   if (!currentStep.value)
     return
 
   const el = document.querySelector(currentStep.value.target)
   if (!el) {
-    // Skip to next step, complete if at the end
+    // Элемент ещё не отрендерен — повторяем с задержкой
+    if (retries > 0) {
+      retryTimer = setTimeout(positionTooltip, 200, retries - 1)
+      return
+    }
+    // После всех попыток — пропускаем шаг
     if (currentStepIndex.value < totalSteps - 1)
       nextStep()
     else
@@ -70,21 +81,27 @@ function positionTooltip() {
   tooltipStyle.value = style
 }
 
+function repositionOnResize() {
+  positionTooltip(0)
+}
+
 watch([currentStepIndex, isActive], () => {
   if (isActive.value) {
-    nextTick(positionTooltip)
+    nextTick(() => positionTooltip())
   }
 })
 
 onMounted(() => {
-  window.addEventListener('resize', positionTooltip)
+  window.addEventListener('resize', repositionOnResize)
   if (isActive.value) {
-    nextTick(positionTooltip)
+    nextTick(() => positionTooltip())
   }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', positionTooltip)
+  window.removeEventListener('resize', repositionOnResize)
+  if (retryTimer)
+    clearTimeout(retryTimer)
 })
 </script>
 

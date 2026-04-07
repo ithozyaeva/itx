@@ -37,7 +37,9 @@ onBeforeMount(() => {
         tg_token.value = authToken
         window.history.replaceState({}, document.title, window.location.pathname)
         startSSE()
-        startOnboarding()
+        // Запускаем онбординг с задержкой, чтобы дать DOM срендериться
+        // (особенно важно для Safari/Telegram WebView)
+        setTimeout(startOnboarding, 1500)
       })
       .catch((error) => {
         stopSSE()

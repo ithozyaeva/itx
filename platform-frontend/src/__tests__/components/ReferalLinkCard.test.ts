@@ -163,7 +163,7 @@ describe('ReferalLinkCard', () => {
     expect(wrapper.text()).not.toContain('Откликнуться')
   })
 
-  it('shows "Вы откликнулись" when already converted', () => {
+  it('shows "Открыть чат снова" when already converted', () => {
     const wrapper = mount(ReferalLinkCard, {
       props: {
         link: createLink({
@@ -173,7 +173,7 @@ describe('ReferalLinkCard', () => {
         }),
       },
     })
-    expect(wrapper.text()).toContain('Вы откликнулись')
+    expect(wrapper.text()).toContain('Открыть чат снова')
   })
 
   it('emits deleted when delete is confirmed', async () => {

@@ -29,8 +29,8 @@ func (s *CasinoService) validateBet(amount int) error {
 	if amount < 10 {
 		return fmt.Errorf("минимальная ставка: 10 баллов")
 	}
-	if amount > 200 {
-		return fmt.Errorf("максимальная ставка: 200 баллов")
+	if amount > 1000 {
+		return fmt.Errorf("максимальная ставка: 1000 баллов")
 	}
 	return nil
 }
