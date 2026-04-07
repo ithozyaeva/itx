@@ -70,6 +70,13 @@ async function handleDelete() {
 }
 
 async function handleConvert() {
+  // Если уже откликались — просто открываем чат снова, без повторного трекинга
+  if (hasConverted.value) {
+    if (props.link.author.tg)
+      window.open(`https://t.me/${props.link.author.tg}`, '_blank')
+    return
+  }
+
   isConverting.value = true
   try {
     await referalLinkService.trackConversion(props.link.id)
@@ -157,11 +164,8 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
       <button
         v-if="canConvert"
         type="button"
-        class="mt-3 w-full rounded-xl py-2 px-4 text-sm font-medium transition-colors"
-        :class="hasConverted
-          ? 'bg-secondary text-muted-foreground cursor-default'
-          : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'"
-        :disabled="hasConverted || isConverting"
+        class="mt-3 w-full rounded-xl py-2 px-4 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+        :disabled="isConverting"
         @click="handleConvert"
       >
         <span class="flex items-center justify-center gap-1.5">
@@ -174,7 +178,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
             v-else-if="hasConverted"
             :size="14"
           />
-          {{ hasConverted ? 'Вы откликнулись' : 'Откликнуться' }}
+          {{ hasConverted ? 'Открыть чат снова' : 'Откликнуться' }}
         </span>
       </button>
     </div>
