@@ -6,6 +6,7 @@ import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE, stopSSE } from '@/composables/useSSE'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
+import { startProactiveRefresh, stopProactiveRefresh } from '@/services/api'
 import { authService } from '@/services/auth'
 import { handleError } from '@/services/errorService'
 import Layout from './components/layout/Layout.vue'
@@ -37,12 +38,14 @@ onBeforeMount(() => {
         tg_token.value = authToken
         window.history.replaceState({}, document.title, window.location.pathname)
         startSSE()
+        startProactiveRefresh()
         // Запускаем онбординг с задержкой, чтобы дать DOM срендериться
         // (особенно важно для Safari/Telegram WebView)
         setTimeout(startOnboarding, 1500)
       })
       .catch((error) => {
         stopSSE()
+        stopProactiveRefresh()
         tg_user.value = null
         tg_token.value = null
         handleError(error)
@@ -53,6 +56,7 @@ onBeforeMount(() => {
   }
   else if (tg_user.value) {
     startSSE()
+    startProactiveRefresh()
   }
   else if (!tg_user.value && !import.meta.env.DEV) {
     window.location.pathname = '/'

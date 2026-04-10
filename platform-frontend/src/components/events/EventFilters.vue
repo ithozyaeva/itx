@@ -33,10 +33,10 @@ onBeforeUnmount(() => clearTimeout(debounceTimer.value))
     <Input
       v-model="filters.title"
       placeholder="Поиск по названию..."
-      class="w-full sm:max-w-xs"
+      class="w-full sm:flex-1"
     />
-    <Select v-model="filters.placeType" class="w-full sm:max-w-xs">
-      <SelectTrigger class="w-full sm:max-w-xs">
+    <Select v-model="filters.placeType" class="w-full sm:w-auto">
+      <SelectTrigger class="w-full sm:w-44">
         <SelectValue placeholder="Все форматы" />
       </SelectTrigger>
       <SelectContent>

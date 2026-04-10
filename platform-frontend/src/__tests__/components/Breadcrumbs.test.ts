@@ -83,7 +83,7 @@ describe('Breadcrumbs', () => {
       meta: { breadcrumb: [{ label: 'События', to: '/events' }, { label: 'Детали' }] },
     }
     const wrapper = mount(Breadcrumbs)
-    const span = wrapper.find('span.text-foreground')
+    const span = wrapper.find('span.text-foreground\\/70')
     expect(span.exists()).toBe(true)
     expect(span.text()).toBe('Детали')
   })

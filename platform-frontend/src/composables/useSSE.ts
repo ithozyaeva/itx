@@ -11,7 +11,6 @@ const listeners = new Map<SSEEventType, Set<() => void>>()
 let eventSource: EventSource | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let consecutiveErrors = 0
-const MAX_RECONNECT_ATTEMPTS = 3
 const connected = ref(false)
 
 function connect() {
@@ -47,8 +46,10 @@ function connect() {
     connected.value = false
     eventSource?.close()
     eventSource = null
-    if (consecutiveErrors < MAX_RECONNECT_ATTEMPTS) {
-      reconnectTimer = setTimeout(connect, 5000)
+    const token = localStorage.getItem('tg_token')
+    if (token) {
+      const delay = Math.min(1000 * 2 ** consecutiveErrors, 60000)
+      reconnectTimer = setTimeout(connect, delay)
     }
   }
 }

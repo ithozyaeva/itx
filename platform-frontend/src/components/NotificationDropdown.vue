@@ -144,7 +144,7 @@ onUnmounted(() => {
           @click="markAsRead(notification)"
         >
           <div class="flex items-start gap-2">
-            <div v-if="!notification.read" class="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
+            <div v-if="!notification.read" class="w-2 h-2 rounded-full bg-accent mt-1.5 shrink-0" />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium truncate">
                 {{ notification.title }}

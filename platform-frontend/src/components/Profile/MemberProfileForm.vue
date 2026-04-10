@@ -118,18 +118,20 @@ async function handleAvatarUpload(event: Event) {
           {{ user?.firstName }} {{ user?.lastName }}
         </Typography>
         <template v-else>
-          <input
-            v-model="editedUser.firstName"
-            type="text"
-            placeholder="Имя"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-          <input
-            v-model="editedUser.lastName"
-            type="text"
-            placeholder="Фамилия"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-2"
-          >
+          <div class="space-y-3 w-full">
+            <input
+              v-model="editedUser.firstName"
+              type="text"
+              placeholder="Имя"
+              class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+            <input
+              v-model="editedUser.lastName"
+              type="text"
+              placeholder="Фамилия"
+              class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+          </div>
         </template>
         <template v-if="!isEdit">
           <p
@@ -144,7 +146,7 @@ async function handleAvatarUpload(event: Event) {
             v-model="editedUser.tg"
             type="text"
             placeholder="Username в Telegram"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-2"
+            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-3"
           >
         </template>
         <div
@@ -175,7 +177,7 @@ async function handleAvatarUpload(event: Event) {
           </p>
         </template>
         <template v-if="isEdit">
-          <div class="flex gap-2 mt-2">
+          <div class="flex gap-3 mt-3">
             <input
               v-model="editedUser.grade"
               type="text"
@@ -193,12 +195,14 @@ async function handleAvatarUpload(event: Event) {
             v-model="editedUser.bio"
             placeholder="О себе..."
             rows="3"
-            class="w-full mt-2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            class="w-full mt-3 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
           <input
             v-model="editedUser.birthday"
             type="date"
-            class="w-full mt-2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Дата рождения"
+            title="Дата рождения"
+            class="w-full mt-3 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
           >
         </template>
         <Button

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Loader2 } from 'lucide-vue-next'
+import { Typography } from 'itx-ui-kit'
+import { BarChart3, Bell, FileText, Folder, Loader2, MessageSquare, ShoppingBag } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
 import MemberProfileCard from '@/components/Profile/MemberProfileForm.vue'
@@ -29,10 +30,36 @@ onMounted(async () => {
 })
 
 const isMentor = isUserMentor()
+
+const quickLinks = [
+  { title: 'Моя статистика', path: '/my-stats', icon: BarChart3 },
+  { title: 'Рефералки', path: '/referals', icon: Folder },
+  { title: 'Резюме', path: '/resumes', icon: FileText },
+  { title: 'Мои отзывы', path: '/my-reviews', icon: MessageSquare },
+  { title: 'Уведомления', path: '/notifications', icon: Bell },
+  { title: 'Барахолка', path: '/marketplace', icon: ShoppingBag },
+]
 </script>
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <Typography variant="h2" as="h1" class="mb-6">
+      Мой профиль
+    </Typography>
+
+    <!-- Quick links hub -->
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+      <router-link
+        v-for="link in quickLinks"
+        :key="link.path"
+        :to="link.path"
+        class="flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 hover:bg-muted/50 hover:border-accent/30 transition-all text-center"
+      >
+        <component :is="link.icon" class="h-5 w-5 text-muted-foreground" />
+        <span class="text-xs text-muted-foreground">{{ link.title }}</span>
+      </router-link>
+    </div>
+
     <div
       v-if="isLoading"
       class="flex justify-center py-12"
