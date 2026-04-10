@@ -17,7 +17,7 @@ func NewEventRepository() *EventRepository {
 	}
 }
 
-func (e *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.Event, int64, error) {
+func (r *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, order *Order) ([]models.Event, int64, error) {
 	var events []models.Event
 	var count int64
 
