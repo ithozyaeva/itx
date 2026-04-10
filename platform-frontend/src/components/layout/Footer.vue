@@ -14,7 +14,7 @@ const links = [
 <template>
   <footer class="w-full border-t py-6">
     <div class="container mx-auto px-4 flex flex-col gap-6">
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-2">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8 gap-y-2">
         <RouterLink
           v-for="link in links"
           :key="link.path"

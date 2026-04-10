@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
+import { displayName } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { guildService } from '@/services/guilds'
 
@@ -132,10 +133,6 @@ async function showMembers(guild: GuildPublic) {
 
 function isInAnyGuild() {
   return guilds.value.some(g => g.isMember)
-}
-
-function displayName(firstName: string, lastName: string) {
-  return [firstName, lastName].filter(Boolean).join(' ')
 }
 
 useSSE('guilds', () => fetchGuilds())

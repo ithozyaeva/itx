@@ -377,11 +377,11 @@ onMounted(() => {
             :src="item.imagePath"
             :alt="item.title"
             loading="lazy"
-            class="w-full h-48 object-cover rounded-t-2xl bg-muted"
+            class="w-full h-36 sm:h-48 object-cover rounded-t-2xl bg-muted"
           >
           <div
             v-else
-            class="w-full h-48 bg-muted flex items-center justify-center rounded-t-2xl"
+            class="w-full h-36 sm:h-48 bg-muted flex items-center justify-center rounded-t-2xl"
           >
             <Package class="h-12 w-12 text-muted-foreground opacity-40" aria-hidden="true" />
           </div>

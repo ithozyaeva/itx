@@ -101,7 +101,7 @@ const daysSinceJoined = computed(() => {
   if (!profile.value?.member.createdAt)
     return null
   const date = new Date(profile.value.member.createdAt)
-  if (date.getFullYear() <= 1)
+  if (Number.isNaN(date.getTime()))
     return null
   const diff = Date.now() - date.getTime()
   return Math.max(1, Math.floor(diff / 86400000))
@@ -194,7 +194,7 @@ onMounted(loadProfile)
             <Typography
               variant="h2"
               as="h1"
-              class="mb-1"
+              class="mb-1 break-words"
               :title="`${profile.member.firstName} ${profile.member.lastName}`"
             >
               {{ profile.member.firstName }} {{ profile.member.lastName }}

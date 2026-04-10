@@ -66,7 +66,7 @@ const sections = [
           </AccordionTrigger>
         </AccordionHeader>
         <AccordionContent class="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <div class="px-5 pb-4 text-muted-foreground leading-relaxed">
+          <div class="px-5 pb-4 text-muted-foreground leading-relaxed break-words">
             {{ item.content }}
           </div>
         </AccordionContent>
