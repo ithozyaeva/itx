@@ -219,7 +219,7 @@ function goToToday() {
       <button
         v-for="(day, index) in calendarDays"
         :key="index"
-        class="relative bg-card p-2 min-h-[3.5rem] text-left transition-colors hover:bg-muted/50"
+        class="relative bg-card p-2 min-h-[3.5rem] text-center transition-colors hover:bg-muted/50"
         :class="{
           'opacity-40': !day.isCurrentMonth,
           'ring-2 ring-primary ring-inset': selectedDate === day.dateKey,
@@ -227,9 +227,9 @@ function goToToday() {
         @click="selectDay(day)"
       >
         <span
-          class="text-sm"
+          class="text-sm inline-flex items-center justify-center w-6 h-6"
           :class="{
-            'flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold': day.isToday,
+            'rounded-full bg-primary text-primary-foreground text-xs font-bold': day.isToday,
           }"
         >
           {{ day.date }}
@@ -237,12 +237,12 @@ function goToToday() {
         <!-- Event dots -->
         <div
           v-if="getEventCount(day.dateKey) > 0"
-          class="flex gap-0.5 mt-1"
+          class="flex justify-center gap-0.5 mt-1"
         >
           <div
             v-for="n in Math.min(getEventCount(day.dateKey), 3)"
             :key="n"
-            class="h-1.5 w-1.5 rounded-full bg-primary"
+            class="h-1.5 w-1.5 rounded-full bg-accent"
           />
           <span
             v-if="getEventCount(day.dateKey) > 3"

@@ -8,7 +8,7 @@ import Sidebar from './Sidebar.vue'
 <template>
   <div class="flex h-screen">
     <Sidebar />
-    <div class="flex-1 flex flex-col overflow-auto">
+    <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
       <Header />
       <main class="flex-grow w-full max-w-[1440px] mx-auto p-1">
         <Breadcrumbs />

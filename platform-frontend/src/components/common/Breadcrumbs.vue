@@ -35,20 +35,20 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
   <nav
     v-if="breadcrumbs.length > 0"
     aria-label="Навигация"
-    class="flex items-center gap-1 text-sm text-muted-foreground mb-4"
+    class="flex items-center gap-1.5 text-xs text-muted-foreground px-3 pt-3"
   >
     <button
-      class="flex items-center gap-1 hover:text-foreground transition-colors"
+      class="flex items-center hover:text-foreground transition-colors"
       aria-label="Главная"
       @click="router.push('/')"
     >
-      <Home class="h-3.5 w-3.5" />
+      <Home class="h-3 w-3" />
     </button>
-    <ChevronRight class="h-3.5 w-3.5" />
     <template
       v-for="(crumb, index) in breadcrumbs"
       :key="index"
     >
+      <ChevronRight class="h-3 w-3 opacity-50" />
       <button
         v-if="crumb.to && index < breadcrumbs.length - 1"
         class="hover:text-foreground transition-colors"
@@ -58,14 +58,10 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
       </button>
       <span
         v-else
-        class="text-foreground font-medium"
+        class="text-foreground/70"
       >
         {{ crumb.label }}
       </span>
-      <ChevronRight
-        v-if="index < breadcrumbs.length - 1"
-        class="h-3.5 w-3.5"
-      />
     </template>
   </nav>
 </template>

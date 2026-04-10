@@ -238,10 +238,10 @@ function activityLevel(count: number): number {
 
 const activityLevelClasses: Record<number, string> = {
   0: 'bg-muted',
-  1: 'bg-primary/20',
-  2: 'bg-primary/40',
-  3: 'bg-primary/70',
-  4: 'bg-primary',
+  1: 'bg-accent/20',
+  2: 'bg-accent/40',
+  3: 'bg-accent/70',
+  4: 'bg-accent',
 }
 
 const totalActivityDays = computed(() => contributionData.value.activeDays)
@@ -386,7 +386,7 @@ onMounted(() => {
             </div>
             <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div
-                class="h-full rounded-full bg-primary transition-all"
+                class="h-full rounded-full bg-accent transition-all"
                 :style="{ width: `${(source.total / maxSourceValue) * 100}%` }"
               />
             </div>

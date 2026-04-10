@@ -35,11 +35,8 @@ function formatDate(dateStr: string) {
 </script>
 
 <template>
-  <div class="px-4 py-6 md:py-8">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold">
-        Контент
-      </h1>
+  <div>
+    <div class="flex items-center justify-end mb-4">
       <a
         href="https://www.youtube.com/@joindev"
         target="_blank"
@@ -57,7 +54,6 @@ function formatDate(dateStr: string) {
         :key="video.id"
         class="rounded-2xl border bg-card overflow-hidden group"
       >
-        <!-- Thumbnail / Embed -->
         <div
           class="relative w-full overflow-hidden"
           style="padding-bottom: 56.25%;"
@@ -88,8 +84,6 @@ function formatDate(dateStr: string) {
             </div>
           </button>
         </div>
-
-        <!-- Info -->
         <div class="p-4">
           <p class="font-medium text-sm line-clamp-2">
             {{ video.title }}

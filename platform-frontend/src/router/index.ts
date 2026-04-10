@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Achievements from '@/pages/Achievements.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Casino from '@/pages/Casino.vue'
-import Content from '@/pages/Content.vue'
+
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
 import Guilds from '@/pages/Guilds.vue'
@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Dashboard, name: 'dashboard' },
   { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
   { path: '/events', component: Events, name: 'events', meta: { breadcrumb: [{ label: 'События' }] } },
-  { path: '/content', component: Content, name: 'content', meta: { breadcrumb: [{ label: 'Контент' }] } },
+  { path: '/content', redirect: '/events?tab=content' },
   { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { breadcrumb: [{ label: 'Профиль участника' }] } },
   { path: '/mentors', component: Mentors, name: 'mentors', meta: { breadcrumb: [{ label: 'Менторы' }] } },
   { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile', meta: { breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
@@ -50,6 +50,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
   { path: '/notifications', component: NotificationSettings, name: 'notifications', meta: { breadcrumb: [{ label: 'Уведомления' }] } },
+  { path: '/faq', name: 'faq', component: () => import('@/pages/FAQ.vue'), meta: { breadcrumb: [{ label: 'FAQ' }] } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

@@ -343,7 +343,7 @@ onMounted(() => {
                   </div>
                   <div class="w-full bg-muted rounded-full h-1.5">
                     <div
-                      class="bg-primary rounded-full h-1.5 transition-all"
+                      class="bg-accent rounded-full h-1.5 transition-all"
                       :style="{ width: `${questProgress(quest)}%` }"
                     />
                   </div>
@@ -425,7 +425,7 @@ onMounted(() => {
                 {{ tx.description || reasonLabels[tx.reason] || tx.reason }}
               </div>
               <div class="text-xs text-muted-foreground mt-0.5">
-                {{ reasonLabels[tx.reason] || tx.reason }}
+                {{ reasonLabels[tx.reason] || reasonLabels[tx.reason?.toLowerCase()] || tx.reason }}
               </div>
             </div>
             <div class="shrink-0 text-right">

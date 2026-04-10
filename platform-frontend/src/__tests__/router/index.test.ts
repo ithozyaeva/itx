@@ -47,7 +47,7 @@ describe('router', () => {
       ['/', 'dashboard'],
       ['/me', 'profile'],
       ['/events', 'events'],
-      ['/content', 'content'],
+      ['/faq', 'faq'],
       ['/mentors', 'mentors'],
       ['/referals', 'referals'],
       ['/resumes', 'resumes'],

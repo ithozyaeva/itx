@@ -77,3 +77,26 @@ export const apiClient = ky.create({
     }],
   },
 })
+
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
+export function startProactiveRefresh() {
+  stopProactiveRefresh()
+  refreshInterval = setInterval(async () => {
+    try {
+      const { token, user } = await doRefresh()
+      localStorageToken.value = token
+      localStorageUser.value = user
+    }
+    catch {
+      // silent fail — reactive refresh on 401 will handle it
+    }
+  }, 20 * 60 * 1000) // every 20 minutes
+}
+
+export function stopProactiveRefresh() {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+}

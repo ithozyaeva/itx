@@ -48,13 +48,13 @@ async function handleSaveReview(text: string) {
   <div>
     <div
       data-onboarding="sidebar"
-      class="fixed md:static h-screen border-r border-border bg-primary text-primary-foreground transition-all duration-300 w-full md:w-56 z-40"
+      class="fixed md:static h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 w-full md:w-56 z-40"
       :class="[
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
-      <div class="flex flex-col justify-between items-center pb-2 h-full">
-        <div class="w-full overflow-y-auto">
+      <div class="flex flex-col justify-between items-center pb-2 h-full overflow-y-auto">
+        <div class="w-full">
           <div class="flex items-center justify-between p-4 md:hidden">
             <Typography
               variant="h4"
@@ -78,7 +78,7 @@ async function handleSaveReview(text: string) {
             >
               <p
                 v-if="group.label"
-                class="px-4 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-primary-foreground/40"
+                class="px-4 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/40"
               >
                 {{ group.label }}
               </p>
@@ -90,7 +90,7 @@ async function handleSaveReview(text: string) {
                 >
                   <Button
                     variant="ghost"
-                    class="w-full justify-start py-2 cursor-pointer text-primary-foreground hover:bg-accent hover:text-accent-foreground"
+                    class="w-full justify-start py-2 cursor-pointer text-sidebar-foreground hover:bg-accent hover:text-accent-foreground"
                     :class="[
                       isActive(item.path) ? 'bg-accent text-accent-foreground' : '',
                     ]"
@@ -115,14 +115,14 @@ async function handleSaveReview(text: string) {
           <a
             v-if="isAdmin"
             href="/admin"
-            class="flex items-center gap-2 cursor-pointer border border-border/20 rounded-full px-4 py-1 text-primary-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
+            class="flex items-center gap-2 cursor-pointer border border-border/20 rounded-full px-4 py-1 text-sidebar-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
           >
             <Shield class="h-4 w-4" />
             <span>Админ-панель</span>
           </a>
           <button
             v-if="isSubscribed"
-            class="cursor-pointer border border-border/20 rounded-full px-4 py-1 text-primary-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
+            class="cursor-pointer border border-border/20 rounded-full px-4 py-1 text-sidebar-foreground hover:bg-accent hover:text-accent-foreground transition duration-300 active:scale-95"
             @click="isModalOpen = true"
           >
             Добавить отзыв
@@ -152,11 +152,11 @@ async function handleSaveReview(text: string) {
               </div>
               <div class="flex flex-col min-w-0">
                 <span class="text-sm font-medium truncate">{{ [user.firstName, user.lastName?.[0]].filter(Boolean).join(' ') }}</span>
-                <span class="text-xs text-primary-foreground/60">{{ level }}</span>
+                <span class="text-xs text-sidebar-foreground/60">{{ level }}</span>
               </div>
             </div>
             <div class="mt-2">
-              <div class="flex justify-between text-xs text-primary-foreground/60 mb-1">
+              <div class="flex justify-between text-xs text-sidebar-foreground/60 mb-1">
                 <span>Уровень {{ levelIndex + 1 }}/{{ maxLevel + 1 }}</span>
               </div>
               <div class="h-1.5 w-full rounded-full bg-primary-foreground/20">

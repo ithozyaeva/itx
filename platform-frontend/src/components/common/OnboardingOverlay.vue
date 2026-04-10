@@ -44,6 +44,15 @@ function positionTooltip(retries = 5) {
   }
 
   const rect = el.getBoundingClientRect()
+
+  // На мобилке элемент может быть за экраном (скрытый сайдбар) — пропускаем
+  if (rect.right <= 0 || rect.left >= window.innerWidth) {
+    if (currentStepIndex.value < totalSteps - 1)
+      nextStep()
+    else
+      skip()
+    return
+  }
   const padding = 8
   const tooltipGap = 12
 
@@ -151,7 +160,7 @@ onUnmounted(() => {
               v-for="i in totalSteps"
               :key="i"
               class="h-1.5 w-1.5 rounded-full transition-colors"
-              :class="i - 1 === currentStepIndex ? 'bg-primary' : 'bg-muted'"
+              :class="i - 1 === currentStepIndex ? 'bg-accent' : 'bg-muted'"
             />
           </div>
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
-import { CalendarIcon, Tag, Typography } from 'itx-ui-kit'
+import { CalendarIcon, Typography } from 'itx-ui-kit'
 import { ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useDictionary } from '@/composables/useDictionary'
 import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
@@ -122,6 +123,10 @@ function getICS() {
   link.click()
 }
 
+function getHostInitials(host: { firstName: string, lastName: string }) {
+  return `${host.firstName.charAt(0)}${host.lastName.charAt(0)}`.toUpperCase()
+}
+
 const { placeTypesObject } = useDictionary(['placeTypes'])
 const { openInGoogleCalendar } = useGoogleCalendar()
 </script>
@@ -129,7 +134,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
 <template>
   <div
     data-reveal
-    class="rounded-3xl border p-4 transition-shadow flex flex-col gap-2"
+    class="rounded-3xl border p-4 transition-all duration-200 flex flex-col gap-2"
     :class="isExclusive
       ? 'bg-gradient-to-br from-amber-50/80 to-yellow-50/50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-300/60 dark:border-amber-600/40 hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/20'
       : 'bg-card hover:shadow-md'"
@@ -139,78 +144,127 @@ const { openInGoogleCalendar } = useGoogleCalendar()
       <Crown class="h-4 w-4" />
       <span class="text-xs font-semibold uppercase tracking-wide">{{ event.exclusiveChatTitle || 'Эксклюзив' }}</span>
     </div>
-    <!-- Header: title + tags -->
-    <div class="flex flex-col gap-1.5">
-      <Typography variant="h4" as="h3">
-        {{ event.title }}
-      </Typography>
-      <div class="flex flex-wrap items-center gap-1.5">
-        <Tag>
-          {{ placeTypesObject[event.placeType] }}
-        </Tag>
-        <Tag
-          v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
-        >
-          {{ event.customPlaceType }}
-        </Tag>
-        <Tag
-          v-for="tag in event.eventTags"
-          :key="tag.id"
-        >
-          {{ tag.name }}
-        </Tag>
-        <template v-if="!isPassedEvent">
-          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" aria-label="Скачать ICS файл" @click="getICS">
-            + ICS
+
+    <!-- Date with calendar popover -->
+    <Popover v-if="!isPassedEvent">
+      <PopoverTrigger>
+        <div class="flex items-center gap-2 text-accent text-sm cursor-pointer">
+          <CalendarIcon class="shrink-0" />
+          <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent>
+        <div class="flex flex-col gap-1 text-sm">
+          <button
+            class="text-left hover:text-accent transition-colors py-1"
+            @click="openInGoogleCalendar(event)"
+          >
+            + Google Calendar
           </button>
-          <button class="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer" @click="openInGoogleCalendar(event)">
-            + Google Cal
+          <button
+            class="text-left hover:text-accent transition-colors py-1"
+            @click="getICS"
+          >
+            + iCalendar
           </button>
-        </template>
-      </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+    <div v-else class="flex items-center gap-2 text-muted-foreground text-sm">
+      <CalendarIcon class="shrink-0" />
+      <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
     </div>
 
-    <p class="text-muted-foreground break-words">
+    <!-- Repeat info -->
+    <span v-if="repeatInfo" class="text-xs text-muted-foreground italic">
+      {{ repeatInfo }}
+    </span>
+
+    <!-- Title -->
+    <Typography
+      variant="h4"
+      as="h3"
+    >
+      {{ event.title }}
+    </Typography>
+
+    <!-- Tags -->
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class="inline-flex items-center rounded-full border border-accent/30 px-2 py-0.5 text-xs text-accent">
+        {{ placeTypesObject[event.placeType] }}
+      </span>
+      <span
+        v-if="event.eventType !== 'ONLINE' && !!event.customPlaceType"
+        class="inline-flex items-center rounded-full border border-accent/30 px-2 py-0.5 text-xs text-accent"
+      >
+        {{ event.customPlaceType }}
+      </span>
+      <span
+        v-for="tag in event.eventTags"
+        :key="tag.id"
+        class="inline-flex items-center rounded-full border border-accent/30 px-2 py-0.5 text-xs text-accent"
+      >
+        {{ tag.name }}
+      </span>
+    </div>
+
+    <!-- Description -->
+    <p class="text-muted-foreground text-sm break-words line-clamp-2">
       {{ event.description }}
     </p>
 
-    <div class="space-y-2 text-sm">
-      <div class="flex items-center gap-2">
-        <CalendarIcon class="shrink-0" />
-        <div class="flex flex-col">
-          <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
-          <span v-if="repeatInfo" class="text-xs text-muted-foreground italic">
-            {{ repeatInfo }}
-          </span>
+    <!-- Place/location -->
+    <div class="flex items-center gap-2 text-sm">
+      <MapPin class="shrink-0 h-4 w-4" />
+      <span v-if="event.placeType === 'OFFLINE'" class="break-all line-clamp-1">{{ event.place }}</span>
+      <p v-if="event.placeType === 'ONLINE'" class="break-all line-clamp-1" v-html="wrapLinks(event.place)" />
+      <p v-if="event.placeType === 'HYBRID'" class="break-all line-clamp-1" v-html="wrapLinks(event.place)" />
+    </div>
+
+    <!-- Hosts with avatars -->
+    <div class="flex items-center gap-2 text-sm">
+      <span class="font-medium shrink-0">Спикеры:</span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div
+          v-for="host in event.hosts"
+          :key="host.id"
+          class="flex items-center gap-1.5"
+        >
+          <img
+            v-if="host.avatarUrl"
+            :src="host.avatarUrl"
+            :alt="`${host.firstName} ${host.lastName}`"
+            class="w-8 h-8 rounded-full object-cover"
+          >
+          <div
+            v-else
+            class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-xs font-medium"
+          >
+            {{ getHostInitials(host) }}
+          </div>
+          <span>{{ host.firstName }} {{ host.lastName }}</span>
         </div>
-      </div>
-      <div class="flex items-start gap-2">
-        <MapPin class="shrink-0 mt-0.5" />
-        <span v-if="event.placeType === 'OFFLINE'" class="break-all">{{ event.place }}</span>
-        <p v-if="event.placeType === 'ONLINE'" class="break-all" v-html="wrapLinks(event.place)" />
-        <p v-if="event.placeType === 'HYBRID'" class="break-all" v-html="wrapLinks(event.place)" />
-      </div>
-      <div class="flex items-start gap-2">
-        <span class="font-medium shrink-0">Спикеры:</span>
-        <span>{{ event.hosts.map(host => `${host.firstName} ${host.lastName}`).join(', ') }}</span>
-      </div>
-      <div v-if="event.videoLink" class="flex items-start gap-2">
-        <span class="shrink-0">Трансляция:</span>
-        <a :href="event.videoLink" target="_blank" class="underline break-all">
-          {{ event.videoLink }}
-        </a>
-      </div>
-      <div v-if="event.recordingUrl" class="flex items-start gap-2">
-        <span class="shrink-0">Запись:</span>
-        <a :href="event.recordingUrl" target="_blank" class="underline break-all text-accent">
-          {{ event.recordingUrl }}
-        </a>
       </div>
     </div>
 
+    <!-- Video/recording links -->
+    <div v-if="event.videoLink" class="flex items-center gap-2 text-sm">
+      <span class="shrink-0">Трансляция:</span>
+      <a :href="event.videoLink" target="_blank" class="underline break-all line-clamp-1">
+        {{ event.videoLink }}
+      </a>
+    </div>
+    <div v-if="event.recordingUrl" class="flex items-center gap-2 text-sm">
+      <span class="shrink-0">Запись:</span>
+      <a :href="event.recordingUrl" target="_blank" class="underline break-all text-accent line-clamp-1">
+        {{ event.recordingUrl }}
+      </a>
+    </div>
+
+    <!-- Members expandable -->
     <div class="flex flex-col">
       <button
-        class="flex items-center gap-2 text-left hover:text-primary transition-colors"
+        class="flex items-center gap-2 text-left hover:text-accent transition-colors"
         @click="toggleMembers"
       >
         <span class="text-sm font-medium">Участники ({{ event.members.length }}{{ event.maxParticipants > 0 ? `/${event.maxParticipants}` : '' }})</span>
@@ -228,13 +282,14 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         ]"
       >
         <div class="overflow-hidden">
-          <div class="mt-1 space-y-1 text-muted-foreground">
+          <div class="mt-1 space-y-1 text-muted-foreground text-sm">
             <span>{{ event.members.map(member => `${member.firstName} ${member.lastName}`).join(', ') }}</span>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Action button -->
     <div v-if="!isPassedEvent" class="self-end">
       <ConfirmDialog
         v-if="isMember"

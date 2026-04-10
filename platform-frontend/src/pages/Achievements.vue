@@ -204,7 +204,7 @@ onMounted(() => {
             <div class="w-full h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 class="h-full rounded-full transition-all"
-                :class="achievement.unlocked ? 'bg-green-500' : 'bg-primary'"
+                :class="achievement.unlocked ? 'bg-green-500' : 'bg-accent'"
                 :style="{ width: `${achievement.threshold > 0 ? Math.min(100, (achievement.progress / achievement.threshold) * 100) : 0}%` }"
               />
             </div>
@@ -269,7 +269,7 @@ onMounted(() => {
             <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div
                 class="h-full rounded-full transition-all"
-                :class="selectedAchievement.unlocked ? 'bg-green-500' : 'bg-primary'"
+                :class="selectedAchievement.unlocked ? 'bg-green-500' : 'bg-accent'"
                 :style="{ width: `${selectedAchievement.threshold > 0 ? Math.min(100, (selectedAchievement.progress / selectedAchievement.threshold) * 100) : 0}%` }"
               />
             </div>
