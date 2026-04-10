@@ -40,11 +40,12 @@ function getInitials(mentor: Mentor) {
       <Typography
         variant="h4"
         as="h3"
+        class="truncate"
       >
         {{ mentor.firstName }} {{ mentor.lastName }}
       </Typography>
 
-      <p v-if="mentor.occupation" class="text-sm text-muted-foreground">
+      <p v-if="mentor.occupation" class="text-sm text-muted-foreground truncate">
         {{ mentor.occupation }}
       </p>
 

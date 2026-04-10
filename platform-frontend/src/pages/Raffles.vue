@@ -2,7 +2,7 @@
 import type { RaffleItem } from '@/models/raffle'
 import { Typography } from 'itx-ui-kit'
 import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
@@ -56,19 +56,28 @@ async function buyTickets(id: number) {
   }
 }
 
+const now = ref(Date.now())
+const tickTimer = setInterval(() => {
+  now.value = Date.now()
+}, 60000)
+onUnmounted(() => clearInterval(tickTimer))
+
 function timeLeft(endsAt: string) {
-  const diff = new Date(endsAt).getTime() - Date.now()
+  const diff = new Date(endsAt).getTime() - now.value
   if (diff <= 0)
     return 'Завершён'
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(hours / 24)
   if (days > 0)
     return `${days} дн. ${hours % 24} ч.`
-  return `${hours} ч.`
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (hours > 0)
+    return `${hours} ч. ${mins} мин.`
+  return `${mins} мин.`
 }
 
 function winnerName(r: RaffleItem) {
-  return [r.winnerFirstName, r.winnerLastName].filter(Boolean).join(' ')
+  return [r.winnerFirstName, r.winnerLastName].filter(Boolean).join(' ') || '—'
 }
 
 useSSE('raffles', () => fetchRaffles())

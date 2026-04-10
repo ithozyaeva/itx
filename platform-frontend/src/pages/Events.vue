@@ -161,20 +161,21 @@ const tabs: { value: TabValue, label: string }[] = [
     </div>
 
     <!-- Tabs -->
-    <div class="flex items-center gap-1 bg-muted rounded-lg p-0.5 mb-4 md:mb-6 overflow-x-auto">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap"
-        :class="activeTab === tab.value ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-        @click="activeTab = tab.value"
-      >
-        {{ tab.label }}
-      </button>
-      <div class="flex-1" />
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4 md:mb-6">
+      <div class="flex items-center gap-1 bg-muted rounded-lg p-0.5 overflow-x-auto">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          class="px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap"
+          :class="activeTab === tab.value ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+          @click="activeTab = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
       <div
         v-if="user && (activeTab === 'upcoming' || activeTab === 'archive')"
-        class="flex gap-1"
+        class="flex gap-1 bg-muted rounded-lg p-0.5 self-start"
       >
         <button
           class="px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap"

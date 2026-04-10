@@ -10,7 +10,7 @@ import Sidebar from './Sidebar.vue'
     <Sidebar />
     <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
       <Header />
-      <main class="flex-grow w-full max-w-[1440px] mx-auto p-1">
+      <main class="flex-grow w-full max-w-[1440px] mx-auto">
         <Breadcrumbs />
         <slot />
       </main>

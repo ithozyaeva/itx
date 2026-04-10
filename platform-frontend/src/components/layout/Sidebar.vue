@@ -55,7 +55,7 @@ async function handleSaveReview(text: string) {
     >
       <div class="flex flex-col justify-between items-center pb-2 h-full overflow-y-auto">
         <div class="w-full">
-          <div class="flex items-center justify-between p-4 md:hidden">
+          <div class="flex items-center justify-between px-4 py-3 md:hidden">
             <Typography
               variant="h4"
               as="h2"
@@ -159,7 +159,7 @@ async function handleSaveReview(text: string) {
               <div class="flex justify-between text-xs text-sidebar-foreground/60 mb-1">
                 <span>Уровень {{ levelIndex + 1 }}/{{ maxLevel + 1 }}</span>
               </div>
-              <div class="h-1.5 w-full rounded-full bg-primary-foreground/20">
+              <div class="h-1.5 w-full rounded-full bg-sidebar-foreground/20">
                 <div
                   class="h-full rounded-full bg-green-500 transition-all duration-500"
                   :style="{ width: `${((levelIndex) / maxLevel) * 100}%` }"

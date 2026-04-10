@@ -3,7 +3,7 @@ import type { Season, SeasonWithLeaderboard } from '@/models/season'
 import { Typography } from 'itx-ui-kit'
 import { Calendar, Crown, Loader2, Medal, Trophy } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
-import { formatShortDate } from '@/lib/utils'
+import { displayName, formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { seasonService } from '@/services/seasons'
 
@@ -51,10 +51,6 @@ async function selectSeason(id: number) {
 
 function formatDate(d: string) {
   return formatShortDate(d)
-}
-
-function displayName(firstName: string, lastName: string) {
-  return [firstName, lastName].filter(Boolean).join(' ')
 }
 
 function getAvatarSrc(entry: SeasonWithLeaderboard['leaderboard'][number]) {

@@ -94,10 +94,10 @@ onMounted(loadMentor)
           <div
             v-for="service in mentor.services"
             :key="service.id"
-            class="flex justify-between items-center border-b border-border pb-2 last:border-0"
+            class="flex justify-between items-start gap-2 border-b border-border pb-2 last:border-0"
           >
-            <span>{{ service.name }}</span>
-            <span v-if="service.price" class="text-sm text-muted-foreground">{{ service.price }} ₽</span>
+            <span class="break-words min-w-0">{{ service.name }}</span>
+            <span v-if="service.price" class="text-sm text-muted-foreground shrink-0">{{ service.price }} ₽</span>
           </div>
         </div>
       </div>

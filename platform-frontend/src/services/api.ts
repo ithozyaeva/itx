@@ -83,6 +83,8 @@ let refreshInterval: ReturnType<typeof setInterval> | null = null
 export function startProactiveRefresh() {
   stopProactiveRefresh()
   refreshInterval = setInterval(async () => {
+    if (isRefreshing)
+      return
     try {
       const { token, user } = await doRefresh()
       localStorageToken.value = token

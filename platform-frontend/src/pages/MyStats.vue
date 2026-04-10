@@ -134,7 +134,7 @@ function getMostActiveArea(): string {
   ]
 
   const sorted = [...areas].sort((a, b) => b.value - a.value)
-  return sorted[0].value > 0 ? sorted[0].label : 'нет активности'
+  return sorted.length > 0 && sorted[0].value > 0 ? sorted[0].label : 'нет активности'
 }
 
 function formatMonth(m: string) {

@@ -421,7 +421,7 @@ onMounted(() => {
             class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl"
           >
             <div class="flex-1 min-w-0">
-              <div class="font-medium text-sm">
+              <div class="font-medium text-sm truncate">
                 {{ tx.description || reasonLabels[tx.reason] || tx.reason }}
               </div>
               <div class="text-xs text-muted-foreground mt-0.5">

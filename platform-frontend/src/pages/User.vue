@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Typography } from 'itx-ui-kit'
-import { BarChart3, Bell, FileText, Folder, Loader2, MessageSquare, ShoppingBag } from 'lucide-vue-next'
+import { BarChart3, Bell, FileText, Folder, Loader2, MessageSquare, RefreshCw, ShoppingBag } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
 import MemberProfileCard from '@/components/Profile/MemberProfileForm.vue'
@@ -48,15 +48,15 @@ const quickLinks = [
     </Typography>
 
     <!-- Quick links hub -->
-    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 mb-6">
       <router-link
         v-for="link in quickLinks"
         :key="link.path"
         :to="link.path"
-        class="flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 hover:bg-muted/50 hover:border-accent/30 transition-all text-center"
+        class="flex flex-col items-center gap-1.5 rounded-2xl border bg-card p-3 sm:p-4 hover:bg-muted/50 hover:border-accent/30 transition-all text-center"
       >
         <component :is="link.icon" class="h-5 w-5 text-muted-foreground" />
-        <span class="text-xs text-muted-foreground">{{ link.title }}</span>
+        <span class="text-[10px] sm:text-xs text-muted-foreground leading-tight">{{ link.title }}</span>
       </router-link>
     </div>
 
@@ -68,9 +68,16 @@ const quickLinks = [
     </div>
     <div
       v-else-if="loadError"
-      class="flex flex-col items-center justify-center py-12 text-muted-foreground"
+      class="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground"
     >
       <p>Не удалось загрузить профиль</p>
+      <button
+        class="flex items-center gap-2 px-4 py-2 rounded-xl border hover:bg-muted transition-colors text-sm"
+        @click="loadError = false; isLoading = true; profileService.getMe().then(() => { isLoading = false }).catch((err) => { handleError(err); loadError = true; isLoading = false })"
+      >
+        <RefreshCw class="h-4 w-4" />
+        Повторить
+      </button>
     </div>
     <div
       v-else-if="isMentor"

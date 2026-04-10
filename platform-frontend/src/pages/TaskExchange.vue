@@ -437,7 +437,7 @@ watch(showEditDialog, (open) => {
           class="rounded-2xl p-4 border bg-card border-border"
         >
           <div class="flex items-start justify-between gap-2 mb-2">
-            <h3 class="font-medium text-sm leading-tight">
+            <h3 class="font-medium text-sm leading-tight break-words min-w-0">
               {{ task.title }}
             </h3>
             <span

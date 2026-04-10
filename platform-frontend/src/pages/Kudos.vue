@@ -17,6 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
+import { displayName } from '@/lib/utils'
 import { apiClient } from '@/services/api'
 import { handleError } from '@/services/errorService'
 import { kudosService } from '@/services/kudos'
@@ -91,10 +92,6 @@ async function sendKudos() {
   finally {
     isSubmitting.value = false
   }
-}
-
-function displayName(firstName: string, lastName: string) {
-  return [firstName, lastName].filter(Boolean).join(' ')
 }
 
 function timeAgo(dateStr: string) {
