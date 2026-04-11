@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Typography } from 'itx-ui-kit'
-import { BarChart3, Bell, FileText, Folder, Loader2, MessageSquare, RefreshCw, ShoppingBag } from 'lucide-vue-next'
+import { BarChart3, FileText, Folder, Loader2, MessageSquare, RefreshCw, ShoppingBag } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
 import MemberProfileCard from '@/components/Profile/MemberProfileForm.vue'
@@ -36,7 +36,6 @@ const quickLinks = [
   { title: 'Рефералки', path: '/referals', icon: Folder },
   { title: 'Резюме', path: '/resumes', icon: FileText },
   { title: 'Мои отзывы', path: '/my-reviews', icon: MessageSquare },
-  { title: 'Уведомления', path: '/notifications', icon: Bell },
   { title: 'Барахолка', path: '/marketplace', icon: ShoppingBag },
 ]
 </script>
@@ -48,7 +47,7 @@ const quickLinks = [
     </Typography>
 
     <!-- Quick links hub -->
-    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 mb-6">
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-6">
       <router-link
         v-for="link in quickLinks"
         :key="link.path"

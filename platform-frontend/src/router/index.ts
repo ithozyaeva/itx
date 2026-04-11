@@ -16,7 +16,7 @@ import Mentors from '@/pages/Mentors.vue'
 import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
 import MyStats from '@/pages/MyStats.vue'
-import NotificationSettings from '@/pages/NotificationSettings.vue'
+
 import Quests from '@/pages/Quests.vue'
 import Raffles from '@/pages/Raffles.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
@@ -49,7 +49,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/minigames', component: Casino, name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }] } },
   { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
-  { path: '/notifications', component: NotificationSettings, name: 'notifications', meta: { breadcrumb: [{ label: 'Уведомления' }] } },
+  { path: '/notifications', redirect: '/me' },
   { path: '/faq', name: 'faq', component: () => import('@/pages/FAQ.vue'), meta: { breadcrumb: [{ label: 'FAQ' }] } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
