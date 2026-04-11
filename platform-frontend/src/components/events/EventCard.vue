@@ -282,7 +282,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         ]"
       >
         <div class="overflow-hidden">
-          <div class="mt-1 space-y-1 text-muted-foreground text-sm">
+          <div class="mt-1 space-y-1 text-muted-foreground text-sm break-words">
             <span>{{ event.members.map(member => `${member.firstName} ${member.lastName}`).join(', ') }}</span>
           </div>
         </div>

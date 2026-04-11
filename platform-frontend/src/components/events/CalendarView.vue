@@ -219,7 +219,7 @@ function goToToday() {
       <button
         v-for="(day, index) in calendarDays"
         :key="index"
-        class="relative bg-card p-2 min-h-[3.5rem] text-center transition-colors hover:bg-muted/50"
+        class="relative bg-card p-1.5 sm:p-2 min-h-[2.5rem] sm:min-h-[3.5rem] text-center transition-colors hover:bg-muted/50"
         :class="{
           'opacity-40': !day.isCurrentMonth,
           'ring-2 ring-primary ring-inset': selectedDate === day.dateKey,

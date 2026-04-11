@@ -374,11 +374,11 @@ watch(showEditDialog, (open) => {
         Биржа заданий
       </Typography>
       <button
-        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
         @click="showCreateDialog = true"
       >
         <Plus class="h-4 w-4" />
-        Предложить задание
+        <span class="hidden sm:inline">Предложить задание</span>
       </button>
     </div>
 

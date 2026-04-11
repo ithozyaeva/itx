@@ -35,7 +35,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
   <nav
     v-if="breadcrumbs.length > 0"
     aria-label="Навигация"
-    class="flex items-center gap-1.5 text-xs text-muted-foreground px-3 pt-3"
+    class="flex items-center gap-1.5 text-xs text-muted-foreground px-4 pt-3"
   >
     <button
       class="flex items-center hover:text-foreground transition-colors"

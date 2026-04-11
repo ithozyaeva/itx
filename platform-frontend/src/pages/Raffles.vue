@@ -150,8 +150,8 @@ onMounted(() => {
             class="rounded-2xl border bg-card border-border p-5"
           >
             <div class="flex items-start justify-between mb-3">
-              <div>
-                <h3 class="font-semibold">
+              <div class="min-w-0">
+                <h3 class="font-semibold break-words">
                   {{ raffle.title }}
                 </h3>
                 <p
@@ -164,7 +164,7 @@ onMounted(() => {
               <Gift class="h-5 w-5 text-primary shrink-0" />
             </div>
 
-            <div class="flex items-center gap-4 text-sm mb-3">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-3">
               <div>
                 <span class="text-muted-foreground">Приз:</span>
                 <span class="font-medium ml-1">{{ raffle.prize }}</span>
