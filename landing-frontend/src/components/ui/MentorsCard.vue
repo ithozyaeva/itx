@@ -31,6 +31,7 @@ export interface Mentor {
   lastName: string
   occupation: string
   experience: string
+  avatarUrl?: string
   profTags: { id: number, title: string }[]
   contacts: Contact[]
   services: { id: number, name: string, price: number }[]

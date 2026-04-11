@@ -111,7 +111,7 @@ function getBestContactLink(contacts: Mentor['contacts']): string {
 const displayedMentors = computed(() =>
   filteredMentors.value.slice(0, visibleCount.value).map((mentor: Mentor) => ({
     id: mentor.id,
-    avatar: `https://t.me/i/userpic/160/${mentor.tg}.jpg`,
+    avatar: mentor.avatarUrl || `https://t.me/i/userpic/160/${mentor.tg}.jpg`,
     name: `${mentor.firstName} ${mentor.lastName}`,
     position: mentor.occupation,
     description: mentor.experience,
