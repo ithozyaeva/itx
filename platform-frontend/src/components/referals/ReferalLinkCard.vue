@@ -113,7 +113,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
           </Badge>
         </div>
         <div v-if="isOwner" class="flex items-center gap-1 shrink-0 ml-2">
-          <button type="button" class="p-1.5 rounded-lg hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors" :disabled="isSaving" @click="startEditing">
+          <button type="button" class="p-2 rounded-lg hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center" aria-label="Редактировать ссылку" :disabled="isSaving" @click="startEditing">
             <Pencil :size="14" />
           </button>
           <ConfirmDialog
@@ -123,7 +123,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
             @confirm="handleDelete"
           >
             <template #trigger>
-              <button type="button" class="p-1.5 rounded-lg hover:bg-destructive/10 cursor-pointer text-muted-foreground hover:text-destructive transition-colors" :disabled="isDeleting">
+              <button type="button" class="p-2 rounded-lg hover:bg-destructive/10 cursor-pointer text-muted-foreground hover:text-destructive transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center" aria-label="Удалить ссылку" :disabled="isDeleting">
                 <Loader2 v-if="isDeleting" :size="14" class="animate-spin" />
                 <Trash v-else :size="14" />
               </button>
