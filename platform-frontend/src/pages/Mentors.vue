@@ -107,10 +107,10 @@ onMounted(loadMentors)
         <Input
           v-model="searchQuery"
           placeholder="Поиск по имени..."
-          class="max-w-xs"
+          class="w-full sm:max-w-xs"
         />
-        <Select v-model="selectedTag" class="max-w-xs">
-          <SelectTrigger class="max-w-xs">
+        <Select v-model="selectedTag" class="w-full sm:max-w-xs">
+          <SelectTrigger class="w-full sm:max-w-xs">
             <SelectValue placeholder="Все теги" />
           </SelectTrigger>
           <SelectContent>
