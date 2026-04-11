@@ -2,6 +2,7 @@
 import type { GuildMemberEntry, GuildPublic } from '@/models/guild'
 import { Loader2, LogOut, Plus, Shield, Trash2, Users } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import GuildCardSkeleton from '@/components/guilds/GuildCardSkeleton.vue'
 import {
   Dialog,
@@ -10,12 +11,15 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { displayName } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { guildService } from '@/services/guilds'
+
+const { toast } = useToast()
 
 const guilds = ref<GuildPublic[]>([])
 const isLoading = ref(true)
@@ -59,6 +63,7 @@ async function createGuild() {
       icon: newIcon.value,
       color: newColor.value,
     })
+    toast({ title: 'Гильдия создана' })
     showCreateDialog.value = false
     newName.value = ''
     newDescription.value = ''
@@ -78,6 +83,7 @@ async function joinGuild(id: number) {
   actionInProgress.value = id
   try {
     await guildService.join(id)
+    toast({ title: 'Вы вступили в гильдию' })
     await fetchGuilds()
   }
   catch (error) {
@@ -94,6 +100,7 @@ async function leaveGuild(id: number) {
   actionInProgress.value = id
   try {
     await guildService.leave(id)
+    toast({ title: 'Вы вышли из гильдии' })
     await fetchGuilds()
   }
   catch (error) {
@@ -110,6 +117,7 @@ async function deleteGuild(id: number) {
   actionInProgress.value = id
   try {
     await guildService.remove(id)
+    toast({ title: 'Гильдия удалена' })
     await fetchGuilds()
   }
   catch (error) {
@@ -247,14 +255,22 @@ onMounted(() => {
                 <LogOut class="h-3.5 w-3.5" />
                 Выйти
               </button>
-              <button
+              <ConfirmDialog
                 v-if="guild.ownerId === user?.id"
-                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto disabled:opacity-50"
-                :disabled="actionInProgress === guild.id"
-                @click="deleteGuild(guild.id)"
+                title="Удалить гильдию?"
+                description="Гильдия и все её данные будут удалены без возможности восстановления."
+                confirm-label="Удалить"
+                @confirm="deleteGuild(guild.id)"
               >
-                <Trash2 class="h-3.5 w-3.5" />
-              </button>
+                <template #trigger>
+                  <button
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto disabled:opacity-50"
+                    :disabled="actionInProgress === guild.id"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </button>
+                </template>
+              </ConfirmDialog>
             </div>
           </div>
         </div>

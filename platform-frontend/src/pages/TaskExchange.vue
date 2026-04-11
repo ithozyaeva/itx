@@ -27,12 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { required, useFormValidation } from '@/composables/useFormValidation'
 import { useSSE } from '@/composables/useSSE'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { taskExchangeService } from '@/services/taskExchange'
+
+const { toast } = useToast()
 
 const tasks = ref<TaskExchange[]>([])
 const total = ref(0)
@@ -128,6 +131,7 @@ async function createTask() {
       description: newDescription.value.trim(),
       maxAssignees: newMaxAssignees.value,
     })
+    toast({ title: 'Задание создано' })
     showCreateDialog.value = false
     await fetchTasks()
   }
@@ -157,6 +161,7 @@ async function updateTask() {
       description: editDescription.value.trim(),
       maxAssignees: editMaxAssignees.value,
     })
+    toast({ title: 'Задание обновлено' })
     showEditDialog.value = false
     await fetchTasks()
   }

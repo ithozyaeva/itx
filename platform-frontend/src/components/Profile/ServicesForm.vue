@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'
+
+const { toast } = useToast()
 
 const services = ref<Service[]>([])
 
@@ -37,6 +40,7 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     await profileService.updateServices(services.value)
+    toast({ title: 'Услуги обновлены' })
     isEdit.value = false
   }
   catch (error) {

@@ -2,11 +2,14 @@
 import { Camera, Edit, Loader2, Star } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 import { profileService } from '@/services/profile'
+
+const { toast } = useToast()
 
 const user = useUser()
 const isEdit = ref<boolean>(false)
@@ -39,6 +42,7 @@ async function handleSubmit() {
   isSaving.value = true
   try {
     await profileService.updateMe(editedUser)
+    toast({ title: 'Профиль обновлён' })
     isEdit.value = false
   }
   catch (err) {

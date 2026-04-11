@@ -7,6 +7,7 @@ import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewModal from '@/components/ReviewModal.vue'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
+import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { reviewService } from '@/services/reviews'
 
@@ -144,7 +145,7 @@ onMounted(loadReviews)
             {{ statusLabels[review.status] }}
           </span>
           <span class="text-xs text-muted-foreground">
-            {{ new Date(review.date).toLocaleDateString() }}
+            {{ formatShortDate(review.date) }}
           </span>
         </div>
 

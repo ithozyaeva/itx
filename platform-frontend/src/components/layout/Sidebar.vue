@@ -19,7 +19,7 @@ const { level, levelIndex, maxLevel } = useUserLevel()
 function isActive(path: string) {
   if (path === '/')
     return route.path === '/'
-  return route.path.startsWith(path)
+  return route.path === path || route.path.startsWith(`${path}/`)
 }
 
 function navigateTo(path: string) {

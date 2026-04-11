@@ -147,7 +147,7 @@ function formatQuestDeadline(dateStr: string) {
     return 'Остался 1 день'
   if (diffDays <= 7)
     return `Осталось ${diffDays} дн.`
-  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  return formatShortDate(date)
 }
 
 useSSE('points', () => fetchPoints())

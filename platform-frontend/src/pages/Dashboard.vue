@@ -45,7 +45,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useSSE } from '@/composables/useSSE'
 import { useUser, useUserLevel } from '@/composables/useUser'
-import { dateFormatter } from '@/lib/utils'
+import { dateFormatter, formatShortDate } from '@/lib/utils'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { achievementsService } from '@/services/achievements'
 import { chatQuestService } from '@/services/chatQuestService'
@@ -165,7 +165,7 @@ function formatQuestDeadline(dateStr: string) {
     return '1 день'
   if (diffDays <= 7)
     return `${diffDays} дн.`
-  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  return formatShortDate(date)
 }
 
 function isEventLive(event: CommunityEvent) {
@@ -685,7 +685,7 @@ onMounted(async () => {
               {{ hl.messageText }}
             </p>
             <p class="text-[11px] text-muted-foreground mt-1.5">
-              {{ new Date(hl.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) }}
+              {{ formatShortDate(hl.createdAt) }}
             </p>
           </div>
         </div>

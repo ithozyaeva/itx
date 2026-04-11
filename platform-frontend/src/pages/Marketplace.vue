@@ -21,11 +21,14 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { required, useFormValidation } from '@/composables/useFormValidation'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { marketplaceService } from '@/services/marketplace'
+
+const { toast } = useToast()
 
 const items = ref<MarketplaceItem[]>([])
 const total = ref(0)
@@ -139,6 +142,7 @@ async function createItem() {
       },
       newImage.value ?? undefined,
     )
+    toast({ title: 'Объявление создано' })
     showCreateDialog.value = false
     resetForm()
     await fetchItems()
@@ -202,6 +206,7 @@ async function markSold(id: number) {
   actionInProgress.value = id
   try {
     await marketplaceService.markSold(id)
+    toast({ title: 'Продажа подтверждена' })
     await fetchItems()
   }
   catch (error) {
@@ -218,6 +223,7 @@ async function deleteItem(id: number) {
   actionInProgress.value = id
   try {
     await marketplaceService.remove(id)
+    toast({ title: 'Объявление удалено' })
     await fetchItems()
   }
   catch (error) {
