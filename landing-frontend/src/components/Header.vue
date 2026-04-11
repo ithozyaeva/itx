@@ -58,17 +58,21 @@ onUnmounted(() => {
 <template>
   <header
     class="sticky top-0 z-50 w-full transition-all duration-500"
-    :class="{ 'bg-background/0.9 backdrop-blur-[25px]': isScrolled, 'bg-transparent backdrop-blur-0': !isScrolled }"
+    :class="{ 'bg-background/80 backdrop-blur-[25px] border-b border-accent/15': isScrolled, 'bg-transparent backdrop-blur-0 border-b border-transparent': !isScrolled }"
   >
     <div class="container px-6 md:px-10 flex gap-5 h-[var(--header-height)] items-center justify-between md:justify-between">
-      <div class="flex items-center gap-4 lg:gap-16">
+      <div class="flex items-center gap-4 lg:gap-10">
         <a
           href="/"
-          class="flex items-center gap-2 font-bold text-xl"
+          class="flex items-center gap-3 font-bold text-xl group"
         >
-          <div class=" w-16  sm:w-[88px] md:w-24">
+          <div class="w-16 sm:w-[88px] md:w-24">
             <Logo />
           </div>
+          <span class="hidden md:flex items-center gap-1.5 font-mono text-[10px] text-foreground/40 uppercase tracking-widest border-l border-accent/20 pl-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent))]" />
+            online
+          </span>
         </a>
         <Navigation v-if="!isMobile" />
       </div>
