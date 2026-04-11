@@ -105,11 +105,6 @@
   }
 }
 
-/* Fix: itx-ui-kit Tag hover makes text invisible on certain backgrounds */
-.tag.default {
-  pointer-events: none;
-}
-
 /* Custom scrollbars */
 * {
   scrollbar-width: thin;

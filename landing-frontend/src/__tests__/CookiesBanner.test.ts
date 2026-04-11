@@ -18,13 +18,16 @@ vi.mock('@vueuse/core', () => ({
   },
 }))
 
-vi.mock('itx-ui-kit', () => ({
-  Button: {
+vi.mock('@/components/ui/UiButton.vue', () => ({
+  default: {
     name: 'Button',
     template: '<button><slot /></button>',
     props: ['as', 'variant'],
   },
-  Typography: {
+}))
+
+vi.mock('@/components/ui/UiTypography.vue', () => ({
+  default: {
     name: 'Typography',
     template: '<span><slot /></span>',
     props: ['variant', 'as'],

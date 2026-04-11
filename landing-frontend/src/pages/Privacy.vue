@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
+import Typography from '@/components/ui/UiTypography.vue'
 import { usePageMeta } from '@/composables/useMeta'
 
 usePageMeta({

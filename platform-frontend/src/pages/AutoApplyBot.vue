@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import {
   Bot,
   CheckCircle,
@@ -12,6 +11,7 @@ import {
   Zap,
 } from 'lucide-vue-next'
 import { ref } from 'vue'
+import { Typography } from '@/components/ui/typography'
 
 const faqItems = ref([
   {

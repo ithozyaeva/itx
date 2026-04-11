@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { BurgerIcon } from 'itx-ui-kit'
-import { LogOut } from 'lucide-vue-next'
+import { LogOut, Menu } from 'lucide-vue-next'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
@@ -27,7 +26,7 @@ function logout() {
         aria-label="Открыть меню"
         @click="toggleSidebar"
       >
-        <BurgerIcon class="w-6 h-6" />
+        <Menu class="w-6 h-6" />
       </button>
       <a
         href="/"

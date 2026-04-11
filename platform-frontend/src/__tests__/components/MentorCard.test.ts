@@ -2,9 +2,8 @@ import type { Mentor } from '@/models/profile'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>' },
-  Tag: { template: '<span><slot /></span>' },
 }))
 
 import MentorCard from '@/components/mentors/MentorCard.vue'

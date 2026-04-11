@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { GuildMemberEntry, GuildPublic } from '@/models/guild'
-import { Typography } from 'itx-ui-kit'
 import { Loader2, LogOut, Plus, Shield, Trash2, Users } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import GuildCardSkeleton from '@/components/guilds/GuildCardSkeleton.vue'
@@ -11,6 +10,7 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { displayName } from '@/lib/utils'

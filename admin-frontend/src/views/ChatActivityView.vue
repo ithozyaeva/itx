@@ -11,7 +11,6 @@ import {
   Title,
   Tooltip,
 } from 'chart.js'
-import { Typography } from 'itx-ui-kit'
 import { ArrowDown, ArrowUp, BarChart3, Download, MessageSquare, Users, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Line } from 'vue-chartjs'
@@ -19,6 +18,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Typography } from '@/components/ui/typography'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { chatActivityService } from '@/services/chatActivityService'
 

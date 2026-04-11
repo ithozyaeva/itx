@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
-import { Typography } from 'itx-ui-kit'
+import { Typography } from '@/components/ui/typography'
 
 const props = defineProps<{
   mentor: Mentor

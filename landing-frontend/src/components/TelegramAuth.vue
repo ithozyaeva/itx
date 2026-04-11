@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { TelegramUser } from '@/services/auth'
-import { Button } from 'itx-ui-kit'
 import { onMounted, ref } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
 import ConfirmServiceModal from '@/components/ConfirmServiceModal.vue'
+import Button from '@/components/ui/UiButton.vue'
 import { useConfirmedPrivacy } from '@/composables/useUser'
 import { authService } from '@/services/auth'
 

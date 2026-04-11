@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { X } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -8,6 +7,7 @@ import ChevronRight from '~icons/lucide/chevron-right'
 import ExternalLink from '~icons/lucide/external-link'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Typography } from '@/components/ui/typography'
 import { useSidebar } from '@/composables/useSidebar'
 
 const { isCollapsed, isMobileOpen, sidebarItems, toggleSidebar, closeMobileSidebar } = useSidebar()

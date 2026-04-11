@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { TelegramUser } from '@/services/auth.ts'
-import { Button, Typography } from 'itx-ui-kit'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
 import TelegramAuth from '@/components/TelegramAuth.vue'
+import Button from '@/components/ui/UiButton.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 import { useToken } from '@/composables/useToken.ts'
 import { useUser } from '@/composables/useUser.ts'
 

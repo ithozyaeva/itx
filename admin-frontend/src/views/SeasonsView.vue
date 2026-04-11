@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { SeasonCreateRequest } from '@/services/seasonService'
-import { Typography } from 'itx-ui-kit'
 import { Plus } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Typography } from '@/components/ui/typography'
 import { seasonService } from '@/services/seasonService'
 
 const showModal = ref(false)

@@ -2,13 +2,12 @@ import type { CommunityEvent } from '@/models/event'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>' },
-  Tag: { template: '<span><slot /></span>' },
-  CalendarIcon: { template: '<span />' },
 }))
 
 vi.mock('lucide-vue-next', () => ({
+  Calendar: { template: '<span />' },
   ChevronDown: { template: '<span />' },
   Crown: { template: '<span />' },
   Loader2: { template: '<span />' },

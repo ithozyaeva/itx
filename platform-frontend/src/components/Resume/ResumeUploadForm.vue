@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { WorkFormat } from '@/models/resume'
-import { Typography } from 'itx-ui-kit'
 import { Loader2, UploadCloud } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Typography } from '@/components/ui/typography'
 import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
 

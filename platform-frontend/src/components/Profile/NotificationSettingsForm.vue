@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { NotificationSettings } from '@/models/profile'
-import { Typography } from 'itx-ui-kit'
 import { Bell, Loader2 } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Typography } from '@/components/ui/typography'
 import { handleError } from '@/services/errorService'
 import { notificationSettingsService } from '@/services/notificationSettings'
 

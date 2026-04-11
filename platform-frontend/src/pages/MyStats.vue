@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ProfileStats } from '@/models/profileStats'
-import { Typography } from 'itx-ui-kit'
 import {
   ArrowDown,
   ArrowUp,
@@ -19,6 +18,7 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { reasonLabels } from '@/lib/reasonLabels'
 import { formatShortDate } from '@/lib/utils'

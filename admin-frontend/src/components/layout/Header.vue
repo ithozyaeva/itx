@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { LogOut, Menu, User } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
+import { Typography } from '@/components/ui/typography'
 import { useAuth } from '@/composables/useAuth'
 import { useSidebar } from '@/composables/useSidebar'
 

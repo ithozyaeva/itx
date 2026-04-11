@@ -22,7 +22,6 @@
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "itx-ui-kit": "^0.2.1",
     "ky": "^1.14.3",
     "lucide-vue-next": "^0.577.0",
     "pinia": "^3.0.4",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { ChevronDown } from 'lucide-vue-next'
 import { AccordionContent, AccordionHeader, AccordionItem, AccordionRoot, AccordionTrigger } from 'reka-ui'
+import { Typography } from '@/components/ui/typography'
 
 const sections = [
   {

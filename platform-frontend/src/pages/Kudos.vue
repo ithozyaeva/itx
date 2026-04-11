@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { KudosItem } from '@/models/kudos'
 import type { TelegramUser } from '@/models/profile'
-import { Typography } from 'itx-ui-kit'
 import { Heart, Loader2, Send } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { displayName } from '@/lib/utils'

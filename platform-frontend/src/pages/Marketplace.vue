@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { MarketplaceItem, MarketplaceItemCondition, MarketplaceItemStatus } from '@/models/marketplace'
-import { Typography } from 'itx-ui-kit'
 import {
   Loader2,
   Package,
@@ -22,6 +21,7 @@ import {
   DialogScrollContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Typography } from '@/components/ui/typography'
 import { required, useFormValidation } from '@/composables/useFormValidation'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'

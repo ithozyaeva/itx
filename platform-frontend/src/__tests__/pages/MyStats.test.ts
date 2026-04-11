@@ -6,7 +6,7 @@ const { mockGetMyStats, mockGetLeaderboard } = vi.hoisted(() => ({
   mockGetLeaderboard: vi.fn(),
 }))
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>', props: ['variant', 'as'] },
 }))
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { MentorSearchFilters } from '@/components/MentorSearchFilters.vue'
 import type { Mentor } from '@/models/mentors'
-import { Tag, Typography } from 'itx-ui-kit'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Trash from '~icons/lucide/trash'
@@ -14,8 +13,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tag } from '@/components/ui/tag'
+
+import { Typography } from '@/components/ui/typography'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import api from '@/lib/api'
 import { bulkService } from '@/services/bulkService'

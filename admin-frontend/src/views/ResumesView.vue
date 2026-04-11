@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ResumeFilter, WorkFormat } from '@/models/resume'
-import { Typography } from 'itx-ui-kit'
 import { onMounted, reactive, ref } from 'vue'
 import Download from '~icons/lucide/download'
 import RefreshCw from '~icons/lucide/refresh-cw'
@@ -11,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { resumeService } from '@/services/resumeService'
 
 const filters = reactive<ResumeFilter>({

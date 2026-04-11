@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { TelegramUser } from '@/services/auth'
 import { useWindowSize } from '@vueuse/core'
-import { BurgerIcon, Button, CloseIcon } from 'itx-ui-kit'
+import { Menu as BurgerIcon, X as CloseIcon } from 'lucide-vue-next'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
 import Logo from '@/assets/itx-logo.svg'
+import Button from '@/components/ui/UiButton.vue'
 import { useScrollHeader } from '@/composables/useScrollHeader.ts'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'

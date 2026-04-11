@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { RaffleCreateRequest } from '@/services/raffleService'
-import { Typography } from 'itx-ui-kit'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Typography } from '@/components/ui/typography'
 import { raffleService } from '@/services/raffleService'
 
 const showModal = ref(false)

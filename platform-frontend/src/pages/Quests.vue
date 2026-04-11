@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
-import { Typography } from 'itx-ui-kit'
 import {
   Calendar,
   CheckCircle,
@@ -10,6 +9,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import QuestCardSkeleton from '@/components/quests/QuestCardSkeleton.vue'
+import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'

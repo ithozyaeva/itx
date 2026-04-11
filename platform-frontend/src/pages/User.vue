@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { BarChart3, FileText, Folder, Loader2, MessageSquare, RefreshCw, ShoppingBag } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import ContactsForm from '@/components/Profile/ContactsForm.vue'
@@ -8,6 +7,7 @@ import MentorInfoForm from '@/components/Profile/MentorInfoForm.vue'
 import NotificationSettingsForm from '@/components/Profile/NotificationSettingsForm.vue'
 import ProfTagsForm from '@/components/Profile/ProfTagsForm.vue'
 import ServicesForm from '@/components/Profile/ServicesForm.vue'
+import { Typography } from '@/components/ui/typography'
 import { isUserMentor, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'

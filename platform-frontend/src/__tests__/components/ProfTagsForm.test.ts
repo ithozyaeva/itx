@@ -42,7 +42,7 @@ vi.mock('@/services/errorService', () => ({
   handleError: vi.fn(),
 }))
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>' },
 }))
 

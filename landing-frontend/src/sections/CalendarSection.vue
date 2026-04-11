@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/services/events'
-import { Button, CalendarIcon, Label, Popover, Tag, Typography } from 'itx-ui-kit'
+import { Calendar as CalendarIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
 import Card from '@/components/ui/Card.vue'
 import TgImage from '@/components/ui/TgImage.vue'
+import Button from '@/components/ui/UiButton.vue'
+import Label from '@/components/ui/UiLabel.vue'
+import Popover from '@/components/ui/UiPopover.vue'
+import Tag from '@/components/ui/UiTag.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar.ts'
 import { eventService } from '@/services/events'
 

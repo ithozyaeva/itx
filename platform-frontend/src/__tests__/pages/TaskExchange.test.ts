@@ -14,7 +14,7 @@ const { mockGetAll, mockCreate, mockUpdate, mockAssign, mockUnassign, mockRemove
   mockRemove: vi.fn(),
 }))
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>', props: ['variant', 'as'] },
 }))
 

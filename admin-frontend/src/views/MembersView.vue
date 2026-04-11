@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
 import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
@@ -12,9 +11,10 @@ import MemberModal from '@/components/modals/MemberModal.vue'
 import MentorModal from '@/components/modals/MentorModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { useDictionary } from '@/composables/useDictionary'
 import { bulkService } from '@/services/bulkService'

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { Camera, Edit, Loader2, Star } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'

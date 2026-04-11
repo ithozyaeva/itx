@@ -8,7 +8,7 @@ import App from './App.vue'
 
 import { queryClient } from './plugins/vueQuery'
 import router from './router'
-import 'itx-ui-kit/style.css'
+import './assets/uikit.css'
 import './assets/base.css'
 
 const app = createApp(App)

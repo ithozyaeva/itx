@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { RaffleItem } from '@/models/raffle'
-import { Typography } from 'itx-ui-kit'
 import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'

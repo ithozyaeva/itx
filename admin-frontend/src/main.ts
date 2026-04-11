@@ -7,7 +7,6 @@ import permissionDirective from './directives/permission'
 import { queryClient } from './plugins/vueQuery'
 import router from './router'
 import './assets/main.css'
-import 'itx-ui-kit/style.css'
 
 const app = createApp(App)
 app.use(createPinia())

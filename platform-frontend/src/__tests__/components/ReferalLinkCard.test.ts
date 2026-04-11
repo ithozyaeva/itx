@@ -44,7 +44,7 @@ vi.mock('@/lib/utils', () => ({
   dateFormatter: { format: (d: Date) => d.toISOString().slice(0, 10) },
 }))
 
-vi.mock('itx-ui-kit', () => ({
+vi.mock('@/components/ui/typography', () => ({
   Typography: { template: '<div><slot /></div>' },
 }))
 

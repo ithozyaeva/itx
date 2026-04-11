@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { LeaderboardEntry } from '@/models/points'
-import { Typography } from 'itx-ui-kit'
 import { Loader2, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import { Button } from '@/components/ui/button'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
