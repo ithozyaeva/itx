@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
@@ -21,6 +22,8 @@ import { displayName } from '@/lib/utils'
 import { apiClient } from '@/services/api'
 import { handleError } from '@/services/errorService'
 import { kudosService } from '@/services/kudos'
+
+const { toast } = useToast()
 
 const PAGE_SIZE = 20
 const items = ref<KudosItem[]>([])
@@ -81,6 +84,7 @@ async function sendKudos() {
   isSubmitting.value = true
   try {
     await kudosService.send(selectedMemberId.value, message.value.trim())
+    toast({ title: 'Благодарность отправлена' })
     showDialog.value = false
     selectedMemberId.value = null
     message.value = ''

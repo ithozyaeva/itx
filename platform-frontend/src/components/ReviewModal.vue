@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { X } from 'lucide-vue-next'
 import { ref } from 'vue'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 
 defineProps<{
@@ -12,10 +13,13 @@ const emit = defineEmits<{
   save: [text: string]
 }>()
 
+const { toast } = useToast()
+
 const reviewText = ref('')
 
 function handleSave() {
   emit('save', reviewText.value)
+  toast({ title: 'Отзыв отправлен' })
   reviewText.value = ''
 }
 

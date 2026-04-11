@@ -3,11 +3,14 @@ import type { RaffleItem } from '@/models/raffle'
 import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { raffleService } from '@/services/raffles'
+
+const { toast } = useToast()
 
 const user = useUser()
 const items = ref<RaffleItem[]>([])
@@ -45,6 +48,7 @@ async function buyTickets(id: number) {
   buyingId.value = id
   try {
     await raffleService.buyTickets(id, getTicketCount(id))
+    toast({ title: 'Билеты куплены' })
     ticketCounts.value[id] = 1
     await fetchRaffles()
   }

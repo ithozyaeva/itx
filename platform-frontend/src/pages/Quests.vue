@@ -11,6 +11,7 @@ import { computed, onMounted, ref } from 'vue'
 import QuestCardSkeleton from '@/components/quests/QuestCardSkeleton.vue'
 import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
+import { formatShortDate } from '@/lib/utils'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 
@@ -52,7 +53,7 @@ function formatQuestDeadline(dateStr: string) {
     return '1 день'
   if (days <= 7)
     return `${days} дн.`
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  return formatShortDate(dateStr)
 }
 
 function questTypeLabel(quest: ChatQuestWithProgress) {

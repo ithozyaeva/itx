@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
 import { Typography } from '@/components/ui/typography'
+import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
 
@@ -119,7 +120,7 @@ onMounted(loadMentor)
             <div class="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <span>{{ review.author }}</span>
               <span v-if="review.service">— {{ review.service.name }}</span>
-              <span>{{ new Date(review.date).toLocaleDateString() }}</span>
+              <span>{{ formatShortDate(review.date) }}</span>
             </div>
             <p class="text-sm">
               {{ review.text }}
