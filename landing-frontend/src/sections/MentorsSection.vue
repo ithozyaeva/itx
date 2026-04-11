@@ -20,7 +20,7 @@ const specializations = ref<string[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const visibleCount = ref(6)
+const visibleCount = ref(4)
 const yandexMetrika = useYandexMetrika()
 
 function handleMentorClick(mentorName: string, link: string) {
@@ -45,6 +45,8 @@ async function fetchMentors() {
 
     const data = await response.json()
     mentors.value = data.items ?? []
+    // Shuffle mentors randomly
+    mentors.value = mentors.value.sort(() => Math.random() - 0.5)
     // Собираем все уникальные теги
     const allTags = new Set<string>()
     data.items?.forEach((mentor: Mentor) => {
@@ -62,10 +64,6 @@ async function fetchMentors() {
   finally {
     loading.value = false
   }
-}
-
-function showMore() {
-  visibleCount.value += 6
 }
 
 watch(selectedSpecialization, (val, oldVal) => {
@@ -228,11 +226,11 @@ onMounted(fetchMentors)
           <Button
             v-if="visibleCount < filteredMentors.length"
             variant="filled"
-            as="button"
+            as="a"
+            href="/platform/mentors"
             class="w-fit self-center"
-            @click="showMore"
           >
-            Показать больше
+            Все менторы
           </Button>
         </div>
       </div>

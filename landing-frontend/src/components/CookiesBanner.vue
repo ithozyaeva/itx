@@ -20,7 +20,8 @@ function acceptCookies() {
   <Transition name="banner-slide">
     <div
       v-if="isVisible"
-      class="fixed bottom-0 left-0 right-0 z-40"
+      class="fixed bottom-0 left-0 right-0 z-50"
+      @keydown.escape="acceptCookies"
     >
       <div class="mx-5 my-3">
         <div

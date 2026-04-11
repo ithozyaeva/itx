@@ -19,9 +19,13 @@ function toggle() {
   <div
     class="accordion"
     :class="{ open: isOpen }"
-    @click="toggle"
   >
-    <div class="accordion-header">
+    <button
+      type="button"
+      class="accordion-header"
+      :aria-expanded="isOpen"
+      @click="toggle"
+    >
       <UiTypography
         variant="h4"
         as="h4"
@@ -57,7 +61,7 @@ function toggle() {
           />
         </svg>
       </div>
-    </div>
+    </button>
     <div
       class="accordion-wrapper"
       :class="{ 'accordion-wrapper--open': isOpen }"
@@ -97,6 +101,14 @@ function toggle() {
   align-items: center;
   gap: 14px;
   display: flex;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }
 
 .accordion-title {

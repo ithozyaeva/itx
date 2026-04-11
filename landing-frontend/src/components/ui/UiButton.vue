@@ -52,9 +52,9 @@ defineProps<{
   background-color: var(--color-white);
 }
 
-.ui-button.filled:not(.disabled):focus {
-  border-color: var(--color-white);
-  outline: none;
+.ui-button.filled:not(.disabled):focus-visible {
+  outline: 2px solid var(--color-green-700);
+  outline-offset: 2px;
 }
 
 .ui-button.filled:not(.disabled):active {
@@ -79,9 +79,9 @@ defineProps<{
   color: var(--color-white);
 }
 
-.ui-button.stroke:not(.disabled):focus {
-  border-width: 4px;
-  border-color: var(--color-white);
+.ui-button.stroke:not(.disabled):focus-visible {
+  outline: 2px solid var(--color-green-700);
+  outline-offset: 2px;
 }
 
 .ui-button.stroke:not(.disabled):active {
@@ -104,9 +104,9 @@ defineProps<{
   background-color: var(--color-green-black-400);
 }
 
-.ui-button.dark-filled:not(.disabled):focus {
-  border-color: var(--color-white);
-  outline: none;
+.ui-button.dark-filled:not(.disabled):focus-visible {
+  outline: 2px solid var(--color-green-700);
+  outline-offset: 2px;
 }
 
 .ui-button.dark-filled:not(.disabled):active {

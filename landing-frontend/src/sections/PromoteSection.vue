@@ -49,8 +49,11 @@ function trackPlatformClick() {
           as="h1"
           class="uppercase max-sm:text-2xl break-words hyphens-auto w-full max-w-full"
         >
-          закрытое сообщество <span class="whitespace-nowrap">IT-специалистов</span> на стыке технологий и AI, в котором ценят опыт, юмор и профессио&shy;нализм
+          закрытое сообщество <span class="whitespace-nowrap">IT-специалистов</span>
         </Typography>
+        <p class="text-lg md:text-xl text-[var(--color-light-grey)] max-w-2xl">
+          250+ специалистов из Яндекса, Тинькофф, VK и стартапов. Менторство, AI, нетворкинг и подготовка к собеседованиям.
+        </p>
       </div>
       <div class="flex justify-start ">
         <TelegramAuth

@@ -164,13 +164,13 @@ describe('uiAccordion', () => {
       slots: { default: 'Answer text' },
     })
 
-    await wrapper.find('.accordion').trigger('click')
+    await wrapper.find('.accordion-header').trigger('click')
 
     expect(wrapper.find('.accordion-wrapper').classes()).toContain('accordion-wrapper--open')
     expect(wrapper.classes()).toContain('open')
 
     // Click again to close
-    await wrapper.find('.accordion').trigger('click')
+    await wrapper.find('.accordion-header').trigger('click')
 
     expect(wrapper.find('.accordion-wrapper').classes()).not.toContain('accordion-wrapper--open')
     expect(wrapper.classes()).not.toContain('open')
@@ -185,7 +185,7 @@ describe('uiAccordion', () => {
     let paths = wrapper.findAll('path')
     expect(paths.some(p => p.attributes('d')?.includes('M20 5v30'))).toBe(true)
 
-    await wrapper.find('.accordion').trigger('click')
+    await wrapper.find('.accordion-header').trigger('click')
 
     // Open: cross icon (path with "31 9 9 31")
     paths = wrapper.findAll('path')
