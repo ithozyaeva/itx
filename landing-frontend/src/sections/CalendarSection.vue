@@ -8,12 +8,10 @@ import TgImage from '@/components/ui/TgImage.vue'
 import Button from '@/components/ui/UiButton.vue'
 import Label from '@/components/ui/UiLabel.vue'
 import Popover from '@/components/ui/UiPopover.vue'
-import Tag from '@/components/ui/UiTag.vue'
 import Typography from '@/components/ui/UiTypography.vue'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar.ts'
 import { eventService } from '@/services/events'
 
-const neededEvents = ref<'new' | 'old'>('new')
 const events = ref<Record<'new' | 'old', CommunityEvent[]>>({
   new: [],
   old: [],
@@ -39,24 +37,13 @@ function formatEventDate(dateString: string): string {
 async function loadEvents() {
   events.value.old = await eventService.getOld()
   events.value.new = await eventService.getNext()
-
-  if (events.value.new.length === 0) {
-    neededEvents.value = 'old'
-  }
-}
-
-const visibleCount = ref(4)
-
-function showMore() {
-  visibleCount.value += 4
 }
 
 const visibleEvents = computed(() => {
-  return events.value[neededEvents.value].slice(0, visibleCount.value)
+  return events.value.new.slice(0, 2)
 })
 
 const hasFutureEvents = computed(() => events.value.new.length > 0)
-const isFuture = computed(() => neededEvents.value === 'new')
 
 const { openInGoogleCalendar } = useGoogleCalendar()
 const yandexMetrika = useYandexMetrika()
@@ -101,21 +88,14 @@ onMounted(loadEvents)
           </Typography>
         </div>
 
-        <div class="flex space-x-4 rounded-full select-none w-fit">
-          <Tag
-            :disabled="!hasFutureEvents"
-            :variant="isFuture ? 'active' : 'default'"
-            @click="neededEvents = 'new'"
-          >
-            Будущие
-          </Tag>
-          <Tag
-            :variant="!isFuture ? 'active' : 'default'"
-            @click="neededEvents = 'old'"
-          >
-            Прошедшие
-          </Tag>
-        </div>
+        <Typography
+          v-if="!hasFutureEvents"
+          variant="body-l"
+          as="p"
+          class="text-muted-foreground"
+        >
+          Следите за обновлениями
+        </Typography>
       </div>
 
       <div class="grid gap-3 pt-12 md:grid-cols-2 md:gap-5">
@@ -132,7 +112,8 @@ onMounted(loadEvents)
                   placement="top-end"
                 >
                   <template #trigger>
-                    <div
+                    <button
+                      type="button"
                       class="flex space-x-2 items-center text-accent hover:opacity-75 transition-opacity"
                     >
                       <div class="flex flex-col">
@@ -152,7 +133,7 @@ onMounted(loadEvents)
                         </Typography>
                       </div>
                       <CalendarIcon />
-                    </div>
+                    </button>
                   </template>
                   <template #content>
                     <ul class="flex flex-col gap-2">
@@ -225,12 +206,13 @@ onMounted(loadEvents)
       </div>
     </div>
     <Button
-      v-if="visibleCount < events[neededEvents].length"
+      v-if="events.new.length > 2"
       variant="filled"
+      as="a"
+      href="/platform/events"
       class="flex mx-auto mt-12"
-      @click="showMore"
     >
-      Показать больше
+      Все события
     </Button>
   </section>
 </template>
