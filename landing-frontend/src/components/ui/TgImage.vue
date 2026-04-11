@@ -1,42 +1,33 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import AvatarPlaceholderIcon from '@/components/ui/AvatarPlaceholderIcon.vue'
 
-defineProps<{ username: string }>()
+const props = defineProps<{
+  username: string
+  avatarUrl?: string
+}>()
 
-const imgRef = ref()
 const isError = ref(false)
+
+const imgSrc = computed(() => {
+  if (props.avatarUrl)
+    return props.avatarUrl
+  return `https://t.me/i/userpic/160/${props.username}.jpg`
+})
+
 function handleLoad(event: Event) {
   if ((event.target as HTMLImageElement).naturalWidth <= 1) {
     isError.value = true
   }
 }
-
-function handleError() {
-  isError.value = true
-}
-
-onMounted(() => {
-  if (imgRef.value) {
-    imgRef.value.addEventListener('load', handleLoad)
-    imgRef.value.addEventListener('error', handleError)
-  }
-})
-
-onUnmounted(() => {
-  if (imgRef.value) {
-    imgRef.value.removeEventListener('load', handleLoad)
-    imgRef.value.removeEventListener('error', handleError)
-  }
-})
 </script>
 
 <template>
   <img
     v-if="!isError"
-    ref="imgRef"
-    :src="`https://t.me/i/userpic/160/${username}.jpg`"
+    :src="imgSrc"
     :alt="`Аватар ${username}`"
+    @load="handleLoad"
     @error="isError = true"
   >
   <AvatarPlaceholderIcon

@@ -8,6 +8,7 @@ export interface TelegramUser {
   tg: string
   firstName: string
   lastName: string
+  avatarUrl?: string
 }
 
 export const authService = {

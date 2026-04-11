@@ -180,6 +180,7 @@ onMounted(loadEvents)
               >
                 <TgImage
                   :username="host.tg"
+                  :avatar-url="host.avatarUrl"
                   class="rounded-full w-12 h-12 shrink-0"
                   width="48"
                   height="48"
