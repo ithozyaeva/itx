@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MenuItem } from 'itx-ui-kit'
+import MenuItem from '@/components/ui/UiMenuItem.vue'
 
 const menuItems = [
   { label: 'менторы', href: '#mentors' },

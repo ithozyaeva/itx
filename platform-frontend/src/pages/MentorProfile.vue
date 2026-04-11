@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { MentorWithReviews } from '@/services/mentors'
-import { Tag, Typography } from 'itx-ui-kit'
 import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
+import { Typography } from '@/components/ui/typography'
 import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
 
@@ -59,9 +59,13 @@ onMounted(loadMentor)
           {{ mentor.experience }}
         </p>
         <div v-if="mentor.profTags?.length" class="flex flex-wrap gap-1 mb-3">
-          <Tag v-for="tag in mentor.profTags" :key="tag.id">
+          <span
+            v-for="tag in mentor.profTags"
+            :key="tag.id"
+            class="inline-flex items-center rounded-full border border-accent/30 px-2 py-0.5 text-xs text-accent"
+          >
             {{ tag.title }}
-          </Tag>
+          </span>
         </div>
         <a
           v-if="mentor.tg"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Button, CloseIcon, Typography } from 'itx-ui-kit'
+import { X as CloseIcon } from 'lucide-vue-next'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import Button from '@/components/ui/UiButton.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 import { useConfirmedPrivacy } from '@/composables/useUser'
 import { authService } from '@/services/auth'
 

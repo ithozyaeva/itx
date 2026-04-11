@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { Mentor } from '@/components/ui/MentorsCard.vue'
-import { Button, MentorCard, TagsGroup, Typography } from 'itx-ui-kit'
-
 import { AlertCircle } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import Button from '@/components/ui/UiButton.vue'
+
+import MentorCard from '@/components/ui/UiMentorCard.vue'
+import TagsGroup from '@/components/ui/UiTagsGroup.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 
 function reloadPage() {
   window.location.reload()

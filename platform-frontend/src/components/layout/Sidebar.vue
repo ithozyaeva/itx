@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { CloseIcon, Typography } from 'itx-ui-kit'
-import { Shield } from 'lucide-vue-next'
+import { Shield, X } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { Typography } from '@/components/ui/typography'
 import { useSidebar } from '@/composables/useSidebar'
 import { canViewAdminPanel, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
@@ -67,7 +67,7 @@ async function handleSaveReview(text: string) {
               aria-label="Закрыть меню"
               @click="toggleSidebar"
             >
-              <CloseIcon class="w-6 h-6" />
+              <X class="w-6 h-6" />
             </button>
           </div>
           <div class="flex-1 py-4">

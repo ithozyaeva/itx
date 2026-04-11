@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PointsSummary, PointTransaction } from '@/models/points'
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
-import { Typography } from 'itx-ui-kit'
 import { Calendar, CheckCircle, FileText, Folder, Loader2, MessageCircle, MessageSquare, Mic, Share2, Star, User } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { reasonLabels } from '@/lib/reasonLabels'
 import { formatShortDate } from '@/lib/utils'

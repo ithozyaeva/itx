@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -8,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { casinoService } from '@/services/casinoService'
 
 const usernameFilter = ref('')

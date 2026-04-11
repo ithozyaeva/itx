@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { AvatarPlaceholderIcon } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
+import AvatarPlaceholderIcon from '@/components/ui/AvatarPlaceholderIcon.vue'
 
 defineProps<{ username: string }>()
 

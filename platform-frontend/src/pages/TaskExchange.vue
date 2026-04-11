@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { TaskExchange, TaskExchangeStatus } from '@/models/taskExchange'
-import { Typography } from 'itx-ui-kit'
 import {
   CheckCircle,
   ClipboardList,
@@ -28,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Typography } from '@/components/ui/typography'
 import { required, useFormValidation } from '@/composables/useFormValidation'
 import { useSSE } from '@/composables/useSSE'
 import { isUserAdmin, useUser } from '@/composables/useUser'

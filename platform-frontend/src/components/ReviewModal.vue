@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { X } from 'lucide-vue-next'
 import { ref } from 'vue'
+import { Typography } from '@/components/ui/typography'
 
 defineProps<{
   isOpen: boolean

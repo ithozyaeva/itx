@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
-import { CalendarIcon, Typography } from 'itx-ui-kit'
-import { ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
+import { Calendar, ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Typography } from '@/components/ui/typography'
 import { useDictionary } from '@/composables/useDictionary'
 import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
@@ -149,7 +149,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
     <Popover v-if="!isPassedEvent">
       <PopoverTrigger>
         <div class="flex items-center gap-2 text-accent text-sm cursor-pointer">
-          <CalendarIcon class="shrink-0" />
+          <Calendar class="shrink-0" />
           <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
         </div>
       </PopoverTrigger>
@@ -171,7 +171,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
       </PopoverContent>
     </Popover>
     <div v-else class="flex items-center gap-2 text-muted-foreground text-sm">
-      <CalendarIcon class="shrink-0" />
+      <Calendar class="shrink-0" />
       <span>{{ formattedDate }} ({{ event.timezone || 'UTC' }})</span>
     </div>
 

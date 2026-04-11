@@ -2,7 +2,6 @@
 import type { AchievementsResponse } from '@/models/achievement'
 import type { PublicProfile } from '@/models/profile'
 import type { ProfileStats } from '@/models/profileStats'
-import { Typography } from 'itx-ui-kit'
 import {
   ArrowLeft,
   Award,
@@ -40,6 +39,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { achievementsService } from '@/services/achievements'

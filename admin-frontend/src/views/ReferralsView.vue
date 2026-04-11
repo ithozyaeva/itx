@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Tag, Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted } from 'vue'
 import Trash from '~icons/lucide/trash'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -8,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tag } from '@/components/ui/tag'
+import { Typography } from '@/components/ui/typography'
 import { referralsService } from '@/services/referralsService'
 
 onMounted(referralsService.search)

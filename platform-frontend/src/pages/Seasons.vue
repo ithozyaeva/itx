@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Season, SeasonWithLeaderboard } from '@/models/season'
-import { Typography } from 'itx-ui-kit'
 import { Calendar, Crown, Loader2, Medal, Trophy } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import { Typography } from '@/components/ui/typography'
 import { displayName, formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { seasonService } from '@/services/seasons'

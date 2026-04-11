@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
 import Plus from '~icons/lucide/plus'
 import Trash from '~icons/lucide/trash'
@@ -11,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { reasonLabels } from '@/lib/reasonLabels'
 import { pointsService } from '@/services/pointsService'
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { SubscriptionChatDetail } from '@/services/subscriptionService'
-import { Typography } from 'itx-ui-kit'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Anchor from '~icons/lucide/anchor'
 import ChevronRight from '~icons/lucide/chevron-right'
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { subscriptionService } from '@/services/subscriptionService'
 
 type Tab = 'overview' | 'users' | 'chats'

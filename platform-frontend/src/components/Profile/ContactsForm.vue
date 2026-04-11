@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { Contacts, Mentor } from '@/models/profile'
-import { Typography } from 'itx-ui-kit'
 import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { CONTACT_TYPES } from '@/models/profile'
 import { handleError } from '@/services/errorService'

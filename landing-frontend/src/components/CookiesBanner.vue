@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { Button, Typography } from 'itx-ui-kit'
 import { computed } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import Button from '@/components/ui/UiButton.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 
 const cookiesAccepted = useLocalStorage<boolean>('cookies_accepted', false)
 const yandexMetrika = useYandexMetrika()

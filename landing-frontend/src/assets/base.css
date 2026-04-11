@@ -80,11 +80,6 @@ html {
     scroll-margin-top: var(--header-height);
 }
 
-/* Fix: itx-ui-kit Tag hover makes text invisible on certain backgrounds */
-.tag.default {
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

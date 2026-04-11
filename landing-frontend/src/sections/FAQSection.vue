@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Accordion, Typography } from 'itx-ui-kit'
+import Accordion from '@/components/ui/UiAccordion.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 
 interface Question {
   title: string

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { ReviewOnCommunity } from '@/services/reviews'
-import { Typography } from 'itx-ui-kit'
 import { Loader2, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewModal from '@/components/ReviewModal.vue'
 import { Button } from '@/components/ui/button'
+import { Typography } from '@/components/ui/typography'
 import { handleError } from '@/services/errorService'
 import { reviewService } from '@/services/reviews'
 

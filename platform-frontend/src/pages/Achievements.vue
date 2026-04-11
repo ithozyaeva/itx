@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { AchievementCategory, AchievementsResponse, UserAchievement } from '@/models/achievement'
-import { Typography } from 'itx-ui-kit'
 import {
   Award,
   BookOpen,
@@ -43,6 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Typography } from '@/components/ui/typography'
 import { achievementsService } from '@/services/achievements'
 import { handleError } from '@/services/errorService'
 

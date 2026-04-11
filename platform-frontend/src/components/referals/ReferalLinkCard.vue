@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ReferalLink } from '@/models/referals'
-import { Typography } from 'itx-ui-kit'
 import { Check, Loader2, Pencil, Trash } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { Badge } from '@/components/ui/badge'
+import { Typography } from '@/components/ui/typography'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter } from '@/lib/utils'

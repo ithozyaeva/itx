@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { Mentor, Service } from '@/models/profile'
-import { Typography } from 'itx-ui-kit'
 import { Edit, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { ref, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { Typography } from '@/components/ui/typography'
 import { useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { profileService } from '@/services/profile'

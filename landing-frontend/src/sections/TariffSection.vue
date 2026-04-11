@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { PriceCard, Typography } from 'itx-ui-kit'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import PriceCard from '@/components/ui/UiPriceCard.vue'
+import Typography from '@/components/ui/UiTypography.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 
 interface Tariff {

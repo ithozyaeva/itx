@@ -11,12 +11,12 @@ import {
   Title,
   Tooltip,
 } from 'chart.js'
-import { Typography } from 'itx-ui-kit'
 import { Calendar, ClipboardList, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Bar, Line } from 'vue-chartjs'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Typography } from '@/components/ui/typography'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { statsService } from '@/services/statsService'
 

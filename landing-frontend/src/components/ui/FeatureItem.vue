@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { Typography } from 'itx-ui-kit'
+import Typography from '@/components/ui/UiTypography.vue'
 
 defineProps<{
   icon: Component

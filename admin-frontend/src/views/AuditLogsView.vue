@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { AuditLogFilters } from '@/services/auditLogService'
-import { Typography } from 'itx-ui-kit'
 import { onMounted, onUnmounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -8,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Typography } from '@/components/ui/typography'
 import { auditLogService } from '@/services/auditLogService'
 
 const filters = ref<AuditLogFilters>({})
