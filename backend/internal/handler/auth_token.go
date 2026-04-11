@@ -58,20 +58,19 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 
 	isSubcriber, err := bot.CheckUserInChat(existingUser.TelegramID)
 	if err != nil {
-		log.Printf("failed to check user %d in chat: %v", existingUser.TelegramID, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to verify chat subscription",
-		})
-	}
+		// Telegram API может быть недоступен (например, из РФ).
+		// Не блокируем авторизацию — оставляем текущую роль.
+		log.Printf("failed to check user %d in chat (skipping role update): %v", existingUser.TelegramID, err)
+	} else {
+		if isSubcriber && utils.HasRole(existingUser.Roles, models.MemberRoleUnsubscriber) {
+			existingUser.Roles = []models.Role{models.MemberRoleSubscriber}
+			existingUser, _ = h.memberService.Update(existingUser)
+		}
 
-	if isSubcriber && utils.HasRole(existingUser.Roles, models.MemberRoleUnsubscriber) {
-		existingUser.Roles = []models.Role{models.MemberRoleSubscriber}
-		existingUser, _ = h.memberService.Update(existingUser)
-	}
-
-	if !isSubcriber && utils.HasRole(existingUser.Roles, models.MemberRoleSubscriber) {
-		existingUser.Roles = []models.Role{models.MemberRoleUnsubscriber}
-		existingUser, _ = h.memberService.Update(existingUser)
+		if !isSubcriber && utils.HasRole(existingUser.Roles, models.MemberRoleSubscriber) {
+			existingUser.Roles = []models.Role{models.MemberRoleUnsubscriber}
+			existingUser, _ = h.memberService.Update(existingUser)
+		}
 	}
 
 	// Добавляем заголовок
