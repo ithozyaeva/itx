@@ -43,7 +43,6 @@ defineProps<{
 .ui-tag.default {
   outline: 1px solid var(--color-green-700);
   background-color: transparent;
-  pointer-events: none;
 }
 
 .ui-tag.default:hover:not(.disabled) {
