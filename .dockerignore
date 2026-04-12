@@ -1,0 +1,11 @@
+.git
+pgdata
+certbot
+static
+docs
+*.md
+*.tsv
+platform-fix-results.tsv
+**/node_modules
+**/dist
+**/.vite

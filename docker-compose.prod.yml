@@ -168,7 +168,8 @@ services:
   platform-frontend:
     container_name: ${CONTAINER_PREFIX:-}platform-frontend
     build:
-      context: ./platform-frontend
+      context: .
+      dockerfile: platform-frontend/Dockerfile
       args:
         - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
         - CACHEBUST=${CACHEBUST:-1}
@@ -180,7 +181,8 @@ services:
   admin-frontend:
     container_name: ${CONTAINER_PREFIX:-}admin-frontend
     build:
-      context: ./admin-frontend
+      context: .
+      dockerfile: admin-frontend/Dockerfile
       args:
         - VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
         - CACHEBUST=${CACHEBUST:-1}
