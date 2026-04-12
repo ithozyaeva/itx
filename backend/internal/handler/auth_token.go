@@ -151,6 +151,7 @@ type HandleBotMessageReq struct {
 	FirstName string      `json:"first_name"`
 	LastName  string      `json:"last_name"`
 	Role      models.Role `json:"role"`
+	AvatarURL string      `json:"avatar_url"`
 }
 
 func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
@@ -184,6 +185,7 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			Username:   req.Username,
 			FirstName:  req.FirstName,
 			LastName:   req.LastName,
+			AvatarURL:  req.AvatarURL,
 			Roles:      []models.Role{role},
 		}
 
@@ -198,6 +200,9 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 		existingUser.Username = req.Username
 		existingUser.FirstName = req.FirstName
 		existingUser.LastName = req.LastName
+		if req.AvatarURL != "" {
+			existingUser.AvatarURL = req.AvatarURL
+		}
 		h.memberService.Update(existingUser)
 
 		_, err := h.authService.CreateOrUpdateToken(req.UserID, req.Token)

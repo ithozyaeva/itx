@@ -2,8 +2,10 @@ package bot
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
+	"ithozyeva/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/redis/go-redis/v9"
@@ -606,7 +609,7 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	// Формируем URL для перенаправления с токеном
 	authUrl := fmt.Sprintf("%s?token=%s", redirectUrl, token)
 
-	sendAuthToBackend(token, message.From)
+	sendAuthToBackend(b.bot, token, message.From)
 
 	// Отправляем сообщение с кнопкой для авторизации
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Нажмите кнопку ниже для авторизации")
@@ -1482,9 +1485,57 @@ type AuthRequest struct {
 	FirstName string      `json:"first_name"`
 	LastName  string      `json:"last_name"`
 	Role      models.Role `json:"role"`
+	AvatarURL string      `json:"avatar_url,omitempty"`
 }
 
-func sendAuthToBackend(token string, user *tgbotapi.User) {
+func downloadTelegramAvatar(botAPI *tgbotapi.BotAPI, userID int64) ([]byte, error) {
+	photos, err := botAPI.GetUserProfilePhotos(tgbotapi.UserProfilePhotosConfig{
+		UserID: userID,
+		Limit:  1,
+	})
+	if err != nil || photos.TotalCount == 0 {
+		return nil, fmt.Errorf("no profile photos: %v", err)
+	}
+
+	sizes := photos.Photos[0]
+	fileID := sizes[len(sizes)-1].FileID
+
+	file, err := botAPI.GetFile(tgbotapi.FileConfig{FileID: fileID})
+	if err != nil {
+		return nil, fmt.Errorf("getFile failed: %v", err)
+	}
+
+	fileURL := file.Link(botAPI.Token)
+	resp, err := telegramHTTPClient.Get(fileURL)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read failed: %v", err)
+	}
+	return data, nil
+}
+
+func uploadAvatarToS3(userID int64, photoData []byte) (string, error) {
+	s3Client, err := utils.NewS3Client()
+	if err != nil {
+		return "", fmt.Errorf("s3 client: %v", err)
+	}
+
+	key := fmt.Sprintf("avatars/%d/telegram.jpg", userID)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := s3Client.Upload(ctx, key, photoData, "image/jpeg"); err != nil {
+		return "", fmt.Errorf("s3 upload: %v", err)
+	}
+	return key, nil
+}
+
+func sendAuthToBackend(botAPI *tgbotapi.BotAPI, token string, user *tgbotapi.User) {
 	isSubcriber, err := CheckUserInChat(user.ID)
 	if err != nil {
 		log.Println("Ошибка проверки пользователя в чате:", err)
@@ -1497,6 +1548,20 @@ func sendAuthToBackend(token string, user *tgbotapi.User) {
 		role = models.MemberRoleUnsubscriber
 	}
 
+	var avatarURL string
+	photoData, err := downloadTelegramAvatar(botAPI, user.ID)
+	if err != nil {
+		log.Printf("Avatar download skipped for user %d: %v", user.ID, err)
+	} else {
+		key, err := uploadAvatarToS3(user.ID, photoData)
+		if err != nil {
+			log.Printf("Avatar S3 upload failed for user %d: %v", user.ID, err)
+		} else {
+			avatarURL = key
+			log.Printf("Avatar uploaded to S3 for user %d: %s", user.ID, key)
+		}
+	}
+
 	data := AuthRequest{
 		Token:     token,
 		UserID:    user.ID,
@@ -1504,6 +1569,7 @@ func sendAuthToBackend(token string, user *tgbotapi.User) {
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Role:      role,
+		AvatarURL: avatarURL,
 	}
 
 	jsonData, err := json.Marshal(data)
