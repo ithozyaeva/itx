@@ -78,12 +78,14 @@ onMounted(loadEvents)
     class="w-full pt-20 md:pt-32 lg:pt-40"
   >
     <div class="container px-6 md:px-10">
-      <SectionHeader
-        index="03"
-        path="~/community/events.log"
-        title="Расписание"
-        subtitle="Еженедельные онлайн-встречи. Скачивай в календарь — пропустить будет нельзя."
-      />
+      <div class="reveal">
+        <SectionHeader
+          index="03"
+          path="~/community/events.log"
+          title="Расписание"
+          subtitle="Еженедельные онлайн-встречи. Скачивай в календарь — пропустить будет нельзя."
+        />
+      </div>
 
       <Typography
         v-if="!hasFutureEvents"

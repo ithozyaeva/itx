@@ -155,12 +155,14 @@ onMounted(fetchMentors)
         v-else
         class="flex flex-col gap-10 md:gap-14"
       >
-        <SectionHeader
-          index="02"
-          path="~/community/mentors.db"
-          title="База менторов"
-          subtitle="Эксперты сообщества, готовые поделиться опытом. Фильтруй по направлению — найди своего."
-        />
+        <div class="reveal">
+          <SectionHeader
+            index="02"
+            path="~/community/mentors.db"
+            title="База менторов"
+            subtitle="Эксперты сообщества, готовые поделиться опытом. Фильтруй по направлению — найди своего."
+          />
+        </div>
 
         <div class="flex flex-col gap-3 items-start">
           <div class="font-mono text-[11px] text-foreground/40 tracking-[0.1em] uppercase">

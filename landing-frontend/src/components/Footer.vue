@@ -49,7 +49,7 @@ function trackJointimerClick() {
           <span class="hidden sm:inline text-[#0b0d0c]/70">[06] ~/join</span>
         </div>
 
-        <h2 class="font-display uppercase text-[38px] sm:text-[56px] md:text-[80px] lg:text-[104px] leading-[0.9] tracking-tight text-[#0b0d0c]">
+        <h2 class="reveal font-display uppercase text-[38px] sm:text-[56px] md:text-[80px] lg:text-[104px] leading-[0.9] tracking-tight text-[#0b0d0c]">
           Стань<br>
           <span class="text-[#0b0d0c]/50">IT-хозяином</span>
         </h2>
