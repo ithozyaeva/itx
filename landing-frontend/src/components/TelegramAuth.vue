@@ -40,12 +40,11 @@ onMounted(() => {
 
 function handleClick() {
   if (isConfirmedPrivacy.value) {
-    const botUrl = authService.getBotUrl()
     yandexMetrika.reachGoal('become_itx_owner_click', {
       location: props.variant || 'default',
     } as any)
-    yandexMetrika.extLink(botUrl, { title: 'Стать IT-Хозяином' })
-    window.open(botUrl, '_blank')
+    yandexMetrika.extLink(authService.getBotUrl(), { title: 'Стать IT-Хозяином' })
+    authService.openBot()
   }
   else {
     isModalOpen.value = true
