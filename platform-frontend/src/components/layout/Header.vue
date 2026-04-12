@@ -52,6 +52,10 @@ function logout() {
           />
         </svg>
       </a>
+      <span class="hidden md:flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent))]" />
+        online
+      </span>
       <div class="flex-1" />
       <div
         v-if="user"

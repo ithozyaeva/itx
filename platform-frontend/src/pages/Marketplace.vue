@@ -275,6 +275,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/marketplace
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -375,7 +378,7 @@ onMounted(() => {
         <div
           v-for="item in filteredItems"
           :key="item.id"
-          class="rounded-2xl border bg-card border-border overflow-hidden"
+          class="rounded-sm border bg-card border-border overflow-hidden terminal-card"
         >
           <!-- Image -->
           <img
@@ -383,11 +386,11 @@ onMounted(() => {
             :src="item.imagePath"
             :alt="item.title"
             loading="lazy"
-            class="w-full h-36 sm:h-48 object-cover rounded-t-2xl bg-muted"
+            class="w-full h-36 sm:h-48 object-cover rounded-t-sm bg-muted"
           >
           <div
             v-else
-            class="w-full h-36 sm:h-48 bg-muted flex items-center justify-center rounded-t-2xl"
+            class="w-full h-36 sm:h-48 bg-muted flex items-center justify-center rounded-t-sm"
           >
             <Package class="h-12 w-12 text-muted-foreground opacity-40" aria-hidden="true" />
           </div>

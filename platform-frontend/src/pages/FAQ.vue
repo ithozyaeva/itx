@@ -41,6 +41,9 @@ const sections = [
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8 max-w-3xl">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/faq
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -57,7 +60,7 @@ const sections = [
         v-for="(item, index) in sections"
         :key="index"
         :value="`item-${index}`"
-        class="rounded-2xl border bg-card overflow-hidden"
+        class="rounded-sm border bg-card overflow-hidden"
       >
         <AccordionHeader>
           <AccordionTrigger class="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-medium hover:bg-muted/50 transition-colors group">

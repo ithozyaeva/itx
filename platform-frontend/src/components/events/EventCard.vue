@@ -134,7 +134,7 @@ const { openInGoogleCalendar } = useGoogleCalendar()
 <template>
   <div
     data-reveal
-    class="rounded-3xl border p-4 transition-all duration-200 flex flex-col gap-2"
+    class="rounded-sm border p-4 transition-all duration-200 flex flex-col gap-2 terminal-card"
     :class="isExclusive
       ? 'bg-gradient-to-br from-amber-50/80 to-yellow-50/50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-300/60 dark:border-amber-600/40 hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/20'
       : 'bg-card hover:shadow-md'"

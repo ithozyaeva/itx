@@ -152,6 +152,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/guilds
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -189,7 +192,7 @@ onMounted(() => {
         <div
           v-for="guild in guilds"
           :key="guild.id"
-          class="rounded-2xl border bg-card border-border overflow-hidden"
+          class="rounded-sm border bg-card border-border overflow-hidden terminal-card"
         >
           <div
             class="h-2"

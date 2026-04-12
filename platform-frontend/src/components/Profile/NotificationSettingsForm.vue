@@ -93,7 +93,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="p-6 md:p-8 bg-card backdrop-blur-lg border border-border shadow-lg rounded-3xl">
+  <div class="p-6 md:p-8 bg-card backdrop-blur-lg border border-border shadow-lg rounded-sm terminal-card">
     <div class="flex relative flex-col items-center space-y-4">
       <div class="flex items-center gap-2">
         <Bell class="h-5 w-5 text-muted-foreground" />

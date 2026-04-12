@@ -57,6 +57,9 @@ function toggleFaq(index: number) {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8 max-w-3xl">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/auto-apply-bot
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -66,9 +69,9 @@ function toggleFaq(index: number) {
     </Typography>
 
     <!-- Hero card -->
-    <div class="bg-card rounded-3xl border p-6 md:p-8 mb-6">
+    <div class="bg-card rounded-sm terminal-card border p-6 md:p-8 mb-6">
       <div class="flex items-center gap-4 mb-4">
-        <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary shrink-0">
+        <div class="flex items-center justify-center w-14 h-14 rounded-sm bg-primary/10 text-primary shrink-0">
           <Bot :size="28" />
         </div>
         <div>
@@ -106,7 +109,7 @@ function toggleFaq(index: number) {
         <div
           v-for="(step, index) in steps"
           :key="index"
-          class="flex gap-3 rounded-2xl border bg-card border-border p-4"
+          class="flex gap-3 rounded-sm border bg-card border-border p-4"
         >
           <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary shrink-0">
             <span class="text-sm font-bold">{{ index + 1 }}</span>
@@ -132,7 +135,7 @@ function toggleFaq(index: number) {
         <div
           v-for="feature in features"
           :key="feature.title"
-          class="flex gap-3 rounded-2xl border bg-card border-border p-4"
+          class="flex gap-3 rounded-sm border bg-card border-border p-4"
         >
           <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-muted shrink-0">
             <component
@@ -161,7 +164,7 @@ function toggleFaq(index: number) {
         <div
           v-for="(item, index) in faqItems"
           :key="index"
-          class="rounded-2xl border bg-card border-border overflow-hidden"
+          class="rounded-sm border bg-card border-border overflow-hidden"
         >
           <button
             class="w-full flex items-center justify-between p-4 text-left text-sm font-medium hover:bg-muted/50 transition-colors"

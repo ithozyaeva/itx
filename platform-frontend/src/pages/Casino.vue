@@ -311,6 +311,9 @@ onBeforeUnmount(() => {
       <!-- Header with balance -->
       <div class="flex items-center justify-between mb-8">
         <div>
+          <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+            ~/community/casino
+          </div>
           <h1 class="casino-title">
             Мини-игры
           </h1>

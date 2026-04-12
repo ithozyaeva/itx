@@ -371,6 +371,9 @@ watch(showEditDialog, (open) => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/task-exchange
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -439,7 +442,7 @@ watch(showEditDialog, (open) => {
         <div
           v-for="task in filteredTasks"
           :key="task.id"
-          class="rounded-2xl p-4 border bg-card border-border"
+          class="rounded-sm p-4 border bg-card border-border terminal-card"
         >
           <div class="flex items-start justify-between gap-2 mb-2">
             <h3 class="font-medium text-sm leading-tight break-words min-w-0">

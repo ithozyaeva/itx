@@ -75,6 +75,9 @@ function isCurrentUser(entry: LeaderboardEntry) {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/leaderboard
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -109,7 +112,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
     >
       <div
         v-if="currentUserEntry && !isCurrentUserVisible"
-        class="p-4 bg-primary/10 border border-primary/30 rounded-2xl shadow-sm mb-4"
+        class="p-4 bg-primary/10 border border-primary/30 rounded-sm shadow-sm mb-4"
       >
         <RouterLink
           :to="`/members/${currentUserEntry.entry.memberId}`"
@@ -153,7 +156,7 @@ function isCurrentUser(entry: LeaderboardEntry) {
         v-for="(entry, index) in visibleEntries"
         :key="entry.memberId"
         :to="`/members/${entry.memberId}`"
-        class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm hover:border-primary/30 transition-colors"
+        class="flex items-center gap-4 p-4 bg-card border border-border rounded-sm shadow-sm hover:border-primary/30 transition-colors"
         :class="{
           'border-yellow-500/50 bg-yellow-500/5': index < 3 && !isCurrentUser(entry),
           'border-primary/50 bg-primary/10 ring-1 ring-primary/20': isCurrentUser(entry),

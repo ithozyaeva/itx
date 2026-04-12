@@ -17,7 +17,7 @@ const emit = defineEmits<{
 
 <template>
   <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-    <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-destructive/10 mb-4">
+    <div class="flex items-center justify-center w-16 h-16 rounded-sm bg-destructive/10 mb-4">
       <WifiOff
         v-if="props.type === 'network'"
         class="h-8 w-8 text-destructive"

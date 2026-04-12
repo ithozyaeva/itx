@@ -126,6 +126,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/achievements
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -169,7 +172,7 @@ onMounted(() => {
         <div
           v-for="achievement in filteredItems"
           :key="achievement.id"
-          class="rounded-2xl p-4 transition-colors border cursor-pointer hover:shadow-md"
+          class="rounded-sm p-4 transition-colors border cursor-pointer hover:shadow-md"
           :class="achievement.unlocked
             ? 'bg-green-500/5 border-green-500/30'
             : 'bg-card border-border opacity-60'"

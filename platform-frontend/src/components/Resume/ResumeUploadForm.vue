@@ -70,7 +70,7 @@ async function handleUpload() {
 </script>
 
 <template>
-  <div class="rounded-3xl border bg-card p-4 md:p-6 space-y-4">
+  <div class="rounded-sm border bg-card p-4 md:p-6 space-y-4 terminal-card">
     <div class="flex items-center space-x-3">
       <UploadCloud class="text-accent" />
       <div>

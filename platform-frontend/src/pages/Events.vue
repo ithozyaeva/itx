@@ -154,6 +154,9 @@ const tabs: { value: TabValue, label: string }[] = [
 
 <template>
   <div ref="containerRef" class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/events
+    </div>
     <div class="flex items-center justify-between mb-4 md:mb-6">
       <Typography variant="h2" as="h1">
         События сообщества
@@ -271,7 +274,7 @@ const tabs: { value: TabValue, label: string }[] = [
     <ContentGrid v-else-if="activeTab === 'content'" />
 
     <!-- Calendar tab -->
-    <div v-else-if="activeTab === 'calendar'" class="rounded-2xl border bg-card border-border p-4">
+    <div v-else-if="activeTab === 'calendar'" class="rounded-sm border bg-card border-border p-4 terminal-card">
       <div v-if="isLoadingCalendar" class="flex justify-center py-12">
         <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
       </div>

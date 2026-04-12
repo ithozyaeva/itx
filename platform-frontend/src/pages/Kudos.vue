@@ -124,6 +124,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/kudos
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -167,7 +170,7 @@ onMounted(() => {
         <div
           v-for="item in items"
           :key="item.id"
-          class="rounded-2xl border bg-card border-border p-4"
+          class="rounded-sm border bg-card border-border p-4"
         >
           <div class="flex items-start gap-3">
             <img

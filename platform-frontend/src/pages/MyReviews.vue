@@ -97,6 +97,9 @@ onMounted(loadReviews)
 
 <template>
   <div class="container mx-auto px-4 py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/my-reviews
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -135,7 +138,7 @@ onMounted(loadReviews)
       <div
         v-for="review in reviews"
         :key="review.id"
-        class="bg-card border border-border rounded-2xl p-4"
+        class="bg-card border border-border rounded-sm p-4"
       >
         <div class="flex items-center justify-between mb-2">
           <span

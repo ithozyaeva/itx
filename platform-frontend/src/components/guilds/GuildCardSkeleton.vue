@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 </script>
 
 <template>
-  <div class="rounded-2xl border bg-card border-border overflow-hidden">
+  <div class="rounded-sm border bg-card border-border overflow-hidden">
     <Skeleton class="h-2 rounded-none" />
     <div class="p-4">
       <Skeleton class="h-5 w-1/2 mb-2" />

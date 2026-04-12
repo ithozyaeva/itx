@@ -84,6 +84,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/quests
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -130,7 +133,7 @@ onMounted(() => {
         <div
           v-for="quest in filteredQuests"
           :key="quest.id"
-          class="rounded-3xl border bg-card p-5 transition-colors"
+          class="rounded-sm border bg-card p-5 transition-colors terminal-card"
           :class="quest.completed ? 'border-green-500/30 bg-green-500/5' : ''"
         >
           <div class="flex items-start gap-3">

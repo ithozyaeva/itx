@@ -131,6 +131,9 @@ onMounted(loadResumes)
 <template>
   <div class="min-h-screen pt-20 pb-10">
     <div class="container mx-auto px-4 max-w-4xl">
+      <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+        ~/community/resumes
+      </div>
       <div class="flex items-center justify-between mb-6">
         <Typography
           variant="h2"
@@ -176,7 +179,7 @@ onMounted(loadResumes)
         <div
           v-for="resume in resumes"
           :key="resume.id"
-          class="rounded-3xl border bg-card p-4"
+          class="rounded-sm border bg-card p-4 terminal-card"
         >
           <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div class="min-w-0 flex-1">

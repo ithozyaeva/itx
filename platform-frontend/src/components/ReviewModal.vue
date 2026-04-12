@@ -43,7 +43,7 @@ function handleBackdropClick(event: MouseEvent) {
       @click="handleBackdropClick"
     >
       <Transition name="modal-scale">
-        <div v-if="isOpen" class="bg-card text-card-foreground rounded-3xl p-6 w-full max-w-md relative shadow-xl">
+        <div v-if="isOpen" class="bg-card text-card-foreground rounded-sm p-6 w-full max-w-md relative shadow-xl">
           <button
             type="button"
             class="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer"

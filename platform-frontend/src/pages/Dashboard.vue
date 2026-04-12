@@ -237,7 +237,7 @@ onMounted(async () => {
       class="space-y-5"
     >
       <!-- Greeting card skeleton -->
-      <div class="rounded-3xl border bg-card p-6 md:p-8">
+      <div class="rounded-sm border bg-card p-6 md:p-8">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="space-y-2">
             <div class="h-8 w-64 animate-pulse rounded-lg bg-muted" />
@@ -257,7 +257,7 @@ onMounted(async () => {
           <div
             v-for="i in 3"
             :key="i"
-            class="flex items-center gap-2.5 rounded-2xl bg-muted/50 p-3"
+            class="flex items-center gap-2.5 rounded-sm bg-muted/50 p-3"
           >
             <div class="w-9 h-9 animate-pulse rounded-xl bg-muted" />
             <div class="space-y-1.5">
@@ -269,7 +269,7 @@ onMounted(async () => {
       </div>
 
       <!-- Event section skeleton -->
-      <div class="rounded-3xl border bg-card p-5 md:p-6">
+      <div class="rounded-sm border bg-card p-5 md:p-6">
         <div class="flex items-center gap-2 mb-3">
           <div class="h-4 w-4 animate-pulse rounded bg-muted" />
           <div class="h-4 w-36 animate-pulse rounded bg-muted" />
@@ -287,7 +287,7 @@ onMounted(async () => {
         <div
           v-for="i in 2"
           :key="i"
-          class="rounded-3xl border bg-card p-5"
+          class="rounded-sm border bg-card p-5"
         >
           <div class="flex items-center gap-2 mb-4">
             <div class="h-4 w-4 animate-pulse rounded bg-muted" />
@@ -297,7 +297,7 @@ onMounted(async () => {
             <div
               v-for="j in 2"
               :key="j"
-              class="rounded-2xl bg-muted/40 p-3.5"
+              class="rounded-sm bg-muted/30 border border-border/50 p-3.5"
             >
               <div class="h-4 w-3/4 animate-pulse rounded bg-muted mb-2" />
               <div class="h-3 w-1/2 animate-pulse rounded bg-muted" />
@@ -311,11 +311,15 @@ onMounted(async () => {
       <!-- Hero Greeting -->
       <div
         data-onboarding="dashboard"
-        class="relative rounded-3xl border bg-card p-6 md:p-8 overflow-hidden"
+        class="relative rounded-sm border bg-card p-6 md:p-8 overflow-hidden terminal-card"
       >
         <!-- Subtle accent gradient -->
         <div class="absolute top-0 right-0 w-48 h-48 rounded-full bg-accent/5 -translate-y-1/2 translate-x-1/4 blur-2xl" />
         <div class="relative">
+          <div class="font-mono text-[11px] text-accent/70 tracking-wider mb-3">
+            <span class="text-muted-foreground">{{ new Date().toISOString().slice(0, 10) }}</span> //
+            session.active
+          </div>
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <h1 class="text-2xl md:text-3xl font-bold tracking-tight">
@@ -351,7 +355,7 @@ onMounted(async () => {
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
             <RouterLink
               to="/points"
-              class="flex items-center gap-2.5 rounded-2xl bg-muted/50 hover:bg-muted/80 transition-colors p-3"
+              class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
               <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-yellow-500/10">
                 <Star class="h-4 w-4 text-yellow-500" />
@@ -368,7 +372,7 @@ onMounted(async () => {
 
             <RouterLink
               to="/achievements"
-              class="flex items-center gap-2.5 rounded-2xl bg-muted/50 hover:bg-muted/80 transition-colors p-3"
+              class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
               <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-purple-500/10">
                 <Trophy class="h-4 w-4 text-purple-500" />
@@ -385,7 +389,7 @@ onMounted(async () => {
 
             <RouterLink
               to="/events"
-              class="flex items-center gap-2.5 rounded-2xl bg-muted/50 hover:bg-muted/80 transition-colors p-3"
+              class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
               <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/10">
                 <Calendar class="h-4 w-4 text-blue-500" />
@@ -411,7 +415,7 @@ onMounted(async () => {
         <div
           v-for="event in nearestEvents"
           :key="event.id"
-          class="rounded-3xl border overflow-hidden"
+          class="rounded-sm terminal-card overflow-hidden"
           :class="event.exclusiveChatId
             ? 'bg-gradient-to-br from-amber-50/80 to-yellow-50/50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-300/60 dark:border-amber-600/40'
             : 'bg-card'"
@@ -422,6 +426,7 @@ onMounted(async () => {
               <span class="text-xs font-semibold uppercase tracking-wide">{{ event.exclusiveChatTitle || 'Эксклюзив' }}</span>
             </div>
             <div class="flex items-center gap-2 mb-3">
+              <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[01]</span>
               <Zap class="h-4 w-4 text-accent" />
               <span class="text-sm font-medium text-accent">Ближайшее событие</span>
               <span
@@ -484,10 +489,11 @@ onMounted(async () => {
 
       <div
         v-else
-        class="mt-5 rounded-3xl border bg-card overflow-hidden"
+        class="mt-5 rounded-sm terminal-card bg-card overflow-hidden"
       >
         <div class="p-5 md:p-6">
           <div class="flex items-center gap-2 mb-3">
+            <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[01]</span>
             <Zap class="h-4 w-4 text-accent" />
             <span class="text-sm font-medium text-accent">Ближайшие события</span>
           </div>
@@ -508,10 +514,11 @@ onMounted(async () => {
       <div class="mt-5 grid gap-5 md:grid-cols-2">
         <!-- Chat Quests -->
         <div
-          class="rounded-3xl border bg-card p-5"
+          class="rounded-sm terminal-card bg-card p-5"
         >
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
+              <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[02]</span>
               <Flame class="h-4 w-4 text-orange-500" />
               <span class="text-sm font-semibold">Задания в чатах</span>
             </div>
@@ -530,7 +537,7 @@ onMounted(async () => {
             <div
               v-for="quest in activeQuests.slice(0, 3)"
               :key="quest.id"
-              class="rounded-2xl bg-muted/40 p-3.5"
+              class="rounded-sm bg-muted/30 border border-border/50 p-3.5"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -595,10 +602,11 @@ onMounted(async () => {
 
         <!-- Open Tasks -->
         <div
-          class="rounded-3xl border bg-card p-5"
+          class="rounded-sm terminal-card bg-card p-5"
         >
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
+              <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[03]</span>
               <ClipboardList class="h-4 w-4 text-blue-500" />
               <span class="text-sm font-semibold">Биржа заданий</span>
             </div>
@@ -618,7 +626,7 @@ onMounted(async () => {
               v-for="task in openTasks"
               :key="task.id"
               to="/tasks"
-              class="block rounded-2xl bg-muted/40 hover:bg-muted/60 transition-colors p-3.5"
+              class="block rounded-sm bg-muted/30 border border-border/50 hover:bg-muted/60 transition-colors p-3.5"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
@@ -653,9 +661,10 @@ onMounted(async () => {
       <!-- Chat Highlights -->
       <div
         v-if="highlights.length > 0"
-        class="mt-5 rounded-3xl border bg-card p-5"
+        class="mt-5 rounded-sm terminal-card bg-card p-5"
       >
         <div class="flex items-center gap-2 mb-4">
+          <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[04]</span>
           <MessageSquare class="h-4 w-4 text-yellow-500" />
           <span class="text-sm font-semibold">Лучшее из чатов</span>
         </div>
@@ -663,7 +672,7 @@ onMounted(async () => {
           <div
             v-for="hl in highlights"
             :key="hl.id"
-            class="rounded-2xl bg-muted/40 p-3.5"
+            class="rounded-sm bg-muted/30 border border-border/50 p-3.5"
           >
             <div class="flex items-center gap-2 mb-1.5">
               <div class="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10 shrink-0">
@@ -693,10 +702,11 @@ onMounted(async () => {
 
       <!-- Achievements Preview -->
       <div
-        class="mt-5 rounded-3xl border bg-card p-5"
+        class="mt-5 rounded-sm terminal-card bg-card p-5"
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[05]</span>
             <Award class="h-4 w-4 text-purple-500" />
             <span class="text-sm font-semibold">Достижения</span>
           </div>
@@ -714,7 +724,7 @@ onMounted(async () => {
           <div
             v-for="ach in achievements.recent"
             :key="ach.id"
-            class="flex items-center gap-2.5 rounded-2xl bg-muted/40 px-4 py-3 shrink-0"
+            class="flex items-center gap-2.5 rounded-sm bg-muted/30 border border-border/50 px-4 py-3 shrink-0"
           >
             <div class="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 shrink-0">
               <component
@@ -751,7 +761,7 @@ onMounted(async () => {
       >
         <RouterLink
           to="/leaderboard"
-          class="rounded-2xl border bg-card hover:bg-muted/50 transition-colors p-4 text-center"
+          class="rounded-sm border bg-card hover:bg-muted/50 transition-colors p-4 text-center terminal-card"
         >
           <Trophy class="h-5 w-5 mx-auto text-yellow-500 mb-1.5" />
           <p class="text-xs font-medium">
@@ -760,7 +770,7 @@ onMounted(async () => {
         </RouterLink>
         <RouterLink
           to="/marketplace"
-          class="rounded-2xl border bg-card hover:bg-muted/50 transition-colors p-4 text-center"
+          class="rounded-sm border bg-card hover:bg-muted/50 transition-colors p-4 text-center terminal-card"
         >
           <Star class="h-5 w-5 mx-auto text-accent mb-1.5" />
           <p class="text-xs font-medium">
@@ -769,7 +779,7 @@ onMounted(async () => {
         </RouterLink>
         <RouterLink
           to="/mentors"
-          class="rounded-2xl border bg-card hover:bg-muted/50 transition-colors p-4 text-center"
+          class="rounded-sm border bg-card hover:bg-muted/50 transition-colors p-4 text-center terminal-card"
         >
           <Users class="h-5 w-5 mx-auto text-blue-500 mb-1.5" />
           <p class="text-xs font-medium">
@@ -778,7 +788,7 @@ onMounted(async () => {
         </RouterLink>
         <RouterLink
           to="/referals"
-          class="rounded-2xl border bg-card hover:bg-muted/50 transition-colors p-4 text-center"
+          class="rounded-sm border bg-card hover:bg-muted/50 transition-colors p-4 text-center terminal-card"
         >
           <Zap class="h-5 w-5 mx-auto text-orange-500 mb-1.5" />
           <p class="text-xs font-medium">

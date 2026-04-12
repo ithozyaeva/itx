@@ -52,7 +52,7 @@ function formatDate(dateStr: string) {
       <div
         v-for="video in videos"
         :key="video.id"
-        class="rounded-2xl border bg-card overflow-hidden group"
+        class="rounded-sm border bg-card overflow-hidden group"
       >
         <div
           class="relative w-full overflow-hidden"

@@ -68,6 +68,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/seasons
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -116,7 +119,7 @@ onMounted(() => {
 
       <template v-else>
         <!-- Season info -->
-        <div class="rounded-2xl border bg-card border-border p-4 mb-6">
+        <div class="rounded-sm border bg-card border-border p-4 mb-6 terminal-card">
           <div class="flex items-center justify-between">
             <div>
               <h3 class="font-semibold text-lg">
