@@ -28,12 +28,16 @@ jobs:
           key:      ${{ secrets.SSH_DEV_KEY }}
           port:     ${{ secrets.SSH_DEV_PORT }}
           script: |
+            set -e
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Copy shared UI package into frontend directories for Docker context
             cp -r packages/ui platform-frontend/_packages_ui
             cp -r packages/ui admin-frontend/_packages_ui
-            # Build new images with legacy builder (BuildKit ignores --no-cache)
-            DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache
+            # Build each service separately for clearer logs
+            DOCKER_BUILDKIT=0 docker compose -f docker-compose.prod.yml build --no-cache backend
+            DOCKER_BUILDKIT=0 docker compose -f docker-compose.prod.yml build --no-cache landing-frontend
+            DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache platform-frontend
+            DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache admin-frontend
             # Remove temporary copies
             rm -rf platform-frontend/_packages_ui admin-frontend/_packages_ui
             # Restart services with forced recreation to pick up new images
