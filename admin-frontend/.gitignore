@@ -30,3 +30,4 @@ coverage
 *.tsbuildinfo
 
 .env
+_packages_ui/
