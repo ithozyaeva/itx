@@ -259,7 +259,7 @@ onMounted(async () => {
             :key="i"
             class="flex items-center gap-2.5 rounded-sm bg-muted/50 p-3"
           >
-            <div class="w-9 h-9 animate-pulse rounded-xl bg-muted" />
+            <div class="w-9 h-9 animate-pulse rounded-sm bg-muted" />
             <div class="space-y-1.5">
               <div class="h-5 w-12 animate-pulse rounded bg-muted" />
               <div class="h-3 w-16 animate-pulse rounded bg-muted" />
@@ -357,7 +357,7 @@ onMounted(async () => {
               to="/points"
               class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
-              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-yellow-500/10">
+              <div class="flex items-center justify-center w-9 h-9 rounded-sm bg-yellow-500/10">
                 <Star class="h-4 w-4 text-yellow-500" />
               </div>
               <div class="min-w-0">
@@ -374,7 +374,7 @@ onMounted(async () => {
               to="/achievements"
               class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
-              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-purple-500/10">
+              <div class="flex items-center justify-center w-9 h-9 rounded-sm bg-purple-500/10">
                 <Trophy class="h-4 w-4 text-purple-500" />
               </div>
               <div class="min-w-0">
@@ -391,7 +391,7 @@ onMounted(async () => {
               to="/events"
               class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
-              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/10">
+              <div class="flex items-center justify-center w-9 h-9 rounded-sm bg-blue-500/10">
                 <Calendar class="h-4 w-4 text-blue-500" />
               </div>
               <div class="min-w-0">
@@ -469,7 +469,7 @@ onMounted(async () => {
               <RouterLink
                 v-if="isMemberOfEvent(event) || isHostOfEvent(event)"
                 to="/events"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-accent/10 text-accent px-4 py-2 text-sm font-medium"
+                class="inline-flex items-center gap-1.5 rounded-sm bg-accent/10 text-accent px-4 py-2 text-sm font-medium"
               >
                 <CheckCircle class="h-4 w-4" />
                 {{ isHostOfEvent(event) ? 'Вы ведущий' : 'Вы записаны' }}
@@ -477,7 +477,7 @@ onMounted(async () => {
               <RouterLink
                 v-else
                 to="/events"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                class="inline-flex items-center gap-1.5 rounded-sm bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
               >
                 Записаться
                 <ArrowRight class="h-3.5 w-3.5" />
@@ -502,7 +502,7 @@ onMounted(async () => {
           </p>
           <RouterLink
             to="/events"
-            class="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors mt-3"
+            class="inline-flex items-center gap-1.5 rounded-sm bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors mt-3"
           >
             Посмотреть события
             <ArrowRight class="h-3.5 w-3.5" />

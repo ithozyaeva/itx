@@ -215,7 +215,7 @@ function goToToday() {
     </div>
 
     <!-- Calendar grid -->
-    <div class="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden">
+    <div class="grid grid-cols-7 gap-px bg-border rounded-sm overflow-hidden">
       <button
         v-for="(day, index) in calendarDays"
         :key="index"

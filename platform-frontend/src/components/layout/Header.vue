@@ -22,7 +22,7 @@ function logout() {
   >
     <div class="container mx-auto px-3 sm:px-4 flex h-14 sm:h-16 items-center justify-between gap-2">
       <button
-        class="p-2 rounded-xl bg-background border border-border md:hidden"
+        class="p-2 rounded-sm bg-background border border-border md:hidden"
         aria-label="Открыть меню"
         @click="toggleSidebar"
       >

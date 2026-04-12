@@ -286,7 +286,7 @@ onMounted(() => {
         Барахолка
       </Typography>
       <button
-        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
         @click="showCreateDialog = true"
       >
         <Plus class="h-4 w-4" />
@@ -329,7 +329,7 @@ onMounted(() => {
               v-model="searchQuery"
               type="text"
               placeholder="Поиск по названию..."
-              class="w-full sm:w-64 rounded-xl border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full sm:w-64 rounded-sm border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
           </div>
         </div>
@@ -583,7 +583,7 @@ onMounted(() => {
               v-model="newTitle"
               type="text"
               required
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Название товара"
             >
           </FormField>
@@ -592,7 +592,7 @@ onMounted(() => {
             <label class="block text-sm font-medium mb-1">Описание</label>
             <textarea
               v-model="newDescription"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
               placeholder="Подробное описание..."
             />
           </div>
@@ -602,7 +602,7 @@ onMounted(() => {
             <input
               v-model="newPrice"
               type="text"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Договорная"
             >
           </div>
@@ -612,7 +612,7 @@ onMounted(() => {
             <input
               v-model="newCity"
               type="text"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Москва"
             >
           </div>
@@ -635,7 +635,7 @@ onMounted(() => {
             <div class="flex gap-2">
               <button
                 type="button"
-                class="px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors"
+                class="px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors"
                 :class="newCondition === 'NEW'
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-card border-border text-muted-foreground hover:text-foreground'"
@@ -645,7 +645,7 @@ onMounted(() => {
               </button>
               <button
                 type="button"
-                class="px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors"
+                class="px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors"
                 :class="newCondition === 'USED'
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-card border-border text-muted-foreground hover:text-foreground'"
@@ -660,7 +660,7 @@ onMounted(() => {
             <label class="block text-sm font-medium mb-1">Дефекты</label>
             <textarea
               v-model="newDefects"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
               placeholder="Опишите дефекты..."
             />
           </div>
@@ -669,7 +669,7 @@ onMounted(() => {
             <label class="block text-sm font-medium mb-1">Комплектация</label>
             <textarea
               v-model="newPackageContents"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
               placeholder="Что входит в комплект..."
             />
           </div>
@@ -687,7 +687,7 @@ onMounted(() => {
           <DialogFooter>
             <button
               type="submit"
-              class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               :disabled="!newTitle.trim() || isSubmitting"
             >
               <Loader2

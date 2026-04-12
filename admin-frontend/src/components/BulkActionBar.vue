@@ -15,7 +15,7 @@ const emit = defineEmits<{
 <template>
   <div
     v-if="count > 0"
-    class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border rounded-2xl shadow-lg px-6 py-3"
+    class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border rounded-sm shadow-lg px-6 py-3 font-mono"
   >
     <span class="text-sm font-medium">Выбрано: {{ count }}</span>
     <ConfirmDialog

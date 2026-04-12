@@ -138,7 +138,7 @@ onMounted(() => {
         >
           <div class="flex items-start gap-3">
             <div
-              class="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+              class="flex items-center justify-center w-10 h-10 rounded-sm shrink-0"
               :class="quest.completed ? 'bg-green-500/20' : 'bg-orange-500/10'"
             >
               <component

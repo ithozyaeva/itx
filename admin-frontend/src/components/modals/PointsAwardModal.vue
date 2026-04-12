@@ -112,7 +112,7 @@ async function handleSubmit() {
           />
           <div
             v-if="showDropdown && memberResults.length > 0"
-            class="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-auto"
+            class="absolute z-50 mt-1 w-full bg-popover border rounded-sm shadow-md max-h-48 overflow-auto"
           >
             <button
               v-for="member in memberResults"

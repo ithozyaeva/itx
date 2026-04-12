@@ -164,7 +164,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
       <button
         v-if="canConvert"
         type="button"
-        class="mt-3 w-full rounded-xl py-2 px-4 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+        class="mt-3 w-full rounded-sm py-2 px-4 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
         :disabled="isConverting"
         @click="handleConvert"
       >

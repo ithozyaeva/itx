@@ -128,7 +128,7 @@ onUnmounted(() => {
 
       <!-- Highlight cutout -->
       <div
-        class="absolute rounded-xl ring-2 ring-primary bg-transparent z-[101] pointer-events-none transition-all duration-300"
+        class="absolute rounded-sm ring-2 ring-primary bg-transparent z-[101] pointer-events-none transition-all duration-300"
         :style="highlightStyle"
       />
 

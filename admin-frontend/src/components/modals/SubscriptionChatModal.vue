@@ -216,7 +216,7 @@ async function handleSave() {
           <Label>Тип</Label>
           <select
             v-model="formChatType"
-            class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs"
           >
             <option value="supergroup">
               supergroup
@@ -261,7 +261,7 @@ async function handleSave() {
           <Label>Anchor для тира</Label>
           <select
             v-model.number="formAnchorTierID"
-            class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs"
           >
             <option :value="null">
               Выберите тир

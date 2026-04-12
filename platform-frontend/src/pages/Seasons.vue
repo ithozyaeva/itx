@@ -155,7 +155,7 @@ onMounted(() => {
           <div
             v-for="entry in selectedSeason.leaderboard"
             :key="entry.memberId"
-            class="flex items-center gap-3 rounded-xl border bg-card border-border p-3"
+            class="flex items-center gap-3 rounded-sm border bg-card border-border p-3"
           >
             <div class="w-8 text-center shrink-0">
               <component

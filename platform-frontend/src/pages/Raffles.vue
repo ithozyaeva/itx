@@ -214,7 +214,7 @@ onMounted(() => {
                 </SelectContent>
               </Select>
               <button
-                class="flex-1 px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                class="flex-1 px-4 py-1.5 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 :disabled="buyingId === raffle.id"
                 @click="buyTickets(raffle.id)"
               >

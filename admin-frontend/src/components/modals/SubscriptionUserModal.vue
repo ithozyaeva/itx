@@ -172,7 +172,7 @@ function formatDate(dateStr?: string) {
             <Label class="text-xs">Установить ручной тир</Label>
             <select
               v-model="selectedTierSlug"
-              class="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+              class="w-full mt-1 h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs"
             >
               <option value="">
                 Выберите тир

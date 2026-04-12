@@ -25,6 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton'
       <Skeleton class="h-4 w-4" />
       <Skeleton class="h-3.5 w-28" />
     </div>
-    <Skeleton class="h-9 w-32 rounded-xl mt-2" />
+    <Skeleton class="h-9 w-32 rounded-sm mt-2" />
   </div>
 </template>

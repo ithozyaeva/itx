@@ -164,7 +164,7 @@ onMounted(() => {
       </Typography>
       <button
         v-if="!isInAnyGuild()"
-        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="flex items-center gap-2 px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         @click="showCreateDialog = true"
       >
         <Plus class="h-4 w-4" />
@@ -243,7 +243,7 @@ onMounted(() => {
             <div class="flex gap-2">
               <button
                 v-if="!guild.isMember && !isInAnyGuild()"
-                class="flex-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                class="flex-1 px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 :disabled="actionInProgress === guild.id"
                 @click="joinGuild(guild.id)"
               >
@@ -251,7 +251,7 @@ onMounted(() => {
               </button>
               <button
                 v-if="guild.isMember && guild.ownerId !== user?.id"
-                class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-sm text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
                 :disabled="actionInProgress === guild.id"
                 @click="leaveGuild(guild.id)"
               >
@@ -267,7 +267,7 @@ onMounted(() => {
               >
                 <template #trigger>
                   <button
-                    class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto disabled:opacity-50"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-sm text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors ml-auto disabled:opacity-50"
                     :disabled="actionInProgress === guild.id"
                   >
                     <Trash2 class="h-3.5 w-3.5" />
@@ -296,7 +296,7 @@ onMounted(() => {
               v-model="newName"
               type="text"
               required
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Название гильдии"
             >
           </div>
@@ -304,7 +304,7 @@ onMounted(() => {
             <label class="block text-sm font-medium mb-1">Описание</label>
             <textarea
               v-model="newDescription"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
               placeholder="О чём ваша гильдия..."
             />
           </div>
@@ -325,7 +325,7 @@ onMounted(() => {
           <DialogFooter>
             <button
               type="submit"
-              class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               :disabled="!newName.trim() || isSubmitting"
             >
               <Loader2
@@ -349,7 +349,7 @@ onMounted(() => {
           <div
             v-for="member in selectedGuildMembers"
             :key="member.memberId"
-            class="flex items-center gap-3 p-2 rounded-xl"
+            class="flex items-center gap-3 p-2 rounded-sm"
           >
             <img
               :src="member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.firstName || '?')}&background=random`"

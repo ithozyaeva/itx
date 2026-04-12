@@ -127,13 +127,13 @@ async function handleAvatarUpload(event: Event) {
               v-model="editedUser.firstName"
               type="text"
               placeholder="Имя"
-              class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
             <input
               v-model="editedUser.lastName"
               type="text"
               placeholder="Фамилия"
-              class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
           </div>
         </template>
@@ -150,7 +150,7 @@ async function handleAvatarUpload(event: Event) {
             v-model="editedUser.tg"
             type="text"
             placeholder="Username в Telegram"
-            class="w-full px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-3"
+            class="w-full px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring mt-3"
           >
         </template>
         <div
@@ -186,27 +186,27 @@ async function handleAvatarUpload(event: Event) {
               v-model="editedUser.grade"
               type="text"
               placeholder="Грейд (Junior, Middle, Senior...)"
-              class="w-1/2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-1/2 px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
             <input
               v-model="editedUser.company"
               type="text"
               placeholder="Место работы"
-              class="w-1/2 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-1/2 px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
           </div>
           <textarea
             v-model="editedUser.bio"
             placeholder="О себе..."
             rows="3"
-            class="w-full mt-3 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            class="w-full mt-3 px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
           <input
             v-model="editedUser.birthday"
             type="date"
             placeholder="Дата рождения"
             title="Дата рождения"
-            class="w-full mt-3 px-4 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            class="w-full mt-3 px-4 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
           >
         </template>
         <Button

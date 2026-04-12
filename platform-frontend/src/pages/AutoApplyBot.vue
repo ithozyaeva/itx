@@ -93,7 +93,7 @@ function toggleFaq(index: number) {
         href="https://t.me/roaster_resume_bot"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="inline-flex items-center gap-2 rounded-sm bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
       >
         Открыть бота в Telegram
         <ExternalLink :size="14" />
@@ -111,7 +111,7 @@ function toggleFaq(index: number) {
           :key="index"
           class="flex gap-3 rounded-sm border bg-card border-border p-4"
         >
-          <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary shrink-0">
+          <div class="flex items-center justify-center w-10 h-10 rounded-sm bg-primary/10 text-primary shrink-0">
             <span class="text-sm font-bold">{{ index + 1 }}</span>
           </div>
           <div>
@@ -137,7 +137,7 @@ function toggleFaq(index: number) {
           :key="feature.title"
           class="flex gap-3 rounded-sm border bg-card border-border p-4"
         >
-          <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-muted shrink-0">
+          <div class="flex items-center justify-center w-10 h-10 rounded-sm bg-muted shrink-0">
             <component
               :is="feature.icon"
               class="h-5 w-5 text-muted-foreground"
@@ -195,7 +195,7 @@ function toggleFaq(index: number) {
         href="https://t.me/roaster_resume_bot"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-6 py-3 text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="inline-flex items-center gap-2 rounded-sm bg-primary text-primary-foreground px-6 py-3 text-sm font-medium hover:bg-primary/90 transition-colors"
       >
         <Bot :size="18" />
         Начать пользоваться ботом

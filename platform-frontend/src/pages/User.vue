@@ -74,7 +74,7 @@ const quickLinks = [
     >
       <p>Не удалось загрузить профиль</p>
       <button
-        class="flex items-center gap-2 px-4 py-2 rounded-xl border hover:bg-muted transition-colors text-sm"
+        class="flex items-center gap-2 px-4 py-2 rounded-sm border hover:bg-muted transition-colors text-sm"
         @click="loadError = false; isLoading = true; profileService.getMe().then(() => { isLoading = false }).catch((err) => { handleError(err); loadError = true; isLoading = false })"
       >
         <RefreshCw class="h-4 w-4" />

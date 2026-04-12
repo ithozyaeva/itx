@@ -92,7 +92,7 @@ async function handleUpload() {
         ref="fileInput"
         type="file"
         accept=".pdf,.doc,.docx"
-        class="block w-full border border-input rounded-xl bg-transparent px-4 py-3 cursor-pointer text-sm"
+        class="block w-full border border-input rounded-sm bg-transparent px-4 py-3 cursor-pointer text-sm"
         @change="onFileChange"
       >
 
