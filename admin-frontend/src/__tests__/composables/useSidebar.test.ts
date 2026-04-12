@@ -76,9 +76,10 @@ describe('useSidebar', () => {
       const { sidebarItems } = useSidebar()
 
       const expectedPaths = [
-        '/dashboard', '/mentors', '/members', '/reviews', '/mentor-reviews',
-        '/events', '/resumes', '/referrals', '/points', '/chat-activity',
-        '/chat-quests', '/seasons', '/raffles', '/minigames', '/subscriptions', '/audit-logs',
+        '/dashboard', '/mentors', '/members', '/events', '/resumes',
+        '/reviews', '/mentor-reviews', '/points', '/chat-activity',
+        '/chat-quests', '/seasons', '/raffles', '/minigames',
+        '/subscriptions', '/referrals', '/audit-logs',
       ]
       const actualPaths = sidebarItems.value.map(i => i.path)
       expect(actualPaths).toEqual(expectedPaths)
