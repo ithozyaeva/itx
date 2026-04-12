@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Check } from 'lucide-vue-next'
 import { computed } from 'vue'
 import UiButton from './UiButton.vue'
-import UiTypography from './UiTypography.vue'
 
 const props = defineProps<{
   name: string
@@ -10,6 +10,8 @@ const props = defineProps<{
   features: string[]
   link: string
   variant?: 'default' | 'highlighted'
+  tierIndex?: string
+  tierLabel?: string
 }>()
 
 const discount = computed(() => {
@@ -25,73 +27,117 @@ const discount = computed(() => {
 
 <template>
   <div
-    class="price-card"
-    :class="variant || 'default'"
+    class="price-card group relative flex flex-col border transition-all duration-300"
+    :class="variant === 'highlighted'
+      ? 'bg-accent text-[#0b0d0c] border-accent shadow-[0_30px_80px_-30px_hsl(var(--accent)/0.5)] md:-translate-y-3'
+      : 'bg-background/80 text-foreground border-accent/20 hover:border-accent/50'"
   >
-    <div class="content">
-      <div class="header">
-        <UiTypography
-          variant="h3"
-          as="h3"
-          class="name"
-        >
-          {{ name }}
-        </UiTypography>
-        <div class="price-container">
-          <UiTypography
-            v-if="discount"
-            as="p"
-            variant="title"
-            class="discount"
-          >
-            &minus;{{ discount }}%
-          </UiTypography>
-        </div>
+    <!-- corner brackets -->
+    <span
+      class="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2"
+      :class="variant === 'highlighted' ? 'border-[#0b0d0c]' : 'border-accent'"
+    />
+    <span
+      class="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2"
+      :class="variant === 'highlighted' ? 'border-[#0b0d0c]' : 'border-accent'"
+    />
+    <span
+      class="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2"
+      :class="variant === 'highlighted' ? 'border-[#0b0d0c]' : 'border-accent'"
+    />
+    <span
+      class="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2"
+      :class="variant === 'highlighted' ? 'border-[#0b0d0c]' : 'border-accent'"
+    />
+
+    <!-- header -->
+    <div
+      class="px-6 md:px-7 pt-6 pb-5 border-b"
+      :class="variant === 'highlighted' ? 'border-[#0b0d0c]/15' : 'border-accent/15'"
+    >
+      <div
+        class="flex items-center justify-between font-mono text-[11px] tracking-[0.1em] uppercase mb-4"
+        :class="variant === 'highlighted' ? 'text-[#0b0d0c]/70' : 'text-foreground/50'"
+      >
+        <span>[ tier.{{ tierIndex }} ]</span>
+        <span
+          v-if="variant === 'highlighted'"
+          class="px-2 py-0.5 bg-[#0b0d0c] text-accent"
+        >recommended</span>
+        <span v-else-if="tierLabel">{{ tierLabel }}</span>
       </div>
-      <ul class="features-container">
-        <li
-          v-for="(feature, index) in features"
-          :key="index"
-          class="feature"
+      <h3
+        class="font-display uppercase text-2xl md:text-3xl leading-tight"
+        :class="variant === 'highlighted' ? 'text-[#0b0d0c]' : 'text-accent'"
+      >
+        {{ name }}
+      </h3>
+
+      <div class="mt-5 flex items-baseline gap-2">
+        <span
+          v-if="oldPrice"
+          class="font-mono text-sm line-through"
+          :class="variant === 'highlighted' ? 'text-[#0b0d0c]/50' : 'text-foreground/30'"
         >
-          <UiTypography variant="body-s">
-            {{ feature }}
-          </UiTypography>
-        </li>
-      </ul>
+          {{ oldPrice }}₽
+        </span>
+        <span
+          class="font-display text-4xl md:text-5xl leading-none"
+          :class="variant === 'highlighted' ? 'text-[#0b0d0c]' : 'text-foreground'"
+        >
+          {{ price }}
+        </span>
+        <span
+          class="font-display text-2xl md:text-3xl"
+          :class="variant === 'highlighted' ? 'text-[#0b0d0c]/80' : 'text-foreground/70'"
+        >
+          ₽
+        </span>
+        <span
+          class="font-mono text-xs self-end pb-1"
+          :class="variant === 'highlighted' ? 'text-[#0b0d0c]/60' : 'text-foreground/40'"
+        >
+          /мес
+        </span>
+        <span
+          v-if="discount"
+          class="ml-auto font-mono text-[11px] px-2 py-1 border tracking-wider"
+          :class="variant === 'highlighted'
+            ? 'border-[#0b0d0c] text-[#0b0d0c]'
+            : 'border-term-amber text-term-amber'"
+        >
+          −{{ discount }}%
+        </span>
+      </div>
     </div>
-    <div class="footer">
-      <div class="price-container">
-        <div class="prices">
-          <UiTypography
-            v-if="oldPrice"
-            variant="price"
-            class="old-price"
-          >
-            {{ oldPrice }}&thinsp;&#8381;
-          </UiTypography>
-          <UiTypography
-            variant="price"
-            class="price"
-          >
-            {{ price }}&thinsp;&#8381;
-          </UiTypography>
-        </div>
-        <UiTypography
-          variant="label"
-          class="period"
-        >
-          в месяц
-        </UiTypography>
-      </div>
+
+    <!-- features -->
+    <ul class="flex-1 px-6 md:px-7 py-6 space-y-3">
+      <li
+        v-for="(feature, index) in features"
+        :key="index"
+        class="flex items-start gap-3 text-sm md:text-[15px] leading-snug"
+        :class="variant === 'highlighted' ? 'text-[#0b0d0c]' : 'text-foreground/80'"
+      >
+        <Check
+          class="w-4 h-4 mt-0.5 shrink-0"
+          :class="variant === 'highlighted' ? 'text-[#0b0d0c]' : 'text-accent'"
+          stroke-width="3"
+        />
+        <span>{{ feature }}</span>
+      </li>
+    </ul>
+
+    <!-- footer -->
+    <div class="px-6 md:px-7 pb-6">
       <UiButton
         as="a"
         :href="link"
         target="_blank"
-        variant="filled"
-        class="button"
+        :variant="variant === 'highlighted' ? 'dark-filled' : 'filled'"
+        class="w-full text-center"
       >
-        Подписаться
+        Подписаться →
       </UiButton>
     </div>
   </div>
@@ -99,143 +145,12 @@ const discount = computed(() => {
 
 <style scoped>
 .price-card {
-  box-sizing: border-box;
-  border-radius: var(--radius-card);
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 32px;
-  min-width: 300px;
-  min-height: 360px;
-  padding: 28px 24px 24px;
-  display: flex;
+  border-radius: 2px;
+  min-width: 280px;
+  min-height: 480px;
 }
-
-.content {
-  text-align: center;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  display: flex;
-}
-
-.header {
-  text-align: center;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  display: flex;
-}
-
-.features-container {
-  text-align: start;
-  flex-direction: column;
-  align-items: start;
-  gap: 8px;
-  max-width: 400px;
-  padding-left: 20px;
-  list-style: outside;
-  display: flex;
-}
-
-.price-container {
-  flex-direction: column;
-  align-items: center;
-  display: flex;
-}
-
-.prices {
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 8px;
-  display: flex;
-}
-
-.prices .old-price {
-  text-decoration: line-through;
-}
-
-.discount {
-  border-radius: var(--radius-default);
-  border: 1px solid;
-  padding: 4px 8px;
-}
-
-.footer {
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  display: flex;
-}
-
-.footer .button {
-  justify-content: center;
-  align-items: center;
-  width: fit-content;
-  display: flex;
-}
-
-/* Default variant */
-.price-card.default {
-  background-color: var(--color-green-black-500);
-}
-
-.price-card.default .name {
-  color: var(--color-green-700);
-}
-
-.price-card.default .discount {
-  color: var(--color-white);
-  border-color: var(--color-white);
-}
-
-.price-card.default .price {
-  color: var(--color-white);
-}
-
-.price-card.default .old-price {
-  color: var(--color-white);
-  opacity: 0.1;
-}
-
-.price-card.default .period {
-  color: var(--color-white);
-  opacity: 0.4;
-}
-
-.price-card.default .feature {
-  color: var(--color-white);
-}
-
-/* Highlighted variant */
-.price-card.highlighted {
-  background-color: var(--color-green-700);
-}
-
-.price-card.highlighted .name {
-  color: var(--color-green-black-700);
-}
-
-.price-card.highlighted .discount {
-  color: var(--color-green-black-700);
-  border-color: var(--color-green-black-700);
-}
-
-.price-card.highlighted .price {
-  color: var(--color-green-black-700);
-}
-
-.price-card.highlighted .old-price {
-  color: var(--color-green-black-700);
-  opacity: 0.3;
-}
-
-.price-card.highlighted .period {
-  color: var(--color-green-black-700);
-  opacity: 0.4;
-}
-
-.price-card.highlighted .feature {
-  color: var(--color-green-black-700);
+.price-card :deep(.ui-button) {
+  width: 100%;
+  border-radius: 2px !important;
 }
 </style>

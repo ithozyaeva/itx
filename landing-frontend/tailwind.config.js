@@ -16,38 +16,43 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
+        display: ['Unbounded', 'Space Grotesk', 'sans-serif'],
       },
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
+        'term-amber': '#ffb547',
+        'term-magenta': '#ff4d8b',
+        'term-cyan': '#5eead4',
+        'border': 'hsl(var(--border))',
+        'input': 'hsl(var(--input))',
+        'ring': 'hsl(var(--ring))',
+        'background': 'hsl(var(--background))',
+        'foreground': 'hsl(var(--foreground))',
+        'primary': {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
         },
-        secondary: {
+        'secondary': {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
-        destructive: {
+        'destructive': {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
-        muted: {
+        'muted': {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
-        accent: {
+        'accent': {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        popover: {
+        'popover': {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
-        card: {
+        'card': {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
@@ -58,6 +63,23 @@ module.exports = {
         sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
+        'marquee': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+        'type-caret': {
+          '50%': { opacity: 0 },
+        },
+        'glitch-x': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%': { transform: 'translateX(-1px)' },
+          '40%': { transform: 'translateX(1px)' },
+          '60%': { transform: 'translateX(-0.5px)' },
+        },
+        'scan': {
+          '0%': { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '0 200%' },
+        },
         'accordion-down': {
           from: { height: 0 },
           to: { height: 'var(--radix-accordion-content-height)' },
@@ -104,6 +126,10 @@ module.exports = {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'card-reveal': 'card-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
         'card-reveal-highlight': 'card-reveal-highlight 1s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'marquee': 'marquee 38s linear infinite',
+        'marquee-slow': 'marquee 60s linear infinite',
+        'type-caret': 'type-caret 1.1s steps(1) infinite',
+        'glitch-x': 'glitch-x 3s steps(1) infinite',
       },
     },
   },

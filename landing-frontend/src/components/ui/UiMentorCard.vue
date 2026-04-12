@@ -126,15 +126,48 @@ onMounted(async () => {
 <style scoped>
 .mentor-card {
   box-sizing: border-box;
-  background-color: var(--color-green-black-600);
-  border-radius: var(--radius-card);
+  background-color: hsl(151 5% 10% / 0.85);
+  border: 1px solid hsl(151 5% 18%);
+  border-radius: 2px;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   gap: 25px;
   width: 100%;
-  padding: 20px 23px 25px;
+  padding: 24px 24px 24px;
   display: flex;
+  position: relative;
+  transition: border-color 250ms ease, transform 250ms ease, background-color 250ms ease;
+}
+
+.mentor-card::before,
+.mentor-card::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--color-green-700);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+.mentor-card::before {
+  top: -1px; left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+.mentor-card::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+.mentor-card:hover {
+  border-color: hsl(151 60% 54% / 0.5);
+  background-color: hsl(151 5% 12% / 0.95);
+}
+.mentor-card:hover::before,
+.mentor-card:hover::after {
+  opacity: 1;
 }
 
 .top-section {
@@ -148,11 +181,14 @@ onMounted(async () => {
 }
 
 .avatar {
-  border-radius: var(--radius-circle);
+  border-radius: 2px;
   flex-shrink: 0;
   width: 106px;
   height: 106px;
   overflow: hidden;
+  border: 1px solid hsl(151 5% 22%);
+  outline: 1px solid hsl(151 60% 54% / 0.2);
+  outline-offset: 3px;
 }
 
 .avatar img {

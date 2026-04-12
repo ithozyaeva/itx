@@ -3,8 +3,9 @@ import type { Mentor } from '@/components/ui/MentorsCard.vue'
 import { AlertCircle } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
-import Button from '@/components/ui/UiButton.vue'
+import SectionHeader from '@/components/ui/SectionHeader.vue'
 
+import Button from '@/components/ui/UiButton.vue'
 import MentorCard from '@/components/ui/UiMentorCard.vue'
 import TagsGroup from '@/components/ui/UiTagsGroup.vue'
 import Typography from '@/components/ui/UiTypography.vue'
@@ -126,7 +127,7 @@ onMounted(fetchMentors)
 <template>
   <section
     id="mentors"
-    class="w-full pt-16 md:pt-24 lg:pt-32"
+    class="w-full pt-20 md:pt-32 lg:pt-40"
   >
     <div class="container px-6 md:px-10">
       <div
@@ -152,30 +153,24 @@ onMounted(fetchMentors)
 
       <div
         v-else
-        class="flex flex-col gap-9"
+        class="flex flex-col gap-10 md:gap-14"
       >
-        <div class="flex flex-col items-center justify-center gap-8">
-          <div class="flex flex-col items-center justify-center gap-5">
-            <Typography
-              variant="h2"
-              as="h2"
-              class="text-accent"
-            >
-              База менторов
-            </Typography>
-            <Typography
-              variant="body-xl"
-              as="p"
-              class="text-center"
-            >
-              Эксперты нашего сообщества, которые готовы поделиться экспертизой
-            </Typography>
+        <SectionHeader
+          index="02"
+          path="~/community/mentors.db"
+          title="База менторов"
+          subtitle="Эксперты сообщества, готовые поделиться опытом. Фильтруй по направлению — найди своего."
+        />
+
+        <div class="flex flex-col gap-3 items-start">
+          <div class="font-mono text-[11px] text-foreground/40 tracking-[0.1em] uppercase">
+            $ grep --filter=specialization
           </div>
           <TagsGroup
             v-model="selectedSpecialization"
             :tags="specializations"
             :multiple="true"
-            class="justify-center"
+            class="justify-start"
           />
         </div>
 

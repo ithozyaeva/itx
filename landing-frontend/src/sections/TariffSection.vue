@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import SectionHeader from '@/components/ui/SectionHeader.vue'
 import PriceCard from '@/components/ui/UiPriceCard.vue'
-import Typography from '@/components/ui/UiTypography.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 
 interface Tariff {
@@ -12,6 +12,8 @@ interface Tariff {
   features: string[]
   link: string
   isPopular?: boolean
+  tierIndex: string
+  tierLabel: string
 }
 
 const yandexMetrika = useYandexMetrika()
@@ -28,6 +30,8 @@ const tariffs: Tariff[] = [
     name: 'Бригадир',
     description: 'Старт в IT-сообществе',
     price: 520,
+    tierIndex: '01',
+    tierLabel: 'basic',
     features: [
       'Доступ ко всем обучающим материалам',
       'IT-чаты по направлениям и грейдам',
@@ -42,6 +46,8 @@ const tariffs: Tariff[] = [
     price: 1000,
     oldPrice: 2000,
     isPopular: true,
+    tierIndex: '02',
+    tierLabel: 'pro',
     features: [
       'Все возможности тарифа «Бригадир»',
       'Приоритетная поддержка и ревью резюме',
@@ -55,6 +61,8 @@ const tariffs: Tariff[] = [
     name: 'KING',
     description: 'Персональное менторство и продвижение',
     price: 5200,
+    tierIndex: '03',
+    tierLabel: 'max',
     features: [
       'Все возможности тарифа «ХОЗЯИН»',
       'Размещение рекламы ваших ресурсов',
@@ -72,28 +80,17 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
   <section
     id="tariffs"
     ref="containerRef"
-    class="w-full pt-12 md:pt-24 lg:pt-32"
+    class="w-full pt-20 md:pt-32 lg:pt-40"
   >
     <div class="container px-6 md:px-10">
-      <div class="flex flex-col items-center justify-center space-y-4 text-center">
-        <div class="space-y-2">
-          <Typography
-            variant="h2"
-            as="h2"
-            class="text-accent"
-          >
-            Тарифы и подписка
-          </Typography>
-          <Typography
-            variant="body-xl"
-            as="p"
-            class="max-w-[540px]"
-          >
-            Выберите подходящий тариф — подписка оформляется через Boosty, можно сменить план в любой момент
-          </Typography>
-        </div>
-      </div>
-      <div class="grid pt-12 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <SectionHeader
+        index="04"
+        path="~/community/access.sh"
+        title="Уровни доступа"
+        subtitle="Подписка через Boosty. План можно повысить или понизить в любой момент."
+      />
+
+      <div class="grid pt-14 md:pt-16 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 items-stretch">
         <div
           v-for="(tariff, index) in tariffs"
           :key="tariff.name"
@@ -106,6 +103,8 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
             :old-price="tariff.oldPrice"
             :features="tariff.features"
             :link="tariff.link"
+            :tier-index="tariff.tierIndex"
+            :tier-label="tariff.tierLabel"
             :variant="tariff.isPopular ? 'highlighted' : 'default'"
             :class="[
               isVisible
