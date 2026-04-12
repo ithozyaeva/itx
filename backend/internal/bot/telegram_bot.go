@@ -586,15 +586,6 @@ func (b *TelegramBot) checkBirthdays() {
 func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	log.Printf("Received /start command from user %d with args: %s", message.From.ID, message.CommandArguments())
 
-	// Получаем аргументы команды
-	args := strings.Split(message.CommandArguments(), " ")
-	if len(args) == 0 || args[0] == "" {
-		log.Printf("No arguments provided for /start command")
-		b.sendMessage(message.Chat.ID, "Пожалуйста, используйте кнопку авторизации на сайте")
-		return
-	}
-
-	// Первый аргумент - URL для перенаправления
 	redirectUrl := config.CFG.PublicDomain
 	log.Printf("Redirect URL before processing: %s", redirectUrl)
 
