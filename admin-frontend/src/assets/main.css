@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@import '@itx/ui/styles/tokens.css';
-@import '@itx/ui/styles/terminal.css';
+@import '../../../packages/ui/src/styles/tokens.css';
+@import '../../../packages/ui/src/styles/terminal.css';
 
 .terminal-table {
   border-radius: 2px !important;
