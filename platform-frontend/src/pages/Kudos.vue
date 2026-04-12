@@ -135,7 +135,7 @@ onMounted(() => {
         Стена благодарностей
       </Typography>
       <button
-        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
         @click="openDialog"
       >
         <Send class="h-4 w-4" />
@@ -257,7 +257,7 @@ onMounted(() => {
             <textarea
               v-model="message"
               required
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
               placeholder="За что вы хотите поблагодарить?"
             />
           </div>
@@ -267,7 +267,7 @@ onMounted(() => {
           <DialogFooter>
             <button
               type="submit"
-              class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               :disabled="!selectedMemberId || !message.trim() || isSubmitting"
             >
               <Loader2

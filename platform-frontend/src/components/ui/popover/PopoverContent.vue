@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<PopoverContentProps & { class?: HTMLAttri
   <PopoverPortal>
     <PopoverContent
       v-bind="props"
-      :class="cn('z-50 rounded-xl border bg-popover p-3 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95', props.class)"
+      :class="cn('z-50 rounded-sm border bg-popover p-3 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95', props.class)"
     >
       <slot />
     </PopoverContent>

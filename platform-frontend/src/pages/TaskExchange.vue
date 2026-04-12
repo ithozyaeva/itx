@@ -382,7 +382,7 @@ watch(showEditDialog, (open) => {
         Биржа заданий
       </Typography>
       <button
-        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+        class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
         @click="showCreateDialog = true"
       >
         <Plus class="h-4 w-4" />
@@ -424,7 +424,7 @@ watch(showEditDialog, (open) => {
             v-model="searchQuery"
             type="text"
             placeholder="Поиск заданий..."
-            class="w-full sm:w-64 rounded-xl border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full sm:w-64 rounded-sm border border-border bg-background pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
         </div>
       </div>
@@ -616,7 +616,7 @@ watch(showEditDialog, (open) => {
               id="create-title"
               v-model="newTitle"
               type="text"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               :class="{ 'border-destructive': createErrors.title }"
               placeholder="Что нужно сделать?"
             >
@@ -628,7 +628,7 @@ watch(showEditDialog, (open) => {
             <textarea
               id="create-desc"
               v-model="newDescription"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
               placeholder="Подробности задания..."
             />
           </FormField>
@@ -642,14 +642,14 @@ watch(showEditDialog, (open) => {
               type="number"
               min="1"
               max="50"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
           </FormField>
 
           <DialogFooter>
             <button
               type="submit"
-              class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               :disabled="!newTitle.trim() || isSubmitting"
             >
               <Loader2
@@ -689,7 +689,7 @@ watch(showEditDialog, (open) => {
               id="edit-title"
               v-model="editTitle"
               type="text"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               :class="{ 'border-destructive': editErrors.title }"
             >
           </FormField>
@@ -700,7 +700,7 @@ watch(showEditDialog, (open) => {
             <textarea
               id="edit-desc"
               v-model="editDescription"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-24 resize-none"
             />
           </FormField>
           <FormField
@@ -713,14 +713,14 @@ watch(showEditDialog, (open) => {
               type="number"
               min="1"
               max="50"
-              class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
           </FormField>
 
           <DialogFooter>
             <button
               type="submit"
-              class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               :disabled="!editTitle.trim() || isSubmitting"
             >
               <Loader2

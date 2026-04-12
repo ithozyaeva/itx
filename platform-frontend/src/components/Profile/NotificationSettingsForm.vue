@@ -117,7 +117,7 @@ async function handleSubmit() {
         class="w-full space-y-3"
       >
         <div
-          class="flex items-center justify-between py-2 px-3 rounded-xl bg-destructive/5 border border-destructive/20 cursor-pointer"
+          class="flex items-center justify-between py-2 px-3 rounded-sm bg-destructive/5 border border-destructive/20 cursor-pointer"
           @click="toggleMuteAll"
         >
           <div class="flex flex-col">
@@ -142,7 +142,7 @@ async function handleSubmit() {
         <div
           v-for="item in toggleItems"
           :key="item.key"
-          class="flex items-center justify-between py-2 px-3 rounded-xl transition-colors"
+          class="flex items-center justify-between py-2 px-3 rounded-sm transition-colors"
           :class="settings.muteAll ? 'opacity-40 pointer-events-none' : 'hover:bg-accent/50 cursor-pointer'"
           @click="toggleSetting(item.key)"
         >

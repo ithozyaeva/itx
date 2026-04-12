@@ -156,7 +156,7 @@ onMounted(loadReviews)
           <textarea
             v-model="editText"
             rows="3"
-            class="w-full px-3 py-2 border border-input rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none text-sm"
+            class="w-full px-3 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring resize-none text-sm"
           />
           <div class="flex gap-2 mt-2">
             <Button

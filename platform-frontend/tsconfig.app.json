@@ -7,6 +7,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@itx/ui": [
+        "../packages/ui/src"
+      ],
+      "@itx/ui/*": [
+        "../packages/ui/src/*"
       ]
     },
     /* Linting */

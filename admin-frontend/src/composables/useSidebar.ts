@@ -25,113 +25,150 @@ export interface SidebarItem {
   requiredPermission?: Permission
 }
 
-// Global state so Header and Sidebar share the same refs
+export interface SidebarGroup {
+  label?: string
+  items: SidebarItem[]
+}
+
 const isCollapsed = ref(false)
 const isMobileOpen = ref(false)
 
 export function useSidebar() {
   const { hasPermission } = usePermissions()
 
-  const allSidebarItems = ref<SidebarItem[]>([
+  const allSidebarGroups: SidebarGroup[] = [
     {
-      title: 'Дашборд',
-      path: '/dashboard',
-      icon: Home,
-      requiredPermission: 'can_view_admin_panel',
+      label: 'system',
+      items: [
+        {
+          title: 'Дашборд',
+          path: '/dashboard',
+          icon: Home,
+          requiredPermission: 'can_view_admin_panel',
+        },
+      ],
     },
     {
-      title: 'Менторы',
-      path: '/mentors',
-      icon: Users,
-      requiredPermission: 'can_view_admin_mentors',
+      label: 'content',
+      items: [
+        {
+          title: 'Менторы',
+          path: '/mentors',
+          icon: Users,
+          requiredPermission: 'can_view_admin_mentors',
+        },
+        {
+          title: 'Участники',
+          path: '/members',
+          icon: User,
+          requiredPermission: 'can_view_admin_members',
+        },
+        {
+          title: 'События',
+          path: '/events',
+          icon: Calendar,
+          requiredPermission: 'can_view_admin_events',
+        },
+        {
+          title: 'Резюме',
+          path: '/resumes',
+          icon: FileText,
+          requiredPermission: 'can_view_admin_resumes',
+        },
+      ],
     },
     {
-      title: 'Участники',
-      path: '/members',
-      icon: User,
-      requiredPermission: 'can_view_admin_members',
+      label: 'reviews',
+      items: [
+        {
+          title: 'Сообщество',
+          path: '/reviews',
+          icon: MessageSquare,
+          requiredPermission: 'can_view_admin_reviews',
+        },
+        {
+          title: 'Менторы',
+          path: '/mentor-reviews',
+          icon: MessageSquare,
+          requiredPermission: 'can_view_admin_mentors_review',
+        },
+      ],
     },
     {
-      title: 'Отзывы на сообщество',
-      path: '/reviews',
-      icon: MessageSquare,
-      requiredPermission: 'can_view_admin_reviews',
+      label: 'gamification',
+      items: [
+        {
+          title: 'Баллы',
+          path: '/points',
+          icon: Star,
+          requiredPermission: 'can_view_admin_points',
+        },
+        {
+          title: 'Активность',
+          path: '/chat-activity',
+          icon: BarChart3,
+        },
+        {
+          title: 'Задания',
+          path: '/chat-quests',
+          icon: Award,
+        },
+        {
+          title: 'Сезоны',
+          path: '/seasons',
+          icon: Trophy,
+        },
+        {
+          title: 'Розыгрыши',
+          path: '/raffles',
+          icon: Gift,
+        },
+        {
+          title: 'Мини-игры',
+          path: '/minigames',
+          icon: Dice5,
+        },
+      ],
     },
     {
-      title: 'Отзывы на менторов',
-      path: '/mentor-reviews',
-      icon: MessageSquare,
-      requiredPermission: 'can_view_admin_mentors_review',
+      label: 'config',
+      items: [
+        {
+          title: 'Подписки',
+          path: '/subscriptions',
+          icon: CreditCard,
+          requiredPermission: 'can_view_admin_subscriptions',
+        },
+        {
+          title: 'Рефералы',
+          path: '/referrals',
+          icon: Link,
+        },
+        {
+          title: 'Журнал',
+          path: '/audit-logs',
+          icon: ClipboardList,
+          requiredPermission: 'can_view_admin_audit_logs',
+        },
+      ],
     },
-    {
-      title: 'События',
-      path: '/events',
-      icon: Calendar,
-      requiredPermission: 'can_view_admin_events',
-    },
-    {
-      title: 'Резюме',
-      path: '/resumes',
-      icon: FileText,
-      requiredPermission: 'can_view_admin_resumes',
-    },
-    {
-      title: 'Рефералы',
-      path: '/referrals',
-      icon: Link,
-    },
-    {
-      title: 'Баллы',
-      path: '/points',
-      icon: Star,
-      requiredPermission: 'can_view_admin_points',
-    },
-    {
-      title: 'Активность чатов',
-      path: '/chat-activity',
-      icon: BarChart3,
-    },
-    {
-      title: 'Задания чатов',
-      path: '/chat-quests',
-      icon: Award,
-    },
-    {
-      title: 'Сезоны',
-      path: '/seasons',
-      icon: Trophy,
-    },
-    {
-      title: 'Розыгрыши',
-      path: '/raffles',
-      icon: Gift,
-    },
-    {
-      title: 'Мини-игры',
-      path: '/minigames',
-      icon: Dice5,
-    },
-    {
-      title: 'Подписки',
-      path: '/subscriptions',
-      icon: CreditCard,
-      requiredPermission: 'can_view_admin_subscriptions',
-    },
-    {
-      title: 'Журнал действий',
-      path: '/audit-logs',
-      icon: ClipboardList,
-      requiredPermission: 'can_view_admin_audit_logs',
-    },
-  ])
+  ]
+
+  const sidebarGroups = computed(() => {
+    return allSidebarGroups
+      .map(group => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (!item.requiredPermission)
+            return true
+          return hasPermission.value(item.requiredPermission)
+        }),
+      }))
+      .filter(group => group.items.length > 0)
+  })
 
   const sidebarItems = computed(() => {
-    return allSidebarItems.value.filter((item) => {
-      if (!item.requiredPermission) {
-        return true
-      }
-      return hasPermission.value(item.requiredPermission)
-    })
+    return sidebarGroups.value.flatMap(g => g.items)
   })
 
   const toggleSidebar = () => {
@@ -150,6 +187,7 @@ export function useSidebar() {
     isCollapsed,
     isMobileOpen,
     sidebarItems,
+    sidebarGroups,
     toggleSidebar,
     toggleMobileSidebar,
     closeMobileSidebar,

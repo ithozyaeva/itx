@@ -36,7 +36,7 @@ function resetFilters() {
 </script>
 
 <template>
-  <Card class="p-4 rounded-lg mb-6">
+  <Card class="p-4 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <Label for="username" class="text-sm font-medium">TG username</Label>

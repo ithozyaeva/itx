@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
         <Skeleton class="h-5 w-5 rounded-full" />
         <Skeleton class="h-3.5 w-24" />
       </div>
-      <Skeleton class="h-9 w-24 rounded-xl" />
+      <Skeleton class="h-9 w-24 rounded-sm" />
     </div>
   </div>
 </template>
