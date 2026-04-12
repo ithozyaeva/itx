@@ -16,6 +16,9 @@ jobs:
           key:      ${{ secrets.SSH_DEV_KEY }}
           port:     ${{ secrets.SSH_DEV_PORT }}
           script: |
+            # Free disk space first
+            docker system prune -af || true
+            docker builder prune -af || true
             cd ${{ secrets.PROJECT_PROD_PATH }}
             git fetch --all
             git reset --hard origin/master
@@ -30,9 +33,6 @@ jobs:
           command_timeout: 30m
           script: |
             cd ${{ secrets.PROJECT_PROD_PATH }}
-            # Free disk space before building
-            docker system prune -af --volumes --filter "until=24h" || true
-            docker builder prune -af || true
             # Copy shared UI package into frontend directories for Docker context
             cp -r packages/ui platform-frontend/_packages_ui
             cp -r packages/ui admin-frontend/_packages_ui
