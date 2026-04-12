@@ -61,7 +61,7 @@ onUnmounted(() => {
     :class="{ 'bg-background/80 backdrop-blur-[25px] border-b border-accent/15': isScrolled, 'bg-transparent backdrop-blur-0 border-b border-transparent': !isScrolled }"
   >
     <div class="container px-6 md:px-10 flex gap-5 h-[var(--header-height)] items-center justify-between md:justify-between">
-      <div class="flex items-center gap-4 lg:gap-10">
+      <div class="flex items-center gap-3 lg:gap-8 min-w-0">
         <a
           href="/"
           class="flex items-center gap-3 font-bold text-xl group"
@@ -78,7 +78,7 @@ onUnmounted(() => {
       </div>
       <div
         v-if="!isMobile"
-        class="flex justify-end "
+        class="flex justify-end shrink-0"
       >
         <TelegramAuth
           v-if="!tgUser"
