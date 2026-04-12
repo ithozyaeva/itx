@@ -1,11 +1,13 @@
-.git
-pgdata
-certbot
-static
-docs
-*.md
-*.tsv
-platform-fix-results.tsv
+# Exclude everything by default
+*
+
+# Include only what frontend builds need
+!packages/ui/
+!admin-frontend/
+!platform-frontend/
+!landing-frontend/
+
+# Exclude heavy dirs inside included paths
 **/node_modules
 **/dist
 **/.vite
