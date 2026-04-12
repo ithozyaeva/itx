@@ -38,14 +38,16 @@ function toggle(i: number) {
     class="w-full py-20 md:py-32 lg:py-40"
   >
     <div class="container px-6 md:px-10">
-      <SectionHeader
-        index="05"
-        path="~/community/faq.txt"
-        title="Частые вопросы"
-        subtitle="Ответы на популярные вопросы о сообществе IT-ХОЗЯЕВА."
-      />
+      <div class="reveal">
+        <SectionHeader
+          index="05"
+          path="~/community/faq.txt"
+          title="Частые вопросы"
+          subtitle="Ответы на популярные вопросы о сообществе IT-ХОЗЯЕВА."
+        />
+      </div>
 
-      <div class="mt-12 md:mt-16 border border-accent/20 bg-background/60 backdrop-blur-sm">
+      <div class="mt-12 md:mt-16 border border-accent/20 bg-background/60 backdrop-blur-sm reveal">
         <div
           v-for="(q, i) in questions"
           :key="q.title"

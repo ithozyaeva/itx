@@ -48,18 +48,20 @@ const features: Feature[] = [
     class="w-full pt-20 md:pt-32 lg:pt-40"
   >
     <div class="container px-6 md:px-10">
-      <SectionHeader
-        index="01"
-        path="~/community/why.md"
-        title="Зачем вступать?"
-        subtitle="IT-сообщество 250+ специалистов на стыке технологий и искусственного интеллекта: менторство, вайбкодинг, нетворкинг, подготовка к собеседованиям, обмен вакансиями и еженедельные встречи."
-      />
+      <div class="reveal">
+        <SectionHeader
+          index="01"
+          path="~/community/why.md"
+          title="Зачем вступать?"
+          subtitle="IT-сообщество 250+ специалистов на стыке технологий и искусственного интеллекта: менторство, вайбкодинг, нетворкинг, подготовка к собеседованиям, обмен вакансиями и еженедельные встречи."
+        />
+      </div>
 
-      <div class="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-2 gap-px bg-accent/15">
+      <div class="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-2 gap-px bg-accent/15 reveal-stagger">
         <article
           v-for="(feature, i) in features"
           :key="feature.id"
-          class="relative group p-7 md:p-10 bg-background/95 hover:bg-accent/5 transition-colors duration-300 min-h-[280px] flex flex-col justify-between cursor-default"
+          class="reveal-child trace-border relative group p-7 md:p-10 bg-background/95 hover:bg-accent/5 transition-colors duration-300 min-h-[280px] flex flex-col justify-between cursor-default"
         >
           <!-- Tag row -->
           <div class="flex items-start justify-between gap-4">

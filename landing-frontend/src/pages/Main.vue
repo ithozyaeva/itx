@@ -2,12 +2,15 @@
 import { computed } from 'vue'
 import StructuredData from '@/components/StructuredData.vue'
 import { usePageMeta } from '@/composables/useMeta'
+import { useRevealObserver } from '@/composables/useRevealObserver'
 import CalendarSection from '@/sections/CalendarSection.vue'
 import FAQSection from '@/sections/FAQSection.vue'
 import MentorsSection from '@/sections/MentorsSection.vue'
 import PromoteSection from '@/sections/PromoteSection.vue'
 import TariffSection from '@/sections/TariffSection.vue'
 import WhySection from '@/sections/WhySection.vue'
+
+useRevealObserver()
 
 usePageMeta({
   title: 'IT-ХОЗЯЕВА - закрытое сообщество IT-специалистов с менторами',

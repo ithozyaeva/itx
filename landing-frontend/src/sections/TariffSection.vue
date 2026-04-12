@@ -83,12 +83,14 @@ const { containerRef, isVisible } = useScrollReveal({ threshold: 0.05 })
     class="w-full pt-20 md:pt-32 lg:pt-40"
   >
     <div class="container px-6 md:px-10">
-      <SectionHeader
-        index="04"
-        path="~/community/access.sh"
-        title="Уровни доступа"
-        subtitle="Подписка через Boosty. План можно повысить или понизить в любой момент."
-      />
+      <div class="reveal">
+        <SectionHeader
+          index="04"
+          path="~/community/access.sh"
+          title="Уровни доступа"
+          subtitle="Подписка через Boosty. План можно повысить или понизить в любой момент."
+        />
+      </div>
 
       <div class="grid pt-14 md:pt-16 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 items-stretch">
         <div

@@ -4,6 +4,8 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
 import TelegramAuth from '@/components/TelegramAuth.vue'
 import Button from '@/components/ui/UiButton.vue'
+import { useCountUp } from '@/composables/useCountUp'
+import { useMagneticHover } from '@/composables/useMagneticHover'
 import { useToken } from '@/composables/useToken.ts'
 import { useUser } from '@/composables/useUser.ts'
 
@@ -23,7 +25,6 @@ function trackPlatformClick() {
   } as any)
 }
 
-// Typewriter effect for the tagline
 const phrases = [
   'менторство_',
   'vibe_coding_',
@@ -59,7 +60,6 @@ function tick() {
   }
 }
 
-// Live "uptime" counter
 const uptime = ref('00:00:00')
 let uptimeTimer: number | undefined
 const started = Date.now()
@@ -71,10 +71,34 @@ function updateUptime() {
   uptime.value = `${h}:${m}:${s}`
 }
 
+// Count-up stats
+const stat1 = useCountUp(250, 2000)
+const stat2 = useCountUp(60, 1800)
+const stat3 = useCountUp(7, 1200)
+
+// Magnetic hover on CTA wrapper
+const ctaRef = ref<HTMLElement | null>(null)
+const { x: magX, y: magY } = useMagneticHover(ctaRef, 0.3)
+
+// Hero entrance animation
+const heroReady = ref(false)
+
 onMounted(() => {
   tick()
   updateUptime()
   uptimeTimer = window.setInterval(updateUptime, 1000)
+
+  // Staggered entrance
+  requestAnimationFrame(() => {
+    heroReady.value = true
+  })
+
+  // Start count-ups after a delay
+  setTimeout(() => {
+    stat1.start()
+    stat2.start()
+    stat3.start()
+  }, 600)
 })
 
 onUnmounted(() => {
@@ -99,26 +123,31 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
     />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute top-[18%] right-[6%] hidden lg:block"
+      class="pointer-events-none absolute top-[18%] right-[6%] hidden lg:block crosshair-spin"
     >
-      <div class="w-[520px] h-[520px] rounded-full border border-accent/10 animate-[glitch-x_6s_steps(1)_infinite]">
-        <div class="absolute inset-8 rounded-full border border-accent/15" />
+      <div class="w-[520px] h-[520px] rounded-full border border-accent/10">
+        <div class="absolute inset-8 rounded-full border border-accent/15 crosshair-spin-reverse" />
         <div class="absolute inset-20 rounded-full border border-accent/20" />
-        <div class="absolute inset-32 rounded-full border border-accent/25" />
+        <div class="absolute inset-32 rounded-full border border-accent/25 crosshair-spin-reverse" />
         <div class="absolute top-1/2 left-0 right-0 h-px bg-accent/20" />
         <div class="absolute left-1/2 top-0 bottom-0 w-px bg-accent/20" />
+        <!-- Scanning dot -->
+        <div class="absolute w-2 h-2 bg-accent rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_12px_hsl(var(--accent))] scan-dot" />
       </div>
     </div>
 
     <!-- Terminal status bar -->
-    <div class="container px-6 md:px-10 pt-8 md:pt-12 relative z-10">
+    <div
+      class="container px-6 md:px-10 pt-8 md:pt-12 relative z-10 transition-all duration-700"
+      :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'"
+    >
       <div class="flex items-center justify-between font-mono text-[11px] md:text-xs tracking-[0.08em] text-foreground/50">
         <div class="flex items-center gap-4 md:gap-6">
           <div class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))]" />
+            <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] animate-pulse" />
             <span class="text-accent">ONLINE</span>
           </div>
-          <span class="hidden sm:inline">uptime: <span class="text-foreground/80">{{ uptime }}</span></span>
+          <span class="hidden sm:inline">uptime: <span class="text-foreground/80 tabular-nums">{{ uptime }}</span></span>
           <span class="hidden md:inline">v4.2.1</span>
         </div>
         <div class="flex items-center gap-4 md:gap-6">
@@ -131,19 +160,33 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
     <!-- Main hero content -->
     <div class="container px-6 md:px-10 flex-1 flex items-center py-12 md:py-16 relative z-10">
       <div class="w-full max-w-5xl">
-        <div class="font-mono text-xs md:text-sm text-foreground/50 mb-5 md:mb-6">
+        <!-- Prompt line -->
+        <div
+          class="font-mono text-xs md:text-sm text-foreground/50 mb-5 md:mb-6 transition-all duration-700 delay-100"
+          :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+        >
           <span class="text-accent">community@ithozyaeva</span>:<span class="text-term-amber">~</span>$
           <span class="text-foreground/80">./welcome --new-user</span>
         </div>
 
-        <div class="flex items-baseline gap-2 md:gap-3 mb-1">
+        <!-- Main title with glitch -->
+        <div
+          class="flex items-baseline gap-2 md:gap-3 mb-1 transition-all duration-700 delay-200"
+          :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+        >
           <span class="font-mono text-accent/60 text-sm md:text-base">&gt;</span>
-          <h1 class="font-display uppercase text-[38px] xs:text-[46px] sm:text-[68px] md:text-[96px] lg:text-[130px] leading-[0.85] tracking-tight text-accent">
+          <h1
+            class="glitch-hover font-display uppercase text-[38px] xs:text-[46px] sm:text-[68px] md:text-[96px] lg:text-[130px] leading-[0.85] tracking-tight text-accent"
+            data-text="IT-ХОЗЯЕВА"
+          >
             IT-ХОЗЯЕВА
           </h1>
         </div>
 
-        <div class="pl-4 md:pl-6 border-l border-accent/30 mt-6 md:mt-8 max-w-3xl">
+        <div
+          class="pl-4 md:pl-6 border-l border-accent/30 mt-6 md:mt-8 max-w-3xl transition-all duration-700 delay-300"
+          :class="heroReady ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'"
+        >
           <h2 class="font-display uppercase text-[22px] sm:text-[32px] md:text-[42px] leading-[1.05] text-foreground">
             Закрытое сообщество<br>
             <span class="text-foreground/40">IT-специалистов</span>
@@ -162,50 +205,63 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
           </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mt-8 md:mt-12">
-          <TelegramAuth
-            v-if="!tgUser"
-            @auth="setUser"
-          />
-          <Button
-            v-else
-            variant="filled"
-            as="a"
-            href="/platform"
-            rel="noopener noreferrer"
-            @click="trackPlatformClick"
-          >
-            Перейти в платформу
-          </Button>
+        <!-- CTA with magnetic hover -->
+        <div
+          ref="ctaRef"
+          class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mt-8 md:mt-12 transition-all duration-700 delay-[400ms]"
+          :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'"
+          :style="{ transform: heroReady ? `translate(${magX}px, ${magY}px)` : undefined }"
+        >
+          <div class="cta-glow rounded-[50px]">
+            <TelegramAuth
+              v-if="!tgUser"
+              @auth="setUser"
+            />
+            <Button
+              v-else
+              variant="filled"
+              as="a"
+              href="/platform"
+              rel="noopener noreferrer"
+              @click="trackPlatformClick"
+            >
+              Перейти в платформу
+            </Button>
+          </div>
           <a
             href="#why"
-            class="font-mono text-xs md:text-sm text-foreground/50 hover:text-accent transition-colors flex items-center gap-2"
+            class="font-mono text-xs md:text-sm text-foreground/50 hover:text-accent transition-colors flex items-center gap-2 group"
           >
-            <span class="text-accent">$</span> ./scroll-down --see-more
+            <span class="text-accent group-hover:animate-pulse">$</span>
+            <span>./scroll-down --see-more</span>
+            <span class="inline-block transition-transform group-hover:translate-y-0.5">↓</span>
           </a>
         </div>
 
-        <!-- Stats strip -->
-        <div class="mt-10 md:mt-16 grid grid-cols-3 max-w-2xl divide-x divide-accent/15 border-t border-b border-accent/15">
+        <!-- Stats strip with count-up -->
+        <div
+          class="mt-10 md:mt-16 grid grid-cols-3 max-w-2xl divide-x divide-accent/15 border-t border-b border-accent/15 transition-all duration-700 delay-500"
+          :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'"
+        >
           <div class="py-4 pr-4">
-            <div class="font-display text-2xl md:text-4xl text-accent">
-              250+
+            <div class="font-display text-2xl md:text-4xl text-accent tabular-nums">
+              {{ stat1.value.value }}+
             </div>
             <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
               участников
             </div>
           </div>
           <div class="py-4 px-4">
-            <div class="font-display text-2xl md:text-4xl text-accent">
-              60+
+            <div class="font-display text-2xl md:text-4xl text-accent tabular-nums">
+              {{ stat2.value.value }}+
             </div>
             <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
               менторов
             </div>
           </div>
           <div class="py-4 pl-4">
-            <div class="font-display text-2xl md:text-4xl text-accent">
-              7×
+            <div class="font-display text-2xl md:text-4xl text-accent tabular-nums">
+              {{ stat3.value.value }}×
             </div>
             <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
               встреч в мес.
@@ -216,17 +272,17 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
     </div>
 
     <!-- Marquee of companies -->
-    <div class="relative z-10 border-t border-accent/15 bg-background/40 backdrop-blur-sm overflow-hidden py-4">
+    <div class="relative z-10 border-t border-accent/15 bg-background/40 backdrop-blur-sm overflow-hidden py-4 group/marquee">
       <div class="flex items-center gap-3 font-mono text-[10px] md:text-xs tracking-[0.2em] uppercase">
         <div class="px-4 md:px-10 shrink-0 text-accent/70">
           // команды из:
         </div>
         <div class="flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
-          <div class="flex gap-10 animate-marquee whitespace-nowrap will-change-transform">
+          <div class="flex gap-10 animate-marquee group-hover/marquee:[animation-play-state:paused] whitespace-nowrap will-change-transform">
             <span
               v-for="(c, i) in [...companies, ...companies]"
               :key="i"
-              class="text-foreground/60 hover:text-accent transition-colors"
+              class="text-foreground/60 hover:text-accent transition-colors cursor-default"
             >
               {{ c }} <span class="text-accent/30 ml-10">◇</span>
             </span>
@@ -242,5 +298,30 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
   .xs\:text-\[46px\] {
     font-size: 46px;
   }
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Crosshair slow spin */
+.crosshair-spin {
+  animation: spin-slow 90s linear infinite;
+}
+.crosshair-spin-reverse {
+  animation: spin-slow 60s linear infinite reverse;
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* Scanning dot on crosshair */
+.scan-dot {
+  animation: scan-orbit 4s ease-in-out infinite;
+}
+@keyframes scan-orbit {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  25% { transform: translate(-50%, -50%) translate(80px, -80px); }
+  50% { transform: translate(-50%, -50%) translate(0, -120px); }
+  75% { transform: translate(-50%, -50%) translate(-80px, -40px); }
 }
 </style>
