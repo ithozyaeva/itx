@@ -20,12 +20,11 @@ const yandexMetrika = useYandexMetrika()
 function handleConfirmed() {
   isConfirmedPrivacy.value = true
   emit('close')
-  const botUrl = authService.getBotUrl()
   yandexMetrika.reachGoal('privacy_modal_accept', {
     action: 'accept',
   } as any)
-  yandexMetrika.extLink(botUrl, { title: 'Стать IT-Хозяином (после модалки)' })
-  window.open(botUrl, '_blank')
+  yandexMetrika.extLink(authService.getBotUrl(), { title: 'Стать IT-Хозяином (после модалки)' })
+  authService.openBot()
 }
 
 function handleClose() {
