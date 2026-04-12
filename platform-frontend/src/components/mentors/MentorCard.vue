@@ -17,7 +17,7 @@ function getInitials(mentor: Mentor) {
   <RouterLink
     :to="`/mentors/${props.mentor.id}`"
     data-reveal
-    class="bg-card rounded-3xl border p-4 hover:border-accent/50 hover:-translate-y-0.5 transition-all duration-200 flex gap-4 cursor-pointer"
+    class="bg-card rounded-sm border p-4 hover:border-accent/50 hover:-translate-y-0.5 transition-all duration-200 flex gap-4 cursor-pointer terminal-card"
   >
     <!-- Avatar -->
     <div class="shrink-0">

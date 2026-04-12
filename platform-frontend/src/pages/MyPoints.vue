@@ -159,6 +159,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/my-points
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -176,7 +179,7 @@ onMounted(() => {
 
     <template v-else-if="data">
       <!-- Баланс -->
-      <div class="bg-card border border-border rounded-2xl p-6 mb-8 flex items-center gap-4">
+      <div class="bg-card border border-border rounded-sm terminal-card p-6 mb-8 flex items-center gap-4">
         <div class="flex items-center justify-center w-14 h-14 rounded-full bg-yellow-500/20">
           <Star class="h-7 w-7 text-yellow-500" />
         </div>
@@ -203,7 +206,7 @@ onMounted(() => {
           v-for="quest in quests"
           :key="quest.to"
           :to="quest.to"
-          class="flex items-center gap-3 rounded-2xl p-4 transition-colors"
+          class="flex items-center gap-3 rounded-sm p-4 transition-colors"
           :class="isQuestCompleted(quest.reason)
             ? 'bg-green-500/5 border border-green-500/30'
             : 'bg-card border border-border hover:border-primary/50'"
@@ -253,7 +256,7 @@ onMounted(() => {
         <div
           v-for="quest in weeklyQuests"
           :key="quest.reason"
-          class="flex items-center gap-3 rounded-2xl p-4 transition-colors"
+          class="flex items-center gap-3 rounded-sm p-4 transition-colors"
           :class="isQuestCompleted(quest.reason)
             ? 'bg-green-500/5 border border-green-500/30'
             : 'bg-card border border-border'"
@@ -303,7 +306,7 @@ onMounted(() => {
           <div
             v-for="quest in chatQuests"
             :key="quest.id"
-            class="rounded-2xl p-4 transition-colors"
+            class="rounded-sm p-4 transition-colors"
             :class="quest.completed
               ? 'bg-green-500/5 border border-green-500/30'
               : 'bg-card border border-border'"
@@ -370,7 +373,7 @@ onMounted(() => {
       >
         За что начисляются баллы
       </Typography>
-      <div class="bg-card border border-border rounded-2xl overflow-x-auto mb-8">
+      <div class="bg-card border border-border rounded-sm terminal-card overflow-x-auto mb-8">
         <table class="w-full text-sm min-w-[320px]">
           <thead>
             <tr class="border-b border-border">
@@ -418,7 +421,7 @@ onMounted(() => {
           <div
             v-for="tx in visibleTransactions"
             :key="tx.id"
-            class="flex items-center gap-4 p-4 bg-card border border-border rounded-2xl"
+            class="flex items-center gap-4 p-4 bg-card border border-border rounded-sm"
           >
             <div class="flex-1 min-w-0">
               <div class="font-medium text-sm truncate">

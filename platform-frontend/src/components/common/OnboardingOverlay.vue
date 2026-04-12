@@ -134,7 +134,7 @@ onUnmounted(() => {
 
       <!-- Tooltip -->
       <div
-        class="absolute z-[102] w-80 bg-card border border-border rounded-2xl p-5 shadow-xl transition-all duration-300"
+        class="absolute z-[102] w-80 bg-card border border-border rounded-sm p-5 shadow-xl transition-all duration-300"
         :class="arrowClass"
         :style="tooltipStyle"
       >

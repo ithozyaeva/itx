@@ -37,6 +37,9 @@ onMounted(loadMentor)
 
 <template>
   <div class="container mx-auto px-4 py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/mentor-profile
+    </div>
     <RouterLink to="/mentors" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
       <ArrowLeft class="h-4 w-4" />
       Назад к менторам
@@ -49,7 +52,7 @@ onMounted(loadMentor)
     <ErrorState v-else-if="loadError" :message="loadError" @retry="loadMentor" />
 
     <div v-else-if="mentor" class="space-y-6">
-      <div class="bg-card rounded-3xl border p-6">
+      <div class="bg-card rounded-sm terminal-card border p-6">
         <Typography variant="h2" as="h1" class="mb-2">
           {{ mentor.firstName }} {{ mentor.lastName }}
         </Typography>
@@ -78,7 +81,7 @@ onMounted(loadMentor)
         </a>
       </div>
 
-      <div v-if="mentor.contacts?.length" class="bg-card rounded-3xl border p-6">
+      <div v-if="mentor.contacts?.length" class="bg-card rounded-sm terminal-card border p-6">
         <Typography variant="h3" as="h2" class="mb-4">
           Контакты
         </Typography>
@@ -91,7 +94,7 @@ onMounted(loadMentor)
         </div>
       </div>
 
-      <div v-if="mentor.services?.length" class="bg-card rounded-3xl border p-6">
+      <div v-if="mentor.services?.length" class="bg-card rounded-sm terminal-card border p-6">
         <Typography variant="h3" as="h2" class="mb-4">
           Услуги
         </Typography>
@@ -107,7 +110,7 @@ onMounted(loadMentor)
         </div>
       </div>
 
-      <div v-if="mentor.reviews?.length" class="bg-card rounded-3xl border p-6">
+      <div v-if="mentor.reviews?.length" class="bg-card rounded-sm terminal-card border p-6">
         <Typography variant="h3" as="h2" class="mb-4">
           Отзывы
         </Typography>
@@ -129,7 +132,7 @@ onMounted(loadMentor)
         </div>
       </div>
 
-      <div v-if="mentor.services?.length" class="bg-card rounded-3xl border p-6">
+      <div v-if="mentor.services?.length" class="bg-card rounded-sm terminal-card border p-6">
         <ReviewForm
           :mentor-id="mentor.id"
           :services="mentor.services"

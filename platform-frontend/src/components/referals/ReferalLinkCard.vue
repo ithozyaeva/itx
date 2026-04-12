@@ -99,7 +99,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
 <template>
   <div
     data-reveal
-    class="bg-card rounded-3xl border p-4 hover:shadow-md transition-shadow flex flex-col gap-1"
+    class="bg-card rounded-sm border p-4 hover:shadow-md transition-shadow flex flex-col gap-1 terminal-card"
   >
     <!-- Режим просмотра -->
     <div v-if="!isEditing">

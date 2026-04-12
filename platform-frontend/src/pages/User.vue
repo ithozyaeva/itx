@@ -42,6 +42,9 @@ const quickLinks = [
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/profile
+    </div>
     <Typography variant="h2" as="h1" class="mb-6">
       Мой профиль
     </Typography>
@@ -52,7 +55,7 @@ const quickLinks = [
         v-for="link in quickLinks"
         :key="link.path"
         :to="link.path"
-        class="flex flex-col items-center gap-1.5 rounded-2xl border bg-card p-3 sm:p-4 hover:bg-muted/50 hover:border-accent/30 transition-all text-center"
+        class="flex flex-col items-center gap-1.5 rounded-sm border bg-card p-3 sm:p-4 hover:bg-muted/50 hover:border-accent/30 transition-all text-center"
       >
         <component :is="link.icon" class="h-5 w-5 text-muted-foreground" />
         <span class="text-[10px] sm:text-xs text-muted-foreground leading-tight">{{ link.title }}</span>

@@ -253,6 +253,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/my-stats
+    </div>
     <Typography
       variant="h2"
       as="h1"
@@ -265,7 +268,7 @@ onMounted(() => {
     <div v-if="isLoading" class="space-y-6">
       <!-- Summary row skeleton -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div v-for="i in 3" :key="i" class="rounded-2xl border bg-card border-border p-4">
+        <div v-for="i in 3" :key="i" class="rounded-sm border bg-card border-border terminal-card p-4">
           <Skeleton class="h-3 w-20 rounded mb-2" />
           <Skeleton class="h-7 w-24 rounded-lg mb-1" />
           <Skeleton class="h-3 w-32 rounded" />
@@ -273,7 +276,7 @@ onMounted(() => {
       </div>
       <!-- Stat grid skeleton -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div v-for="i in 9" :key="i" class="rounded-2xl border bg-card border-border p-4">
+        <div v-for="i in 9" :key="i" class="rounded-sm border bg-card border-border terminal-card p-4">
           <div class="flex items-center gap-2 mb-2">
             <Skeleton class="w-8 h-8 rounded-lg" />
             <Skeleton class="h-3 w-20 rounded" />
@@ -282,7 +285,7 @@ onMounted(() => {
         </div>
       </div>
       <!-- Chart skeleton -->
-      <div class="rounded-2xl border bg-card border-border p-4">
+      <div class="rounded-sm border bg-card border-border terminal-card p-4">
         <Skeleton class="h-5 w-40 rounded mb-4" />
         <Skeleton class="h-40 w-full rounded-lg" />
       </div>
@@ -297,7 +300,7 @@ onMounted(() => {
     <template v-else-if="stats">
       <!-- Summary row -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <div class="rounded-2xl border bg-card border-border p-4">
+        <div class="rounded-sm border bg-card border-border terminal-card p-4">
           <p class="text-xs text-muted-foreground mb-1">
             Участник с
           </p>
@@ -309,7 +312,7 @@ onMounted(() => {
           </p>
         </div>
 
-        <div class="rounded-2xl border bg-card border-border p-4">
+        <div class="rounded-sm border bg-card border-border terminal-card p-4">
           <p class="text-xs text-muted-foreground mb-1">
             Общая активность
           </p>
@@ -323,7 +326,7 @@ onMounted(() => {
 
         <div
           v-if="leaderboardPosition"
-          class="rounded-2xl border bg-card border-border p-4"
+          class="rounded-sm border bg-card border-border terminal-card p-4"
         >
           <p class="text-xs text-muted-foreground mb-1">
             Место в рейтинге
@@ -342,7 +345,7 @@ onMounted(() => {
         <div
           v-for="card in statCards"
           :key="card.label"
-          class="rounded-2xl border bg-card border-border p-4"
+          class="rounded-sm border bg-card border-border terminal-card p-4"
         >
           <div class="flex items-center gap-2 mb-2">
             <div
@@ -366,7 +369,7 @@ onMounted(() => {
       <!-- Points by source -->
       <div
         v-if="topSources.length > 0"
-        class="rounded-2xl border bg-card border-border p-4 mb-6"
+        class="rounded-sm border bg-card border-border terminal-card p-4 mb-6"
       >
         <div class="flex items-center gap-2 mb-4">
           <Star class="h-4 w-4 text-yellow-500" />
@@ -397,7 +400,7 @@ onMounted(() => {
       <!-- Achievements progress -->
       <div
         v-if="stats.achievementsTotal > 0"
-        class="rounded-2xl border bg-card border-border p-4 mb-6"
+        class="rounded-sm border bg-card border-border terminal-card p-4 mb-6"
       >
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
@@ -430,7 +433,7 @@ onMounted(() => {
       <!-- Points history chart -->
       <div
         v-if="stats.pointsHistory && stats.pointsHistory.length > 0"
-        class="rounded-2xl border bg-card border-border p-4 mb-6"
+        class="rounded-sm border bg-card border-border terminal-card p-4 mb-6"
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
@@ -527,7 +530,7 @@ onMounted(() => {
       <!-- Contribution graph -->
       <div
         v-if="contributionWeeks.length > 0"
-        class="rounded-2xl border bg-card border-border p-4"
+        class="rounded-sm border bg-card border-border terminal-card p-4"
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">

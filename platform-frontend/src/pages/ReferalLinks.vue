@@ -109,6 +109,9 @@ function handleLinkDeleted(deletedLinkId: number) {
 
 <template>
   <div ref="containerRef" class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/referals
+    </div>
     <Typography variant="h2" as="h1" class="mb-4">
       Реферальные ссылки
     </Typography>
@@ -135,7 +138,7 @@ function handleLinkDeleted(deletedLinkId: number) {
     />
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <div class="bg-card rounded-3xl border p-4 shadow-md ">
+      <div class="bg-card rounded-sm border p-4 shadow-md ">
         <button
           v-if="!showAddForm"
           type="button"
@@ -161,7 +164,7 @@ function handleLinkDeleted(deletedLinkId: number) {
         @deleted="handleLinkDeleted"
       />
 
-      <button v-if="referalLinks.length < totalLinks" type="button" class="bg-card rounded-3xl border p-4 hover:shadow-md flex justify-center items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" :disabled="isLoadingMore" @click="loadMore">
+      <button v-if="referalLinks.length < totalLinks" type="button" class="bg-card rounded-sm border p-4 hover:shadow-md flex justify-center items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" :disabled="isLoadingMore" @click="loadMore">
         <Loader2 v-if="isLoadingMore" class="h-5 w-5 animate-spin" />
         <span v-else class="m-auto">
           Показать ещё

@@ -156,6 +156,9 @@ onMounted(loadProfile)
 
 <template>
   <div class="container mx-auto px-4 py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/member-profile
+    </div>
     <button
       class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
       @click="router.back()"
@@ -175,7 +178,7 @@ onMounted(loadProfile)
       v-else-if="profile"
       class="space-y-6"
     >
-      <div class="bg-card rounded-3xl border p-6">
+      <div class="bg-card rounded-sm terminal-card border p-6">
         <div class="flex items-start gap-5">
           <div class="w-20 h-20 rounded-full overflow-hidden shrink-0 bg-accent/20 flex items-center justify-center">
             <img
@@ -227,7 +230,7 @@ onMounted(loadProfile)
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="bg-card rounded-3xl border p-6 flex items-center gap-3">
+        <div class="bg-card rounded-sm terminal-card border p-6 flex items-center gap-3">
           <Trophy class="h-5 w-5 text-yellow-500 shrink-0" />
           <div>
             <div class="text-2xl font-bold">
@@ -240,7 +243,7 @@ onMounted(loadProfile)
         </div>
         <div
           v-if="daysSinceJoined"
-          class="bg-card rounded-3xl border p-6"
+          class="bg-card rounded-sm terminal-card border p-6"
         >
           <div class="text-2xl font-bold">
             {{ daysSinceJoined }}
@@ -249,7 +252,7 @@ onMounted(loadProfile)
             {{ pluralizeDays(daysSinceJoined) }} с нами
           </div>
         </div>
-        <div class="bg-card rounded-3xl border p-6">
+        <div class="bg-card rounded-sm terminal-card border p-6">
           <div class="text-2xl font-bold">
             {{ subscriptionLevel }}
           </div>
@@ -268,7 +271,7 @@ onMounted(loadProfile)
         v-if="stats"
         class="grid grid-cols-2 sm:grid-cols-4 gap-4"
       >
-        <div class="bg-card rounded-3xl border p-4 text-center">
+        <div class="bg-card rounded-sm terminal-card border p-4 text-center">
           <div class="text-2xl font-bold">
             {{ stats.eventsAttended }}
           </div>
@@ -276,7 +279,7 @@ onMounted(loadProfile)
             Событий посещено
           </div>
         </div>
-        <div class="bg-card rounded-3xl border p-4 text-center">
+        <div class="bg-card rounded-sm terminal-card border p-4 text-center">
           <div class="text-2xl font-bold">
             {{ stats.tasksCreated + stats.tasksDone }}
           </div>
@@ -284,7 +287,7 @@ onMounted(loadProfile)
             Заданий
           </div>
         </div>
-        <div class="bg-card rounded-3xl border p-4 text-center">
+        <div class="bg-card rounded-sm terminal-card border p-4 text-center">
           <div class="text-2xl font-bold">
             {{ stats.kudosReceived }}
           </div>
@@ -292,7 +295,7 @@ onMounted(loadProfile)
             Благодарностей
           </div>
         </div>
-        <div class="bg-card rounded-3xl border p-4 text-center">
+        <div class="bg-card rounded-sm terminal-card border p-4 text-center">
           <div class="text-2xl font-bold">
             {{ stats.reviewsCount }}
           </div>
@@ -304,7 +307,7 @@ onMounted(loadProfile)
 
       <div
         v-if="profile.isMentor && profile.mentor"
-        class="bg-card rounded-3xl border p-6"
+        class="bg-card rounded-sm terminal-card border p-6"
       >
         <Typography
           variant="h3"
@@ -330,7 +333,7 @@ onMounted(loadProfile)
 
       <div
         v-if="achievements && achievements.unlockedCount > 0"
-        class="bg-card rounded-3xl border p-6"
+        class="bg-card rounded-sm terminal-card border p-6"
       >
         <div class="flex items-center gap-2 mb-4">
           <Award class="h-5 w-5 text-yellow-500" />

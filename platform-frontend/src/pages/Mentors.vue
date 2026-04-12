@@ -98,6 +98,9 @@ onMounted(loadMentors)
 
 <template>
   <div ref="containerRef" class="container mx-auto px-4 py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/mentors
+    </div>
     <Typography variant="h2" as="h1" class="mb-8">
       Менторы
     </Typography>

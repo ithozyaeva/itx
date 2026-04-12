@@ -93,6 +93,9 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-6 md:py-8">
+    <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
+      ~/community/raffles
+    </div>
     <div class="flex items-center justify-between mb-6">
       <Typography
         variant="h2"
@@ -151,7 +154,7 @@ onMounted(() => {
           <div
             v-for="raffle in activeRaffles"
             :key="raffle.id"
-            class="rounded-2xl border bg-card border-border p-5"
+            class="rounded-sm border bg-card border-border terminal-card p-5"
           >
             <div class="flex items-start justify-between mb-3">
               <div class="min-w-0">
@@ -235,7 +238,7 @@ onMounted(() => {
           <div
             v-for="raffle in finishedRaffles"
             :key="raffle.id"
-            class="rounded-2xl border bg-card border-border p-5 opacity-75"
+            class="rounded-sm border bg-card border-border terminal-card p-5 opacity-75"
           >
             <h3 class="font-semibold mb-1">
               {{ raffle.title }}
