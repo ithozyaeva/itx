@@ -12,21 +12,25 @@ const links = [
 </script>
 
 <template>
-  <footer class="w-full border-t py-6">
-    <div class="container mx-auto px-4 flex flex-col gap-6">
+  <footer class="w-full border-t py-4">
+    <div class="container mx-auto px-4 flex flex-col gap-4">
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8 gap-y-2">
         <RouterLink
           v-for="link in links"
           :key="link.path"
           :to="link.path"
-          class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          class="font-mono text-xs text-muted-foreground hover:text-accent transition-colors tracking-wide"
         >
-          {{ link.label }}
+          ./{{ link.label.toLowerCase() }}
         </RouterLink>
       </div>
-      <p class="text-center text-sm text-muted-foreground">
-        © {{ new Date().getFullYear() }} IT-ХОЗЯЕВА. Все права защищены.
-      </p>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 font-mono text-[11px] text-muted-foreground/70 tracking-wide border-t border-border pt-3">
+        <span>© {{ new Date().getFullYear() }} IT-ХОЗЯЕВА // all rights reserved</span>
+        <span class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent" />
+          status: operational
+        </span>
+      </div>
     </div>
   </footer>
 </template>

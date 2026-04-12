@@ -70,6 +70,11 @@ async function handleSaveReview(text: string) {
               <X class="w-6 h-6" />
             </button>
           </div>
+          <!-- Terminal system header -->
+          <div class="px-4 py-3 border-b border-sidebar-border hidden md:flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent))]" />
+            <span class="font-mono text-xs font-medium tracking-wider text-sidebar-foreground/80">[SYS] IT-X</span>
+          </div>
           <div class="flex-1 py-4">
             <div
               v-for="(group, groupIndex) in sidebarGroups"
@@ -78,24 +83,25 @@ async function handleSaveReview(text: string) {
             >
               <p
                 v-if="group.label"
-                class="px-4 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/40"
+                class="px-4 mb-1.5 text-[11px] font-mono font-medium uppercase tracking-wider text-sidebar-foreground/40"
               >
-                {{ group.label }}
+                // {{ group.label }}
               </p>
               <ul class="space-y-0.5">
                 <li
-                  v-for="item in group.items"
+                  v-for="(item, itemIndex) in group.items"
                   :key="item.path"
                   :data-onboarding="item.dataOnboarding"
                 >
                   <Button
                     variant="ghost"
-                    class="w-full justify-start py-2 cursor-pointer text-sidebar-foreground hover:bg-accent hover:text-accent-foreground"
+                    class="w-full justify-start py-2 cursor-pointer rounded-sm text-sidebar-foreground hover:bg-accent hover:text-accent-foreground"
                     :class="[
                       isActive(item.path) ? 'bg-accent text-accent-foreground' : '',
                     ]"
                     @click="navigateTo(item.path)"
                   >
+                    <span class="font-mono text-[10px] text-sidebar-foreground/40 mr-1.5 w-4 shrink-0">{{ String(itemIndex + 1).padStart(2, '0') }}</span>
                     <component
                       :is="item.icon"
                       class="h-5 w-5 mr-2"
