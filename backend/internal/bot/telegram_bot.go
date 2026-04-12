@@ -1541,10 +1541,12 @@ func sendAuthToBackend(token string, user *tgbotapi.User) {
 	log.Println("Ответ от Fiber:", resp.Status)
 }
 
+var telegramHTTPClient = &http.Client{Timeout: 5 * time.Second}
+
 func CheckUserInChat(userID int64) (bool, error) {
 	telegramApiUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getChatMember?chat_id=%d&user_id=%d", config.CFG.TelegramToken, config.CFG.TelegramMainChatID, userID)
 
-	resp, err := http.Get(telegramApiUrl)
+	resp, err := telegramHTTPClient.Get(telegramApiUrl)
 	if err != nil {
 		return false, err
 	}
