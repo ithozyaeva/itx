@@ -76,8 +76,7 @@ services:
   platform-frontend:
     container_name: platform-frontend
     build:
-      context: .
-      dockerfile: platform-frontend/Dockerfile
+      context: ./platform-frontend
     volumes:
       - ./static/platform-frontend:/static/platform-frontend
     networks:
@@ -86,8 +85,7 @@ services:
   admin-frontend:
     container_name: admin-frontend
     build:
-      context: .
-      dockerfile: admin-frontend/Dockerfile
+      context: ./admin-frontend
     volumes:
       - ./static/admin-frontend:/static/admin-frontend
     depends_on:
