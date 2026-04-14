@@ -277,6 +277,8 @@ func (b *TelegramBot) Start() {
 				b.handleSubCheckAllCommand(update.Message)
 			case "substats":
 				b.handleSubStatsCommand(update.Message)
+			case "subpin":
+				b.handleSubPinCommand(update.Message)
 			case "help":
 				b.handleHelpCommand(update.Message)
 			}
@@ -365,7 +367,8 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 			"/subuserinfo <user_id> - Инфо о пользователе\n" +
 			"/suboverride <user_id> <tier_slug|clear> - Ручной тир\n" +
 			"/subcheckall - Проверить всех\n" +
-			"/substats - Статистика"
+			"/substats - Статистика\n" +
+			"/subpin <anchor_chat_id> - Запостить и закрепить приветствие в anchor-чате"
 	}
 
 	b.sendMessage(message.Chat.ID, text)
@@ -588,6 +591,11 @@ func (b *TelegramBot) checkBirthdays() {
 
 func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	log.Printf("Received /start command from user %d with args: %s", message.From.ID, message.CommandArguments())
+
+	if strings.TrimSpace(message.CommandArguments()) == "sub" {
+		b.handleSubCommand(message)
+		return
+	}
 
 	redirectUrl := config.CFG.PublicDomain
 	log.Printf("Redirect URL before processing: %s", redirectUrl)
