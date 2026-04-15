@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { SubscriptionChatDetail } from '@/services/subscriptionService'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Anchor from '~icons/lucide/anchor'
 import ChevronRight from '~icons/lucide/chevron-right'
 import Eye from '~icons/lucide/eye'
 import Loader2 from '~icons/lucide/loader-2'
+import Pencil from '~icons/lucide/pencil'
 import Plus from '~icons/lucide/plus'
 import ShieldX from '~icons/lucide/shield-x'
 import Trash2 from '~icons/lucide/trash-2'
@@ -14,6 +15,7 @@ import SubscriptionChatModal from '@/components/modals/SubscriptionChatModal.vue
 import SubscriptionUserModal from '@/components/modals/SubscriptionUserModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Typography } from '@/components/ui/typography'
@@ -31,6 +33,14 @@ const expandedChatId = ref<number | null>(null)
 const expandedChatDetail = ref<SubscriptionChatDetail | null>(null)
 const expandedLoading = ref(false)
 const savingAction = ref<string | null>(null)
+const expandedCategory = ref('')
+const expandedEmoji = ref('')
+const savingCategory = ref(false)
+
+watch(expandedChatDetail, (detail) => {
+  expandedCategory.value = detail?.category ?? ''
+  expandedEmoji.value = detail?.emoji ?? ''
+})
 
 const stats = computed(() => subscriptionService.stats.value)
 
@@ -117,6 +127,28 @@ async function toggleContentTier(chatId: number, tierId: number) {
   }
   finally {
     savingAction.value = null
+  }
+}
+
+async function saveCategoryEmoji(chatId: number) {
+  savingCategory.value = true
+  try {
+    const success = await subscriptionService.updateChat(chatId, {
+      category: expandedCategory.value || null,
+      emoji: expandedEmoji.value || null,
+      clearCategory: !expandedCategory.value && !expandedEmoji.value,
+    })
+    if (success && expandedChatDetail.value) {
+      expandedChatDetail.value = {
+        ...expandedChatDetail.value,
+        category: expandedCategory.value || null,
+        emoji: expandedEmoji.value || null,
+      }
+      await subscriptionService.fetchChats()
+    }
+  }
+  finally {
+    savingCategory.value = false
   }
 }
 
@@ -468,10 +500,12 @@ onUnmounted(subscriptionService.clearPagination)
 
               <div class="flex-1 min-w-0">
                 <div class="font-medium truncate">
-                  {{ chat.title }}
+                  <span v-if="chat.emoji" class="mr-1">{{ chat.emoji }}</span>{{ chat.title }}
                 </div>
-                <div class="text-xs text-muted-foreground">
+                <div class="text-xs text-muted-foreground flex items-center gap-1.5">
                   {{ chat.chatType }} &middot; {{ chat.id }}
+                  <span v-if="chat.category" class="text-muted-foreground/70">· {{ chat.category }}</span>
+                  <span v-else class="text-muted-foreground/40 italic">без категории</span>
                 </div>
               </div>
 
@@ -501,9 +535,17 @@ onUnmounted(subscriptionService.clearPagination)
               </div>
 
               <div
-                class="shrink-0"
+                class="flex items-center gap-1 shrink-0"
                 @click.stop
               >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  @click="openChatModal(chat.id)"
+                >
+                  <Pencil class="h-3.5 w-3.5" />
+                </Button>
                 <ConfirmDialog
                   title="Удалить чат?"
                   description="Чат будет удалён из системы подписок. Все привязки и доступы будут удалены."
@@ -551,7 +593,7 @@ onUnmounted(subscriptionService.clearPagination)
                     <button
                       v-for="tier in subscriptionService.tiers.value"
                       :key="tier.id"
-                      class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all duration-150 cursor-pointer"
+                      class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       :class="expandedChatDetail.anchorForTierID === tier.id
                         ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
                         : 'bg-background border-border hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30'"
@@ -581,7 +623,7 @@ onUnmounted(subscriptionService.clearPagination)
                     <button
                       v-for="tier in subscriptionService.tiers.value"
                       :key="tier.id"
-                      class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all duration-150 cursor-pointer"
+                      class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       :class="(expandedChatDetail.tierIDs || []).includes(tier.id)
                         ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                         : 'bg-background border-border hover:border-primary/30 hover:bg-accent'"
@@ -594,6 +636,38 @@ onUnmounted(subscriptionService.clearPagination)
                       />
                       {{ tier.name }}
                     </button>
+                  </div>
+                </div>
+
+                <!-- Category / Emoji inline editor -->
+                <div>
+                  <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                    Категория в боте
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <Input
+                      v-model="expandedEmoji"
+                      class="w-16 text-center text-lg"
+                      placeholder="💬"
+                      maxlength="8"
+                    />
+                    <Input
+                      v-model="expandedCategory"
+                      class="flex-1"
+                      placeholder="Название категории"
+                      maxlength="100"
+                    />
+                    <Button
+                      size="sm"
+                      :disabled="savingCategory"
+                      @click="saveCategoryEmoji(chat.id)"
+                    >
+                      <Loader2
+                        v-if="savingCategory"
+                        class="h-3.5 w-3.5 animate-spin mr-1"
+                      />
+                      {{ savingCategory ? 'Сохранение' : 'Сохранить' }}
+                    </Button>
                   </div>
                 </div>
               </div>

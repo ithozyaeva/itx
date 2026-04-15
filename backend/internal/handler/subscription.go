@@ -113,6 +113,8 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 			"title":       ch.Title,
 			"chatType":    ch.ChatType,
 			"activeUsers": accessCounts[ch.ID],
+			"category":    ch.Category,
+			"emoji":       ch.Emoji,
 		}
 		if ch.AnchorForTierID != nil {
 			item["anchorForTierID"] = *ch.AnchorForTierID
@@ -310,11 +312,13 @@ func (h *SubscriptionHandler) ClearOverride(c *fiber.Ctx) error {
 
 func (h *SubscriptionHandler) CreateChat(c *fiber.Ctx) error {
 	var req struct {
-		ID       int64  `json:"id"`
-		Title    string `json:"title"`
-		ChatType string `json:"chatType"`
-		AnchorForTierID *uint  `json:"anchorForTierID"`
-		TierIDs  []uint `json:"tierIDs"`
+		ID              int64   `json:"id"`
+		Title           string  `json:"title"`
+		ChatType        string  `json:"chatType"`
+		AnchorForTierID *uint   `json:"anchorForTierID"`
+		TierIDs         []uint  `json:"tierIDs"`
+		Category        *string `json:"category"`
+		Emoji           *string `json:"emoji"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
@@ -328,6 +332,12 @@ func (h *SubscriptionHandler) CreateChat(c *fiber.Ctx) error {
 
 	if err := h.svc.UpsertChat(req.ID, req.Title, req.ChatType); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось создать чат"})
+	}
+
+	if req.Category != nil || req.Emoji != nil {
+		if err := h.svc.UpdateChatMeta(req.ID, req.Category, req.Emoji); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось сохранить категорию"})
+		}
 	}
 
 	if req.AnchorForTierID != nil {
@@ -361,6 +371,9 @@ func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
 		AnchorForTierID *uint   `json:"anchorForTierID"`
 		ClearAnchor     bool    `json:"clearAnchor"`
 		TierIDs         *[]uint `json:"tierIDs"`
+		Category        *string `json:"category"`
+		Emoji           *string `json:"emoji"`
+		ClearCategory   bool    `json:"clearCategory"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
@@ -369,6 +382,18 @@ func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
 	if req.Title != nil && *req.Title != "" {
 		if err := h.svc.UpsertChat(chatID, *req.Title, existing.ChatType); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось обновить чат"})
+		}
+	}
+
+	if req.Category != nil || req.Emoji != nil || req.ClearCategory {
+		cat := req.Category
+		emoji := req.Emoji
+		if req.ClearCategory {
+			cat = nil
+			emoji = nil
+		}
+		if err := h.svc.UpdateChatMeta(chatID, cat, emoji); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось сохранить категорию"})
 		}
 	}
 
@@ -422,6 +447,8 @@ func (h *SubscriptionHandler) GetChatDetail(c *fiber.Ctx) error {
 		"title":    chat.Title,
 		"chatType": chat.ChatType,
 		"tierIDs":  tierIDs,
+		"category": chat.Category,
+		"emoji":    chat.Emoji,
 	}
 	if chat.AnchorForTierID != nil {
 		result["anchorForTierID"] = *chat.AnchorForTierID

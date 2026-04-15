@@ -1,0 +1,3 @@
+ALTER TABLE subscription_chats
+    ADD COLUMN IF NOT EXISTS category VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS emoji    VARCHAR(16);

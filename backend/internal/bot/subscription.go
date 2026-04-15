@@ -228,24 +228,51 @@ func (b *TelegramBot) postAnchorWelcome(chatID int64, user *tgbotapi.User) {
 	}
 }
 
-// sendSubscriptionLinks sends invite links as inline keyboard buttons.
+// sendSubscriptionLinks sends invite links grouped by category as a single HTML message.
 func (b *TelegramBot) sendSubscriptionLinks(chatID int64, result *service.SyncResult) {
-	var rows [][]tgbotapi.InlineKeyboardButton
+	type entry struct {
+		title string
+		link  string
+	}
+	groups := make(map[string][]entry)
+	groupEmoji := make(map[string]string)
+	var order []string
+
 	for _, g := range result.Granted {
 		chat, err := b.subscriptionService.GetChat(g.ChatID)
 		title := fmt.Sprintf("Chat %d", g.ChatID)
+		cat := "Прочее"
+		emoji := "💬"
 		if err == nil {
 			title = chat.Title
+			if chat.Category != nil && *chat.Category != "" {
+				cat = *chat.Category
+			}
+			if chat.Emoji != nil && *chat.Emoji != "" {
+				emoji = *chat.Emoji
+			}
 		}
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL(title, g.Link),
-		))
+		if _, exists := groups[cat]; !exists {
+			order = append(order, cat)
+			groupEmoji[cat] = emoji
+		}
+		groups[cat] = append(groups[cat], entry{title: title, link: g.Link})
 	}
 
-	msg := tgbotapi.NewMessage(chatID, "Подписка подтверждена! Вот ваши ссылки на чаты:")
+	text := fmt.Sprintf("Подписка подтверждена! Доступно чатов: <b>%d</b>\n", len(result.Granted))
+	for _, cat := range order {
+		text += fmt.Sprintf("\n%s <b>%s</b>\n", groupEmoji[cat], cat)
+		for _, e := range groups[cat] {
+			text += fmt.Sprintf("• <a href=\"%s\">%s</a>\n", e.link, e.title)
+		}
+	}
+
+	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-	b.bot.Send(msg)
+	msg.DisableWebPagePreview = true
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("Failed to send subscription links to %d: %v", chatID, err)
+	}
 }
 
 // --- Chat member event handlers ---

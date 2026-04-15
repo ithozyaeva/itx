@@ -261,6 +261,10 @@ func (s *SubscriptionService) UpsertChat(chatID int64, title, chatType string) e
 	return s.repo.UpsertChat(chatID, title, chatType)
 }
 
+func (s *SubscriptionService) UpdateChatMeta(chatID int64, category, emoji *string) error {
+	return s.repo.UpdateChatMeta(chatID, category, emoji)
+}
+
 func (s *SubscriptionService) SetAnchor(chatID int64, tierID *uint) error {
 	return s.repo.SetAnchor(chatID, tierID)
 }

@@ -12,10 +12,12 @@ type SubscriptionTier struct {
 func (SubscriptionTier) TableName() string { return "subscription_tiers" }
 
 type SubscriptionChat struct {
-	ID              int64  `json:"id" gorm:"primaryKey;autoIncrement:false"`
-	Title           string `json:"title" gorm:"size:255"`
-	ChatType        string `json:"chat_type" gorm:"size:50;default:supergroup"`
-	AnchorForTierID *uint  `json:"anchor_for_tier_id"`
+	ID              int64   `json:"id" gorm:"primaryKey;autoIncrement:false"`
+	Title           string  `json:"title" gorm:"size:255"`
+	ChatType        string  `json:"chat_type" gorm:"size:50;default:supergroup"`
+	AnchorForTierID *uint   `json:"anchor_for_tier_id"`
+	Category        *string `json:"category" gorm:"size:100"`
+	Emoji           *string `json:"emoji" gorm:"size:16"`
 }
 
 func (SubscriptionChat) TableName() string { return "subscription_chats" }
