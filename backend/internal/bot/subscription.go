@@ -194,6 +194,40 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 	b.SendDirectMessage(message.Chat.ID, text)
 }
 
+// subscriptionDeepLink returns a t.me link that launches the bot with /start sub.
+func (b *TelegramBot) subscriptionDeepLink() string {
+	return fmt.Sprintf("https://t.me/%s?start=sub", b.bot.Self.UserName)
+}
+
+// postAnchorWelcome posts a welcome message in the anchor chat with a button
+// that deep-links to the bot so the user can receive DM invite links.
+func (b *TelegramBot) postAnchorWelcome(chatID int64, user *tgbotapi.User) {
+	mention := "@" + user.UserName
+	if user.UserName == "" {
+		name := strings.TrimSpace(user.FirstName + " " + user.LastName)
+		if name == "" {
+			name = "друг"
+		}
+		mention = fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", user.ID, name)
+	}
+
+	text := fmt.Sprintf(
+		"%s, добро пожаловать! Нажмите кнопку ниже, чтобы получить доступ к остальным чатам.",
+		mention)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.DisableNotification = true
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Получить доступ", b.subscriptionDeepLink()),
+		),
+	)
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("Failed to post anchor welcome in chat %d: %v", chatID, err)
+	}
+}
+
 // sendSubscriptionLinks sends invite links as inline keyboard buttons.
 func (b *TelegramBot) sendSubscriptionLinks(chatID int64, result *service.SyncResult) {
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -248,6 +282,13 @@ func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated
 		return
 	}
 
+	// Post welcome in anchor only on join (not on leave/kick).
+	// Telegram не даёт боту писать первым в ЛС: сообщение в anchor с deep-link
+	// — единственный способ заставить юзера один раз стартануть бота.
+	if newActive && !oldActive {
+		b.postAnchorWelcome(update.Chat.ID, tgUser)
+	}
+
 	b.notifyUserOfSyncResult(userID, result)
 }
 
@@ -273,6 +314,12 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 			return
 		}
 		log.Printf("Bot added to chat %d (%s), registered in DB", chat.ID, title)
+
+		// Бот должен быть администратором, чтобы получать chat_member updates
+		// и создавать invite-ссылки. Если добавили не админом — предупреждаем.
+		if newStatus != "administrator" {
+			log.Printf("WARNING: bot is not an administrator in chat %d (status=%s) — chat_member updates and invite links will not work", chat.ID, newStatus)
+		}
 
 		// Notify admins
 		for _, adminID := range b.member.GetAdminTelegramIDs() {
@@ -659,6 +706,58 @@ func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
+}
+
+// handleSubPinCommand posts and pins a welcome message in an anchor chat
+// so existing members can click the button to receive DM invite links.
+func (b *TelegramBot) handleSubPinCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+
+	args := strings.Fields(message.Text)
+	if len(args) < 2 {
+		b.sendMessage(message.Chat.ID, "Использование: /subpin <anchor_chat_id>")
+		return
+	}
+
+	chatID, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		b.sendMessage(message.Chat.ID, "Неверный chat_id.")
+		return
+	}
+
+	chat, err := b.subscriptionService.GetChat(chatID)
+	if err != nil || chat.AnchorForTierID == nil {
+		b.sendMessage(message.Chat.ID, "Чат не зарегистрирован как anchor.")
+		return
+	}
+
+	text := "Добро пожаловать! Нажмите кнопку ниже, чтобы получить доступ к остальным чатам по вашей подписке."
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Получить доступ", b.subscriptionDeepLink()),
+		),
+	)
+	sent, err := b.bot.Send(msg)
+	if err != nil {
+		b.sendMessage(message.Chat.ID, fmt.Sprintf("Не удалось запостить: %v", err))
+		return
+	}
+
+	pinCfg := tgbotapi.PinChatMessageConfig{
+		ChatID:              chatID,
+		MessageID:           sent.MessageID,
+		DisableNotification: false,
+	}
+	if _, err := b.bot.Request(pinCfg); err != nil {
+		b.sendMessage(message.Chat.ID, fmt.Sprintf("Запостил, но не удалось закрепить: %v", err))
+		return
+	}
+
+	b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Сообщение запощено и закреплено в чате <code>%d</code>.", chatID))
 }
 
 // parseAPIResponse parses the Telegram API response into the target struct.
