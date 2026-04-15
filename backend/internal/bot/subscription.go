@@ -321,15 +321,19 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 			log.Printf("WARNING: bot is not an administrator in chat %d (status=%s) — chat_member updates and invite links will not work", chat.ID, newStatus)
 		}
 
-		// Notify admins
-		for _, adminID := range b.member.GetAdminTelegramIDs() {
-			b.SendDirectMessage(adminID, fmt.Sprintf(
-				"Бот добавлен в чат:\nID: <code>%d</code>\nНазвание: %s\n\n"+
-					"Настройте роль через:\n"+
-					"/subaddchat %d <tier_slug> — content чат\n"+
-					"/subaddchat %d <tier_slug> anchor — anchor чат",
-				chat.ID, title, chat.ID, chat.ID))
+		// Notify only the subscription admin (не всех админов платформы).
+		addedBy := ""
+		if update.From.UserName != "" {
+			addedBy = fmt.Sprintf("\nДобавил: @%s", update.From.UserName)
+		} else if update.From.ID != 0 {
+			addedBy = fmt.Sprintf("\nДобавил: id=%d", update.From.ID)
 		}
+		b.SendDirectMessage(subscriptionAdminID, fmt.Sprintf(
+			"Бот добавлен в чат:\nID: <code>%d</code>\nНазвание: %s%s\n\n"+
+				"Настройте роль через:\n"+
+				"/subaddchat %d <tier_slug> — content чат\n"+
+				"/subaddchat %d <tier_slug> anchor — anchor чат",
+			chat.ID, title, addedBy, chat.ID, chat.ID))
 	}
 
 	// Bot removed from chat
