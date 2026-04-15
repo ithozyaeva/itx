@@ -58,6 +58,8 @@ function onIdInput() {
 const formRole = ref<'anchor' | 'content'>('content')
 const formAnchorTierID = ref<number | null>(null)
 const formTierIDs = ref<number[]>([])
+const formCategory = ref('')
+const formEmoji = ref('')
 
 watch(() => props.isOpen, async (open) => {
   if (!open) {
@@ -90,6 +92,8 @@ function resetForm() {
   formRole.value = 'content'
   formAnchorTierID.value = null
   formTierIDs.value = []
+  formCategory.value = ''
+  formEmoji.value = ''
 }
 
 function fillForm(detail: SubscriptionChatDetail) {
@@ -105,6 +109,8 @@ function fillForm(detail: SubscriptionChatDetail) {
     formAnchorTierID.value = null
   }
   formTierIDs.value = detail.tierIDs ?? []
+  formCategory.value = detail.category ?? ''
+  formEmoji.value = detail.emoji ?? ''
 }
 
 function handleClose() {
@@ -135,6 +141,8 @@ async function handleSave() {
         chatType: formChatType.value,
         anchorForTierID: formRole.value === 'anchor' && formAnchorTierID.value ? formAnchorTierID.value : undefined,
         tierIDs: formRole.value === 'content' ? formTierIDs.value : undefined,
+        category: formCategory.value || null,
+        emoji: formEmoji.value || null,
       })
       if (success) {
         emit('saved')
@@ -148,6 +156,9 @@ async function handleSave() {
         anchorForTierID: formRole.value === 'anchor' && formAnchorTierID.value ? formAnchorTierID.value : undefined,
         clearAnchor: formRole.value === 'content',
         tierIDs: formRole.value === 'content' ? formTierIDs.value : [],
+        category: formCategory.value || null,
+        emoji: formEmoji.value || null,
+        clearCategory: !formCategory.value && !formEmoji.value,
       })
       if (success) {
         emit('saved')
@@ -198,7 +209,7 @@ async function handleSave() {
           </div>
           <p
             v-if="resolveError"
-            class="text-xs text-muted-foreground"
+            class="text-xs text-destructive"
           >
             {{ resolveError }}
           </p>
@@ -216,7 +227,7 @@ async function handleSave() {
           <Label>Тип</Label>
           <select
             v-model="formChatType"
-            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs"
+            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="supergroup">
               supergroup
@@ -261,7 +272,7 @@ async function handleSave() {
           <Label>Anchor для тира</Label>
           <select
             v-model.number="formAnchorTierID"
-            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs"
+            class="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option :value="null">
               Выберите тир
@@ -293,6 +304,26 @@ async function handleSave() {
               />
               <span class="text-sm">{{ tier.name }} (level {{ tier.level }})</span>
             </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[64px_1fr] gap-3 items-end">
+          <div class="space-y-2">
+            <Label>Эмодзи</Label>
+            <Input
+              v-model="formEmoji"
+              placeholder="💬"
+              class="text-center text-lg"
+              maxlength="8"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label>Категория</Label>
+            <Input
+              v-model="formCategory"
+              placeholder="Например: По интересам"
+              maxlength="100"
+            />
           </div>
         </div>
       </div>

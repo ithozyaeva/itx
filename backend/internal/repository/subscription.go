@@ -106,6 +106,11 @@ func (r *SubscriptionRepository) UpsertChat(chatID int64, title string, chatType
 	return r.db.Save(&chat).Error
 }
 
+func (r *SubscriptionRepository) UpdateChatMeta(chatID int64, category, emoji *string) error {
+	return r.db.Model(&models.SubscriptionChat{}).Where("id = ?", chatID).
+		Updates(map[string]interface{}{"category": category, "emoji": emoji}).Error
+}
+
 func (r *SubscriptionRepository) SetAnchor(chatID int64, tierID *uint) error {
 	return r.db.Model(&models.SubscriptionChat{}).Where("id = ?", chatID).
 		Update("anchor_for_tier_id", tierID).Error
