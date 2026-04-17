@@ -8,7 +8,7 @@
     "prebuild": "npm run lint && npm run generate:sitemap",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "build-only": "vite build",
+    "build-only": "vite build && node scripts/generate-route-html.mjs",
     "type-check": "vue-tsc --build",
     "lint": "eslint",
     "test": "vitest run",

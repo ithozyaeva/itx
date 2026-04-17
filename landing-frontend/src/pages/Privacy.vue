@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import StructuredData from '@/components/StructuredData.vue'
 import Typography from '@/components/ui/UiTypography.vue'
 import { usePageMeta } from '@/composables/useMeta'
 
@@ -8,9 +9,19 @@ usePageMeta({
   url: 'https://ithozyaeva.ru/privacy',
   type: 'article',
 })
+
+const breadcrumb = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  'itemListElement': [
+    { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': 'https://ithozyaeva.ru/' },
+    { '@type': 'ListItem', 'position': 2, 'name': 'Политика конфиденциальности', 'item': 'https://ithozyaeva.ru/privacy' },
+  ],
+}
 </script>
 
 <template>
+  <StructuredData :data="breadcrumb" />
   <div class="container px-4 md:px-6 pt-10 pb-24 max-w-[900px]">
     <Typography
       variant="h1"
