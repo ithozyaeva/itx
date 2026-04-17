@@ -52,16 +52,10 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate landing-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate platform-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate admin-frontend
-            # Регенерируем nginx default.conf из template: nginx-init это одноразовый контейнер,
-            # он делает envsubst только при старте; без recreate template-правки не применяются.
-            docker rm -f nginx-init 2>/dev/null || true
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx-init
-            # Ждём пока nginx-init завершится (он записывает default.conf на bind-mount и exit).
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              if ! docker ps --format '{{.Names}}' | grep -q '^nginx-init$'; then break; fi
-              sleep 1
-            done
-            # Теперь пересоздаём nginx, чтобы он перечитал свежий default.conf.
+            # Регенерируем nginx default.conf: run --rm запускает одноразовый nginx-init
+            # синхронно (ждёт exit), envsubst записывает свежий default.conf на bind-mount.
+            # Только после exit пересоздаём nginx, чтобы он прочитал свежий конфиг.
+            docker compose -f docker-compose.prod.yml run --rm --no-deps nginx-init
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
             # Clean up old images (без affecting чужих проектов)
             docker image prune -f
