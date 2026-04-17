@@ -15,9 +15,9 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
-        display: ['Unbounded', 'Space Grotesk', 'sans-serif'],
+        sans: ['"Inter Variable"', 'Inter', 'sans-serif'],
+        mono: ['"JetBrains Mono Variable"', 'JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
+        display: ['Unbounded', '"Space Grotesk Variable"', 'Space Grotesk', 'sans-serif'],
       },
       colors: {
         'term-amber': '#ffb547',

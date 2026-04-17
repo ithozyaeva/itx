@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@floating-ui/vue": "^1.1.6",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/space-grotesk": "^5.2.10",
     "@tanstack/vue-query": "^5.92.9",
     "@unhead/vue": "^2.1.12",
     "@vueuse/core": "^14.2.1",
