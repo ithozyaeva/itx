@@ -100,9 +100,21 @@ function trackJointimerClick() {
             <span>©{{ new Date().getFullYear() }} IT-ХОЗЯЕВА</span>
             <span class="text-foreground/25">|</span>
             <a
+              href="/mentors"
+              class="hover:text-accent transition-colors underline underline-offset-4"
+            >
+              mentors
+            </a>
+            <span class="text-foreground/25">|</span>
+            <a
+              href="/vibe-coding"
+              class="hover:text-accent transition-colors underline underline-offset-4"
+            >
+              vibe-coding
+            </a>
+            <span class="text-foreground/25">|</span>
+            <a
               href="/privacy"
-              target="_blank"
-              rel="noopener noreferrer"
               class="hover:text-accent transition-colors underline underline-offset-4"
             >
               privacy.policy

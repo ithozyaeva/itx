@@ -4,6 +4,8 @@ import Home from '../pages/Main.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
+  { path: '/mentors', component: () => import('../pages/Mentors.vue') },
+  { path: '/vibe-coding', component: () => import('../pages/VibeCoding.vue') },
   { path: '/privacy', component: () => import('../pages/Privacy.vue') },
 ]
 

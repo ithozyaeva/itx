@@ -8,7 +8,9 @@ const __dirname = dirname(__filename)
 const BASE_URL = 'https://ithozyaeva.ru'
 const routes = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
-  { path: '/privacy', priority: '0.5', changefreq: 'monthly' },
+  { path: '/mentors', priority: '0.9', changefreq: 'weekly' },
+  { path: '/vibe-coding', priority: '0.8', changefreq: 'monthly' },
+  { path: '/privacy', priority: '0.3', changefreq: 'monthly' },
 ]
 
 const today = new Date().toISOString().split('T')[0]
