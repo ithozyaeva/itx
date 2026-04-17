@@ -17,4 +17,4 @@ RUN if [ -d "_packages_ui" ]; then mkdir -p /packages/ui && cp -r _packages_ui/*
 
 RUN npm run build
 
-CMD ["sh", "-c", "rm -rf /static/platform-frontend/* && cp -r /app/dist/* /static/platform-frontend/"]
+CMD ["sh", "-c", "mkdir -p /static/platform-frontend && find /static/platform-frontend -mindepth 1 -delete && cp -a /app/dist/. /static/platform-frontend/"]
