@@ -59,7 +59,14 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate landing-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate platform-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate admin-frontend
-            # Пересоздаём nginx: `nginx -s reload` не перечитывает envsubst в conf.d/nginx.conf.template.
+            # Регенерируем nginx default.conf из template: nginx-init одноразовый контейнер,
+            # envsubst выполняется только при старте. Без recreate изменения в template не применяются.
+            docker rm -f nginx-init 2>/dev/null || true
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx-init
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if ! docker ps --format '{{.Names}}' | grep -q '^nginx-init$'; then break; fi
+              sleep 1
+            done
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
             # Clean up old images
             docker image prune -f
