@@ -12,6 +12,15 @@ const SEO_SHELL_RE = /<div id="app">[\s\S]*?<\/div>\s*<script type="module"/
 
 const BASE_URL = 'https://ithozyaeva.ru'
 
+const SHELL_STYLE = `<style>
+        .seo-fallback { max-width: 840px; margin: 0 auto; padding: 24px; font: 16px/1.5 system-ui, sans-serif; color: #d4d4d4; background: #0b0d0c; }
+        .seo-fallback h1 { font-size: 32px; margin: 0 0 12px; color: #5eead4; }
+        .seo-fallback h2 { font-size: 22px; margin: 28px 0 10px; color: #5eead4; }
+        .seo-fallback h3 { font-size: 17px; margin: 16px 0 6px; }
+        .seo-fallback a { color: #5eead4; }
+        .seo-fallback nav { margin-bottom: 16px; font-size: 14px; color: #8a8a8a; }
+      </style>`
+
 /**
  * Каждый route — отдельный prerendered HTML.
  * title / description / canonical / og-теги подменяются в статическом HTML,
@@ -34,13 +43,7 @@ const routes = [
         { '@type': 'ListItem', 'position': 2, 'name': 'Политика конфиденциальности', 'item': `${BASE_URL}/privacy` },
       ],
     },
-    shellHtml: `<style>
-        .seo-fallback { max-width: 840px; margin: 0 auto; padding: 24px; font: 16px/1.5 system-ui, sans-serif; color: #d4d4d4; background: #0b0d0c; }
-        .seo-fallback h1 { font-size: 32px; margin: 0 0 12px; color: #5eead4; }
-        .seo-fallback h2 { font-size: 22px; margin: 28px 0 10px; color: #5eead4; }
-        .seo-fallback a { color: #5eead4; }
-        .seo-fallback nav { margin-bottom: 16px; font-size: 14px; color: #8a8a8a; }
-      </style>
+    shellHtml: `${SHELL_STYLE}
       <div class="seo-fallback">
         <nav aria-label="breadcrumb"><a href="/">Главная</a> › Политика конфиденциальности</nav>
         <h1>Политика в отношении обработки персональных данных</h1>
@@ -54,6 +57,84 @@ const routes = [
           <li>Контактные данные оператора для обращений.</li>
         </ul>
         <p>Полный текст доступен на странице после загрузки интерфейса. Для возврата на главную перейдите по ссылке <a href="/">ithozyaeva.ru</a>.</p>
+      </div>`,
+  },
+  {
+    path: 'mentors.html',
+    canonical: `${BASE_URL}/mentors`,
+    title: 'База менторов — senior-разработчики, AI-инженеры, тимлиды | IT-ХОЗЯЕВА',
+    description: 'База из 60+ IT-менторов: senior-разработчики, тимлиды, архитекторы и AI-инженеры из Яндекса, Tinkoff, VK. Помогают с карьерой, сменой грейда, переходом в AI и подготовкой к собеседованиям.',
+    ogType: 'website',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${BASE_URL}/` },
+        { '@type': 'ListItem', 'position': 2, 'name': 'Менторы', 'item': `${BASE_URL}/mentors` },
+      ],
+    },
+    shellHtml: `${SHELL_STYLE}
+      <div class="seo-fallback">
+        <nav aria-label="breadcrumb"><a href="/">Главная</a> › Менторы</nav>
+        <h1>База менторов IT-ХОЗЯЕВА</h1>
+        <p>60+ IT-менторов: senior-разработчики, тимлиды, архитекторы и AI-инженеры из топовых российских IT-компаний — Яндекс, Tinkoff, VK, Ozon, Сбер, Kaspersky, JetBrains. Помогаем расти по грейду, сменить направление, подготовиться к собеседованию и разобраться в AI и вайбкодинге.</p>
+        <h2>Кто в базе</h2>
+        <p>Senior и lead разработчики, архитекторы, AI-инженеры, DevOps, QA-лиды. Специалисты, которые реально собеседуют и принимают в топовых командах.</p>
+        <h2>С чем помогают</h2>
+        <ul>
+          <li>Карьерное планирование и смена грейда.</li>
+          <li>Ревью резюме и мок-интервью.</li>
+          <li>Подготовка к системному дизайну и технической секции.</li>
+          <li>Разбор PR, архитектурные консультации.</li>
+          <li>Переход в AI-разработку, смена стека.</li>
+        </ul>
+        <h2>Как получить доступ</h2>
+        <p>Доступ к базе менторов открывается на тарифе ХОЗЯИН — <a href="https://boosty.to/jointime/purchase/3150814" rel="noopener">от 1000 ₽/мес через Boosty</a>. Получаете полную таблицу контактов, расписание групповых сессий и возможность забронировать индивидуальную консультацию.</p>
+        <p><a href="/">← Вернуться на главную</a></p>
+      </div>`,
+  },
+  {
+    path: 'vibe-coding.html',
+    canonical: `${BASE_URL}/vibe-coding`,
+    title: 'Вайбкодинг (vibe coding) — что это, как научиться и где практиковать | IT-ХОЗЯЕВА',
+    description: 'Вайбкодинг — разработка в паре с LLM, где программист описывает результат, а код пишет и правит AI. Разбираем термин, инструменты (Cursor, Claude Code, Windsurf), практики и где освоить в IT-сообществе.',
+    ogType: 'article',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${BASE_URL}/` },
+        { '@type': 'ListItem', 'position': 2, 'name': 'Вайбкодинг', 'item': `${BASE_URL}/vibe-coding` },
+      ],
+    },
+    shellHtml: `${SHELL_STYLE}
+      <div class="seo-fallback">
+        <nav aria-label="breadcrumb"><a href="/">Главная</a> › Вайбкодинг</nav>
+        <h1>Вайбкодинг: что это и как научиться</h1>
+        <p>Вайбкодинг (от англ. vibe coding) — стиль разработки, при котором программист описывает намерение и результат естественным языком, а большую часть кода пишет и правит LLM. Термин ввёл Андрей Карпаты в феврале 2025 — «ты не столько пишешь код, сколько задаёшь вайб».</p>
+        <h2>Как это работает</h2>
+        <p>Разработчик открывает IDE с агентом (Cursor, Claude Code, Windsurf) и даёт задачу в чате. Модель читает структуру репозитория, вносит изменения в несколько файлов, запускает линтер и тесты, показывает diff. Важное отличие от обычного автокомплита — агент действует автономно.</p>
+        <h2>Инструменты</h2>
+        <ul>
+          <li><strong>Cursor</strong> — форк VS Code с Claude/GPT агентом в интерфейсе.</li>
+          <li><strong>Claude Code</strong> — официальный CLI от Anthropic с долгими автономными сессиями.</li>
+          <li><strong>Windsurf</strong> — агентный IDE от Codeium с многоступенчатым планированием.</li>
+          <li><strong>Aider</strong> — open-source CLI, работает с любым API.</li>
+          <li><strong>GitHub Copilot Workspace</strong> — агент внутри GitHub для работы по issue → PR.</li>
+        </ul>
+        <h2>Что меняется в работе</h2>
+        <p>Рутина — CRUD, тесты, рефакторинг, перевод кода между языками — уходит к AI почти полностью. Критичным становится умение быстро проверить и отвергнуть неверное решение модели, держать архитектуру в голове и грамотно декомпозировать задачу.</p>
+        <h2>Как начать</h2>
+        <ol>
+          <li>Установить один из агентных IDE (Cursor — самый быстрый старт).</li>
+          <li>Выбрать свежую модель — Claude Opus 4.x или Sonnet 4.x.</li>
+          <li>Взять реальную задачу, не учебную: багфикс, небольшая фича, миграция.</li>
+          <li>Писать промпты с контекстом: куда положить файл, какие соглашения проекта, что не трогать.</li>
+          <li>Каждый diff просматривать глазами.</li>
+        </ol>
+        <h2>Где практиковать в сообществе</h2>
+        <p>В <a href="/">IT-ХОЗЯЕВА</a> еженедельно проходят онлайн-воркшопы по vibe coding: разбор реальных задач участников в Cursor и Claude Code, обсуждение промптов, подход к ревью AI-кода. Доступ к воркшопам — по подписке от 520 ₽/мес.</p>
+        <p><a href="/">← Вернуться на главную</a></p>
       </div>`,
   },
 ]
