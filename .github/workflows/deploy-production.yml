@@ -48,12 +48,18 @@ jobs:
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Build new images with legacy builder (BuildKit ignores --no-cache)
             DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache
+            # Проект-локальная очистка зависших контейнеров от предыдущих неудачных деплоев.
+            # docker compose --force-recreate падает с Container name already in use, если
+            # старый контейнер остался c hash-prefix'ом — явно удаляем по имени.
+            for svc in backend landing-frontend platform-frontend admin-frontend; do
+              docker rm -f "$svc" 2>/dev/null || true
+            done
             # Restart services with forced recreation to pick up new images
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate landing-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate platform-frontend
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate admin-frontend
-            # Reload nginx to pick up any config changes (graceful, no downtime)
-            docker compose -f docker-compose.prod.yml exec nginx nginx -s reload || true
+            # Пересоздаём nginx: `nginx -s reload` не перечитывает envsubst в conf.d/nginx.conf.template.
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
             # Clean up old images
             docker image prune -f
