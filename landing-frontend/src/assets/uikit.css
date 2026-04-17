@@ -1,13 +1,5 @@
 /* UI Kit design tokens — extracted from itx-ui-kit */
 
-@font-face {
-  font-family: 'Unbounded';
-  font-weight: 400 600;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&display=swap');
-}
-
 :root {
   /* Colors */
   --color-total-black: #000;
@@ -35,9 +27,9 @@
   --transition-popover: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Fonts */
-  --font-unbounded: 'Unbounded', 'Space Grotesk', sans-serif;
-  --font-inter: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+  --font-unbounded: 'Unbounded', 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
+  --font-inter: 'Inter Variable', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
 
   /* Terminal accent */
   --color-terminal-amber: #ffb547;
