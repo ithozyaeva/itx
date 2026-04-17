@@ -5,7 +5,6 @@ import { usePageMeta } from '@/composables/useMeta'
 usePageMeta({
   title: 'Политика конфиденциальности',
   description: 'Политика в отношении обработки персональных данных IT-ХОЗЯЕВА. Узнайте, как мы обрабатываем и защищаем ваши персональные данные.',
-  keywords: 'политика конфиденциальности, персональные данные, защита данных, обработка данных, IT-ХОЗЯЕВА',
   url: 'https://ithozyaeva.ru/privacy',
   type: 'article',
 })
