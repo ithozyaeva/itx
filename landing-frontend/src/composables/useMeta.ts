@@ -11,7 +11,6 @@ const SITE_BASE = {
 export interface PageMeta {
   title?: string
   description?: string
-  keywords?: string
   image?: string
   url?: string
   type?: 'website' | 'article'
@@ -25,7 +24,6 @@ export function usePageMeta(meta: PageMeta) {
     : SITE_BASE.name
 
   const description = meta.description || SITE_BASE.description
-  const keywords = meta.keywords || 'IT сообщество, AI, вайбкодинг, vibe coding, искусственный интеллект, менторство в IT, нетворкинг, IT комьюнити, карьера в IT, AI-инженер, разработчики, собеседования'
   const image = meta.image || SITE_BASE.image
   const url = meta.url || SITE_BASE.url
   const type = meta.type || 'website'
@@ -53,10 +51,7 @@ export function usePageMeta(meta: PageMeta) {
 
   useHead({
     meta: [
-      { name: 'keywords', content: keywords },
       { name: 'author', content: SITE_BASE.name },
-      { name: 'ai:description', content: description },
-      { name: 'ai:keywords', content: keywords },
       { name: 'theme-color', content: '#000000' },
       { name: 'apple-mobile-web-app-title', content: SITE_BASE.name },
     ],
