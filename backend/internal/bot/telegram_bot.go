@@ -1258,7 +1258,40 @@ func (b *TelegramBot) startEventAlertsScheduler() {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		b.processMissingInitialAlerts()
 		b.checkAndSendEventAlerts()
+	}
+}
+
+// processMissingInitialAlerts находит будущие события без отправленного
+// начального алерта (флаг initial_alerts_sent_at IS NULL) и отправляет их.
+// Нужно для APP_MODE=api, где хендлер не может дёрнуть бота напрямую.
+// Флаг ставится в любом случае (даже при ошибке отправки), чтобы избежать
+// бесконечных ретраев, если у события нет подходящих получателей.
+func (b *TelegramBot) processMissingInitialAlerts() {
+	var eventIds []int64
+	if err := database.DB.Model(&models.Event{}).
+		Where("initial_alerts_sent_at IS NULL AND date > ?", time.Now()).
+		Pluck("id", &eventIds).Error; err != nil {
+		log.Printf("Error loading events missing initial alerts: %v", err)
+		return
+	}
+	for _, id := range eventIds {
+		event, err := b.eventService.GetById(id)
+		if err != nil {
+			log.Printf("Error loading event %d for initial alert: %v", id, err)
+			continue
+		}
+		log.Printf("Sending missed initial alert for event %d (%s)", event.Id, event.Title)
+		if alertErr := b.SendInitialEventAlerts(event); alertErr != nil {
+			log.Printf("Error sending missed initial alert for event %d: %v", event.Id, alertErr)
+		}
+		now := time.Now()
+		if updErr := database.DB.Model(&models.Event{}).
+			Where("id = ?", event.Id).
+			Update("initial_alerts_sent_at", now).Error; updErr != nil {
+			log.Printf("Error updating initial_alerts_sent_at for event %d: %v", event.Id, updErr)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"ithozyeva/database"
 	"ithozyeva/internal/bot"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
@@ -10,6 +11,7 @@ import (
 	"ithozyeva/internal/utils"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -196,7 +198,9 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка создания события"})
 	}
 
-	// Отправляем инициализирующие алерты в фоне
+	// Отправляем инициализирующие алерты в фоне.
+	// При APP_MODE=api бот в этом процессе nil — алерт отправит бот на NL
+	// по флагу initial_alerts_sent_at через свой шедулер.
 	go func() {
 		telegramBot := bot.GetGlobalBot()
 		if telegramBot == nil {
@@ -205,6 +209,14 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 		}
 		if err := telegramBot.SendInitialEventAlerts(result); err != nil {
 			log.Printf("Error sending initial event alerts: %v", err)
+			return
+		}
+		// Помечаем как отправленное, чтобы шедулер бота не продублировал отправку.
+		now := time.Now()
+		if err := database.DB.Model(&models.Event{}).
+			Where("id = ?", result.Id).
+			Update("initial_alerts_sent_at", now).Error; err != nil {
+			log.Printf("Error marking initial_alerts_sent_at for event %d: %v", result.Id, err)
 		}
 	}()
 
