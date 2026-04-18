@@ -182,6 +182,14 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 	// Подставляем название эксклюзивного чата
 	h.resolveExclusiveChatTitle(event)
 
+	// Резолвим теги по имени (новые теги, введённые вручную, имеют Id=0)
+	resolvedTags, err := h.svc.ResolveEventTags(event.EventTags)
+	if err != nil {
+		log.Printf("resolve event tags error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обработки тегов"})
+	}
+	event.EventTags = resolvedTags
+
 	result, err := h.service.Create(event)
 	if err != nil {
 		log.Printf("create event error: %v", err)
@@ -214,6 +222,14 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 
 	// Подставляем название эксклюзивного чата
 	h.resolveExclusiveChatTitle(event)
+
+	// Резолвим теги по имени (новые теги, введённые вручную, имеют Id=0)
+	resolvedTags, err := h.svc.ResolveEventTags(event.EventTags)
+	if err != nil {
+		log.Printf("resolve event tags error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обработки тегов"})
+	}
+	event.EventTags = resolvedTags
 
 	result, err := h.service.Update(event)
 	if err != nil {
