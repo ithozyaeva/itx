@@ -46,8 +46,9 @@ server {
 
   location / {
     root /static/landing-frontend;
-    try_files $uri $uri.html $uri/ /index.html;
+    try_files $uri $uri.html $uri/ =404;
     index index.html;
+    error_page 404 /404.html;
     location ~* \.html$ {
       add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
