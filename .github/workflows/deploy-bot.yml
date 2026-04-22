@@ -5,6 +5,9 @@ on:
     branches: [ master ]
     paths:
       - 'backend/**'
+  # Ручной триггер нужен, когда push не срабатывает (merge без backend/**,
+  # или предыдущий прогон упал по таймауту и контейнер остался на старом коде).
+  workflow_dispatch: {}
 
 jobs:
   deploy_bot:
@@ -29,7 +32,10 @@ jobs:
           username: ${{ secrets.SSH_BOT_USER }}
           key:      ${{ secrets.SSH_BOT_KEY }}
           port:     ${{ secrets.SSH_BOT_PORT }}
-          command_timeout: 30m
+          # NL-сервер слабый; Go build --no-cache занимает 20–27 мин, а при
+          # конкурентных нагрузках от соседних проектов — упирается в лимит.
+          # 60m даёт запас и не плодит зависшие docker build-процессы.
+          command_timeout: 60m
           script: |
             cd /opt/itx-bot
             docker compose build --no-cache platform-bot

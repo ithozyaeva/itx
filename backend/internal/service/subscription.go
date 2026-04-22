@@ -69,22 +69,26 @@ func (s *SubscriptionService) ResolveTierID(userID int64, botCheckFunc func(chat
 		return nil
 	}
 
-	// Build anchor map: tierID -> chatID
-	anchorMap := make(map[uint]int64)
+	// tierID -> все чаты, которые для него anchor. Раньше был map[uint]int64
+	// и при дубликате anchor'ов на один тир последний перезаписывал первые,
+	// из-за чего часть юзеров из anchor-чата мимо «выживающего» теряли тир.
+	anchorMap := make(map[uint][]int64)
 	for _, c := range anchorChats {
 		if c.AnchorForTierID != nil {
-			anchorMap[*c.AnchorForTierID] = c.ID
+			anchorMap[*c.AnchorForTierID] = append(anchorMap[*c.AnchorForTierID], c.ID)
 		}
 	}
 
 	for _, tier := range tiersDesc {
-		anchorChatID, ok := anchorMap[tier.ID]
+		chatIDs, ok := anchorMap[tier.ID]
 		if !ok {
 			continue
 		}
-		if s.IsMember(anchorChatID, userID, botCheckFunc) {
-			id := tier.ID
-			return &id
+		for _, chatID := range chatIDs {
+			if s.IsMember(chatID, userID, botCheckFunc) {
+				id := tier.ID
+				return &id
+			}
 		}
 	}
 	return nil
