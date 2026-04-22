@@ -314,9 +314,11 @@ func (b *TelegramBot) Start() {
 
 func (b *TelegramBot) registerCommands() {
 	commands := []tgbotapi.BotCommand{
-		{Command: "start", Description: "Авторизация на платформе"},
+		{Command: "start", Description: "Начать / welcome"},
+		{Command: "sub", Description: "Проверить подписку и получить инвайты"},
+		{Command: "substatus", Description: "Мои чаты по подписке"},
+		{Command: "mygroups", Description: "Все доступные чаты по подписке"},
 		{Command: "mypoints", Description: "Мои баллы"},
-		{Command: "mygroups", Description: "Доступные чаты, куда ещё не вступил"},
 		{Command: "events", Description: "Ближайшие события"},
 		{Command: "summarize", Description: "Саммари чата (day/week/3d/число)"},
 		{Command: "whois", Description: "Кто этот участник"},
@@ -368,7 +370,10 @@ func (b *TelegramBot) handleEventsCommand(message *tgbotapi.Message) {
 
 func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 	text := "Доступные команды:\n" +
-		"/start - Авторизация на платформе\n" +
+		"/start - Главное меню бота\n" +
+		"/sub - Проверить подписку и получить инвайты\n" +
+		"/substatus - Мои чаты по подписке\n" +
+		"/mygroups - Все доступные по подписке чаты (с ✅ где состоишь)\n" +
 		"/mypoints - Посмотреть баланс баллов\n" +
 		"/events - Ближайшие события\n" +
 		"/summarize - AI-саммари чата\n" +
@@ -378,9 +383,6 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"  • /summarize 3d — за 3 дня\n" +
 		"  • /summarize 500 — последние 500 сообщений\n" +
 		"  Лимит: 5 запросов в день\n" +
-		"/sub - Проверить подписку и получить доступ к чатам\n" +
-		"/substatus - Статус подписки\n" +
-		"/mygroups - Доступные чаты, в которых ты ещё не состоишь\n" +
 		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
 		"/help - Помощь"
 
@@ -620,45 +622,47 @@ func (b *TelegramBot) checkBirthdays() {
 func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	log.Printf("Received /start command from user %d with args: %s", message.From.ID, message.CommandArguments())
 
+	// Deep-link из закрепа в anchor-чате: /start sub → flow подписки без
+	// welcome-экрана, сразу зовёт /sub.
 	if strings.TrimSpace(message.CommandArguments()) == "sub" {
 		b.handleSubCommand(message)
 		return
 	}
 
-	redirectUrl := config.CFG.PublicDomain
-	log.Printf("Redirect URL before processing: %s", redirectUrl)
+	b.sendWelcomeWizard(message.Chat.ID)
+}
 
-	if !strings.HasPrefix(redirectUrl, "http://") && !strings.HasPrefix(redirectUrl, "https://") {
-		redirectUrl = "http://" + redirectUrl
-	}
-	log.Printf("Final redirect URL: %s", redirectUrl)
-
-	// Генерируем токен для пользователя
-	token, err := b.tg_service.GenerateAuthToken(message.From.ID)
-	if err != nil {
-		log.Printf("Error generating auth token for user %d: %v", message.From.ID, err)
-		return
-	}
-
-	log.Printf("Generated token for user %d", message.From.ID)
-
-	// Формируем URL для перенаправления с токеном
-	authUrl := fmt.Sprintf("%s?token=%s", redirectUrl, token)
-
-	sendAuthToBackend(b.bot, token, message.From)
-
-	// Отправляем сообщение с кнопкой для авторизации
-	msg := tgbotapi.NewMessage(message.Chat.ID, "Нажмите кнопку ниже для авторизации")
+// sendWelcomeWizard — первое сообщение новому юзеру в ЛС бота: короткий
+// текст «что это» + набор inline-кнопок, которые покрывают 90% флоу
+// (подписка, список чатов, авторизация на платформе, FAQ). Остальные
+// команды (/events, /mypoints, …) остаются доступны в меню бота, но в
+// первый экран не тащим, чтобы не пугать длинным списком.
+func (b *TelegramBot) sendWelcomeWizard(chatID int64) {
+	text := "<b>Привет! Я бот сообщества IT-X.</b>\n\n" +
+		"Через меня можно:\n" +
+		"• получить инвайт-ссылки в чаты по твоей подписке,\n" +
+		"• посмотреть свой тир и куда ещё можно зайти,\n" +
+		"• авторизоваться на платформе " +
+		"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>.\n\n" +
+		"Выбери, с чего начать:"
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("Авторизоваться", authUrl),
+			tgbotapi.NewInlineKeyboardButtonData("🔑 Проверить подписку", "wiz:sub"),
+			tgbotapi.NewInlineKeyboardButtonData("📚 Мои чаты", "wiz:status"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("🆕 Куда ещё зайти", "wiz:mygroups"),
+			tgbotapi.NewInlineKeyboardButtonData("🌐 Платформа", "wiz:auth"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("❓ Как это работает", "wiz:help"),
 		),
 	)
-
 	if _, err := b.bot.Send(msg); err != nil {
-		log.Printf("Error sending message: %v", err)
-	} else {
-		log.Printf("Successfully sent auth button to user %d", message.From.ID)
+		log.Printf("Error sending welcome wizard: %v", err)
 	}
 }
 
@@ -935,6 +939,12 @@ func (b *TelegramBot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) {
 	data := callback.Data
 	userID := callback.From.ID
 
+	// Welcome-wizard (/start) — короткие колбэки wiz:*.
+	if strings.HasPrefix(data, "wiz:") {
+		b.handleWizardCallback(callback)
+		return
+	}
+
 	// Парсим callback data
 	if strings.HasPrefix(data, "event_attend:") {
 		eventIdStr := strings.TrimPrefix(data, "event_attend:")
@@ -1011,6 +1021,88 @@ func (b *TelegramBot) answerCallbackQuery(callbackID string, text string) {
 	callbackConfig := tgbotapi.NewCallback(callbackID, text)
 	if _, err := b.bot.Request(callbackConfig); err != nil {
 		log.Printf("Error answering callback query: %v", err)
+	}
+}
+
+// handleWizardCallback разруливает нажатия по кнопкам welcome-экрана.
+// Каждый пункт либо вызывает соответствующий handler (/sub, /substatus,
+// /mygroups), либо отвечает отдельным сообщением — мы не редактируем
+// welcome, чтобы кнопки оставались доступны и юзер мог вернуться.
+func (b *TelegramBot) handleWizardCallback(callback *tgbotapi.CallbackQuery) {
+	b.answerCallbackQuery(callback.ID, "")
+	action := strings.TrimPrefix(callback.Data, "wiz:")
+
+	// Синтетическое message.From — переиспользуем существующие handlers,
+	// которые ожидают tgbotapi.Message (а не CallbackQuery).
+	synth := &tgbotapi.Message{
+		From: callback.From,
+		Chat: callback.Message.Chat,
+	}
+
+	switch action {
+	case "sub":
+		b.handleSubCommand(synth)
+	case "status":
+		b.handleSubStatusCommand(synth)
+	case "mygroups":
+		b.handleMyGroupsCommand(synth)
+	case "auth":
+		b.sendAuthButton(callback.From, callback.Message.Chat.ID)
+	case "help":
+		b.sendWelcomeFAQ(callback.Message.Chat.ID)
+	default:
+		log.Printf("Unknown wizard action: %s", action)
+	}
+}
+
+// sendAuthButton выдаёт кнопку для авторизации на ithozyaeva.ru — ту же,
+// что раньше уезжала сразу из /start. Токен one-time, генерим по запросу,
+// чтобы не хранить устаревший.
+func (b *TelegramBot) sendAuthButton(user *tgbotapi.User, chatID int64) {
+	redirectUrl := config.CFG.PublicDomain
+	if !strings.HasPrefix(redirectUrl, "http://") && !strings.HasPrefix(redirectUrl, "https://") {
+		redirectUrl = "http://" + redirectUrl
+	}
+
+	token, err := b.tg_service.GenerateAuthToken(user.ID)
+	if err != nil {
+		log.Printf("sendAuthButton: token gen for user %d failed: %v", user.ID, err)
+		b.sendMessage(chatID, "Не удалось сгенерировать ссылку авторизации. Попробуйте позже.")
+		return
+	}
+	sendAuthToBackend(b.bot, token, user)
+
+	authUrl := fmt.Sprintf("%s?token=%s", redirectUrl, token)
+	msg := tgbotapi.NewMessage(chatID,
+		"Нажмите кнопку ниже, чтобы авторизоваться на платформе ithozyaeva.ru. "+
+			"Ссылка одноразовая.")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Авторизоваться", authUrl),
+		),
+	)
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("sendAuthButton: send failed for user %d: %v", user.ID, err)
+	}
+}
+
+// sendWelcomeFAQ — краткий FAQ: как устроены тиры, anchor-чаты, что
+// делает /sub и где настраивать уведомления. Открывается по кнопке
+// «Как это работает».
+func (b *TelegramBot) sendWelcomeFAQ(chatID int64) {
+	text := "<b>Как это работает</b>\n\n" +
+		"• Подписка оформляется через Boosty или Tribute.\n" +
+		"• Когда ты в <b>якорном чате</b> своего тира — бот считает подписку активной.\n" +
+		"• /sub или кнопка <b>«Проверить подписку»</b> выдаёт инвайты во все доступные чаты.\n" +
+		"• /mygroups или <b>«Куда ещё зайти»</b> показывает полный список чатов по подписке, " +
+		"включая те, где ты уже состоишь (они помечены ✅).\n" +
+		"• Если тебе открыли новый чат, бот пришлёт сюда сообщение со ссылкой — отдельно действия не нужны.\n\n" +
+		"Если что-то не работает, напиши @jointimer."
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("sendWelcomeFAQ: %v", err)
 	}
 }
 
