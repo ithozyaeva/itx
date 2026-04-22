@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"strconv"
 	"strings"
@@ -349,18 +350,19 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 		}
 
 		// Notify only the subscription admin (не всех админов платформы).
+		// Всё идёт под HTML parse-mode — placeholder-ы и пользовательский ввод экранируем.
 		addedBy := ""
 		if update.From.UserName != "" {
-			addedBy = fmt.Sprintf("\nДобавил: @%s", update.From.UserName)
+			addedBy = fmt.Sprintf("\nДобавил: @%s", html.EscapeString(update.From.UserName))
 		} else if update.From.ID != 0 {
 			addedBy = fmt.Sprintf("\nДобавил: id=%d", update.From.ID)
 		}
 		b.SendDirectMessage(subscriptionAdminID, fmt.Sprintf(
 			"Бот добавлен в чат:\nID: <code>%d</code>\nНазвание: %s%s\n\n"+
 				"Настройте роль через:\n"+
-				"/subaddchat %d <tier_slug> — content чат\n"+
-				"/subaddchat %d <tier_slug> anchor — anchor чат",
-			chat.ID, title, addedBy, chat.ID, chat.ID))
+				"/subaddchat %d &lt;tier_slug&gt; — content чат\n"+
+				"/subaddchat %d &lt;tier_slug&gt; anchor — anchor чат",
+			chat.ID, html.EscapeString(title), addedBy, chat.ID, chat.ID))
 	}
 
 	// Bot removed from chat
