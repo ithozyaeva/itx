@@ -46,8 +46,17 @@ jobs:
           envs: VITE_YANDEX_METRIKA_ID,VITE_YANDEX_METRIKA_ENABLED
           script: |
             cd ${{ secrets.PROJECT_PROD_PATH }}
+            # Copy shared UI package into frontend directories for Docker context.
+            # Без этого admin-frontend/platform-frontend build падает при загрузке
+            # tailwind.config.js (require('../packages/ui/tailwind.preset')), а сам
+            # docker compose build завершается с ненулевым кодом, но workflow этого
+            # не видит — и up -d поднимает контейнер на старом образе.
+            cp -r packages/ui platform-frontend/_packages_ui
+            cp -r packages/ui admin-frontend/_packages_ui
             # Build new images with legacy builder (BuildKit ignores --no-cache)
             DOCKER_BUILDKIT=0 CACHEBUST=$(date +%s) docker compose -f docker-compose.prod.yml build --no-cache
+            # Remove temporary copies
+            rm -rf platform-frontend/_packages_ui admin-frontend/_packages_ui
             # Проект-локальная очистка зависших контейнеров от предыдущих неудачных деплоев.
             # docker compose --force-recreate падает с Container name already in use, если
             # старый контейнер остался c hash-prefix'ом — явно удаляем по имени.
