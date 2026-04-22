@@ -19,7 +19,11 @@ import { Input } from '@/components/ui/input'
 import { Pagination, PaginationEllipsis, PaginationFirst, PaginationLast, PaginationList, PaginationListItem, PaginationNext, PaginationPrev } from '@/components/ui/pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Typography } from '@/components/ui/typography'
+import { usePermissions } from '@/composables/usePermissions'
 import { subscriptionService } from '@/services/subscriptionService'
+
+const { hasPermission } = usePermissions()
+const isSuperAdmin = computed(() => hasPermission.value('is_super_admin'))
 
 type Tab = 'overview' | 'users' | 'chats'
 
@@ -119,6 +123,10 @@ function openChatModal(chatId: number | null) {
 }
 
 async function toggleChatExpand(chatId: number) {
+  // Панель показывает только редактор, который доступен супер-админу. Для
+  // остальных не дёргаем getChatDetail вхолостую.
+  if (!isSuperAdmin.value)
+    return
   if (expandedChatId.value === chatId) {
     expandedChatId.value = null
     expandedChatDetail.value = null
@@ -571,6 +579,7 @@ onUnmounted(subscriptionService.clearPagination)
             </button>
           </div>
           <Button
+            v-if="isSuperAdmin"
             size="sm"
             @click="openChatModal(null)"
           >
@@ -639,6 +648,7 @@ onUnmounted(subscriptionService.clearPagination)
               </div>
 
               <div
+                v-if="isSuperAdmin"
                 class="flex items-center gap-1 shrink-0"
                 @click.stop
               >
@@ -669,9 +679,9 @@ onUnmounted(subscriptionService.clearPagination)
               </div>
             </div>
 
-            <!-- Expanded panel -->
+            <!-- Expanded panel (редактор доступен только супер-админу) -->
             <div
-              v-if="expandedChatId === chat.id"
+              v-if="expandedChatId === chat.id && isSuperAdmin"
               class="border-t px-4 py-4 bg-muted/20"
             >
               <div

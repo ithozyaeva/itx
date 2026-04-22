@@ -40,12 +40,20 @@ func (b *TelegramBot) isAdmin(userID int64) bool {
 	return b.member.IsAdminByTelegramID(userID)
 }
 
-// subscriptionAdminID is the only Telegram user allowed to manage subscriptions via bot.
-const subscriptionAdminID int64 = 931916742
+// subscriptionAdminID — единственный Telegram-пользователь, которому разрешено
+// управлять подписками через бот. Источник правды — config.CFG.SuperAdminTelegramID
+// (env SUPER_ADMIN_TELEGRAM_ID), с fallback на исторический id для безопасности,
+// если конфиг ещё не инициализирован.
+func subscriptionAdminID() int64 {
+	if config.CFG != nil && config.CFG.SuperAdminTelegramID != 0 {
+		return config.CFG.SuperAdminTelegramID
+	}
+	return 931916742
+}
 
 // isSubscriptionAdmin checks if the user is allowed to manage subscriptions.
 func (b *TelegramBot) isSubscriptionAdmin(userID int64) bool {
-	return userID == subscriptionAdminID
+	return userID == subscriptionAdminID()
 }
 
 // --- Telegram API helpers for subscription system ---
@@ -343,6 +351,12 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 		}
 		log.Printf("Bot added to chat %d (%s), registered in DB", chat.ID, title)
 
+		// Сразу начинаем трекать активность в этом чате, чтобы новый чат
+		// автоматически появился на дашборде «Активность чатов» без ручных миграций.
+		if err := b.chatActivityService.AddTrackedChat(chat.ID, title, chat.Type); err != nil {
+			log.Printf("Failed to add tracked chat %d: %v", chat.ID, err)
+		}
+
 		// Бот должен быть администратором, чтобы получать chat_member updates
 		// и создавать invite-ссылки. Если добавили не админом — предупреждаем.
 		if newStatus != "administrator" {
@@ -357,7 +371,7 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 		} else if update.From.ID != 0 {
 			addedBy = fmt.Sprintf("\nДобавил: id=%d", update.From.ID)
 		}
-		b.SendDirectMessage(subscriptionAdminID, fmt.Sprintf(
+		b.SendDirectMessage(subscriptionAdminID(), fmt.Sprintf(
 			"Бот добавлен в чат:\nID: <code>%d</code>\nНазвание: %s%s\n\n"+
 				"Настройте роль через:\n"+
 				"/subaddchat %d &lt;tier_slug&gt; — content чат\n"+
@@ -369,6 +383,12 @@ func (b *TelegramBot) handleMyChatMemberUpdated(update *tgbotapi.ChatMemberUpdat
 	if isActiveMemberStatus(oldStatus) && !isActiveMemberStatus(newStatus) {
 		b.subscriptionService.DeleteChat(chat.ID)
 		log.Printf("Bot removed from chat %d, deleted from DB", chat.ID)
+
+		// Снимаем чат с отслеживания активности. История сообщений в chat_messages
+		// остаётся — дашборд покажет только активные источники.
+		if err := b.chatActivityService.RemoveTrackedChat(chat.ID); err != nil {
+			log.Printf("Failed to deactivate tracked chat %d: %v", chat.ID, err)
+		}
 	}
 }
 

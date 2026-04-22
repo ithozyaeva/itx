@@ -31,9 +31,10 @@ type Config struct {
 	Redis              RedisConfig
 	JwtSecret          []byte
 	Port               string
-	TelegramToken      string
-	TelegramMainChatID int64
-	PublicDomain       string
+	TelegramToken        string
+	TelegramMainChatID   int64
+	SuperAdminTelegramID int64
+	PublicDomain         string
 	BackendDomain      string
 	AllowedOrigins     string
 	BotSharedSecret    string
@@ -152,6 +153,13 @@ func LoadConfig() {
 		subCheckInterval = 4
 	}
 
+	// SUPER_ADMIN_TELEGRAM_ID — единственный пользователь, которому разрешено
+	// управлять чатами подписок через UI (и получать уведомления от бота).
+	superAdminID := viper.GetInt64("SUPER_ADMIN_TELEGRAM_ID")
+	if superAdminID == 0 {
+		superAdminID = 931916742
+	}
+
 	CFG = &Config{
 		Database: DatabaseConfig{
 			Host:     viper.GetString("DB_HOST"),
@@ -168,9 +176,10 @@ func LoadConfig() {
 		},
 		JwtSecret:          []byte(jwtSecret),
 		Port:               viper.GetString("PORT"),
-		TelegramToken:      viper.GetString("TELEGRAM_BOT_TOKEN"),
-		TelegramMainChatID: viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
-		PublicDomain:       viper.GetString("PUBLIC_DOMAIN"),
+		TelegramToken:        viper.GetString("TELEGRAM_BOT_TOKEN"),
+		TelegramMainChatID:   viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
+		SuperAdminTelegramID: superAdminID,
+		PublicDomain:         viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,

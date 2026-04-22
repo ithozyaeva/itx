@@ -12,12 +12,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
 	"strconv"
 )
+
+// superAdminPermission — псевдо-пермишен, который добавляется в ответ
+// /me/permissions для супер-админа. Реального пермишена в БД нет, признак
+// вычисляется из Telegram-id. Строка должна совпадать с фронтовым типом.
+const superAdminPermission models.Permission = "is_super_admin"
 
 // MembersHandler обработчик для работы с участниками
 type MembersHandler struct {
@@ -350,6 +356,10 @@ func (h *MembersHandler) GetPermissions(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("get permissions error (member=%d): %v", member.Id, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка получения разрешений"})
+	}
+
+	if config.CFG != nil && config.CFG.SuperAdminTelegramID != 0 && member.TelegramID == config.CFG.SuperAdminTelegramID {
+		permissions = append(permissions, superAdminPermission)
 	}
 
 	return c.JSON(permissions)

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/utils"
@@ -98,6 +99,28 @@ func (m *AuthMiddleware) RequireAuth(c *fiber.Ctx) error {
 
 	// Add member info to context
 	c.Locals("member", member)
+	return c.Next()
+}
+
+// RequireSuperAdmin пропускает только супер-админа (Telegram-id из
+// config.CFG.SuperAdminTelegramID). Используется для действий, которые не должны
+// быть доступны ни одному другому админу платформы — например, ручное создание
+// или удаление чатов в системе подписок.
+func (m *AuthMiddleware) RequireSuperAdmin(c *fiber.Ctx) error {
+	member, ok := c.Locals("member").(*models.Member)
+	if !ok || member == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	superAdminID := config.CFG.SuperAdminTelegramID
+	if superAdminID == 0 || member.TelegramID != superAdminID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Only the super admin can perform this action.",
+		})
+	}
+
 	return c.Next()
 }
 
