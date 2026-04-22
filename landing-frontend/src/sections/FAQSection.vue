@@ -90,7 +90,7 @@ function toggle(i: number) {
             :style="{ gridTemplateRows: openIndex === i ? '1fr' : '0fr' }"
           >
             <div class="overflow-hidden">
-              <div class="px-5 md:px-8 pb-6 md:pb-8 pl-14 md:pl-[66px] -mt-2">
+              <div class="px-5 md:px-8 pb-6 md:pb-8 pl-14 md:pl-[66px]">
                 <div class="font-mono text-[11px] text-accent/60 mb-2">
                   &gt; answer:
                 </div>
