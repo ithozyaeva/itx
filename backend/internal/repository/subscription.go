@@ -271,6 +271,25 @@ func (r *SubscriptionRepository) CountAllUsers() (int64, error) {
 	return count, err
 }
 
+// GetEligibleUsersWithoutAccessForChat возвращает пользователей, у которых
+// эффективный тир (manual, иначе resolved) имеет уровень >= tierLevel и
+// при этом нет активной записи в subscription_user_chat_access для chatID.
+// Используется для рассылки новых чат-доступов, когда чат только что
+// привязали к тиру.
+func (r *SubscriptionRepository) GetEligibleUsersWithoutAccessForChat(
+	chatID int64, tierLevel int,
+) ([]models.SubscriptionUser, error) {
+	var users []models.SubscriptionUser
+	err := r.db.
+		Table("subscription_users AS su").
+		Select("su.*").
+		Joins(`JOIN subscription_tiers st ON st.id = COALESCE(su.manual_tier_id, su.resolved_tier_id)`).
+		Joins(`LEFT JOIN subscription_user_chat_access sa ON sa.user_id = su.id AND sa.chat_id = ? AND sa.revoked_at IS NULL`, chatID).
+		Where("su.is_active = ? AND st.level >= ? AND sa.user_id IS NULL", true, tierLevel).
+		Find(&users).Error
+	return users, err
+}
+
 func (r *SubscriptionRepository) GetUsersByTier(tierID uint) ([]models.SubscriptionUser, error) {
 	var users []models.SubscriptionUser
 	err := r.db.Where(

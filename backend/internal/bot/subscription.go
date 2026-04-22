@@ -530,11 +530,75 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 		b.subscriptionService.SetAnchor(chatID, &tier.ID)
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 			"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s.", chatID, tier.Name))
-	} else {
-		b.subscriptionService.AddChatToTier(chatID, tier.ID)
-		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
-			"Чат <code>%d</code> добавлен как <b>content</b> для тира %s.", chatID, tier.Name))
+		return
 	}
+
+	b.subscriptionService.AddChatToTier(chatID, tier.ID)
+	b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
+		"Чат <code>%d</code> добавлен как <b>content</b> для тира %s.", chatID, tier.Name))
+
+	// Рассылаем уведомления всем пользователям, у которых эффективный тир
+	// достаточного уровня и ещё нет доступа в этот чат. Делаем асинхронно,
+	// чтобы команда /subaddchat не блокировалась на N Telegram-запросах.
+	go b.notifyNewChatAccess(chatID, title, tier.Level, message.Chat.ID)
+}
+
+// notifyNewChatAccess выдаёт доступ в chatID всем пользователям с нужным
+// уровнем тира (у кого его ещё нет) и рассылает им одноразовые invite-ссылки
+// в ЛС. В конце отправляет супер-админу сводку по рассылке.
+func (b *TelegramBot) notifyNewChatAccess(chatID int64, chatTitle string, tierLevel int, adminChatID int64) {
+	users, err := b.subscriptionService.GetEligibleUsersWithoutAccessForChat(chatID, tierLevel)
+	if err != nil {
+		log.Printf("notifyNewChatAccess: failed to fetch eligible users for chat %d: %v", chatID, err)
+		b.SendDirectMessage(adminChatID, fmt.Sprintf("Не удалось собрать список получателей для чата <code>%d</code>: %v", chatID, err))
+		return
+	}
+	if len(users) == 0 {
+		b.SendDirectMessage(adminChatID, fmt.Sprintf("Рассылка не нужна: в чате <code>%d</code> уже все с подходящим тиром.", chatID))
+		return
+	}
+
+	titleEscaped := html.EscapeString(chatTitle)
+	delivered, skipped, failed := 0, 0, 0
+
+	for _, user := range users {
+		link, err := b.createOneTimeInviteLink(chatID)
+		if err != nil {
+			log.Printf("notifyNewChatAccess: invite-link failed for chat %d user %d: %v", chatID, user.ID, err)
+			failed++
+			continue
+		}
+		text := fmt.Sprintf(
+			"🆕 Вам открыт новый чат по вашей подписке:\n\n<b>%s</b>\n\n<a href=\"%s\">Перейти в чат</a>",
+			titleEscaped, link)
+		msg := tgbotapi.NewMessage(user.ID, text)
+		msg.ParseMode = "HTML"
+		msg.DisableWebPagePreview = true
+		if _, err := b.bot.Send(msg); err != nil {
+			// Forbidden = пользователь не нажимал /start боту. Не считаем это
+			// ошибкой, просто skip — ссылка «прогорает» без жертв.
+			if strings.Contains(err.Error(), "Forbidden") {
+				skipped++
+			} else {
+				log.Printf("notifyNewChatAccess: DM failed to user %d: %v", user.ID, err)
+				failed++
+			}
+			continue
+		}
+		if err := b.subscriptionService.GrantAccess(user.ID, chatID); err != nil {
+			log.Printf("notifyNewChatAccess: grant failed for user %d chat %d: %v", user.ID, chatID, err)
+			failed++
+			continue
+		}
+		delivered++
+		// Небольшая пауза между отправками, чтобы не упереться в Telegram
+		// flood-limit при рассылке на 100+ пользователей.
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	b.SendDirectMessage(adminChatID, fmt.Sprintf(
+		"Рассылка по чату <code>%d</code>: доставлено %d, пропущено (бот заблокирован) %d, ошибок %d.",
+		chatID, delivered, skipped, failed))
 }
 
 func (b *TelegramBot) handleSubSetAnchorCommand(message *tgbotapi.Message) {

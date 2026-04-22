@@ -285,6 +285,14 @@ func (s *SubscriptionService) SetChatTiers(chatID int64, tierIDs []uint) error {
 	return s.repo.SetChatTiers(chatID, tierIDs)
 }
 
+// GetEligibleUsersWithoutAccessForChat — пользователи с эффективным тиром
+// уровня >= tierLevel, которым доступ к этому чату ещё не выдан.
+func (s *SubscriptionService) GetEligibleUsersWithoutAccessForChat(
+	chatID int64, tierLevel int,
+) ([]models.SubscriptionUser, error) {
+	return s.repo.GetEligibleUsersWithoutAccessForChat(chatID, tierLevel)
+}
+
 func (s *SubscriptionService) DeleteChat(chatID int64) error {
 	return s.repo.DeleteChat(chatID)
 }
@@ -307,6 +315,10 @@ func (s *SubscriptionService) GetActiveAccess(userID int64) ([]models.Subscripti
 
 func (s *SubscriptionService) GetUsersWithAccessToChat(chatID int64) ([]models.SubscriptionUser, error) {
 	return s.repo.GetUsersWithAccessToChat(chatID)
+}
+
+func (s *SubscriptionService) GrantAccess(userID int64, chatID int64) error {
+	return s.repo.GrantAccess(userID, chatID)
 }
 
 func (s *SubscriptionService) RevokeAccess(userID int64, chatID int64) error {
