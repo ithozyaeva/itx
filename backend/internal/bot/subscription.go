@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -194,31 +195,44 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 		}
 	}
 
+	// Собираем доступные юзеру чаты по двум источникам:
+	//  1. Записи в subscription_user_chat_access — явно выданный доступ.
+	//  2. Чаты, привязанные к его тиру (или ниже) — доступны даже если
+	//     access-запись ещё не проставлена (например, чат добавили недавно,
+	//     рассылка не прошла или юзер заблокировал бота).
+	// Объединение даёт полный ответ на вопрос «что мне доступно по подписке».
+	unique := map[int64]models.SubscriptionChat{}
 	access, _ := b.subscriptionService.GetActiveAccess(message.From.ID)
+	for _, a := range access {
+		if chat, err := b.subscriptionService.GetChat(a.ChatID); err == nil {
+			unique[a.ChatID] = *chat
+		}
+	}
+	if tierID != nil {
+		if tier, err := b.subscriptionService.GetTier(*tierID); err == nil {
+			chats, _ := b.subscriptionService.GetChatsForTierLevel(tier.Level)
+			for _, c := range chats {
+				unique[c.ID] = c
+			}
+		}
+	}
 
 	text := fmt.Sprintf("<b>Статус подписки</b>\n\n"+
 		"Тир: %s\n"+
-		"Активных чатов: %d\n", tierName, len(access))
+		"Доступных чатов: %d\n", tierName, len(unique))
 
-	if len(access) > 0 {
-		text += "\nДоступные чаты:\n"
-		for _, a := range access {
-			chat, err := b.subscriptionService.GetChat(a.ChatID)
-			if err != nil {
-				continue
+	if len(unique) > 0 {
+		items := make([]chatListItem, 0, len(unique))
+		for _, chat := range unique {
+			// Одноразовая ссылка на каждый чат: хранить их смысла нет, в БД
+			// ссылки не держим (см. комментарий в /substatus v1).
+			link, linkErr := b.createOneTimeInviteLink(chat.ID)
+			if linkErr != nil {
+				log.Printf("substatus: failed to create invite link for chat %d: %v", chat.ID, linkErr)
 			}
-			title := html.EscapeString(chat.Title)
-			// Для каждой записи создаём свежую одноразовую invite-ссылку — в
-			// subscription_user_chat_access ссылки не хранятся, а раздавать
-			// старые уже использованные одноразовые смысла нет. Если бот не
-			// админ в чате или API вернул ошибку — отдаём просто название.
-			if link, linkErr := b.createOneTimeInviteLink(a.ChatID); linkErr == nil {
-				text += fmt.Sprintf("  • <a href=\"%s\">%s</a>\n", link, title)
-			} else {
-				log.Printf("substatus: failed to create invite link for chat %d: %v", a.ChatID, linkErr)
-				text += fmt.Sprintf("  • %s\n", title)
-			}
+			items = append(items, chatListItem{chat: chat, link: link})
 		}
+		text += formatChatsGrouped(items)
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -255,34 +269,34 @@ func (b *TelegramBot) handleMyGroupsCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	// Фильтруем через Telegram API: оставляем только те, в которых юзер
-	// ещё не состоит. IsMember кеширует результат в Redis (5 мин TTL), так
-	// что при частых /mygroups не бомбим getChatMember.
-	notJoined := make([]models.SubscriptionChat, 0, len(chats))
-	for _, chat := range chats {
-		if !b.subscriptionService.IsMember(chat.ID, userID, b.isChatMember) {
-			notJoined = append(notJoined, chat)
-		}
-	}
-
-	if len(notJoined) == 0 {
+	if len(chats) == 0 {
 		b.SendDirectMessage(message.Chat.ID,
-			"Вы уже состоите во всех чатах, доступных по тиру <b>"+html.EscapeString(tier.Name)+"</b>.")
+			"По вашему тиру <b>"+html.EscapeString(tier.Name)+"</b> пока нет подключённых чатов.")
 		return
 	}
 
-	text := fmt.Sprintf(
-		"<b>Доступные чаты по подписке (%s), куда можно зайти:</b>\n\n",
-		html.EscapeString(tier.Name))
-	for _, chat := range notJoined {
-		title := html.EscapeString(chat.Title)
-		if link, linkErr := b.createOneTimeInviteLink(chat.ID); linkErr == nil {
-			text += fmt.Sprintf("• <a href=\"%s\">%s</a>\n", link, title)
-		} else {
+	// Показываем все доступные чаты, а не только «куда ещё не вступил».
+	// Для каждого делаем одноразовую invite-ссылку; рядом с теми, где юзер
+	// уже состоит, ставим ✅ — так человек видит полный scope своей подписки
+	// и может проверить, что нигде не пропустил.
+	items := make([]chatListItem, 0, len(chats))
+	for _, chat := range chats {
+		link, linkErr := b.createOneTimeInviteLink(chat.ID)
+		if linkErr != nil {
 			log.Printf("mygroups: invite-link failed for chat %d: %v", chat.ID, linkErr)
-			text += fmt.Sprintf("• %s\n", title)
 		}
+		items = append(items, chatListItem{
+			chat:     chat,
+			link:     link,
+			isMember: b.subscriptionService.IsMember(chat.ID, userID, b.isChatMember),
+		})
 	}
+
+	text := fmt.Sprintf(
+		"<b>Доступные чаты по подписке (%s):</b>\n",
+		html.EscapeString(tier.Name))
+	text += formatChatsGrouped(items)
+	text += "\n<i>✅ — чат, в котором вы уже состоите.</i>"
 
 	b.SendDirectMessage(message.Chat.ID, text)
 }
@@ -321,44 +335,101 @@ func (b *TelegramBot) postAnchorWelcome(chatID int64, user *tgbotapi.User) {
 	}
 }
 
+// chatListItem — строка в форматируемом списке: чат с, возможно, заранее
+// сгенерированной invite-ссылкой и отметкой «юзер уже там» для /mygroups.
+type chatListItem struct {
+	chat     models.SubscriptionChat
+	link     string
+	isMember bool
+}
+
+// formatChatsGrouped группирует items по Category (NULL → «Прочее»),
+// сортирует категории по MAX(priority) DESC, внутри категории — по title.
+// Результат — HTML-строка с заголовками-категориями и пунктами-списком.
+// Передавайте прегенерированные link-и (для юзерских команд — одноразовые);
+// если link пуст, выводится просто название.
+func formatChatsGrouped(items []chatListItem) string {
+	const fallbackCategory = "Прочее"
+	const fallbackEmoji = "💬"
+
+	type group struct {
+		items       []chatListItem
+		emoji       string
+		maxPriority int
+	}
+	groups := make(map[string]*group)
+	for _, it := range items {
+		cat := fallbackCategory
+		emoji := fallbackEmoji
+		if it.chat.Category != nil && *it.chat.Category != "" {
+			cat = *it.chat.Category
+		}
+		if it.chat.Emoji != nil && *it.chat.Emoji != "" {
+			emoji = *it.chat.Emoji
+		}
+		g, ok := groups[cat]
+		if !ok {
+			g = &group{emoji: emoji, maxPriority: it.chat.Priority}
+			groups[cat] = g
+		} else if g.emoji == fallbackEmoji && emoji != fallbackEmoji {
+			// Если в группе появился чат с явно заданным emoji — используем его.
+			g.emoji = emoji
+		}
+		if it.chat.Priority > g.maxPriority {
+			g.maxPriority = it.chat.Priority
+		}
+		g.items = append(g.items, it)
+	}
+
+	order := make([]string, 0, len(groups))
+	for cat := range groups {
+		order = append(order, cat)
+	}
+	sort.Slice(order, func(i, j int) bool {
+		gi, gj := groups[order[i]], groups[order[j]]
+		if gi.maxPriority != gj.maxPriority {
+			return gi.maxPriority > gj.maxPriority
+		}
+		return order[i] < order[j]
+	})
+
+	var sb strings.Builder
+	for _, cat := range order {
+		g := groups[cat]
+		sort.Slice(g.items, func(i, j int) bool {
+			return g.items[i].chat.Title < g.items[j].chat.Title
+		})
+		sb.WriteString(fmt.Sprintf("\n%s <b>%s</b>\n", g.emoji, html.EscapeString(cat)))
+		for _, it := range g.items {
+			title := html.EscapeString(it.chat.Title)
+			prefix := "• "
+			if it.isMember {
+				prefix = "• ✅ "
+			}
+			if it.link != "" {
+				sb.WriteString(fmt.Sprintf("%s<a href=\"%s\">%s</a>\n", prefix, it.link, title))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s%s\n", prefix, title))
+			}
+		}
+	}
+	return sb.String()
+}
+
 // sendSubscriptionLinks sends invite links grouped by category as a single HTML message.
 func (b *TelegramBot) sendSubscriptionLinks(chatID int64, result *service.SyncResult) {
-	type entry struct {
-		title string
-		link  string
-	}
-	groups := make(map[string][]entry)
-	groupEmoji := make(map[string]string)
-	var order []string
-
+	items := make([]chatListItem, 0, len(result.Granted))
 	for _, g := range result.Granted {
 		chat, err := b.subscriptionService.GetChat(g.ChatID)
-		title := fmt.Sprintf("Chat %d", g.ChatID)
-		cat := "Прочее"
-		emoji := "💬"
-		if err == nil {
-			title = chat.Title
-			if chat.Category != nil && *chat.Category != "" {
-				cat = *chat.Category
-			}
-			if chat.Emoji != nil && *chat.Emoji != "" {
-				emoji = *chat.Emoji
-			}
+		if err != nil {
+			// Не нашли чат в БД — формируем заглушку, чтобы всё равно отдать ссылку.
+			chat = &models.SubscriptionChat{ID: g.ChatID, Title: fmt.Sprintf("Chat %d", g.ChatID)}
 		}
-		if _, exists := groups[cat]; !exists {
-			order = append(order, cat)
-			groupEmoji[cat] = emoji
-		}
-		groups[cat] = append(groups[cat], entry{title: title, link: g.Link})
+		items = append(items, chatListItem{chat: *chat, link: g.Link})
 	}
 
 	text := fmt.Sprintf("Подписка подтверждена! Доступно чатов: <b>%d</b>\n", len(result.Granted))
-	for _, cat := range order {
-		text += fmt.Sprintf("\n%s <b>%s</b>\n", groupEmoji[cat], cat)
-		for _, e := range groups[cat] {
-			text += fmt.Sprintf("• <a href=\"%s\">%s</a>\n", e.link, e.title)
-		}
-	}
+	text += formatChatsGrouped(items)
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"

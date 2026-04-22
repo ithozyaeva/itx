@@ -32,6 +32,7 @@ export interface SubscriptionChat {
   activeUsers: number
   category?: string | null
   emoji?: string | null
+  priority?: number
 }
 
 export interface SubscriptionChatDetail {
@@ -42,6 +43,7 @@ export interface SubscriptionChatDetail {
   tierIDs: number[]
   category?: string | null
   emoji?: string | null
+  priority?: number
 }
 
 export interface SubscriptionUser {
@@ -191,7 +193,7 @@ class SubscriptionService {
     }
   }
 
-  createChat = async (data: { id: number, title: string, chatType: string, anchorForTierID?: number, tierIDs?: number[], category?: string | null, emoji?: string | null }): Promise<boolean> => {
+  createChat = async (data: { id: number, title: string, chatType: string, anchorForTierID?: number, tierIDs?: number[], category?: string | null, emoji?: string | null, priority?: number }): Promise<boolean> => {
     try {
       await api.post('subscriptions/chats', { json: data }).json()
       this.toast.toast({ title: 'Успешно', description: 'Чат добавлен' })
@@ -203,7 +205,7 @@ class SubscriptionService {
     }
   }
 
-  updateChat = async (chatId: number, data: { title?: string, anchorForTierID?: number, clearAnchor?: boolean, tierIDs?: number[], category?: string | null, emoji?: string | null, clearCategory?: boolean }): Promise<boolean> => {
+  updateChat = async (chatId: number, data: { title?: string, anchorForTierID?: number, clearAnchor?: boolean, tierIDs?: number[], category?: string | null, emoji?: string | null, clearCategory?: boolean, priority?: number }): Promise<boolean> => {
     try {
       await api.put(`subscriptions/chats/${chatId}`, { json: data }).json()
       this.toast.toast({ title: 'Успешно', description: 'Чат обновлён' })

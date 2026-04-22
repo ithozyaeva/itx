@@ -39,6 +39,7 @@ const expandedLoading = ref(false)
 const savingAction = ref<string | null>(null)
 const expandedCategory = ref('')
 const expandedEmoji = ref('')
+const expandedPriority = ref<number>(0)
 const savingCategory = ref(false)
 
 // Фильтр списка чатов: выбранные tierId + флаг "без привязки".
@@ -108,6 +109,7 @@ const unlinkedCount = computed(() =>
 watch(expandedChatDetail, (detail) => {
   expandedCategory.value = detail?.category ?? ''
   expandedEmoji.value = detail?.emoji ?? ''
+  expandedPriority.value = detail?.priority ?? 0
 })
 
 const stats = computed(() => subscriptionService.stats.value)
@@ -205,16 +207,19 @@ async function toggleContentTier(chatId: number, tierId: number) {
 async function saveCategoryEmoji(chatId: number) {
   savingCategory.value = true
   try {
+    const priority = Number.isFinite(expandedPriority.value) ? expandedPriority.value : 0
     const success = await subscriptionService.updateChat(chatId, {
       category: expandedCategory.value || null,
       emoji: expandedEmoji.value || null,
       clearCategory: !expandedCategory.value && !expandedEmoji.value,
+      priority,
     })
     if (success && expandedChatDetail.value) {
       expandedChatDetail.value = {
         ...expandedChatDetail.value,
         category: expandedCategory.value || null,
         emoji: expandedEmoji.value || null,
+        priority,
       }
       await subscriptionService.fetchChats()
     }
@@ -753,10 +758,10 @@ onUnmounted(subscriptionService.clearPagination)
                   </div>
                 </div>
 
-                <!-- Category / Emoji inline editor -->
+                <!-- Category / Emoji / Priority inline editor -->
                 <div>
                   <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                    Категория в боте
+                    Категория и приоритет
                   </div>
                   <div class="flex items-center gap-2">
                     <Input
@@ -771,6 +776,13 @@ onUnmounted(subscriptionService.clearPagination)
                       placeholder="Название категории"
                       maxlength="100"
                     />
+                    <Input
+                      v-model.number="expandedPriority"
+                      type="number"
+                      class="w-20 text-center"
+                      placeholder="0"
+                      title="Чем выше — тем выше категория в списках бота"
+                    />
                     <Button
                       size="sm"
                       :disabled="savingCategory"
@@ -782,6 +794,9 @@ onUnmounted(subscriptionService.clearPagination)
                       />
                       {{ savingCategory ? 'Сохранение' : 'Сохранить' }}
                     </Button>
+                  </div>
+                  <div class="mt-1 text-xs text-muted-foreground/70">
+                    Приоритет: чем больше число, тем выше категория в меню бота (0 = дефолт).
                   </div>
                 </div>
               </div>

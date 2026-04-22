@@ -6,6 +6,7 @@ import (
 	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -115,6 +116,7 @@ func (h *SubscriptionHandler) GetChats(c *fiber.Ctx) error {
 			"activeUsers": accessCounts[ch.ID],
 			"category":    ch.Category,
 			"emoji":       ch.Emoji,
+			"priority":    ch.Priority,
 		}
 		if ch.AnchorForTierID != nil {
 			item["anchorForTierID"] = *ch.AnchorForTierID
@@ -350,6 +352,12 @@ func (h *SubscriptionHandler) CreateChat(c *fiber.Ctx) error {
 		if err := h.svc.SetChatTiers(req.ID, req.TierIDs); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось привязать тиры"})
 		}
+		// Новый чат → все его тиры «новые». Публикуем рассылку по каждому.
+		for _, tid := range req.TierIDs {
+			if err := h.svc.PublishNewChatAccess(c.Context(), req.ID, tid); err != nil {
+				log.Printf("CreateChat: publish new-chat-access chat=%d tier=%d failed: %v", req.ID, tid, err)
+			}
+		}
 	}
 
 	return c.JSON(fiber.Map{"success": true})
@@ -374,6 +382,7 @@ func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
 		Category        *string `json:"category"`
 		Emoji           *string `json:"emoji"`
 		ClearCategory   bool    `json:"clearCategory"`
+		Priority        *int    `json:"priority"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
@@ -407,13 +416,47 @@ func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
 		}
 	}
 
+	var addedTiers []uint
 	if req.TierIDs != nil {
+		// Фиксируем старые привязки до SetChatTiers, чтобы вычислить diff и
+		// опубликовать рассылку только по реально добавленным тирам.
+		oldTierIDs, _ := h.svc.GetTierIDsForChat(chatID)
 		if err := h.svc.SetChatTiers(chatID, *req.TierIDs); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось обновить тиры"})
+		}
+		addedTiers = diffTiers(*req.TierIDs, oldTierIDs)
+	}
+
+	if req.Priority != nil {
+		if err := h.svc.SetChatPriority(chatID, *req.Priority); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось сохранить приоритет"})
+		}
+	}
+
+	// Публикуем события уже ПОСЛЕ всех БД-изменений, иначе подписчик
+	// может прибежать с invite раньше, чем чат стал доступным тиру.
+	for _, tid := range addedTiers {
+		if err := h.svc.PublishNewChatAccess(c.Context(), chatID, tid); err != nil {
+			log.Printf("UpdateChat: publish new-chat-access chat=%d tier=%d failed: %v", chatID, tid, err)
 		}
 	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+// diffTiers возвращает tierID, которые есть в next, но отсутствуют в prev.
+func diffTiers(next, prev []uint) []uint {
+	prevSet := make(map[uint]struct{}, len(prev))
+	for _, t := range prev {
+		prevSet[t] = struct{}{}
+	}
+	added := make([]uint, 0, len(next))
+	for _, t := range next {
+		if _, ok := prevSet[t]; !ok {
+			added = append(added, t)
+		}
+	}
+	return added
 }
 
 func (h *SubscriptionHandler) DeleteChat(c *fiber.Ctx) error {
@@ -449,6 +492,7 @@ func (h *SubscriptionHandler) GetChatDetail(c *fiber.Ctx) error {
 		"tierIDs":  tierIDs,
 		"category": chat.Category,
 		"emoji":    chat.Emoji,
+		"priority": chat.Priority,
 	}
 	if chat.AnchorForTierID != nil {
 		result["anchorForTierID"] = *chat.AnchorForTierID

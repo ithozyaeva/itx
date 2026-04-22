@@ -18,6 +18,7 @@ type SubscriptionChat struct {
 	AnchorForTierID *uint   `json:"anchor_for_tier_id"`
 	Category        *string `json:"category" gorm:"size:100"`
 	Emoji           *string `json:"emoji" gorm:"size:16"`
+	Priority        int     `json:"priority" gorm:"default:0"`
 }
 
 func (SubscriptionChat) TableName() string { return "subscription_chats" }
