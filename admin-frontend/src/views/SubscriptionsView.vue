@@ -37,6 +37,70 @@ const expandedCategory = ref('')
 const expandedEmoji = ref('')
 const savingCategory = ref(false)
 
+// Фильтр списка чатов: выбранные tierId + флаг "без привязки".
+// Пустой набор + флаг false = показать все.
+const chatTierFilter = ref<Set<number>>(new Set())
+const chatUnlinkedFilter = ref(false)
+
+function toggleChatTierFilter(tierId: number) {
+  const next = new Set(chatTierFilter.value)
+  if (next.has(tierId))
+    next.delete(tierId)
+  else
+    next.add(tierId)
+  chatTierFilter.value = next
+  if (next.size > 0)
+    chatUnlinkedFilter.value = false
+}
+
+function toggleUnlinkedFilter() {
+  chatUnlinkedFilter.value = !chatUnlinkedFilter.value
+  if (chatUnlinkedFilter.value)
+    chatTierFilter.value = new Set()
+}
+
+function resetChatFilter() {
+  chatTierFilter.value = new Set()
+  chatUnlinkedFilter.value = false
+}
+
+function chatMatchesTier(chat: { anchorForTierID?: number, tierIDs?: number[] }, tierId: number): boolean {
+  if (chat.anchorForTierID === tierId)
+    return true
+  return (chat.tierIDs ?? []).includes(tierId)
+}
+
+function chatIsUnlinked(chat: { anchorForTierID?: number, tierIDs?: number[] }): boolean {
+  return chat.anchorForTierID == null && (chat.tierIDs ?? []).length === 0
+}
+
+const filteredChats = computed(() => {
+  const all = subscriptionService.chats.value
+  if (chatUnlinkedFilter.value)
+    return all.filter(chatIsUnlinked)
+  const selected = chatTierFilter.value
+  if (selected.size === 0)
+    return all
+  return all.filter(chat => [...selected].some(tid => chatMatchesTier(chat, tid)))
+})
+
+const tierFilterCounts = computed(() => {
+  const counts: Record<number, number> = {}
+  for (const tier of subscriptionService.tiers.value)
+    counts[tier.id] = 0
+  for (const chat of subscriptionService.chats.value) {
+    for (const tier of subscriptionService.tiers.value) {
+      if (chatMatchesTier(chat, tier.id))
+        counts[tier.id]++
+    }
+  }
+  return counts
+})
+
+const unlinkedCount = computed(() =>
+  subscriptionService.chats.value.filter(chatIsUnlinked).length,
+)
+
 watch(expandedChatDetail, (detail) => {
   expandedCategory.value = detail?.category ?? ''
   expandedEmoji.value = detail?.emoji ?? ''
@@ -465,7 +529,47 @@ onUnmounted(subscriptionService.clearPagination)
 
       <!-- Chats Tab -->
       <template v-if="activeTab === 'chats'">
-        <div class="flex justify-end">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground mr-1">
+              Фильтр
+            </span>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors"
+              :class="chatTierFilter.size === 0 && !chatUnlinkedFilter
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background border-border hover:bg-muted'"
+              @click="resetChatFilter"
+            >
+              Все
+              <span class="tabular-nums opacity-70">{{ subscriptionService.chats.value.length }}</span>
+            </button>
+            <button
+              v-for="tier in subscriptionService.tiers.value"
+              :key="tier.id"
+              type="button"
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors"
+              :class="chatTierFilter.has(tier.id)
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border hover:bg-muted'"
+              @click="toggleChatTierFilter(tier.id)"
+            >
+              {{ tier.name }}
+              <span class="tabular-nums opacity-70">{{ tierFilterCounts[tier.id] ?? 0 }}</span>
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors"
+              :class="chatUnlinkedFilter
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background border-border hover:bg-muted'"
+              @click="toggleUnlinkedFilter"
+            >
+              Без привязки
+              <span class="tabular-nums opacity-70">{{ unlinkedCount }}</span>
+            </button>
+          </div>
           <Button
             size="sm"
             @click="openChatModal(null)"
@@ -477,14 +581,14 @@ onUnmounted(subscriptionService.clearPagination)
 
         <div class="space-y-2">
           <div
-            v-if="subscriptionService.chats.value.length === 0"
+            v-if="filteredChats.length === 0"
             class="text-center py-12 text-muted-foreground"
           >
-            Чаты не найдены
+            {{ subscriptionService.chats.value.length === 0 ? 'Чаты не найдены' : 'Под фильтр ничего не подходит' }}
           </div>
 
           <Card
-            v-for="chat in subscriptionService.chats.value"
+            v-for="chat in filteredChats"
             :key="chat.id"
             class="transition-colors"
             :class="{ 'ring-1 ring-primary/20': expandedChatId === chat.id }"
