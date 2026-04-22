@@ -47,6 +47,7 @@ type Config struct {
 	AppMode string // "full", "api", "bot"
 
 	SubscriptionCheckIntervalHours int
+	SubscriptionAutoKickEnabled    bool
 
 	AlertReminderIntervalMinutes       int64
 	AlertReminderFirstIntervalMinutes  int64
@@ -188,6 +189,7 @@ func LoadConfig() {
 		OpenAIModel:   viper.GetString("OPENAI_MODEL"),
 
 		SubscriptionCheckIntervalHours: subCheckInterval,
+		SubscriptionAutoKickEnabled:    viper.GetBool("SUBSCRIPTION_AUTO_KICK_ENABLED"),
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,

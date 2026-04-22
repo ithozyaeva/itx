@@ -93,7 +93,16 @@ func (b *TelegramBot) createOneTimeInviteLink(chatID int64) (string, error) {
 }
 
 // kickFromChat kicks a user by ban+unban.
+// Управляется фича-флагом SUBSCRIPTION_AUTO_KICK_ENABLED: если он выключен,
+// бот ничего не делает и только пишет «dry-run» в лог. Это позволяет
+// безопасно отключить автоматическое удаление участников из анкорных чатов,
+// оставив логику вычисления «кого надо было бы убрать» без изменений.
 func (b *TelegramBot) kickFromChat(chatID, userID int64) {
+	if config.CFG == nil || !config.CFG.SubscriptionAutoKickEnabled {
+		log.Printf("[auto-kick disabled] dry-run: would kick user %d from chat %d", userID, chatID)
+		return
+	}
+
 	_, err := b.bot.Request(tgbotapi.BanChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
 			ChatID: chatID,
