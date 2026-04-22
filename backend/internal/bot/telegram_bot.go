@@ -212,6 +212,13 @@ func (b *TelegramBot) Start() {
 			for _, newMember := range update.Message.NewChatMembers {
 				b.handleNewChatMember(update.Message.Chat.ID, &newMember)
 			}
+			b.deleteServiceMessage(update.Message.Chat.ID, update.Message.MessageID)
+			continue
+		}
+
+		// Сообщение «X вышел(а) из группы» — тоже убираем в наших чатах.
+		if update.Message.LeftChatMember != nil {
+			b.deleteServiceMessage(update.Message.Chat.ID, update.Message.MessageID)
 			continue
 		}
 
@@ -713,6 +720,19 @@ func (b *TelegramBot) sendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	if _, err := b.bot.Send(msg); err != nil {
 		log.Printf("Error sending message: %v", err)
+	}
+}
+
+// deleteServiceMessage убирает Telegram-service-сообщения (например,
+// «X вступил(а) в группу по ссылке-приглашению») в чатах, которые мы трекаем.
+// Ограничиваемся tracked_chats, чтобы не лезть с удалением в соседние чаты,
+// где бот мог оказаться случайно и без нужных прав.
+func (b *TelegramBot) deleteServiceMessage(chatID int64, messageID int) {
+	if !b.chatActivityService.IsTrackedChat(chatID) {
+		return
+	}
+	if _, err := b.bot.Request(tgbotapi.NewDeleteMessage(chatID, messageID)); err != nil {
+		log.Printf("Failed to delete service message %d in chat %d: %v", messageID, chatID, err)
 	}
 }
 
