@@ -189,6 +189,30 @@ func (s *ChatActivityService) GetTrackedChats() ([]models.TrackedChat, error) {
 	return s.repo.GetTrackedChats()
 }
 
+// AddTrackedChat включает отслеживание активности для чата и прогревает кеш.
+// Используется, когда бота только что добавили в группу.
+func (s *ChatActivityService) AddTrackedChat(chatID int64, title string, chatType string) error {
+	if err := s.repo.UpsertTrackedChat(chatID, title, chatType); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.trackedChatIDs[chatID] = true
+	s.mu.Unlock()
+	return nil
+}
+
+// RemoveTrackedChat снимает чат с отслеживания (при удалении бота из группы).
+// История сообщений сохраняется.
+func (s *ChatActivityService) RemoveTrackedChat(chatID int64) error {
+	if err := s.repo.DeactivateTrackedChat(chatID); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	delete(s.trackedChatIDs, chatID)
+	s.mu.Unlock()
+	return nil
+}
+
 // GetUserStats возвращает статистику конкретного пользователя
 func (s *ChatActivityService) GetUserStats(userID int64, days int) (*models.UserStats, error) {
 	return s.repo.GetUserStats(userID, days)

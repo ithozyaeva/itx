@@ -4,6 +4,8 @@ import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"time"
+
+	"gorm.io/gorm/clause"
 )
 
 type ChatActivityRepository struct{}
@@ -31,6 +33,30 @@ func (r *ChatActivityRepository) GetTrackedChats() ([]models.TrackedChat, error)
 	var chats []models.TrackedChat
 	err := database.DB.Where("is_active = ?", true).Order("title").Find(&chats).Error
 	return chats, err
+}
+
+// UpsertTrackedChat активирует отслеживание чата (создаёт или реактивирует запись,
+// обновляя заголовок и тип). На chat_id стоит UNIQUE, делаем ON CONFLICT по нему.
+func (r *ChatActivityRepository) UpsertTrackedChat(chatID int64, title string, chatType string) error {
+	chat := models.TrackedChat{
+		ChatID:   chatID,
+		Title:    title,
+		ChatType: chatType,
+		IsActive: true,
+	}
+	return database.DB.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "chat_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"title", "chat_type", "is_active",
+		}),
+	}).Create(&chat).Error
+}
+
+// DeactivateTrackedChat снимает чат с отслеживания без потери истории сообщений.
+func (r *ChatActivityRepository) DeactivateTrackedChat(chatID int64) error {
+	return database.DB.Model(&models.TrackedChat{}).
+		Where("chat_id = ?", chatID).
+		Update("is_active", false).Error
 }
 
 // GetMemberIDsByChatID возвращает member_id участников, которые писали в указанном чате
