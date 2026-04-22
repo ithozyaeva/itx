@@ -263,6 +263,8 @@ func (b *TelegramBot) Start() {
 				b.handleSubCommand(update.Message)
 			case "substatus":
 				b.handleSubStatusCommand(update.Message)
+			case "mygroups":
+				b.handleMyGroupsCommand(update.Message)
 			// Admin subscription commands
 			case "subchats":
 				b.handleSubChatsCommand(update.Message)
@@ -297,6 +299,7 @@ func (b *TelegramBot) registerCommands() {
 	commands := []tgbotapi.BotCommand{
 		{Command: "start", Description: "Авторизация на платформе"},
 		{Command: "mypoints", Description: "Мои баллы"},
+		{Command: "mygroups", Description: "Доступные чаты, куда ещё не вступил"},
 		{Command: "events", Description: "Ближайшие события"},
 		{Command: "summarize", Description: "Саммари чата (day/week/3d/число)"},
 		{Command: "whois", Description: "Кто этот участник"},
@@ -360,6 +363,7 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 		"  Лимит: 5 запросов в день\n" +
 		"/sub - Проверить подписку и получить доступ к чатам\n" +
 		"/substatus - Статус подписки\n" +
+		"/mygroups - Доступные чаты, в которых ты ещё не состоишь\n" +
 		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
 		"/help - Помощь"
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ithozyeva/config"
+	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -217,6 +218,69 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 				log.Printf("substatus: failed to create invite link for chat %d: %v", a.ChatID, linkErr)
 				text += fmt.Sprintf("  • %s\n", title)
 			}
+		}
+	}
+
+	b.SendDirectMessage(message.Chat.ID, text)
+}
+
+// handleMyGroupsCommand shows chats available to the user's tier that they
+// haven't joined yet, with fresh one-time invite links for each.
+func (b *TelegramBot) handleMyGroupsCommand(message *tgbotapi.Message) {
+	userID := message.From.ID
+	user, err := b.subscriptionService.GetUser(userID)
+	if err != nil {
+		b.sendMessage(message.Chat.ID, "Вы не зарегистрированы. Используйте /sub, чтобы начать.")
+		return
+	}
+
+	effectiveTierID := user.EffectiveTierID()
+	if effectiveTierID == nil {
+		b.sendMessage(message.Chat.ID,
+			"У вас нет активной подписки. Используйте /sub, чтобы получить доступ к чатам.")
+		return
+	}
+
+	tier, err := b.subscriptionService.GetTier(*effectiveTierID)
+	if err != nil {
+		log.Printf("mygroups: failed to get tier %d: %v", *effectiveTierID, err)
+		b.sendMessage(message.Chat.ID, "Не удалось получить ваш тир. Попробуйте позже.")
+		return
+	}
+
+	chats, err := b.subscriptionService.GetChatsForTierLevel(tier.Level)
+	if err != nil {
+		log.Printf("mygroups: failed to list chats for level %d: %v", tier.Level, err)
+		b.sendMessage(message.Chat.ID, "Не удалось получить список чатов.")
+		return
+	}
+
+	// Фильтруем через Telegram API: оставляем только те, в которых юзер
+	// ещё не состоит. IsMember кеширует результат в Redis (5 мин TTL), так
+	// что при частых /mygroups не бомбим getChatMember.
+	notJoined := make([]models.SubscriptionChat, 0, len(chats))
+	for _, chat := range chats {
+		if !b.subscriptionService.IsMember(chat.ID, userID, b.isChatMember) {
+			notJoined = append(notJoined, chat)
+		}
+	}
+
+	if len(notJoined) == 0 {
+		b.SendDirectMessage(message.Chat.ID,
+			"Вы уже состоите во всех чатах, доступных по тиру <b>"+html.EscapeString(tier.Name)+"</b>.")
+		return
+	}
+
+	text := fmt.Sprintf(
+		"<b>Доступные чаты по подписке (%s), куда можно зайти:</b>\n\n",
+		html.EscapeString(tier.Name))
+	for _, chat := range notJoined {
+		title := html.EscapeString(chat.Title)
+		if link, linkErr := b.createOneTimeInviteLink(chat.ID); linkErr == nil {
+			text += fmt.Sprintf("• <a href=\"%s\">%s</a>\n", link, title)
+		} else {
+			log.Printf("mygroups: invite-link failed for chat %d: %v", chat.ID, linkErr)
+			text += fmt.Sprintf("• %s\n", title)
 		}
 	}
 

@@ -293,6 +293,12 @@ func (s *SubscriptionService) GetEligibleUsersWithoutAccessForChat(
 	return s.repo.GetEligibleUsersWithoutAccessForChat(chatID, tierLevel)
 }
 
+// GetChatsForTierLevel — все content-чаты, привязанные к тирам с level <= tierLevel.
+// Anchor-чаты не включены (членство в них определяет сам тир).
+func (s *SubscriptionService) GetChatsForTierLevel(tierLevel int) ([]models.SubscriptionChat, error) {
+	return s.repo.GetChatsForTierLevel(tierLevel)
+}
+
 func (s *SubscriptionService) DeleteChat(chatID int64) error {
 	return s.repo.DeleteChat(chatID)
 }
