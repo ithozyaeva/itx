@@ -203,8 +203,19 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 		text += "\nДоступные чаты:\n"
 		for _, a := range access {
 			chat, err := b.subscriptionService.GetChat(a.ChatID)
-			if err == nil {
-				text += fmt.Sprintf("  • %s\n", chat.Title)
+			if err != nil {
+				continue
+			}
+			title := html.EscapeString(chat.Title)
+			// Для каждой записи создаём свежую одноразовую invite-ссылку — в
+			// subscription_user_chat_access ссылки не хранятся, а раздавать
+			// старые уже использованные одноразовые смысла нет. Если бот не
+			// админ в чате или API вернул ошибку — отдаём просто название.
+			if link, linkErr := b.createOneTimeInviteLink(a.ChatID); linkErr == nil {
+				text += fmt.Sprintf("  • <a href=\"%s\">%s</a>\n", link, title)
+			} else {
+				log.Printf("substatus: failed to create invite link for chat %d: %v", a.ChatID, linkErr)
+				text += fmt.Sprintf("  • %s\n", title)
 			}
 		}
 	}
