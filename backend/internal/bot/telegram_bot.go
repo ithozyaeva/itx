@@ -168,6 +168,23 @@ func (b *TelegramBot) Start() {
 	// Start subscription checker
 	go b.startSubscriptionChecker()
 
+	// Слушаем Redis pub/sub от бэкенда: когда админ через UI привязывает чат
+	// к новому тиру, приходит событие — бот рассылает invite-ссылки всем
+	// пользователям с подходящим тиром (та же логика, что и в /subaddchat).
+	b.subscriptionService.SubscribeNewChatAccess(context.Background(), func(ev service.NewChatAccessEvent) {
+		chat, err := b.subscriptionService.GetChat(ev.ChatID)
+		if err != nil {
+			log.Printf("new-chat-access: chat %d not found: %v", ev.ChatID, err)
+			return
+		}
+		tier, err := b.subscriptionService.GetTier(ev.TierID)
+		if err != nil {
+			log.Printf("new-chat-access: tier %d not found: %v", ev.TierID, err)
+			return
+		}
+		b.notifyNewChatAccess(ev.ChatID, chat.Title, tier.Level, subscriptionAdminID())
+	})
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	u.AllowedUpdates = []string{"message", "callback_query", "chat_member", "my_chat_member"}

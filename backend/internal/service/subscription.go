@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -13,6 +14,17 @@ import (
 )
 
 const membershipCacheTTL = 5 * time.Minute
+
+// NewChatAccessChannel — Redis pub/sub канал для уведомлений о том, что чат
+// стал доступен новому тиру подписки. Publisher — backend-handler (UI),
+// subscriber — бот на NL (он единственный, кто может дойти до Telegram API).
+const NewChatAccessChannel = "subscription:new_chat_access"
+
+// NewChatAccessEvent — payload события «чат привязан к новому тиру».
+type NewChatAccessEvent struct {
+	ChatID int64 `json:"chat_id"`
+	TierID uint  `json:"tier_id"`
+}
 
 type SubscriptionService struct {
 	repo  *repository.SubscriptionRepository
@@ -269,6 +281,10 @@ func (s *SubscriptionService) UpdateChatMeta(chatID int64, category, emoji *stri
 	return s.repo.UpdateChatMeta(chatID, category, emoji)
 }
 
+func (s *SubscriptionService) SetChatPriority(chatID int64, priority int) error {
+	return s.repo.UpdateChatPriority(chatID, priority)
+}
+
 func (s *SubscriptionService) SetAnchor(chatID int64, tierID *uint) error {
 	return s.repo.SetAnchor(chatID, tierID)
 }
@@ -301,6 +317,45 @@ func (s *SubscriptionService) GetEligibleUsersWithoutAccessForChat(
 // Anchor-чаты не включены (членство в них определяет сам тир).
 func (s *SubscriptionService) GetChatsForTierLevel(tierLevel int) ([]models.SubscriptionChat, error) {
 	return s.repo.GetChatsForTierLevel(tierLevel)
+}
+
+// PublishNewChatAccess сигналит боту, что в чат chatID теперь имеют доступ
+// пользователи тира tierID — их надо пригласить. Бэкенд в РФ не может сам
+// пойти в Telegram (i/o timeout), поэтому рассылку делает бот на NL,
+// подписанный на этот канал.
+func (s *SubscriptionService) PublishNewChatAccess(ctx context.Context, chatID int64, tierID uint) error {
+	payload, err := json.Marshal(NewChatAccessEvent{ChatID: chatID, TierID: tierID})
+	if err != nil {
+		return err
+	}
+	return s.redis.Publish(ctx, NewChatAccessChannel, payload).Err()
+}
+
+// SubscribeNewChatAccess запускает горутину, которая читает события pub/sub
+// и для каждого вызывает handler. Вызывается при старте бота.
+func (s *SubscriptionService) SubscribeNewChatAccess(ctx context.Context, handler func(ev NewChatAccessEvent)) {
+	pubsub := s.redis.Subscribe(ctx, NewChatAccessChannel)
+	go func() {
+		defer pubsub.Close()
+		ch := pubsub.Channel()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				var ev NewChatAccessEvent
+				if err := json.Unmarshal([]byte(msg.Payload), &ev); err != nil {
+					log.Printf("new-chat-access: bad payload: %v", err)
+					continue
+				}
+				handler(ev)
+			}
+		}
+	}()
+	log.Printf("Subscribed to %s for new-chat-access events", NewChatAccessChannel)
 }
 
 func (s *SubscriptionService) DeleteChat(chatID int64) error {
