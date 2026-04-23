@@ -169,13 +169,12 @@ func (b *TelegramBot) handleSubCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	if len(result.Granted) > 0 {
-		b.sendSubscriptionLinks(message.Chat.ID, result)
-	} else {
-		b.sendMessage(message.Chat.ID,
-			"Ваша подписка активна! У вас уже есть доступ ко всем чатам.\n"+
-				"Используйте /substatus для просмотра.")
-	}
+	// Раньше /sub показывал только что granted. Если у юзера уже есть
+	// access на часть чатов (например, они были добавлены в тир раньше),
+	// эти чаты пропускались — казалось, что /sub «не видит» ИИ-чат или
+	// ещё что-то, хотя на деле он просто не в списке «новых». Теперь
+	// показываем полный актуальный список — как в /substatus.
+	b.handleSubStatusCommand(message)
 }
 
 // handleSubStatusCommand shows current subscription status.
