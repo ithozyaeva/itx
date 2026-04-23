@@ -481,13 +481,12 @@ func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated
 		return
 	}
 
-	// Post welcome in anchor only on join (not on leave/kick).
-	// Telegram не даёт боту писать первым в ЛС: сообщение в anchor с deep-link
-	// — единственный способ заставить юзера один раз стартануть бота.
-	if newActive && !oldActive {
-		b.postAnchorWelcome(update.Chat.ID, tgUser)
-	}
-
+	// Раньше постили персональное "@user, добро пожаловать, нажми кнопку"
+	// прямо в anchor-чат — это видели все участники, и люди жаловались на
+	// спам. Теперь молчим: приветствие/инвайты уходят в ЛС через
+	// notifyUserOfSyncResult (если юзер стартовал бота). Для тех, кто
+	// ещё не нажимал /start, в anchor-чате есть закреплённое сообщение
+	// с deep-link — его ставит pinAnchorWelcome при установке anchor.
 	b.notifyUserOfSyncResult(userID, result)
 }
 
