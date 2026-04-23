@@ -83,24 +83,22 @@ func (s *EventsService) ResolveEventTags(tags []models.EventTag) ([]models.Event
 }
 
 func (s *EventsService) GetFutureEvents(now time.Time) ([]models.Event, error) {
-	allEvents, _, err := s.repo.Search(nil, nil, nil, nil)
+	// Отсекаем прошлое на уровне БД, а не в Go. Шедулер алертов зовёт это
+	// раз в минуту, и раньше каждый вызов делал SELECT * FROM events
+	// (~200–400ms на 29 строках) — отсюда постоянный SLOW SQL в логах.
+	events, err := s.repo.GetFutureEvents(now)
 	if err != nil {
 		return nil, err
 	}
 
-	var futureEvents []models.Event
-	for _, event := range allEvents {
-		if event.IsRepeating && event.RepeatPeriod != nil {
-			if event.RepeatEndDate != nil && now.After(*event.RepeatEndDate) {
-				continue
-			}
-			futureEvents = append(futureEvents, event)
-		} else {
-			if event.Date.After(now) || event.Date.Equal(now) {
-				futureEvents = append(futureEvents, event)
-			}
+	// Для повторяющихся дополнительно проверяем RepeatPeriod != NULL — БД
+	// этого условия не знает (в схеме period хранится как *string).
+	filtered := events[:0]
+	for _, ev := range events {
+		if ev.IsRepeating && ev.RepeatPeriod == nil {
+			continue
 		}
+		filtered = append(filtered, ev)
 	}
-
-	return futureEvents, nil
+	return filtered, nil
 }

@@ -98,6 +98,23 @@ func (r *EventRepository) Update(entity *models.Event) (*models.Event, error) {
 	return updatedEntity, nil
 }
 
+// GetFutureEvents возвращает события, которые ещё не прошли к моменту now.
+// Условие двойное: повторяющиеся с открытой или будущей датой окончания,
+// либо обычные с датой >= now. Preload-ы те же, что в Search — вызывающий
+// шедулер тут же читает Members/Hosts/EventTags.
+func (r *EventRepository) GetFutureEvents(now time.Time) ([]models.Event, error) {
+	var events []models.Event
+	err := database.DB.
+		Preload("Hosts").Preload("Members").Preload("EventTags").
+		Where(
+			"(is_repeating = ? AND (repeat_end_date IS NULL OR repeat_end_date > ?)) OR "+
+				"(is_repeating = ? AND date >= ?)",
+			true, now, false, now,
+		).
+		Find(&events).Error
+	return events, err
+}
+
 // GetById получает отзыв по ID с информацией о услуге
 func (r *EventRepository) GetById(id int64) (*models.Event, error) {
 	var event models.Event
