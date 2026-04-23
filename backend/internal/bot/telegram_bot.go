@@ -114,6 +114,7 @@ type TelegramBot struct {
 	notificationSettingsService *service.NotificationSettingsService
 	chatHighlightService        *service.ChatHighlightService
 	subscriptionService         *service.SubscriptionService
+	supportService              *service.SupportService
 }
 
 func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
@@ -141,6 +142,7 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 	notificationSettingsService := service.NewNotificationSettingsService()
 	chatHighlightService := service.NewChatHighlightService()
 	subscriptionService := service.NewSubscriptionService(redisClient)
+	supportService := service.NewSupportService(redisClient)
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -152,6 +154,7 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 		notificationSettingsService: notificationSettingsService,
 		chatHighlightService:        chatHighlightService,
 		subscriptionService:         subscriptionService,
+		supportService:              supportService,
 	}, nil
 }
 
@@ -263,6 +266,13 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Открытый саппорт-тикет перехватывает следующее сообщение,
+		// кроме команд (на случай если юзер решит нажать /cancel
+		// или /start ещё раз). Команды обрабатываем как обычно.
+		if !update.Message.IsCommand() && b.handleSupportIncoming(update.Message) {
+			continue
+		}
+
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
@@ -300,6 +310,8 @@ func (b *TelegramBot) Start() {
 				b.handleSubStatsCommand(update.Message)
 			case "subpin":
 				b.handleSubPinCommand(update.Message)
+			case "cancel":
+				b.handleCancelCommand(update.Message)
 			case "help":
 				b.handleHelpCommand(update.Message)
 			}
@@ -308,13 +320,13 @@ func (b *TelegramBot) Start() {
 }
 
 func (b *TelegramBot) registerCommands() {
+	// В выпадающее меню пускаем только команды, которые реально нужны в
+	// любом контексте. Подписочные пункты (/sub, /substatus, /mygroups,
+	// /mypoints, /events) запускаются через inline-кнопки из /start —
+	// так меню не растягивается на пол-экрана. Сами команды продолжают
+	// работать как fallback для тех, кто набирает их руками.
 	commands := []tgbotapi.BotCommand{
-		{Command: "start", Description: "Начать / welcome"},
-		{Command: "sub", Description: "Проверить подписку и получить инвайты"},
-		{Command: "substatus", Description: "Мои чаты по подписке"},
-		{Command: "mygroups", Description: "Все доступные чаты по подписке"},
-		{Command: "mypoints", Description: "Мои баллы"},
-		{Command: "events", Description: "Ближайшие события"},
+		{Command: "start", Description: "Открыть меню бота"},
 		{Command: "summarize", Description: "Саммари чата (day/week/3d/число)"},
 		{Command: "whois", Description: "Кто этот участник"},
 		{Command: "help", Description: "Помощь"},
@@ -364,22 +376,10 @@ func (b *TelegramBot) handleEventsCommand(message *tgbotapi.Message) {
 }
 
 func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
-	text := "Доступные команды:\n" +
-		"/start - Главное меню бота\n" +
-		"/sub - Проверить подписку и получить инвайты\n" +
-		"/substatus - Мои чаты по подписке\n" +
-		"/mygroups - Все доступные по подписке чаты (с ✅ где состоишь)\n" +
-		"/mypoints - Посмотреть баланс баллов\n" +
-		"/events - Ближайшие события\n" +
-		"/summarize - AI-саммари чата\n" +
-		"  • /summarize — последние 200 сообщений\n" +
-		"  • /summarize day — за сутки\n" +
-		"  • /summarize week — за неделю\n" +
-		"  • /summarize 3d — за 3 дня\n" +
-		"  • /summarize 500 — последние 500 сообщений\n" +
-		"  Лимит: 5 запросов в день\n" +
-		"/whois - Кто этот участник (ответьте на сообщение или /whois @username)\n" +
-		"/help - Помощь"
+	text := "Подписка, чаты, баллы, события, связь с админом — всё через /start с кнопками.\n\n" +
+		"Вспомогательное в группах:\n" +
+		"/summarize [day|week|3d|N] — AI-саммари чата (5/день на юзера)\n" +
+		"/whois — кто участник (reply или /whois @username)"
 
 	if b.isAdmin(message.From.ID) {
 		text += "\n\nАдмин-команды подписок:\n" +
@@ -636,9 +636,10 @@ func (b *TelegramBot) sendWelcomeWizard(chatID int64) {
 	text := "<b>Привет! Я бот сообщества IT-X.</b>\n\n" +
 		"Через меня можно:\n" +
 		"• получить инвайт-ссылки в чаты по твоей подписке,\n" +
-		"• посмотреть свой тир и куда ещё можно зайти,\n" +
+		"• посмотреть свой тир, баллы и ближайшие события,\n" +
 		"• авторизоваться на платформе " +
-		"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>.\n\n" +
+		"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>,\n" +
+		"• написать админу.\n\n" +
 		"Выбери, с чего начать:"
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
@@ -650,9 +651,14 @@ func (b *TelegramBot) sendWelcomeWizard(chatID int64) {
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("🆕 Куда ещё зайти", "wiz:mygroups"),
+			tgbotapi.NewInlineKeyboardButtonData("🎓 События", "wiz:events"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⭐ Мои баллы", "wiz:points"),
 			tgbotapi.NewInlineKeyboardButtonData("🌐 Платформа", "wiz:auth"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("📨 Написать админу", "wiz:support"),
 			tgbotapi.NewInlineKeyboardButtonData("❓ Как это работает", "wiz:help"),
 		),
 	)
@@ -1041,8 +1047,14 @@ func (b *TelegramBot) handleWizardCallback(callback *tgbotapi.CallbackQuery) {
 		b.handleSubStatusCommand(synth)
 	case "mygroups":
 		b.handleMyGroupsCommand(synth)
+	case "events":
+		b.handleEventsCommand(synth)
+	case "points":
+		b.handleMyPointsCommand(synth)
 	case "auth":
 		b.sendAuthButton(callback.From, callback.Message.Chat.ID)
+	case "support":
+		b.beginSupportTicket(callback.From.ID, callback.Message.Chat.ID)
 	case "help":
 		b.sendWelcomeFAQ(callback.Message.Chat.ID)
 	default:
@@ -1092,13 +1104,74 @@ func (b *TelegramBot) sendWelcomeFAQ(chatID int64) {
 		"• /mygroups или <b>«Куда ещё зайти»</b> показывает полный список чатов по подписке, " +
 		"включая те, где ты уже состоишь (они помечены ✅).\n" +
 		"• Если тебе открыли новый чат, бот пришлёт сюда сообщение со ссылкой — отдельно действия не нужны.\n\n" +
-		"Если что-то не работает, напиши @jointimer."
+		"Если что-то не работает — нажми в /start кнопку «Написать админу»."
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
 	msg.DisableWebPagePreview = true
 	if _, err := b.bot.Send(msg); err != nil {
 		log.Printf("sendWelcomeFAQ: %v", err)
 	}
+}
+
+// beginSupportTicket помечает в Redis, что от userID ждём следующее
+// сообщение для передачи супер-админу. Пользователю возвращаем подсказку
+// (или сообщаем про rate-limit).
+func (b *TelegramBot) beginSupportTicket(userID int64, chatID int64) {
+	err := b.supportService.BeginTicket(context.Background(), userID)
+	if err == service.ErrSupportRateLimited {
+		b.sendMessage(chatID,
+			"Слишком часто. Попробуй через минуту — и потом пиши одним сообщением.")
+		return
+	}
+	if err != nil {
+		log.Printf("beginSupportTicket: %v", err)
+		b.sendMessage(chatID, "Не удалось открыть тикет. Попробуй позже.")
+		return
+	}
+	b.sendMessage(chatID,
+		"Напиши следующим сообщением, что передать админу — уйдёт сразу.\n"+
+			"Отменить: /cancel. У тебя 10 минут.")
+}
+
+// handleSupportIncoming — если от userID ждут ticket-сообщение, пересылаем
+// его супер-админу и завершаем тикет. Возвращает true, если сообщение
+// действительно было обработано как саппорт, иначе false — чтобы вызывающий
+// мог пробросить сообщение в обычные обработчики.
+func (b *TelegramBot) handleSupportIncoming(message *tgbotapi.Message) bool {
+	ctx := context.Background()
+	if !b.supportService.IsAwaiting(ctx, message.From.ID) {
+		return false
+	}
+	// Форвард от имени отправителя — у админа сразу видно, кто пишет.
+	fwd := tgbotapi.NewForward(subscriptionAdminID(), message.Chat.ID, message.MessageID)
+	if _, err := b.bot.Send(fwd); err != nil {
+		log.Printf("handleSupportIncoming: forward failed: %v", err)
+		b.sendMessage(message.Chat.ID, "Не удалось отправить сообщение админу. Попробуй позже.")
+		_ = b.supportService.EndTicket(ctx, message.From.ID)
+		return true
+	}
+	// Отдельная карточка — @username и user_id кликабельны.
+	username := "(без username)"
+	if message.From.UserName != "" {
+		username = "@" + message.From.UserName
+	}
+	b.SendDirectMessage(subscriptionAdminID(), fmt.Sprintf(
+		"📨 Саппорт от %s (id=<code>%d</code>)",
+		username, message.From.ID))
+	_ = b.supportService.EndTicket(ctx, message.From.ID)
+	b.sendMessage(message.Chat.ID, "Отправлено. Админ увидит.")
+	return true
+}
+
+// handleCancelCommand закрывает открытый саппорт-тикет, если он был.
+func (b *TelegramBot) handleCancelCommand(message *tgbotapi.Message) {
+	ctx := context.Background()
+	if !b.supportService.IsAwaiting(ctx, message.From.ID) {
+		b.sendMessage(message.Chat.ID, "Нечего отменять.")
+		return
+	}
+	_ = b.supportService.EndTicket(ctx, message.From.ID)
+	b.sendMessage(message.Chat.ID, "Отменено.")
 }
 
 // getNotificationSettingsMap получает настройки уведомлений для списка участников
