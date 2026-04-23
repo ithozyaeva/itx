@@ -241,6 +241,8 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 			items = append(items, chatListItem{chat: chat, link: link})
 		}
 		text += formatChatsGrouped(items)
+		text += "\n<i>Во все сразу вступать не обязательно — Telegram после нескольких " +
+			"подряд вступлений просит подождать. Заходи, куда хочется.</i>"
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -304,7 +306,9 @@ func (b *TelegramBot) handleMyGroupsCommand(message *tgbotapi.Message) {
 		"<b>Доступные чаты по подписке (%s):</b>\n",
 		html.EscapeString(tier.Name))
 	text += formatChatsGrouped(items)
-	text += "\n<i>✅ — чат, в котором вы уже состоите.</i>"
+	text += "\n<i>✅ — чат, в котором вы уже состоите. Во все сразу вступать " +
+		"не обязательно — Telegram ограничивает подряд идущие вступления, " +
+		"так что выбирай, что тебе интересно.</i>"
 
 	b.SendDirectMessage(message.Chat.ID, text)
 }
@@ -438,6 +442,9 @@ func (b *TelegramBot) sendSubscriptionLinks(chatID int64, result *service.SyncRe
 
 	text := fmt.Sprintf("Подписка подтверждена! Доступно чатов: <b>%d</b>\n", len(result.Granted))
 	text += formatChatsGrouped(items)
+	text += "\n<i>Необязательно вступать во все сразу — Telegram после нескольких подряд " +
+		"вступлений просит подождать. Выбирай чаты, которые тебе интересны; " +
+		"остальные всегда под рукой в /mygroups.</i>"
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
