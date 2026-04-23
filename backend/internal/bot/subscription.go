@@ -663,8 +663,21 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 
 	if isAnchor {
 		b.subscriptionService.SetAnchor(chatID, &tier.ID)
+		// Сразу ставим единое закреплённое приветствие с deep-link в бота —
+		// иначе новый участник якорного чата не знает, куда идти (писать
+		// боту первым нельзя — Telegram запрещает; нужен его click).
+		// Ошибка пина не критична: чат уже записан как anchor, админ
+		// может вызвать /subpin руками.
+		if err := b.pinAnchorWelcome(chatID); err != nil {
+			log.Printf("subaddchat: failed to pin anchor welcome for chat %d: %v", chatID, err)
+			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
+				"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s, но закрепить welcome не удалось: %v.\n"+
+					"Вызовите /subpin %d вручную.", chatID, tier.Name, err, chatID))
+			return
+		}
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
-			"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s.", chatID, tier.Name))
+			"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s, welcome-сообщение закреплено.",
+			chatID, tier.Name))
 		return
 	}
 
@@ -766,8 +779,16 @@ func (b *TelegramBot) handleSubSetAnchorCommand(message *tgbotapi.Message) {
 	}
 
 	b.subscriptionService.SetAnchor(chatID, &tier.ID)
+	if err := b.pinAnchorWelcome(chatID); err != nil {
+		log.Printf("subsetanchor: failed to pin anchor welcome for chat %d: %v", chatID, err)
+		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
+			"Чат <code>%d</code> теперь anchor для тира %s, но закрепить welcome не удалось: %v.\n"+
+				"Вызовите /subpin %d вручную.", chatID, tier.Name, err, chatID))
+		return
+	}
 	b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
-		"Чат <code>%d</code> теперь anchor для тира %s.", chatID, tier.Name))
+		"Чат <code>%d</code> теперь anchor для тира %s, welcome-сообщение закреплено.",
+		chatID, tier.Name))
 }
 
 func (b *TelegramBot) handleSubRemoveChatCommand(message *tgbotapi.Message) {
@@ -980,6 +1001,34 @@ func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {
 	b.SendDirectMessage(message.Chat.ID, text)
 }
 
+// pinAnchorWelcome публикует и закрепляет единое welcome-сообщение с
+// deep-link в бот — чтобы новый участник якорного чата мог одним нажатием
+// стартнуть /start и получить инвайты. Используется и бот-командой /subpin,
+// и автоматически при установке anchor через /subaddchat … anchor.
+func (b *TelegramBot) pinAnchorWelcome(chatID int64) error {
+	text := "Добро пожаловать! Нажмите кнопку ниже, чтобы получить доступ к остальным чатам по вашей подписке."
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Получить доступ", b.subscriptionDeepLink()),
+		),
+	)
+	sent, err := b.bot.Send(msg)
+	if err != nil {
+		return fmt.Errorf("send: %w", err)
+	}
+	pinCfg := tgbotapi.PinChatMessageConfig{
+		ChatID:              chatID,
+		MessageID:           sent.MessageID,
+		DisableNotification: false,
+	}
+	if _, err := b.bot.Request(pinCfg); err != nil {
+		return fmt.Errorf("pin: %w", err)
+	}
+	return nil
+}
+
 // handleSubPinCommand posts and pins a welcome message in an anchor chat
 // so existing members can click the button to receive DM invite links.
 func (b *TelegramBot) handleSubPinCommand(message *tgbotapi.Message) {
@@ -1005,27 +1054,8 @@ func (b *TelegramBot) handleSubPinCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	text := "Добро пожаловать! Нажмите кнопку ниже, чтобы получить доступ к остальным чатам по вашей подписке."
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = "HTML"
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("Получить доступ", b.subscriptionDeepLink()),
-		),
-	)
-	sent, err := b.bot.Send(msg)
-	if err != nil {
-		b.sendMessage(message.Chat.ID, fmt.Sprintf("Не удалось запостить: %v", err))
-		return
-	}
-
-	pinCfg := tgbotapi.PinChatMessageConfig{
-		ChatID:              chatID,
-		MessageID:           sent.MessageID,
-		DisableNotification: false,
-	}
-	if _, err := b.bot.Request(pinCfg); err != nil {
-		b.sendMessage(message.Chat.ID, fmt.Sprintf("Запостил, но не удалось закрепить: %v", err))
+	if err := b.pinAnchorWelcome(chatID); err != nil {
+		b.sendMessage(message.Chat.ID, fmt.Sprintf("Не удалось закрепить: %v", err))
 		return
 	}
 
