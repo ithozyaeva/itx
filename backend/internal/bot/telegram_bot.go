@@ -177,12 +177,7 @@ func (b *TelegramBot) Start() {
 			log.Printf("new-chat-access: chat %d not found: %v", ev.ChatID, err)
 			return
 		}
-		tier, err := b.subscriptionService.GetTier(ev.TierID)
-		if err != nil {
-			log.Printf("new-chat-access: tier %d not found: %v", ev.TierID, err)
-			return
-		}
-		b.notifyNewChatAccess(ev.ChatID, chat.Title, tier.Level, subscriptionAdminID())
+		b.notifyNewChatAccess(ev.ChatID, chat.Title, ev.MinTierLevel, subscriptionAdminID())
 	})
 
 	u := tgbotapi.NewUpdate(0)

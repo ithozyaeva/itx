@@ -352,15 +352,33 @@ func (h *SubscriptionHandler) CreateChat(c *fiber.Ctx) error {
 		if err := h.svc.SetChatTiers(req.ID, req.TierIDs); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось привязать тиры"})
 		}
-		// Новый чат → все его тиры «новые». Публикуем рассылку по каждому.
-		for _, tid := range req.TierIDs {
-			if err := h.svc.PublishNewChatAccess(c.Context(), req.ID, tid); err != nil {
-				log.Printf("CreateChat: publish new-chat-access chat=%d tier=%d failed: %v", req.ID, tid, err)
+		// Новый чат → все его тиры «новые». Шлём одно событие с min level.
+		if level, ok := h.minTierLevel(req.TierIDs); ok {
+			if err := h.svc.PublishNewChatAccess(c.Context(), req.ID, level); err != nil {
+				log.Printf("CreateChat: publish new-chat-access chat=%d level=%d failed: %v", req.ID, level, err)
 			}
 		}
 	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+// minTierLevel возвращает минимальный level среди указанных tierID, чтобы
+// publisher мог уведомить всех пользователей, у кого effective tier >= этого
+// значения. Если ни один tier не найден — возвращает (0, false).
+func (h *SubscriptionHandler) minTierLevel(tierIDs []uint) (int, bool) {
+	min, found := 0, false
+	for _, tid := range tierIDs {
+		tier, err := h.svc.GetTier(tid)
+		if err != nil {
+			continue
+		}
+		if !found || tier.Level < min {
+			min = tier.Level
+			found = true
+		}
+	}
+	return min, found
 }
 
 func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
@@ -435,9 +453,10 @@ func (h *SubscriptionHandler) UpdateChat(c *fiber.Ctx) error {
 
 	// Публикуем события уже ПОСЛЕ всех БД-изменений, иначе подписчик
 	// может прибежать с invite раньше, чем чат стал доступным тиру.
-	for _, tid := range addedTiers {
-		if err := h.svc.PublishNewChatAccess(c.Context(), chatID, tid); err != nil {
-			log.Printf("UpdateChat: publish new-chat-access chat=%d tier=%d failed: %v", chatID, tid, err)
+	// Одно событие на чат — бот рассылает всем с level >= min(added).
+	if level, ok := h.minTierLevel(addedTiers); ok {
+		if err := h.svc.PublishNewChatAccess(c.Context(), chatID, level); err != nil {
+			log.Printf("UpdateChat: publish new-chat-access chat=%d level=%d failed: %v", chatID, level, err)
 		}
 	}
 

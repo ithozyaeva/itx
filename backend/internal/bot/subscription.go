@@ -77,9 +77,18 @@ func (b *TelegramBot) isChatMember(chatID, userID int64) bool {
 
 // createOneTimeInviteLink creates a single-use invite link for a chat.
 func (b *TelegramBot) createOneTimeInviteLink(chatID int64) (string, error) {
+	return b.createInviteLinkWithLimit(chatID, 1)
+}
+
+// createInviteLinkWithLimit создаёт invite-link с заданным member_limit.
+// memberLimit=1 — эквивалент старой createOneTimeInviteLink.
+// Для массовых рассылок шлём одну ссылку с limit=len(users), чтобы не
+// упираться в Telegram rate-limit на createChatInviteLink (~20/мин на чат).
+// memberLimit=0 означает ссылку без ограничения (до 99999 юзеров).
+func (b *TelegramBot) createInviteLinkWithLimit(chatID int64, memberLimit int) (string, error) {
 	link, err := b.bot.Request(tgbotapi.CreateChatInviteLinkConfig{
-		ChatConfig: tgbotapi.ChatConfig{ChatID: chatID},
-		MemberLimit: 1,
+		ChatConfig:  tgbotapi.ChatConfig{ChatID: chatID},
+		MemberLimit: memberLimit,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create invite link for chat %d: %w", chatID, err)
@@ -691,8 +700,12 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 }
 
 // notifyNewChatAccess выдаёт доступ в chatID всем пользователям с нужным
-// уровнем тира (у кого его ещё нет) и рассылает им одноразовые invite-ссылки
-// в ЛС. В конце отправляет супер-админу сводку по рассылке.
+// уровнем тира (у кого его ещё нет) и рассылает им invite-ссылку в ЛС.
+// В конце отправляет супер-админу сводку по рассылке.
+//
+// Создаём ОДНУ invite-ссылку с member_limit = len(users), а не по штуке
+// на каждого — Telegram лимитирует createChatInviteLink ~20/мин на чат,
+// и раньше рассылка на 50+ юзеров массово падала с «Too Many Requests».
 func (b *TelegramBot) notifyNewChatAccess(chatID int64, chatTitle string, tierLevel int, adminChatID int64) {
 	users, err := b.subscriptionService.GetEligibleUsersWithoutAccessForChat(chatID, tierLevel)
 	if err != nil {
@@ -705,25 +718,27 @@ func (b *TelegramBot) notifyNewChatAccess(chatID int64, chatTitle string, tierLe
 		return
 	}
 
+	link, err := b.createInviteLinkWithLimit(chatID, len(users))
+	if err != nil {
+		log.Printf("notifyNewChatAccess: failed to create shared invite link for chat %d: %v", chatID, err)
+		b.SendDirectMessage(adminChatID, fmt.Sprintf(
+			"Не удалось создать invite-ссылку для чата <code>%d</code>: %v", chatID, err))
+		return
+	}
+
 	titleEscaped := html.EscapeString(chatTitle)
+	text := fmt.Sprintf(
+		"🆕 Вам открыт новый чат по вашей подписке:\n\n<b>%s</b>\n\n<a href=\"%s\">Перейти в чат</a>",
+		titleEscaped, link)
 	delivered, skipped, failed := 0, 0, 0
 
 	for _, user := range users {
-		link, err := b.createOneTimeInviteLink(chatID)
-		if err != nil {
-			log.Printf("notifyNewChatAccess: invite-link failed for chat %d user %d: %v", chatID, user.ID, err)
-			failed++
-			continue
-		}
-		text := fmt.Sprintf(
-			"🆕 Вам открыт новый чат по вашей подписке:\n\n<b>%s</b>\n\n<a href=\"%s\">Перейти в чат</a>",
-			titleEscaped, link)
 		msg := tgbotapi.NewMessage(user.ID, text)
 		msg.ParseMode = "HTML"
 		msg.DisableWebPagePreview = true
 		if _, err := b.bot.Send(msg); err != nil {
 			// Forbidden = пользователь не нажимал /start боту. Не считаем это
-			// ошибкой, просто skip — ссылка «прогорает» без жертв.
+			// ошибкой, просто skip — ссылка shared, новая «не протухает».
 			if strings.Contains(err.Error(), "Forbidden") {
 				skipped++
 			} else {
@@ -738,8 +753,8 @@ func (b *TelegramBot) notifyNewChatAccess(chatID int64, chatTitle string, tierLe
 			continue
 		}
 		delivered++
-		// Небольшая пауза между отправками, чтобы не упереться в Telegram
-		// flood-limit при рассылке на 100+ пользователей.
+		// Небольшая пауза между отправками — Telegram limits ~30 msg/sec
+		// в разные чаты. 50ms с запасом.
 		time.Sleep(50 * time.Millisecond)
 	}
 

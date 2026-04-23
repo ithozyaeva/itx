@@ -20,10 +20,14 @@ const membershipCacheTTL = 5 * time.Minute
 // subscriber — бот на NL (он единственный, кто может дойти до Telegram API).
 const NewChatAccessChannel = "subscription:new_chat_access"
 
-// NewChatAccessEvent — payload события «чат привязан к новому тиру».
+// NewChatAccessEvent — payload события «чат стал доступен новой аудитории».
+// MinTierLevel — минимальный уровень тира среди только что добавленных
+// привязок; подписчик уведомляет всех пользователей с level >= этого
+// значения. Одно событие на чат, чтобы избежать кратных рассылок, когда
+// чат одновременно привязан к нескольким тирам.
 type NewChatAccessEvent struct {
-	ChatID int64 `json:"chat_id"`
-	TierID uint  `json:"tier_id"`
+	ChatID       int64 `json:"chat_id"`
+	MinTierLevel int   `json:"min_tier_level"`
 }
 
 type SubscriptionService struct {
@@ -319,12 +323,14 @@ func (s *SubscriptionService) GetChatsForTierLevel(tierLevel int) ([]models.Subs
 	return s.repo.GetChatsForTierLevel(tierLevel)
 }
 
-// PublishNewChatAccess сигналит боту, что в чат chatID теперь имеют доступ
-// пользователи тира tierID — их надо пригласить. Бэкенд в РФ не может сам
-// пойти в Telegram (i/o timeout), поэтому рассылку делает бот на NL,
-// подписанный на этот канал.
-func (s *SubscriptionService) PublishNewChatAccess(ctx context.Context, chatID int64, tierID uint) error {
-	payload, err := json.Marshal(NewChatAccessEvent{ChatID: chatID, TierID: tierID})
+// PublishNewChatAccess сигналит боту, что чат chatID стал доступен новой
+// аудитории — пользователей с эффективным тиром >= minTierLevel надо
+// пригласить. Бэкенд в РФ не может сам пойти в Telegram (i/o timeout),
+// поэтому рассылку делает бот на NL, подписанный на этот канал.
+// Шлём одно событие на чат, а не на каждый tier — иначе при привязке
+// чата сразу к нескольким тирам рассылка повторялась бы N раз.
+func (s *SubscriptionService) PublishNewChatAccess(ctx context.Context, chatID int64, minTierLevel int) error {
+	payload, err := json.Marshal(NewChatAccessEvent{ChatID: chatID, MinTierLevel: minTierLevel})
 	if err != nil {
 		return err
 	}
