@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 
 describe('Dashboard logic', () => {
   function pluralizeDays(n: number): string {
@@ -11,9 +12,9 @@ describe('Dashboard logic', () => {
     return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
   }
 
-  function isEventLive(event: { date: string }) {
+  function isEventLive(event: any) {
     const now = new Date()
-    const eventDate = new Date(event.date)
+    const eventDate = getNextOccurrenceDate(event, now)
     const diffMs = now.getTime() - eventDate.getTime()
     return diffMs >= 0 && diffMs < 2 * 60 * 60 * 1000
   }
