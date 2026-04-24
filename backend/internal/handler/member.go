@@ -190,6 +190,7 @@ func (h *MembersHandler) Delete(c *fiber.Ctx) error {
 
 func (h *MembersHandler) Me(c *fiber.Ctx) error {
 	member := c.Locals("member").(*models.Member)
+	member.SubscriptionTier = h.svc.GetEffectiveTier(member.TelegramID)
 
 	mentor, err := h.svc.GetMentor(member.Id)
 
@@ -197,6 +198,7 @@ func (h *MembersHandler) Me(c *fiber.Ctx) error {
 		return c.JSON(member)
 	}
 
+	mentor.SubscriptionTier = member.SubscriptionTier
 	return c.JSON(mentor)
 }
 
@@ -329,6 +331,8 @@ func (h *MembersHandler) GetPublicProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
 	}
 
+	member.SubscriptionTier = h.svc.GetEffectiveTier(member.TelegramID)
+
 	points, _ := h.pointsSvc.GetBalance(member.Id)
 
 	result := fiber.Map{
@@ -339,6 +343,7 @@ func (h *MembersHandler) GetPublicProfile(c *fiber.Ctx) error {
 
 	mentor, err := h.svc.GetMentor(member.Id)
 	if err == nil && mentor != nil {
+		mentor.SubscriptionTier = member.SubscriptionTier
 		result["isMentor"] = true
 		result["mentor"] = mentor
 	}

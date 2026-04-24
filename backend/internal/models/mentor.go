@@ -21,22 +21,23 @@ type MentorDbModel struct {
 }
 
 type MentorModel struct {
-	Id         int64     `json:"id"`
-	TelegramID int64     `json:"telegramID"`
-	Username   string    `json:"tg"`
-	FirstName  string    `json:"firstName"`
-	LastName   string    `json:"lastName"`
-	Bio        string    `json:"bio"`
-	AvatarURL  string    `json:"avatarUrl"`
-	Occupation string    `json:"occupation"`
-	Experience string    `json:"experience"`
-	Birthday   *DateOnly `json:"birthday"`
-	Roles      []Role    `json:"roles"`
-	Order      int       `json:"order"`
-	MemberId   int       `json:"memberId"`
-	ProfTags   []ProfTag `json:"profTags"`
-	Contacts   []Contact `json:"contacts"`
-	Services   []Service `json:"services"`
+	Id               int64             `json:"id"`
+	TelegramID       int64             `json:"telegramID"`
+	Username         string            `json:"tg"`
+	FirstName        string            `json:"firstName"`
+	LastName         string            `json:"lastName"`
+	Bio              string            `json:"bio"`
+	AvatarURL        string            `json:"avatarUrl"`
+	Occupation       string            `json:"occupation"`
+	Experience       string            `json:"experience"`
+	Birthday         *DateOnly         `json:"birthday"`
+	Roles            []Role            `json:"roles"`
+	Order            int               `json:"order"`
+	MemberId         int               `json:"memberId"`
+	ProfTags         []ProfTag         `json:"profTags"`
+	Contacts         []Contact         `json:"contacts"`
+	Services         []Service         `json:"services"`
+	SubscriptionTier *SubscriptionTier `json:"subscriptionTier,omitempty"`
 }
 
 type MentorsTag struct {

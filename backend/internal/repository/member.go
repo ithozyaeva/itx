@@ -59,6 +59,7 @@ func (r *MemberRepository) GetById(id int64) (*models.Member, error) {
 		AvatarURL:  member.AvatarURL,
 		Roles:      member.GetRoleStrings(),
 		Birthday:   member.Birthday,
+		CreatedAt:  member.CreatedAt,
 	}
 
 	return result, nil

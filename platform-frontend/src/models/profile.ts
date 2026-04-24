@@ -1,5 +1,14 @@
 export type UserRole = 'UNSUBSCRIBER' | 'SUBSCRIBER' | 'MENTOR' | 'ADMIN' | 'EVENT_MAKER'
 
+export type SubscriptionTierSlug = 'beginner' | 'foreman' | 'master' | 'king'
+
+export interface SubscriptionTier {
+  id: number
+  slug: SubscriptionTierSlug | string
+  name: string
+  level: number
+}
+
 export interface TelegramUser {
   id: number
   telegramID: number
@@ -13,6 +22,7 @@ export interface TelegramUser {
   avatarUrl: string
   roles: UserRole[]
   createdAt?: string
+  subscriptionTier?: SubscriptionTier | null
 }
 
 export interface Mentor extends TelegramUser {
@@ -72,18 +82,33 @@ export const SUBSCRIPTION_LEVELS = [
 
 export type SubscriptionLevel = typeof SUBSCRIPTION_LEVELS[number]
 
-export function getSubscriptionLevel(roles: UserRole[]): SubscriptionLevel {
+// Маппинг тиров подписки (из subscription_tiers) на UI-уровни.
+// beginner = "в комьюнити" без повышенного тира → Новичок.
+// MENTOR как отдельная роль — поднимает до Хозяина, если тир ниже.
+// ADMIN всегда побеждает и даёт Бизнесмена.
+export function getSubscriptionLevel(
+  roles: UserRole[],
+  tier?: SubscriptionTier | null,
+): SubscriptionLevel {
   if (roles.includes('ADMIN'))
     return 'Бизнесмен'
+  const slug = tier?.slug
+  if (slug === 'king')
+    return 'King'
+  if (slug === 'master')
+    return 'Хозяин'
   if (roles.includes('MENTOR'))
     return 'Хозяин'
-  if (roles.includes('SUBSCRIBER'))
+  if (slug === 'foreman')
     return 'Бригадир'
   return 'Новичок'
 }
 
-export function getSubscriptionLevelIndex(roles: UserRole[]): number {
-  const level = getSubscriptionLevel(roles)
+export function getSubscriptionLevelIndex(
+  roles: UserRole[],
+  tier?: SubscriptionTier | null,
+): number {
+  const level = getSubscriptionLevel(roles, tier)
   return SUBSCRIPTION_LEVELS.indexOf(level)
 }
 

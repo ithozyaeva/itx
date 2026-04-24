@@ -14,8 +14,9 @@ type MemberRepoAdapter struct {
 // MemberService представляет сервис для работы с участниками
 type MemberService struct {
 	BaseService[models.Member]
-	repo       *repository.MemberRepository
-	mentorRepo *repository.MentorRepository
+	repo             *repository.MemberRepository
+	mentorRepo       *repository.MentorRepository
+	subscriptionRepo *repository.SubscriptionRepository
 }
 
 // NewMemberService создает новый экземпляр сервиса участников
@@ -24,10 +25,31 @@ func NewMemberService() *MemberService {
 	adapter := &MemberRepoAdapter{repo}
 
 	return &MemberService{
-		BaseService: NewBaseService[models.Member](adapter),
-		repo:        repo,
-		mentorRepo:  repository.NewMentorRepository(),
+		BaseService:      NewBaseService[models.Member](adapter),
+		repo:             repo,
+		mentorRepo:       repository.NewMentorRepository(),
+		subscriptionRepo: repository.NewSubscriptionRepository(),
 	}
+}
+
+// GetEffectiveTier возвращает эффективный тир подписки пользователя
+// (ManualTierID в приоритете, иначе ResolvedTierID). nil если подписки нет.
+// Используется хендлерами профиля, чтобы отдать фронту актуальный уровень
+// без чтения roles, которые с тирами не синхронизируются.
+func (s *MemberService) GetEffectiveTier(telegramID int64) *models.SubscriptionTier {
+	user, err := s.subscriptionRepo.GetUser(telegramID)
+	if err != nil {
+		return nil
+	}
+	tierID := user.EffectiveTierID()
+	if tierID == nil {
+		return nil
+	}
+	tier, err := s.subscriptionRepo.GetTier(*tierID)
+	if err != nil {
+		return nil
+	}
+	return tier
 }
 
 func (s *MemberService) GetTodayBirthdays() ([]string, error) {
