@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/utils"
+	"sort"
 	"time"
 )
 
@@ -65,6 +67,54 @@ func (r *EventRepository) Search(limit *int, offset *int, filter *SearchFilter, 
 	}
 
 	return events, count, nil
+}
+
+// SearchUpcoming отдаёт предстоящие события, отсортированные по ближайшему
+// будущему вхождению. Для рекуррентных событий поле date хранит исходное
+// вхождение, поэтому отсортировать в SQL без вычислений нельзя без потери
+// точности для MONTHLY/YEARLY — считаем в Go.
+//
+// Ожидается, что filter уже содержит условие «date >= now OR
+// (is_repeating AND repeat_end_date >= now / NULL)».
+func (r *EventRepository) SearchUpcoming(limit *int, offset *int, filter *SearchFilter) ([]models.Event, int64, error) {
+	var events []models.Event
+
+	query := database.DB.Model(&models.Event{}).Preload("Hosts").Preload("Members").Preload("EventTags")
+	if filter != nil {
+		for key, value := range *filter {
+			if args, ok := value.([]interface{}); ok {
+				query = query.Where(key, args...)
+			} else {
+				query = query.Where(key, value)
+			}
+		}
+	}
+
+	if err := query.Find(&events).Error; err != nil {
+		return nil, 0, err
+	}
+
+	now := time.Now()
+	sort.SliceStable(events, func(i, j int) bool {
+		return utils.NextOccurrence(&events[i], now).Before(utils.NextOccurrence(&events[j], now))
+	})
+
+	total := int64(len(events))
+
+	start := 0
+	if offset != nil && *offset > 0 {
+		start = *offset
+	}
+	if start > len(events) {
+		start = len(events)
+	}
+	events = events[start:]
+
+	if limit != nil && *limit >= 0 && *limit < len(events) {
+		events = events[:*limit]
+	}
+
+	return events, total, nil
 }
 
 func (r *EventRepository) Update(entity *models.Event) (*models.Event, error) {

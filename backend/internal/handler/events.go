@@ -72,6 +72,18 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 		filter["place_type = ?"] = *req.PlaceType
 	}
 
+	// Для предстоящих — сортируем по ближайшему будущему вхождению
+	// (учитывая repeat_period), а не по исходному date. Для архива
+	// оставляем обычный DESC по date.
+	if req.DateFrom != nil {
+		result, err := h.svc.SearchUpcoming(req.Limit, req.Offset, &filter)
+		if err != nil {
+			log.Printf("events upcoming search error: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска событий"})
+		}
+		return c.JSON(result)
+	}
+
 	result, err := h.service.Search(req.Limit, req.Offset, &filter, &repository.Order{
 		ColumnBy: "date",
 		Order:    "DESC",
