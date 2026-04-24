@@ -411,6 +411,14 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		// Способ 2: /whois @username
 		args := strings.TrimSpace(message.CommandArguments())
 		if args == "" {
+			// Невалидный вызов в группе — тихо удаляем команду, не засоряя чат
+			// подсказкой. В личке оставляем подсказку, там удалять нечего.
+			if message.Chat.Type != "private" {
+				if _, delErr := b.bot.Request(tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)); delErr != nil {
+					log.Printf("Failed to delete invalid /whois command %d in chat %d: %v", message.MessageID, message.Chat.ID, delErr)
+				}
+				return
+			}
 			msg := tgbotapi.NewMessage(message.Chat.ID, "Ответьте на сообщение командой /whois или укажите username: /whois @username")
 			msg.ReplyToMessageID = message.MessageID
 			b.bot.Send(msg)
