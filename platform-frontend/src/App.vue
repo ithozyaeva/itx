@@ -9,6 +9,7 @@ import { useUser } from '@/composables/useUser'
 import { startProactiveRefresh, stopProactiveRefresh } from '@/services/api'
 import { authService } from '@/services/auth'
 import { handleError } from '@/services/errorService'
+import { profileService } from '@/services/profile'
 import Layout from './components/layout/Layout.vue'
 
 const { start: startOnboarding } = useOnboarding()
@@ -39,6 +40,9 @@ onBeforeMount(() => {
         window.history.replaceState({}, document.title, window.location.pathname)
         startSSE()
         startProactiveRefresh()
+        // Авторизация возвращает не все поля профиля (нет subscriptionTier и т.п.)
+        // — дёргаем /me чтобы перетереть tg_user актуальной версией.
+        profileService.getMe().catch(() => {})
         // Запускаем онбординг с задержкой, чтобы дать DOM срендериться
         // (особенно важно для Safari/Telegram WebView)
         setTimeout(startOnboarding, 1500)
@@ -57,6 +61,10 @@ onBeforeMount(() => {
   else if (tg_user.value) {
     startSSE()
     startProactiveRefresh()
+    // Освежаем tg_user при каждом открытии: бэкенд со временем добавляет
+    // поля (subscriptionTier, роли после /subcheckall и т.п.), локалсторейдж
+    // сам по себе не инвалидируется.
+    profileService.getMe().catch(() => {})
   }
   else if (!tg_user.value && !import.meta.env.DEV) {
     window.location.pathname = '/'
