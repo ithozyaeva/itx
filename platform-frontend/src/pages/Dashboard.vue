@@ -43,6 +43,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useSSE } from '@/composables/useSSE'
 import { useUser, useUserLevel } from '@/composables/useUser'
 import { dateFormatter, formatShortDate } from '@/lib/utils'
@@ -170,7 +171,7 @@ function formatQuestDeadline(dateStr: string) {
 
 function isEventLive(event: CommunityEvent) {
   const now = new Date()
-  const eventDate = new Date(event.date)
+  const eventDate = getNextOccurrenceDate(event, now)
   const diffMs = now.getTime() - eventDate.getTime()
   return diffMs >= 0 && diffMs < 2 * 60 * 60 * 1000
 }
@@ -186,7 +187,7 @@ function isHostOfEvent(event: CommunityEvent) {
 onMounted(async () => {
   try {
     const results = await Promise.allSettled([
-      eventsService.searchNext(3, 0),
+      eventsService.searchNext(20, 0),
       pointsService.getMyPoints(),
       chatQuestService.getActiveQuests(),
       Promise.all([
@@ -197,8 +198,13 @@ onMounted(async () => {
       highlightsService.getRecent(5),
     ])
 
-    if (results[0].status === 'fulfilled')
-      nearestEvents.value = results[0].value?.items ?? []
+    if (results[0].status === 'fulfilled') {
+      const now = new Date()
+      const items = results[0].value?.items ?? []
+      nearestEvents.value = [...items]
+        .sort((a, b) => getNextOccurrenceDate(a, now).getTime() - getNextOccurrenceDate(b, now).getTime())
+        .slice(0, 3)
+    }
     if (results[1].status === 'fulfilled')
       pointsSummary.value = results[1].value
     if (results[2].status === 'fulfilled')
@@ -451,7 +457,7 @@ onMounted(async () => {
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-muted-foreground">
               <span class="flex items-center gap-1.5">
                 <Calendar class="h-3.5 w-3.5" />
-                {{ dateFormatter.format(new Date(event.date)) }}
+                {{ dateFormatter.format(getNextOccurrenceDate(event)) }}
               </span>
               <span
                 v-if="event.hosts.length"
