@@ -273,7 +273,7 @@ describe('useUser', () => {
       expect(result.levelIndex.value).toBe(0)
     })
 
-    it('returns Бригадир for SUBSCRIBER', async () => {
+    it('returns Новичок for SUBSCRIBER without tier (beginner or null)', async () => {
       const user: TelegramUser = {
         id: 1,
         telegramID: 1,
@@ -286,6 +286,30 @@ describe('useUser', () => {
         company: '',
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
+        subscriptionTier: { id: 1, slug: 'beginner', name: 'Beginner', level: 1 },
+      }
+      localStorage.setItem('tg_user', JSON.stringify(user))
+
+      const { useUserLevel } = await freshImport()
+      const { result } = withSetup(() => useUserLevel())
+      expect(result.level.value).toBe('Новичок')
+      expect(result.levelIndex.value).toBe(0)
+    })
+
+    it('returns Бригадир for foreman tier', async () => {
+      const user: TelegramUser = {
+        id: 1,
+        telegramID: 1,
+        tg: 'user',
+        birthday: '',
+        firstName: '',
+        lastName: '',
+        bio: '',
+        grade: '',
+        company: '',
+        avatarUrl: '',
+        roles: ['SUBSCRIBER'],
+        subscriptionTier: { id: 2, slug: 'foreman', name: 'Foreman', level: 2 },
       }
       localStorage.setItem('tg_user', JSON.stringify(user))
 
@@ -293,6 +317,74 @@ describe('useUser', () => {
       const { result } = withSetup(() => useUserLevel())
       expect(result.level.value).toBe('Бригадир')
       expect(result.levelIndex.value).toBe(1)
+    })
+
+    it('returns Хозяин for master tier', async () => {
+      const user: TelegramUser = {
+        id: 1,
+        telegramID: 1,
+        tg: 'user',
+        birthday: '',
+        firstName: '',
+        lastName: '',
+        bio: '',
+        grade: '',
+        company: '',
+        avatarUrl: '',
+        roles: ['SUBSCRIBER'],
+        subscriptionTier: { id: 3, slug: 'master', name: 'Master', level: 3 },
+      }
+      localStorage.setItem('tg_user', JSON.stringify(user))
+
+      const { useUserLevel } = await freshImport()
+      const { result } = withSetup(() => useUserLevel())
+      expect(result.level.value).toBe('Хозяин')
+      expect(result.levelIndex.value).toBe(2)
+    })
+
+    it('returns King for king tier', async () => {
+      const user: TelegramUser = {
+        id: 1,
+        telegramID: 1,
+        tg: 'user',
+        birthday: '',
+        firstName: '',
+        lastName: '',
+        bio: '',
+        grade: '',
+        company: '',
+        avatarUrl: '',
+        roles: ['SUBSCRIBER'],
+        subscriptionTier: { id: 4, slug: 'king', name: 'King', level: 4 },
+      }
+      localStorage.setItem('tg_user', JSON.stringify(user))
+
+      const { useUserLevel } = await freshImport()
+      const { result } = withSetup(() => useUserLevel())
+      expect(result.level.value).toBe('King')
+      expect(result.levelIndex.value).toBe(4)
+    })
+
+    it('returns Хозяин for MENTOR even without master tier', async () => {
+      const user: TelegramUser = {
+        id: 1,
+        telegramID: 1,
+        tg: 'user',
+        birthday: '',
+        firstName: '',
+        lastName: '',
+        bio: '',
+        grade: '',
+        company: '',
+        avatarUrl: '',
+        roles: ['MENTOR'],
+      }
+      localStorage.setItem('tg_user', JSON.stringify(user))
+
+      const { useUserLevel } = await freshImport()
+      const { result } = withSetup(() => useUserLevel())
+      expect(result.level.value).toBe('Хозяин')
+      expect(result.levelIndex.value).toBe(2)
     })
 
     it('returns Бизнесмен for ADMIN', async () => {

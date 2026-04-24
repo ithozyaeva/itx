@@ -42,8 +42,8 @@ export function canViewAdminPanel() {
 
 export function useUserLevel() {
   const user = useUser()
-  const level = computed(() => user.value ? getSubscriptionLevel(user.value.roles) : SUBSCRIPTION_LEVELS[0])
-  const levelIndex = computed(() => user.value ? getSubscriptionLevelIndex(user.value.roles) : 0)
+  const level = computed(() => user.value ? getSubscriptionLevel(user.value.roles, user.value.subscriptionTier) : SUBSCRIPTION_LEVELS[0])
+  const levelIndex = computed(() => user.value ? getSubscriptionLevelIndex(user.value.roles, user.value.subscriptionTier) : 0)
   const maxLevel = SUBSCRIPTION_LEVELS.length - 1
 
   return { level, levelIndex, maxLevel }

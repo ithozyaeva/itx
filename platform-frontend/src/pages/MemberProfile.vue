@@ -110,13 +110,13 @@ const daysSinceJoined = computed(() => {
 const subscriptionLevel = computed(() => {
   if (!profile.value)
     return SUBSCRIPTION_LEVELS[0]
-  return getSubscriptionLevel(profile.value.member.roles)
+  return getSubscriptionLevel(profile.value.member.roles, profile.value.member.subscriptionTier)
 })
 
 const subscriptionLevelIndex = computed(() => {
   if (!profile.value)
     return 0
-  return getSubscriptionLevelIndex(profile.value.member.roles)
+  return getSubscriptionLevelIndex(profile.value.member.roles, profile.value.member.subscriptionTier)
 })
 
 function getAvatarSrc(tg: string, avatarUrl?: string) {

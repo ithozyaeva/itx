@@ -35,6 +35,9 @@ type Member struct {
 	Roles       []Role       `json:"roles" gorm:"-:all"`
 	Birthday    *DateOnly    `json:"birthday" gorm:"column:birthday"`
 	CreatedAt   time.Time    `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
+	// SubscriptionTier — эффективный тир подписки (EffectiveTier из subscription_users).
+	// Заполняется хендлерами перед отдачей профиля. В БД не хранится.
+	SubscriptionTier *SubscriptionTier `json:"subscriptionTier,omitempty" gorm:"-:all"`
 }
 
 type ReviewOnCommunity struct {
