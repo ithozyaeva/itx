@@ -17,6 +17,7 @@ import { handleError } from '@/services/errorService'
 
 const quests = ref<ChatQuestWithProgress[]>([])
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
 const activeFilter = ref<'all' | 'active' | 'completed'>('all')
 
 const filters: { key: 'all' | 'active' | 'completed', label: string }[] = [
@@ -64,11 +65,12 @@ function questTypeLabel(quest: ChatQuestWithProgress) {
 
 async function fetchQuests() {
   isLoading.value = true
+  loadError.value = null
   try {
     quests.value = await chatQuestService.getAllQuests() ?? []
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -109,6 +111,21 @@ onMounted(() => {
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
       <QuestCardSkeleton v-for="i in 3" :key="i" />
+    </div>
+
+    <div
+      v-else-if="loadError"
+      class="text-center py-12"
+    >
+      <p class="text-sm text-destructive mb-3">
+        {{ loadError }}
+      </p>
+      <button
+        class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+        @click="fetchQuests"
+      >
+        Повторить
+      </button>
     </div>
 
     <template v-else>

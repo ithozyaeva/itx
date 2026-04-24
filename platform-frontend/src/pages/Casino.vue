@@ -10,6 +10,7 @@ import { handleError } from '@/services/errorService'
 const stats = ref<CasinoStats | null>(null)
 const feed = ref<CasinoFeedItem[]>([])
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
 const isPlaying = ref(false)
 const lastResult = ref<CasinoBetResult | null>(null)
 const showResult = ref(false)
@@ -74,6 +75,7 @@ let wheelTimer: ReturnType<typeof setTimeout> | null = null
 
 async function fetchData() {
   isLoading.value = true
+  loadError.value = null
   try {
     const [s, f] = await Promise.all([
       casinoService.getStats(),
@@ -83,7 +85,7 @@ async function fetchData() {
     feed.value = f ?? []
   }
   catch (error) {
-    handleError(error)
+    loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
@@ -109,7 +111,7 @@ async function playGame(action: () => Promise<CasinoBetResult>, delayMs = 1500) 
     if (stats.value) {
       stats.value.balance = result.balance
     }
-    casinoService.getFeed().then(f => feed.value = f ?? []).catch(() => {})
+    casinoService.getFeed().then(f => feed.value = f ?? []).catch(handleError)
   }
   catch (error) {
     handleError(error)
@@ -337,6 +339,21 @@ onBeforeUnmount(() => {
         class="flex justify-center py-20"
       >
         <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+
+      <div
+        v-else-if="loadError"
+        class="text-center py-20"
+      >
+        <p class="text-sm text-destructive mb-3">
+          {{ loadError }}
+        </p>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+          @click="fetchData"
+        >
+          Повторить
+        </button>
       </div>
 
       <template v-else>
