@@ -75,9 +75,7 @@ export const SUBSCRIPTION_LEVELS = [
   'Новичок',
   'Бригадир',
   'Хозяин',
-  'Меценат',
   'King',
-  'Бизнесмен',
 ] as const
 
 export type SubscriptionLevel = typeof SUBSCRIPTION_LEVELS[number]
@@ -85,13 +83,13 @@ export type SubscriptionLevel = typeof SUBSCRIPTION_LEVELS[number]
 // Маппинг тиров подписки (из subscription_tiers) на UI-уровни.
 // beginner = "в комьюнити" без повышенного тира → Новичок.
 // MENTOR как отдельная роль — поднимает до Хозяина, если тир ниже.
-// ADMIN всегда побеждает и даёт Бизнесмена.
+// ADMIN даёт максимальный уровень (King).
 export function getSubscriptionLevel(
   roles: UserRole[],
   tier?: SubscriptionTier | null,
 ): SubscriptionLevel {
   if (roles.includes('ADMIN'))
-    return 'Бизнесмен'
+    return 'King'
   const slug = tier?.slug
   if (slug === 'king')
     return 'King'
