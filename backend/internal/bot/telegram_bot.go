@@ -570,7 +570,18 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	msg.ParseMode = "HTML"
 	msg.ReplyToMessageID = message.MessageID
 	msg.DisableWebPagePreview = true
-	b.bot.Send(msg)
+	if _, sendErr := b.bot.Send(msg); sendErr != nil {
+		log.Printf("Failed to send /whois reply in chat %d: %v", message.Chat.ID, sendErr)
+		return
+	}
+
+	// В группе чистим команду, чтобы в чате оставалась только карточка бота
+	// и не плодились кликабельные /whois, по которым тапают соседи.
+	if message.Chat.Type != "private" {
+		if _, delErr := b.bot.Request(tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)); delErr != nil {
+			log.Printf("Failed to delete /whois command %d in chat %d: %v", message.MessageID, message.Chat.ID, delErr)
+		}
+	}
 }
 
 // handleChatIDCommand отправляет ID чата владельцу в ЛС и удаляет команду
