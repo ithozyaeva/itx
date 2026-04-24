@@ -532,13 +532,6 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		builder.WriteString(fmt.Sprintf("\n💜 Благодарностей: %d", kudosCount))
 	}
 
-	// Гильдия
-	guildRepo := repository.NewGuildRepository()
-	guildName := guildRepo.GetMemberGuildName(member.Id)
-	if guildName != "" {
-		builder.WriteString(fmt.Sprintf("\n🛡 Гильдия: %s", guildName))
-	}
-
 	// Менторская информация
 	mentor, mentorErr := b.member.GetMentor(member.Id)
 	if mentorErr == nil && mentor != nil {

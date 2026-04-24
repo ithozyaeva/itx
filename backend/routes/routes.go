@@ -387,17 +387,6 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	casino.Get("/feed", casinoHandler.GetGlobalFeed)
 	casino.Get("/stats", casinoHandler.GetStats)
 
-	// Маршруты для гильдий
-	guildHandler := handler.NewGuildHandler()
-	guilds := protected.Group("/guilds")
-	guilds.Get("/", guildHandler.GetAll)
-	guilds.Post("/", guildHandler.Create)
-	guilds.Put("/:id", guildHandler.Update)
-	guilds.Delete("/:id", guildHandler.Delete)
-	guilds.Post("/:id/join", guildHandler.Join)
-	guilds.Post("/:id/leave", guildHandler.Leave)
-	guilds.Get("/:id/members", guildHandler.GetMembers)
-
 	// Маршруты для статистики профиля
 	profileStatsHandler := handler.NewProfileStatsHandler()
 	profileStats := protected.Group("/profile-stats")
