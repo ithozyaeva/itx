@@ -261,6 +261,17 @@ func (b *TelegramBot) Start() {
 			continue
 		}
 
+		// Голое «/слово» в группе (без аргументов и без другого текста):
+		// удаляем, чтобы клик по подсвеченной команде не превращался в цепочку спама.
+		// Наши команды обработаны выше и сюда не падают.
+		if update.Message.Chat.Type != "private" {
+			text := strings.TrimSpace(update.Message.Text)
+			if strings.HasPrefix(text, "/") && !strings.ContainsAny(text, " \t\n") {
+				b.deleteBareCommand(update.Message.Chat.ID, update.Message.MessageID)
+				continue
+			}
+		}
+
 		// Бот отвечает только в личных сообщениях
 		if update.Message.Chat.Type != "private" {
 			continue
@@ -767,6 +778,18 @@ func (b *TelegramBot) deleteServiceMessage(chatID int64, messageID int) {
 	}
 	if _, err := b.bot.Request(tgbotapi.NewDeleteMessage(chatID, messageID)); err != nil {
 		log.Printf("Failed to delete service message %d in chat %d: %v", messageID, chatID, err)
+	}
+}
+
+// deleteBareCommand удаляет сообщение-«голую команду» (только «/слово») в
+// трекаемых чатах. Telegram рендерит такие строки как кликабельные
+// bot-команды — по ним тапают соседи и множат спам.
+func (b *TelegramBot) deleteBareCommand(chatID int64, messageID int) {
+	if !b.chatActivityService.IsTrackedChat(chatID) {
+		return
+	}
+	if _, err := b.bot.Request(tgbotapi.NewDeleteMessage(chatID, messageID)); err != nil {
+		log.Printf("Failed to delete bare command %d in chat %d: %v", messageID, chatID, err)
 	}
 }
 
