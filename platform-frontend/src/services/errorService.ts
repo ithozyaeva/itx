@@ -89,7 +89,9 @@ export async function handleError(error: unknown): Promise<AppError> {
     variant: 'destructive',
   })
 
-  console.error('[App Error]', appError)
+  if (import.meta.env.DEV) {
+    console.error('[App Error]', appError)
+  }
 
   return appError
 }
