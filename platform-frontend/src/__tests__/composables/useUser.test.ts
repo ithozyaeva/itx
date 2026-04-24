@@ -362,7 +362,7 @@ describe('useUser', () => {
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
       expect(result.level.value).toBe('King')
-      expect(result.levelIndex.value).toBe(4)
+      expect(result.levelIndex.value).toBe(3)
     })
 
     it('returns Хозяин for MENTOR even without master tier', async () => {
@@ -387,7 +387,7 @@ describe('useUser', () => {
       expect(result.levelIndex.value).toBe(2)
     })
 
-    it('returns Бизнесмен for ADMIN', async () => {
+    it('returns King for ADMIN', async () => {
       const user: TelegramUser = {
         id: 1,
         telegramID: 1,
@@ -405,14 +405,14 @@ describe('useUser', () => {
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
-      expect(result.level.value).toBe('Бизнесмен')
-      expect(result.levelIndex.value).toBe(5)
+      expect(result.level.value).toBe('King')
+      expect(result.levelIndex.value).toBe(3)
     })
 
     it('exposes maxLevel', async () => {
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
-      expect(result.maxLevel).toBe(5)
+      expect(result.maxLevel).toBe(3)
     })
   })
 })
