@@ -45,6 +45,17 @@ func (s *EventsService) GetUpcomingEvents(limit int) ([]models.Event, error) {
 	return s.repo.GetUpcoming(limit)
 }
 
+// SearchUpcoming делегирует в репозиторий поиск предстоящих событий,
+// отсортированных по ближайшему будущему вхождению (а не по исходному date).
+// Возвращает тот же формат, что и Search.
+func (s *EventsService) SearchUpcoming(limit *int, offset *int, filter *repository.SearchFilter) (*models.RegistrySearch[models.Event], error) {
+	items, total, err := s.repo.SearchUpcoming(limit, offset, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &models.RegistrySearch[models.Event]{Items: items, Total: int(total)}, nil
+}
+
 // ResolveEventTags нормализует список тегов события: теги с Id > 0 оставляются как есть,
 // а теги без Id (приходят с фронта, когда админ вводит новое имя вручную) ищутся по имени
 // или создаются. Возвращает список тегов с корректными Id, пригодный для GORM many2many.

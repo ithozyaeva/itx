@@ -64,3 +64,49 @@ func escapeICS(s string) string {
 	)
 	return replacer.Replace(s)
 }
+
+// NextOccurrence возвращает дату ближайшего будущего вхождения события.
+// Для обычных событий и для рекуррентных с датой в будущем — исходная дата.
+// Для рекуррентных с прошедшей исходной датой вычисляет следующее вхождение
+// исходя из repeat_period и repeat_interval.
+//
+// Логика дублирует фронтенд (platform-frontend/src/composables/useEventOccurrence.ts)
+// — любая правка должна идти синхронно в обе стороны.
+func NextOccurrence(event *models.Event, now time.Time) time.Time {
+	if !event.IsRepeating || event.RepeatPeriod == nil {
+		return event.Date
+	}
+	if !event.Date.Before(now) {
+		return event.Date
+	}
+
+	interval := 1
+	if event.RepeatInterval != nil && *event.RepeatInterval > 0 {
+		interval = *event.RepeatInterval
+	}
+
+	switch models.RepeatPeriod(*event.RepeatPeriod) {
+	case models.RepeatDaily:
+		diffDays := int(now.Sub(event.Date) / (24 * time.Hour))
+		next := (diffDays/interval + 1) * interval
+		return event.Date.AddDate(0, 0, next)
+	case models.RepeatWeekly:
+		diffWeeks := int(now.Sub(event.Date) / (7 * 24 * time.Hour))
+		next := (diffWeeks/interval + 1) * interval
+		return event.Date.AddDate(0, 0, next*7)
+	case models.RepeatMonthly:
+		current := event.Date
+		for current.Before(now) {
+			current = current.AddDate(0, interval, 0)
+		}
+		return current
+	case models.RepeatYearly:
+		current := event.Date
+		for current.Before(now) {
+			current = current.AddDate(interval, 0, 0)
+		}
+		return current
+	default:
+		return event.Date
+	}
+}
