@@ -440,6 +440,15 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	}
 
 	if err != nil || member == nil {
+		// В группе не найденного участника не озвучиваем, иначе начинается
+		// цепочка «а меня найдёшь?» и чат захлёбывается. Просто удаляем вызов.
+		// В личке — оставляем ответ, там это полезный feedback юзеру.
+		if message.Chat.Type != "private" {
+			if _, delErr := b.bot.Request(tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)); delErr != nil {
+				log.Printf("Failed to delete /whois not-found command %d in chat %d: %v", message.MessageID, message.Chat.ID, delErr)
+			}
+			return
+		}
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Участник не найден на платформе.")
 		msg.ReplyToMessageID = message.MessageID
 		b.bot.Send(msg)
