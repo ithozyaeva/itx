@@ -7,7 +7,6 @@ vi.mock('@/pages/AutoApplyBot.vue', () => ({ default: { template: '<div />' } })
 vi.mock('@/pages/Content.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Dashboard.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Events.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/Guilds.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Kudos.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Leaderboard.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Marketplace.vue', () => ({ default: { template: '<div />' } }))
@@ -62,7 +61,6 @@ describe('router', () => {
       ['/kudos', 'kudos'],
       ['/seasons', 'seasons'],
       ['/raffles', 'raffles'],
-      ['/guilds', 'guilds'],
       ['/my-stats', 'myStats'],
     ])('route %s has name %s', (path, name) => {
       const route = router.getRoutes().find((r: any) => r.name === name)

@@ -6,7 +6,6 @@ import Casino from '@/pages/Casino.vue'
 
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
-import Guilds from '@/pages/Guilds.vue'
 import Kudos from '@/pages/Kudos.vue'
 import Leaderboard from '@/pages/Leaderboard.vue'
 import Marketplace from '@/pages/Marketplace.vue'
@@ -47,7 +46,6 @@ const routes: RouteRecordRaw[] = [
   { path: '/seasons', component: Seasons, name: 'seasons', meta: { breadcrumb: [{ label: 'Сезоны' }] } },
   { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }] } },
   { path: '/minigames', component: Casino, name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }] } },
-  { path: '/guilds', component: Guilds, name: 'guilds', meta: { breadcrumb: [{ label: 'Гильдии' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },
   { path: '/notifications', redirect: '/me' },
   { path: '/faq', name: 'faq', component: () => import('@/pages/FAQ.vue'), meta: { breadcrumb: [{ label: 'FAQ' }] } },
