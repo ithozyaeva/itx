@@ -2,10 +2,13 @@ package service
 
 import (
 	"fmt"
+	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"log"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type PointsService struct {
@@ -65,18 +68,37 @@ func (s *PointsService) GiveCustomPoints(memberId int64, amount int, reason mode
 	}
 }
 
+// awardIdempotentTx — внутренний помощник для атомарного начисления внутри транзакции.
+func (s *PointsService) awardIdempotentTx(db *gorm.DB, memberId int64, reason models.PointReason, sourceType string, sourceId int64, description string) error {
+	tx := &models.PointTransaction{
+		MemberId:    memberId,
+		Amount:      models.PointValues[reason],
+		Reason:      reason,
+		SourceType:  sourceType,
+		SourceId:    sourceId,
+		Description: description,
+	}
+	return s.repo.AwardPointsTx(db, tx)
+}
+
 func (s *PointsService) AwardEventPoints(event *models.Event) error {
-	for _, host := range event.Hosts {
-		s.AwardIdempotent(host.Id, models.PointReasonEventHost, "event", event.Id,
-			fmt.Sprintf("Проведение события: %s", event.Title))
-	}
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		for _, host := range event.Hosts {
+			if err := s.awardIdempotentTx(tx, host.Id, models.PointReasonEventHost, "event", event.Id,
+				fmt.Sprintf("Проведение события: %s", event.Title)); err != nil {
+				return err
+			}
+		}
 
-	for _, member := range event.Members {
-		s.AwardIdempotent(member.Id, models.PointReasonEventAttend, "event", event.Id,
-			fmt.Sprintf("Участие в событии: %s", event.Title))
-	}
+		for _, member := range event.Members {
+			if err := s.awardIdempotentTx(tx, member.Id, models.PointReasonEventAttend, "event", event.Id,
+				fmt.Sprintf("Участие в событии: %s", event.Title)); err != nil {
+				return err
+			}
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // CheckProfileComplete проверяет заполненность профиля и начисляет одноразовый бонус.
@@ -188,6 +210,8 @@ func (s *PointsService) AwardWeeklyChatter() {
 }
 
 // AwardActivityBonuses начисляет бонусы за активность: еженедельная активность, 3+ события в месяц, серия 4 недели.
+// Каждый бонус-блок выполняется в собственной транзакции, чтобы сбой одного типа
+// не откатывал успешные начисления другого.
 func (s *PointsService) AwardActivityBonuses() {
 	now := time.Now()
 	year, week := now.ISOWeek()
@@ -196,14 +220,21 @@ func (s *PointsService) AwardActivityBonuses() {
 	prevWeekTime := now.AddDate(0, 0, -7)
 	prevYear, prevWeek := prevWeekTime.ISOWeek()
 
-	weeklyMembers, err := s.repo.GetMembersWithEventsInWeek(prevYear, prevWeek)
-	if err != nil {
+	if weeklyMembers, err := s.repo.GetMembersWithEventsInWeek(prevYear, prevWeek); err != nil {
 		log.Printf("Error getting weekly active members: %v", err)
 	} else {
 		sourceId := int64(prevYear*100 + prevWeek)
-		for _, memberId := range weeklyMembers {
-			s.AwardIdempotent(memberId, models.PointReasonWeeklyActivity, "weekly", sourceId,
-				fmt.Sprintf("Активность на неделе %d/%d", prevWeek, prevYear))
+		err := database.DB.Transaction(func(tx *gorm.DB) error {
+			for _, memberId := range weeklyMembers {
+				if err := s.awardIdempotentTx(tx, memberId, models.PointReasonWeeklyActivity, "weekly", sourceId,
+					fmt.Sprintf("Активность на неделе %d/%d", prevWeek, prevYear)); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			log.Printf("AwardActivityBonuses weekly tx error: %v", err)
 		}
 	}
 
@@ -212,26 +243,40 @@ func (s *PointsService) AwardActivityBonuses() {
 	monthYear := prevMonthTime.Year()
 	prevMonth := int(prevMonthTime.Month())
 
-	monthlyMembers, err := s.repo.GetMembersWithMonthlyEvents(monthYear, prevMonth, 3)
-	if err != nil {
+	if monthlyMembers, err := s.repo.GetMembersWithMonthlyEvents(monthYear, prevMonth, 3); err != nil {
 		log.Printf("Error getting monthly active members: %v", err)
 	} else {
 		sourceId := int64(monthYear*100 + prevMonth)
-		for _, memberId := range monthlyMembers {
-			s.AwardIdempotent(memberId, models.PointReasonMonthlyActive, "monthly", sourceId,
-				fmt.Sprintf("3+ событий за %d/%d", prevMonth, monthYear))
+		err := database.DB.Transaction(func(tx *gorm.DB) error {
+			for _, memberId := range monthlyMembers {
+				if err := s.awardIdempotentTx(tx, memberId, models.PointReasonMonthlyActive, "monthly", sourceId,
+					fmt.Sprintf("3+ событий за %d/%d", prevMonth, monthYear)); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			log.Printf("AwardActivityBonuses monthly tx error: %v", err)
 		}
 	}
 
 	// Серия 4 недели подряд
-	streakMembers, err := s.repo.GetMembersWithStreak(4)
-	if err != nil {
+	if streakMembers, err := s.repo.GetMembersWithStreak(4); err != nil {
 		log.Printf("Error getting streak members: %v", err)
 	} else {
 		sourceId := int64(year*100 + week)
-		for _, memberId := range streakMembers {
-			s.AwardIdempotent(memberId, models.PointReasonStreak4Weeks, "streak", sourceId,
-				"Серия: 4 недели подряд с событиями")
+		err := database.DB.Transaction(func(tx *gorm.DB) error {
+			for _, memberId := range streakMembers {
+				if err := s.awardIdempotentTx(tx, memberId, models.PointReasonStreak4Weeks, "streak", sourceId,
+					"Серия: 4 недели подряд с событиями"); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			log.Printf("AwardActivityBonuses streak tx error: %v", err)
 		}
 	}
 }
