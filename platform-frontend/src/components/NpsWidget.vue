@@ -81,11 +81,11 @@ async function submit() {
   <Transition name="nps-fade">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm p-4"
+      class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm p-2 sm:p-4"
       @click="handleBackdropClick"
     >
       <Transition name="nps-scale">
-        <div v-if="isOpen" class="bg-card text-card-foreground rounded-sm p-6 w-full max-w-md relative shadow-xl">
+        <div v-if="isOpen" class="bg-card text-card-foreground rounded-sm p-4 sm:p-6 w-full max-w-md relative shadow-xl">
           <button
             type="button"
             class="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer"
@@ -102,13 +102,17 @@ async function submit() {
             Насколько вероятно, что вы порекомендуете нас другу?
           </p>
 
-          <div class="grid grid-cols-6 sm:grid-cols-11 gap-1 mb-2">
+          <!-- 11 кнопок в один ряд при любой ширине: на узких экранах
+               получаются маленькие, но не переносятся (NPS-шкала визуально
+               важнее размера кнопок). min-h обеспечивает достаточный
+               touch-target. -->
+          <div class="grid grid-cols-11 gap-0.5 sm:gap-1 mb-2">
             <button
               v-for="n in 11"
               :key="n - 1"
               type="button"
               :aria-label="`Оценка ${n - 1}`"
-              class="min-h-9 px-1 text-sm rounded-sm border border-input transition-colors cursor-pointer"
+              class="min-h-10 px-0 text-xs sm:text-sm rounded-sm border border-input transition-colors cursor-pointer"
               :class="score === n - 1
                 ? 'bg-accent text-accent-foreground border-accent'
                 : 'hover:bg-secondary'"
@@ -117,7 +121,7 @@ async function submit() {
               {{ n - 1 }}
             </button>
           </div>
-          <div class="flex justify-between text-xs text-muted-foreground mb-4">
+          <div class="flex justify-between text-[10px] sm:text-xs text-muted-foreground mb-4">
             <span>Точно нет</span>
             <span>Точно да</span>
           </div>
