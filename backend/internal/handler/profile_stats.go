@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"log"
@@ -33,7 +32,10 @@ func (h *ProfileStatsHandler) enrichAchievements(stats *repository.ProfileStats,
 }
 
 func (h *ProfileStatsHandler) GetMyStats(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	stats, err := h.repo.GetStats(member.Id)
 	if err != nil {
 		log.Printf("get my profile stats error (member=%d): %v", member.Id, err)

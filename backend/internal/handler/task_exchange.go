@@ -59,7 +59,10 @@ func (h *TaskExchangeHandler) GetById(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) Create(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	var req models.CreateTaskExchangeRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -92,7 +95,10 @@ func (h *TaskExchangeHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) Update(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -122,7 +128,10 @@ func (h *TaskExchangeHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -139,7 +148,10 @@ func (h *TaskExchangeHandler) Assign(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) Unassign(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -155,7 +167,10 @@ func (h *TaskExchangeHandler) Unassign(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) RemoveAssignee(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -184,7 +199,10 @@ func (h *TaskExchangeHandler) RemoveAssignee(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -288,7 +306,10 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 }
 
 func (h *TaskExchangeHandler) Delete(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})

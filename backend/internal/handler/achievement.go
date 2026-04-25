@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"strconv"
 
@@ -19,7 +18,10 @@ func NewAchievementHandler() *AchievementHandler {
 }
 
 func (h *AchievementHandler) GetMyAchievements(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	resp, err := h.svc.GetUserAchievements(member.Id)
 	if err != nil {

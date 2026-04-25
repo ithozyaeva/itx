@@ -133,7 +133,10 @@ func (h *EventsHandler) AddMember(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	result, err := h.svc.AddMember(req.EventId, int(member.Id))
 	if err != nil {
@@ -157,7 +160,10 @@ func (h *EventsHandler) RemoveMember(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	result, err := h.svc.RemoveMember(req.EventId, int(member.Id))
 	if err != nil {

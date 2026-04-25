@@ -62,7 +62,10 @@ func (h *MarketplaceHandler) GetById(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) Create(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	req := &models.CreateMarketplaceItemRequest{
 		Title:           c.FormValue("title"),
@@ -118,6 +121,7 @@ func (h *MarketplaceHandler) Create(c *fiber.Ctx) error {
 
 	item, err := h.svc.Create(req, member.Id, imageFileName, imageContent, imageContentType)
 	if err != nil {
+		log.Printf("Marketplace create error (member=%d): %v", member.Id, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось создать объявление"})
 	}
 
@@ -128,7 +132,10 @@ func (h *MarketplaceHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) Update(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -157,7 +164,10 @@ func (h *MarketplaceHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) RequestPurchase(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -180,7 +190,10 @@ func (h *MarketplaceHandler) RequestPurchase(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) CancelPurchase(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -204,7 +217,10 @@ func (h *MarketplaceHandler) CancelPurchase(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) MarkSold(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -233,7 +249,10 @@ func (h *MarketplaceHandler) MarkSold(c *fiber.Ctx) error {
 }
 
 func (h *MarketplaceHandler) Delete(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})

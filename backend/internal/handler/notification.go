@@ -17,7 +17,10 @@ func NewNotificationHandler() *NotificationHandler {
 }
 
 func (h *NotificationHandler) GetMy(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	var notifications []models.Notification
 	if err := database.DB.Where("member_id = ?", member.Id).
@@ -32,7 +35,10 @@ func (h *NotificationHandler) GetMy(c *fiber.Ctx) error {
 }
 
 func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	var count int64
 	if err := database.DB.Model(&models.Notification{}).
@@ -46,7 +52,10 @@ func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
 }
 
 func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -69,7 +78,10 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 }
 
 func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	if err := database.DB.Model(&models.Notification{}).
 		Where("member_id = ? AND read = false", member.Id).

@@ -189,7 +189,10 @@ func (h *MembersHandler) Delete(c *fiber.Ctx) error {
 }
 
 func (h *MembersHandler) Me(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	member.SubscriptionTier = h.svc.GetEffectiveTier(member.TelegramID)
 
 	mentor, err := h.svc.GetMentor(member.Id)
@@ -204,12 +207,14 @@ func (h *MembersHandler) Me(c *fiber.Ctx) error {
 
 func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	request := new(UpdateRequest)
-	err := c.BodyParser(request)
-	if err != nil {
+	if err := c.BodyParser(request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
 	member.Bio = request.Bio
