@@ -34,6 +34,7 @@ const (
 	PermissionCanApprovePlatformTasks      Permission = "can_approve_platform_tasks"
 	PermissionCanViewAdminSubscriptions    Permission = "can_view_admin_subscriptions"
 	PermissionCanEditAdminSubscriptions    Permission = "can_edit_admin_subscriptions"
+	PermissionCanViewAdminFeedback         Permission = "can_view_admin_feedback"
 )
 
 type PermissionModel struct {

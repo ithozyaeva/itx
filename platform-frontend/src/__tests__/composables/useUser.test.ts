@@ -8,6 +8,12 @@ async function freshImport() {
   return mod
 }
 
+// useUser хранит данные обёрнутыми в {data, savedAt} под версионированным
+// ключом — пишем через хелпер, чтобы тесты не дублировали логику сериализации.
+function setStoredUser(user: TelegramUser | null) {
+  localStorage.setItem('tg_user:v2', JSON.stringify({ data: user, savedAt: Date.now() }))
+}
+
 describe('useUser', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -36,7 +42,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(mockUser))
+      setStoredUser(mockUser)
 
       const { useUser } = await freshImport()
       const { result } = withSetup(() => useUser())
@@ -71,7 +77,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserSubscribed } = await freshImport()
       const { result } = withSetup(() => isUserSubscribed())
@@ -92,7 +98,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['UNSUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserSubscribed } = await freshImport()
       const { result } = withSetup(() => isUserSubscribed())
@@ -115,7 +121,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['MENTOR'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserMentor } = await freshImport()
       const { result } = withSetup(() => isUserMentor())
@@ -136,7 +142,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserMentor } = await freshImport()
       const { result } = withSetup(() => isUserMentor())
@@ -159,7 +165,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['ADMIN'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserAdmin } = await freshImport()
       const { result } = withSetup(() => isUserAdmin())
@@ -180,7 +186,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { isUserAdmin } = await freshImport()
       const { result } = withSetup(() => isUserAdmin())
@@ -209,7 +215,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['ADMIN'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { canViewAdminPanel } = await freshImport()
       const { result } = withSetup(() => canViewAdminPanel())
@@ -230,7 +236,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['EVENT_MAKER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { canViewAdminPanel } = await freshImport()
       const { result } = withSetup(() => canViewAdminPanel())
@@ -251,7 +257,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { canViewAdminPanel } = await freshImport()
       const { result } = withSetup(() => canViewAdminPanel())
@@ -288,7 +294,7 @@ describe('useUser', () => {
         roles: ['SUBSCRIBER'],
         subscriptionTier: { id: 1, slug: 'beginner', name: 'Beginner', level: 1 },
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
@@ -311,7 +317,7 @@ describe('useUser', () => {
         roles: ['SUBSCRIBER'],
         subscriptionTier: { id: 2, slug: 'foreman', name: 'Foreman', level: 2 },
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
@@ -334,7 +340,7 @@ describe('useUser', () => {
         roles: ['SUBSCRIBER'],
         subscriptionTier: { id: 3, slug: 'master', name: 'Master', level: 3 },
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
@@ -357,7 +363,7 @@ describe('useUser', () => {
         roles: ['SUBSCRIBER'],
         subscriptionTier: { id: 4, slug: 'king', name: 'King', level: 4 },
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
@@ -379,7 +385,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['MENTOR'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())
@@ -401,7 +407,7 @@ describe('useUser', () => {
         avatarUrl: '',
         roles: ['ADMIN'],
       }
-      localStorage.setItem('tg_user', JSON.stringify(user))
+      setStoredUser(user)
 
       const { useUserLevel } = await freshImport()
       const { result } = withSetup(() => useUserLevel())

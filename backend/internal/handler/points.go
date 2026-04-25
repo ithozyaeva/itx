@@ -19,7 +19,10 @@ func NewPointsHandler() *PointsHandler {
 }
 
 func (h *PointsHandler) GetMyPoints(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	summary, err := h.svc.GetMyPoints(member.Id)
 	if err != nil {

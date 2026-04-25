@@ -21,7 +21,10 @@ func NewRaffleHandler() *RaffleHandler {
 }
 
 func (h *RaffleHandler) GetAll(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	items, err := h.svc.GetAll(member.Id)
 	if err != nil {
 		log.Printf("get raffles error (member=%d): %v", member.Id, err)
@@ -40,7 +43,10 @@ func (h *RaffleHandler) GetAllAdmin(c *fiber.Ctx) error {
 }
 
 func (h *RaffleHandler) BuyTickets(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})

@@ -74,7 +74,10 @@ func (h *MentorHandler) AddReviewFromPlatform(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	author := member.FirstName + " " + member.LastName
 
 	review := &models.ReviewOnService{
@@ -206,7 +209,11 @@ func (h *MentorHandler) UpdateInfo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	existedMentor, err := h.svc.GetByMemberID(member.Id)
 
 	if err != nil {
 		log.Printf("get mentor by member ID error: %v", err)
@@ -235,7 +242,11 @@ func (h *MentorHandler) UpdateProfTags(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	existedMentor, err := h.svc.GetByMemberID(member.Id)
 
 	if err != nil {
 		log.Printf("get mentor by member ID error: %v", err)
@@ -263,7 +274,11 @@ func (h *MentorHandler) UpdateContacts(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	existedMentor, err := h.svc.GetByMemberID(member.Id)
 
 	if err != nil {
 		log.Printf("get mentor by member ID error: %v", err)
@@ -316,7 +331,11 @@ func (h *MentorHandler) UpdateServices(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	existedMentor, err := h.svc.GetByMemberID(c.Locals("member").(*models.Member).Id)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	existedMentor, err := h.svc.GetByMemberID(member.Id)
 
 	if err != nil {
 		log.Printf("get mentor by member ID error: %v", err)

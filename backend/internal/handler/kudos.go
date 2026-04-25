@@ -21,7 +21,10 @@ func NewKudosHandler() *KudosHandler {
 }
 
 func (h *KudosHandler) Send(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	req := new(models.CreateKudosRequest)
 	if err := c.BodyParser(req); err != nil {

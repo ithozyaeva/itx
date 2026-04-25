@@ -3,7 +3,6 @@ package handler
 import (
 	"bufio"
 	"fmt"
-	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 	"log"
 
@@ -17,7 +16,10 @@ func NewSSEHandler() *SSEHandler {
 }
 
 func (h *SSEHandler) Stream(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")

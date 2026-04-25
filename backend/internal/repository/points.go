@@ -4,6 +4,8 @@ import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type PointsRepository struct{}
@@ -12,8 +14,9 @@ func NewPointsRepository() *PointsRepository {
 	return &PointsRepository{}
 }
 
-func (r *PointsRepository) AwardPoints(tx *models.PointTransaction) error {
-	result := database.DB.Exec(
+// AwardPointsTx идемпотентно начисляет баллы внутри переданного tx (или DB).
+func (r *PointsRepository) AwardPointsTx(db *gorm.DB, tx *models.PointTransaction) error {
+	result := db.Exec(
 		`INSERT INTO point_transactions (member_id, amount, reason, source_type, source_id, description)
 		 SELECT ?, ?, ?, ?, ?, ?
 		 WHERE NOT EXISTS (
@@ -24,6 +27,10 @@ func (r *PointsRepository) AwardPoints(tx *models.PointTransaction) error {
 		tx.MemberId, tx.Reason, tx.SourceType, tx.SourceId,
 	)
 	return result.Error
+}
+
+func (r *PointsRepository) AwardPoints(tx *models.PointTransaction) error {
+	return r.AwardPointsTx(database.DB, tx)
 }
 
 func (r *PointsRepository) GetBalance(memberId int64) (int, error) {

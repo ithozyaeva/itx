@@ -232,6 +232,11 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 		subs.Delete("/users/:id/override", authMiddleware.RequirePermission(models.PermissionCanEditAdminSubscriptions), subscriptionHandler.ClearOverride)
 		subs.Delete("/users/:id/access/:chatId", authMiddleware.RequirePermission(models.PermissionCanEditAdminSubscriptions), subscriptionHandler.RevokeAccess)
 	}
+
+	// Маршруты для обратной связи (NPS)
+	feedbackHandler := handler.NewFeedbackHandler()
+	feedback := protected.Group("/feedback", authMiddleware.RequirePermission(models.PermissionCanViewAdminFeedback))
+	feedback.Get("/", feedbackHandler.AdminList)
 }
 
 func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
@@ -396,4 +401,8 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	// SSE (Server-Sent Events) для real-time обновлений
 	sseHandler := handler.NewSSEHandler()
 	protected.Get("/sse", sseHandler.Stream)
+
+	// Маршруты для обратной связи (NPS)
+	feedbackHandler := handler.NewFeedbackHandler()
+	protected.Post("/feedback", feedbackHandler.Create)
 }

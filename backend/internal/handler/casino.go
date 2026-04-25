@@ -35,7 +35,10 @@ func (h *CasinoHandler) checkRateLimit(memberId int64) error {
 }
 
 func (h *CasinoHandler) PlayCoinFlip(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	if err := h.checkRateLimit(member.Id); err != nil {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "Подождите секунду между ставками"})
 	}
@@ -56,7 +59,10 @@ func (h *CasinoHandler) PlayCoinFlip(c *fiber.Ctx) error {
 }
 
 func (h *CasinoHandler) PlayDiceRoll(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	if err := h.checkRateLimit(member.Id); err != nil {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "Подождите секунду между ставками"})
 	}
@@ -77,7 +83,10 @@ func (h *CasinoHandler) PlayDiceRoll(c *fiber.Ctx) error {
 }
 
 func (h *CasinoHandler) PlayWheel(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	if err := h.checkRateLimit(member.Id); err != nil {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "Подождите секунду между ставками"})
 	}
@@ -108,7 +117,10 @@ func (h *CasinoHandler) GetGlobalFeed(c *fiber.Ctx) error {
 }
 
 func (h *CasinoHandler) GetHistory(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 
@@ -122,7 +134,10 @@ func (h *CasinoHandler) GetHistory(c *fiber.Ctx) error {
 }
 
 func (h *CasinoHandler) GetStats(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	stats, err := h.svc.GetStats(member.Id)
 	if err != nil {
 		log.Printf("GetStats error (member=%d): %v", member.Id, err)

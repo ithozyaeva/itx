@@ -25,7 +25,7 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      expect(sidebarItems.value).toHaveLength(16)
+      expect(sidebarItems.value).toHaveLength(17)
     })
 
     it('shows only items without requiredPermission when user has no permissions', () => {
@@ -77,7 +77,7 @@ describe('useSidebar', () => {
 
       const expectedPaths = [
         '/dashboard', '/mentors', '/members', '/events', '/resumes',
-        '/reviews', '/mentor-reviews', '/points', '/chat-activity',
+        '/reviews', '/mentor-reviews', '/feedback', '/points', '/chat-activity',
         '/chat-quests', '/seasons', '/raffles', '/minigames',
         '/subscriptions', '/referrals', '/audit-logs',
       ]

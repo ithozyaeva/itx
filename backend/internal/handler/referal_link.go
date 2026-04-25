@@ -74,10 +74,9 @@ func (h *ReferalLinkHandler) AddLink(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
-
-	if member == nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Произошла ошибка при получении пользователя"})
+	member, err := getMember(c)
+	if err != nil {
+		return err
 	}
 
 	result, err := h.svc.AddLink(req, member)
@@ -99,7 +98,10 @@ func (h *ReferalLinkHandler) UpdateLink(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	existedLink, err := h.service.GetById(req.Id)
 	if err != nil {
@@ -132,9 +134,12 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
-	err := h.svc.TrackConversion(req.ReferralLinkId, member.Id)
+	err = h.svc.TrackConversion(req.ReferralLinkId, member.Id)
 	if err != nil {
 		// Handle unique constraint violation (duplicate conversion) as idempotent success
 		errMsg := err.Error()
@@ -222,7 +227,10 @@ func (h *ReferalLinkHandler) DeleteLink(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
 	existedLink, err := h.service.GetById(req.Id)
 	if err != nil {

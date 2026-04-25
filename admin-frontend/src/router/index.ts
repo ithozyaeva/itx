@@ -18,6 +18,7 @@ const SeasonsView = () => import('@/views/SeasonsView.vue')
 const RafflesView = () => import('@/views/RafflesView.vue')
 const CasinoView = () => import('@/views/CasinoView.vue')
 const SubscriptionsView = () => import('@/views/SubscriptionsView.vue')
+const FeedbackView = () => import('@/views/FeedbackView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -128,6 +129,12 @@ const router = createRouter({
       path: '/subscriptions',
       name: 'subscriptions',
       component: SubscriptionsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/feedback',
+      name: 'feedback',
+      component: FeedbackView,
       meta: { requiresAuth: true },
     },
   ],

@@ -48,9 +48,12 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
-	author := c.Locals("member").(*models.Member)
+	author, err := getMember(c)
+	if err != nil {
+		return err
+	}
 
-	err := h.svc.CreateReviewOnCommunityByMemberId(author.Id, review.Text, nil)
+	err = h.svc.CreateReviewOnCommunityByMemberId(author.Id, review.Text, nil)
 
 	if err != nil {
 		log.Printf("add review error (member=%d): %v", author.Id, err)
@@ -79,7 +82,10 @@ func (h *ReviewOnCommunityHandler) CreateReview(c *fiber.Ctx) error {
 }
 
 func (h *ReviewOnCommunityHandler) GetMyReviews(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	reviews, err := h.svc.GetByAuthorId(member.Id)
 	if err != nil {
 		log.Printf("get my reviews error (member=%d): %v", member.Id, err)
@@ -89,7 +95,10 @@ func (h *ReviewOnCommunityHandler) GetMyReviews(c *fiber.Ctx) error {
 }
 
 func (h *ReviewOnCommunityHandler) UpdateMyReview(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
@@ -119,7 +128,10 @@ func (h *ReviewOnCommunityHandler) UpdateMyReview(c *fiber.Ctx) error {
 }
 
 func (h *ReviewOnCommunityHandler) DeleteMyReview(c *fiber.Ctx) error {
-	member := c.Locals("member").(*models.Member)
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
