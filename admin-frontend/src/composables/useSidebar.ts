@@ -92,6 +92,12 @@ export function useSidebar() {
           icon: MessageSquare,
           requiredPermission: 'can_view_admin_mentors_review',
         },
+        {
+          title: 'Обратная связь',
+          path: '/feedback',
+          icon: MessageSquare,
+          requiredPermission: 'can_view_admin_feedback',
+        },
       ],
     },
     {

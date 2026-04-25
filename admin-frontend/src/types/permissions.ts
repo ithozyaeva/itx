@@ -23,6 +23,7 @@ export type Permission
     | 'can_edit_admin_points'
     | 'can_view_admin_subscriptions'
     | 'can_edit_admin_subscriptions'
+    | 'can_view_admin_feedback'
     | 'is_super_admin'
 
 /**
@@ -49,6 +50,7 @@ export function isPermission(value: string): value is Permission {
     'can_edit_admin_points',
     'can_view_admin_subscriptions',
     'can_edit_admin_subscriptions',
+    'can_view_admin_feedback',
     'is_super_admin',
   ]
 
