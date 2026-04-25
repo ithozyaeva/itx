@@ -7,10 +7,11 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import svgLoader from 'vite-svg-loader'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
+    // vue-devtools раздувает prod-bundle на ~50–100 KB и в проде не нужен
+    ...(command === 'serve' ? [vueDevTools()] : []),
     svgLoader({ svgo: false, defaultImport: 'component' }),
     Icons({
       autoInstall: true,
@@ -29,4 +30,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
