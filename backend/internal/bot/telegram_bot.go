@@ -468,26 +468,6 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	}
 	builder.WriteString("\n")
 
-	// Роли
-	if len(member.Roles) > 0 {
-		roleLabels := map[models.Role]string{
-			models.MemberRoleSubscriber:   "Участник",
-			models.MemberRoleMentor:       "Ментор",
-			models.MemberRoleAdmin:        "Админ",
-			models.MemberRoleEventMaker:   "Организатор событий",
-			models.MemberRoleUnsubscriber: "Неактивный",
-		}
-		var roles []string
-		for _, role := range member.Roles {
-			if label, ok := roleLabels[role]; ok {
-				roles = append(roles, label)
-			}
-		}
-		if len(roles) > 0 {
-			builder.WriteString(fmt.Sprintf("🏷 %s\n", strings.Join(roles, ", ")))
-		}
-	}
-
 	// Грейд и компания
 	if member.Grade != "" || member.Company != "" {
 		parts := []string{}
@@ -516,13 +496,6 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		} else {
 			builder.WriteString("\n📅 С нами: сегодня")
 		}
-	}
-
-	// Баллы
-	pointsSvc := service.NewPointsService()
-	balance, pointsErr := pointsSvc.GetBalance(member.Id)
-	if pointsErr == nil {
-		builder.WriteString(fmt.Sprintf("\n⭐ Баллы: %d", balance))
 	}
 
 	// Благодарности
