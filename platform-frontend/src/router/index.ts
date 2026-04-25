@@ -20,7 +20,6 @@ import Quests from '@/pages/Quests.vue'
 import Raffles from '@/pages/Raffles.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
-import Seasons from '@/pages/Seasons.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
 
@@ -43,7 +42,6 @@ const routes: RouteRecordRaw[] = [
   { path: '/quests', component: Quests, name: 'quests', meta: { breadcrumb: [{ label: 'Квесты' }] } },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }] } },
   { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }] } },
-  { path: '/seasons', component: Seasons, name: 'seasons', meta: { breadcrumb: [{ label: 'Сезоны' }] } },
   { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }] } },
   { path: '/minigames', component: Casino, name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }] } },
   { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }] } },

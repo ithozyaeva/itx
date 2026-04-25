@@ -25,7 +25,7 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      expect(sidebarItems.value).toHaveLength(17)
+      expect(sidebarItems.value).toHaveLength(16)
     })
 
     it('shows only items without requiredPermission when user has no permissions', () => {
@@ -33,11 +33,11 @@ describe('useSidebar', () => {
 
       const { sidebarItems } = useSidebar()
 
-      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Сезоны, Розыгрыши, Мини-игры
+      // Items without requiredPermission: Рефералы, Активность чатов, Задания чатов, Розыгрыши, Мини-игры
       const itemsWithoutPermission = sidebarItems.value
-      expect(itemsWithoutPermission.length).toBe(6)
+      expect(itemsWithoutPermission.length).toBe(5)
       expect(itemsWithoutPermission.map(i => i.path)).toEqual(
-        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/seasons', '/raffles', '/minigames']),
+        expect.arrayContaining(['/referrals', '/chat-activity', '/chat-quests', '/raffles', '/minigames']),
       )
     })
 
@@ -78,7 +78,7 @@ describe('useSidebar', () => {
       const expectedPaths = [
         '/dashboard', '/mentors', '/members', '/events', '/resumes',
         '/reviews', '/mentor-reviews', '/feedback', '/points', '/chat-activity',
-        '/chat-quests', '/seasons', '/raffles', '/minigames',
+        '/chat-quests', '/raffles', '/minigames',
         '/subscriptions', '/referrals', '/audit-logs',
       ]
       const actualPaths = sidebarItems.value.map(i => i.path)

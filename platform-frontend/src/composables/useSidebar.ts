@@ -39,7 +39,6 @@ const state = {
       items: [
         { title: 'Мои баллы', path: '/points', icon: Star, dataOnboarding: 'points' },
         { title: 'Рейтинг', path: '/leaderboard', icon: Trophy },
-        { title: 'Сезоны', path: '/seasons', icon: Calendar },
         { title: 'Достижения', path: '/achievements', icon: Award },
         { title: 'Биржа заданий', path: '/tasks', icon: ClipboardList },
         { title: 'Задания в чатах', path: '/quests', icon: Flame },

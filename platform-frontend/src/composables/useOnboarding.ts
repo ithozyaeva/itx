@@ -35,7 +35,7 @@ const steps: OnboardingStep[] = [
   {
     target: '[data-onboarding="points"]',
     title: 'Баллы и награды',
-    description: 'Зарабатывайте баллы за активность, участвуйте в розыгрышах и сезонных рейтингах.',
+    description: 'Зарабатывайте баллы за активность, поднимайтесь в рейтинге и участвуйте в розыгрышах.',
     placement: 'right',
   },
   {

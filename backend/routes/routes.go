@@ -185,13 +185,6 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	chatQuests.Put("/:id", chatQuestHandler.Update)
 	chatQuests.Delete("/:id", chatQuestHandler.Delete)
 
-	// Маршруты для сезонов (админ)
-	seasonHandler := handler.NewSeasonHandler()
-	adminSeasons := protected.Group("/seasons")
-	adminSeasons.Get("/", seasonHandler.GetAll)
-	adminSeasons.Post("/", seasonHandler.Create)
-	adminSeasons.Post("/:id/finish", seasonHandler.Finish)
-
 	// Маршруты для розыгрышей (админ)
 	raffleHandler := handler.NewRaffleHandler()
 	adminRaffles := protected.Group("/raffles")
@@ -368,13 +361,6 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	kudos := protected.Group("/kudos")
 	kudos.Get("/", kudosHandler.GetRecent)
 	kudos.Post("/", kudosHandler.Send)
-
-	// Маршруты для сезонов
-	seasonHandler := handler.NewSeasonHandler()
-	seasons := protected.Group("/seasons")
-	seasons.Get("/", seasonHandler.GetAll)
-	seasons.Get("/active", seasonHandler.GetActive)
-	seasons.Get("/:id/leaderboard", seasonHandler.GetLeaderboard)
 
 	// Маршруты для розыгрышей
 	raffleHandler := handler.NewRaffleHandler()
