@@ -41,8 +41,8 @@ describe('router', () => {
   })
 
   describe('route definitions', () => {
-    it('has 19 routes defined', () => {
-      expect(router.getRoutes()).toHaveLength(19)
+    it('has 18 routes defined', () => {
+      expect(router.getRoutes()).toHaveLength(18)
     })
 
     it('has a login route', () => {
@@ -70,7 +70,6 @@ describe('router', () => {
       ['referrals', '/referrals'],
       ['chat-activity', '/chat-activity'],
       ['chat-quests', '/chat-quests'],
-      ['seasons', '/seasons'],
       ['raffles', '/raffles'],
       ['subscriptions', '/subscriptions'],
       ['feedback', '/feedback'],

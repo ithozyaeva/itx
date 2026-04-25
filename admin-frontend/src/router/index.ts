@@ -14,7 +14,6 @@ const PointsView = () => import('@/views/PointsView.vue')
 const ReferralsView = () => import('@/views/ReferralsView.vue')
 const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 const ChatQuestsView = () => import('@/views/ChatQuestsView.vue')
-const SeasonsView = () => import('@/views/SeasonsView.vue')
 const RafflesView = () => import('@/views/RafflesView.vue')
 const CasinoView = () => import('@/views/CasinoView.vue')
 const SubscriptionsView = () => import('@/views/SubscriptionsView.vue')
@@ -105,12 +104,6 @@ const router = createRouter({
       path: '/chat-quests',
       name: 'chat-quests',
       component: ChatQuestsView,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/seasons',
-      name: 'seasons',
-      component: SeasonsView,
       meta: { requiresAuth: true },
     },
     {

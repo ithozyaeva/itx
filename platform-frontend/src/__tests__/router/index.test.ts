@@ -20,7 +20,6 @@ vi.mock('@/pages/Quests.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Raffles.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/ReferalLinks.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Resumes.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/Seasons.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/TaskExchange.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/User.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Casino.vue', () => ({ default: { template: '<div />' } }))
@@ -59,7 +58,6 @@ describe('router', () => {
       ['/quests', 'quests'],
       ['/auto-apply', 'autoApplyBot'],
       ['/kudos', 'kudos'],
-      ['/seasons', 'seasons'],
       ['/raffles', 'raffles'],
       ['/my-stats', 'myStats'],
     ])('route %s has name %s', (path, name) => {

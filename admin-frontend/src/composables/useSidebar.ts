@@ -13,7 +13,6 @@ import Home from '~icons/lucide/home'
 import Link from '~icons/lucide/link'
 import MessageSquare from '~icons/lucide/message-square'
 import Star from '~icons/lucide/star'
-import Trophy from '~icons/lucide/trophy'
 import User from '~icons/lucide/user'
 import Users from '~icons/lucide/users'
 import { usePermissions } from './usePermissions'
@@ -118,11 +117,6 @@ export function useSidebar() {
           title: 'Задания',
           path: '/chat-quests',
           icon: Award,
-        },
-        {
-          title: 'Сезоны',
-          path: '/seasons',
-          icon: Trophy,
         },
         {
           title: 'Розыгрыши',
