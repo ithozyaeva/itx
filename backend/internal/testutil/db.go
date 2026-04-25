@@ -1,15 +1,16 @@
 // Package testutil содержит хелперы для интеграционных тестов.
 //
-// SetupTestDB поднимает PostgreSQL в Docker через testcontainers-go,
-// прогоняет на нём все миграции из database/migrations/ и возвращает
-// готовый *gorm.DB. Контейнер автоматически останавливается через
-// t.Cleanup. На пакет рекомендуется поднимать одну БД и truncate-ить
-// между тестами через TruncateAll — старт контейнера дороже самих
-// тестов.
+// Используется shared-модель: один Postgres-контейнер на тестовый пакет.
+// EnsureTestDB поднимает контейнер при первом вызове в пакете, прогоняет
+// миграции, подменяет database.DB и возвращает *gorm.DB. Контейнер живёт
+// до конца жизни тестового процесса — его очистка ложится на ОС вместе
+// с runtime'ом.
 //
-// Тесты, использующие этот пакет, требуют запущенного Docker. Если
-// Docker недоступен (TEST_SKIP_DB=1 или ошибка соединения), тесты
-// должны вызывать t.Skip — за это отвечает SetupTestDB.
+// Между тестами и подтестами используется TruncateAll(t, db, tables...)
+// для изоляции данных. Контейнер не пересоздаётся.
+//
+// Если Docker недоступен или TEST_SKIP_DB=1 — EnsureTestDB вызывает
+// t.Skip и тест проходит как пропущенный.
 package testutil
 
 import (
@@ -21,6 +22,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,16 +35,41 @@ import (
 
 const dbImage = "postgres:15-alpine"
 
-// SetupTestDB поднимает свежую PostgreSQL под тест и применяет все
-// миграции. Возвращает *gorm.DB; останов и очистку регистрирует через
-// t.Cleanup.
-func SetupTestDB(t *testing.T) *gorm.DB {
+var (
+	once     sync.Once
+	sharedDB *gorm.DB
+	sharedErr error
+	skipReason string
+)
+
+// EnsureTestDB поднимает один Postgres-контейнер на тестовый процесс
+// (через sync.Once) и возвращает готовый *gorm.DB. Подменяет
+// database.DB. Если Docker недоступен — t.Skip.
+func EnsureTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
 	if os.Getenv("TEST_SKIP_DB") == "1" {
 		t.Skip("TEST_SKIP_DB=1, пропускаю интеграционный тест")
 	}
 
+	once.Do(initSharedDB)
+
+	if skipReason != "" {
+		t.Skip(skipReason)
+	}
+	if sharedErr != nil {
+		t.Fatalf("init shared db: %v", sharedErr)
+	}
+
+	// Привязываем глобальный database.DB. Восстанавливать в Cleanup
+	// не нужно: shared instance живёт до конца процесса, никто другой
+	// не пишет в database.DB параллельно (тесты в одном пакете идут
+	// последовательно по умолчанию).
+	database.DB = sharedDB
+	return sharedDB
+}
+
+func initSharedDB() {
 	ctx := context.Background()
 
 	container, err := tcpostgres.Run(ctx, dbImage,
@@ -56,47 +83,33 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 		),
 	)
 	if err != nil {
-		t.Skipf("не удалось поднять postgres-контейнер (Docker недоступен?): %v", err)
+		skipReason = fmt.Sprintf("не удалось поднять postgres-контейнер (Docker недоступен?): %v", err)
+		return
 	}
-
-	t.Cleanup(func() {
-		// Используем отдельный контекст с таймаутом — t.Cleanup иногда
-		// вызывается уже после отмены родительского.
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := container.Terminate(ctx); err != nil {
-			t.Logf("не удалось остановить контейнер: %v", err)
-		}
-	})
 
 	dsn, err := container.ConnectionString(ctx, "sslmode=disable", "TimeZone=UTC")
 	if err != nil {
-		t.Fatalf("connection string: %v", err)
+		sharedErr = fmt.Errorf("connection string: %w", err)
+		return
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("gorm open: %v", err)
+		sharedErr = fmt.Errorf("gorm open: %w", err)
+		return
 	}
-
-	// Привязываем глобальный database.DB — много кода использует его
-	// напрямую (PointsRepository.AwardPoints и т.п.). Сохраняем старое
-	// значение и восстанавливаем в Cleanup, чтобы соседи не моргнули.
-	prevDB := database.DB
-	database.DB = db
-	t.Cleanup(func() { database.DB = prevDB })
 
 	if err := applyMigrations(db); err != nil {
-		t.Fatalf("apply migrations: %v", err)
+		sharedErr = fmt.Errorf("apply migrations: %w", err)
+		return
 	}
 
-	return db
+	sharedDB = db
 }
 
-// TruncateAll очищает заданные таблицы — обычно вызывается перед
-// каждым тестом одной горутины, чтобы между тестами не текли данные.
-// CASCADE снимает FK, RESTART IDENTITY сбрасывает sequence-ы, чтобы
-// id-ы были предсказуемыми.
+// TruncateAll очищает заданные таблицы — рекомендуется вызывать в
+// начале каждого теста, чтобы между тестами не текли данные. CASCADE
+// снимает FK, RESTART IDENTITY сбрасывает sequence-ы.
 func TruncateAll(t *testing.T, db *gorm.DB, tables ...string) {
 	t.Helper()
 	if len(tables) == 0 {
@@ -108,9 +121,12 @@ func TruncateAll(t *testing.T, db *gorm.DB, tables ...string) {
 	}
 }
 
-// applyMigrations выполняет все .sql в database/migrations/ в порядке
-// имени файла. Для тестов проще, чем поднимать database.SetupDatabase()
-// — не нужно ни viper, ни env-переменных.
+// SetupTestDB — устаревший alias на EnsureTestDB для обратной
+// совместимости. Новый код должен вызывать EnsureTestDB напрямую.
+func SetupTestDB(t *testing.T) *gorm.DB {
+	return EnsureTestDB(t)
+}
+
 func applyMigrations(db *gorm.DB) error {
 	dir := migrationsDir()
 	entries, err := os.ReadDir(dir)
@@ -138,11 +154,7 @@ func applyMigrations(db *gorm.DB) error {
 	return nil
 }
 
-// migrationsDir возвращает абсолютный путь к database/migrations/.
-// Тесты могут запускаться из любого каталога пакета — берём корень
-// модуля относительно положения этого файла.
 func migrationsDir() string {
 	_, thisFile, _, _ := runtime.Caller(0)
-	// .../backend/internal/testutil/db.go → .../backend/database/migrations
 	return filepath.Join(filepath.Dir(thisFile), "..", "..", "database", "migrations")
 }
