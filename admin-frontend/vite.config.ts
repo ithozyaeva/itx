@@ -8,11 +8,12 @@ import { defineConfig } from 'vite'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: '/admin/',
   plugins: [
     vue(),
-    vueDevTools(),
+    // vue-devtools раздувает prod-bundle на ~50–100 KB и в проде не нужен
+    ...(command === 'serve' ? [vueDevTools()] : []),
     Icons({
       autoInstall: true,
       compiler: 'vue3',
@@ -36,4 +37,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
