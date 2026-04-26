@@ -9,6 +9,8 @@ const (
 	ModerationActionUnmute      = "unmute"
 	ModerationActionCleanup     = "cleanup"
 	ModerationActionVotebanMute = "voteban_mute"
+	ModerationActionGlobalBan   = "globalban"
+	ModerationActionGlobalUnban = "globalunban"
 )
 
 // ModerationAction — журнал модерационных действий бота.
@@ -81,4 +83,27 @@ func (VotebanVote) TableName() string {
 type VotebanTally struct {
 	For     int `json:"for"`
 	Against int `json:"against"`
+}
+
+// GlobalBan — запись о глобальной блокировке пользователя. ExpiresAt=nil
+// означает permanent. Снимается через /globalunban.
+type GlobalBan struct {
+	UserID    int64      `json:"userId" gorm:"column:user_id;primaryKey"`
+	BannedBy  int64      `json:"bannedBy" gorm:"column:banned_by"`
+	Reason    *string    `json:"reason" gorm:"column:reason"`
+	ExpiresAt *time.Time `json:"expiresAt" gorm:"column:expires_at"`
+	CreatedAt time.Time  `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt time.Time  `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (GlobalBan) TableName() string {
+	return "bot_global_bans"
+}
+
+// IsActive возвращает true, если бан ещё действует.
+func (g GlobalBan) IsActive(now time.Time) bool {
+	if g.ExpiresAt == nil {
+		return true
+	}
+	return g.ExpiresAt.After(now)
 }

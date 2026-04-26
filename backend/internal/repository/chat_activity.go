@@ -290,3 +290,15 @@ func (r *ChatActivityRepository) LookupUserIDByUsername(chatID int64, username s
 		Pluck("telegram_user_id", &userID).Error
 	return userID, err
 }
+
+// LookupUserIDByUsernameAny — то же, но без привязки к чату. Используется
+// глобальными командами модерации, когда чат отправителя — личка.
+func (r *ChatActivityRepository) LookupUserIDByUsernameAny(username string) (int64, error) {
+	var userID int64
+	err := database.DB.Model(&models.ChatMessage{}).
+		Where("LOWER(telegram_username) = LOWER(?)", username).
+		Order("sent_at DESC").
+		Limit(1).
+		Pluck("telegram_user_id", &userID).Error
+	return userID, err
+}

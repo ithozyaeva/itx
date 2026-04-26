@@ -156,3 +156,61 @@ func (r *ModerationRepository) ListExpiredOpenVotebans(now time.Time) ([]models.
 		Find(&list).Error
 	return list, err
 }
+
+// --- Global bans ---
+
+// UpsertGlobalBan создаёт/обновляет запись (по PK user_id).
+func (r *ModerationRepository) UpsertGlobalBan(b *models.GlobalBan) error {
+	now := time.Now()
+	b.UpdatedAt = now
+	if b.CreatedAt.IsZero() {
+		b.CreatedAt = now
+	}
+	return database.DB.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"banned_by", "reason", "expires_at", "updated_at",
+		}),
+	}).Create(b).Error
+}
+
+// GetGlobalBan возвращает запись или (nil, nil) если её нет.
+func (r *ModerationRepository) GetGlobalBan(userID int64) (*models.GlobalBan, error) {
+	var b models.GlobalBan
+	err := database.DB.Where("user_id = ?", userID).First(&b).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &b, nil
+}
+
+// DeleteGlobalBan удаляет запись (используется при /globalunban).
+func (r *ModerationRepository) DeleteGlobalBan(userID int64) error {
+	return database.DB.Where("user_id = ?", userID).Delete(&models.GlobalBan{}).Error
+}
+
+// ListActiveGlobalBans возвращает все активные баны (не истёкшие).
+func (r *ModerationRepository) ListActiveGlobalBans(now time.Time) ([]models.GlobalBan, error) {
+	var list []models.GlobalBan
+	err := database.DB.Where("expires_at IS NULL OR expires_at > ?", now).
+		Order("created_at DESC").
+		Find(&list).Error
+	return list, err
+}
+
+// KnownChatIDs возвращает уникальные chat_id из subscription_chats и активных
+// tracked_chats — тот набор, по которому проходим при глобальном бане/анбане.
+func (r *ModerationRepository) KnownChatIDs() ([]int64, error) {
+	var ids []int64
+	err := database.DB.Raw(`
+		SELECT DISTINCT chat_id FROM (
+			SELECT id AS chat_id FROM subscription_chats
+			UNION
+			SELECT chat_id FROM tracked_chats WHERE is_active = TRUE
+		) c
+	`).Pluck("chat_id", &ids).Error
+	return ids, err
+}
