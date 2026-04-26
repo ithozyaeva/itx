@@ -23,6 +23,7 @@ type ChatMessage struct {
 	TelegramFirstName string    `json:"telegramFirstName" gorm:"column:telegram_first_name"`
 	MemberID          *int64    `json:"memberId" gorm:"column:member_id"`
 	MessageText       string    `json:"messageText" gorm:"column:message_text"`
+	TelegramMessageID *int      `json:"telegramMessageId" gorm:"column:telegram_message_id"`
 	SentAt            time.Time `json:"sentAt" gorm:"column:sent_at"`
 	CreatedAt         time.Time `json:"createdAt" gorm:"column:created_at"`
 }

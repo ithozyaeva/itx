@@ -278,3 +278,15 @@ func (r *ChatActivityRepository) DeleteOldMessages(beforeDate time.Time) (int64,
 	result := database.DB.Where("sent_at < ?", beforeDate).Delete(&models.ChatMessage{})
 	return result.RowsAffected, result.Error
 }
+
+// LookupUserIDByUsername ищет telegram_user_id по последнему совпадению
+// telegram_username в указанном чате. Регистронезависимо. 0 = не найдено.
+func (r *ChatActivityRepository) LookupUserIDByUsername(chatID int64, username string) (int64, error) {
+	var userID int64
+	err := database.DB.Model(&models.ChatMessage{}).
+		Where("chat_id = ? AND LOWER(telegram_username) = LOWER(?)", chatID, username).
+		Order("sent_at DESC").
+		Limit(1).
+		Pluck("telegram_user_id", &userID).Error
+	return userID, err
+}

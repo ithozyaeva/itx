@@ -96,6 +96,7 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 	// Определяем member_id
 	memberID := s.resolveMemberID(message.From.ID)
 
+	tgMessageID := message.MessageID
 	msg := &models.ChatMessage{
 		ChatID:            message.Chat.ID,
 		TelegramUserID:    message.From.ID,
@@ -103,6 +104,7 @@ func (s *ChatActivityService) TrackMessage(message *tgbotapi.Message) {
 		TelegramFirstName: message.From.FirstName,
 		MemberID:          memberID,
 		MessageText:       message.Text,
+		TelegramMessageID: &tgMessageID,
 		SentAt:            time.Unix(int64(message.Date), 0),
 	}
 
@@ -226,6 +228,13 @@ func (s *ChatActivityService) GetDailyActivityByUser(userID int64, days int) ([]
 // GetMessagesForExport возвращает данные для CSV экспорта
 func (s *ChatActivityService) GetMessagesForExport(chatID *int64, days int) ([]models.ExportRow, error) {
 	return s.repo.GetMessagesForExport(chatID, days)
+}
+
+// LookupUserIDByUsername ищет telegram_user_id по @username среди сообщений
+// в этом чате. Используется командами модерации, когда есть только @username
+// (например, /unban @user). 0 — не найден.
+func (s *ChatActivityService) LookupUserIDByUsername(chatID int64, username string) (int64, error) {
+	return s.repo.LookupUserIDByUsername(chatID, username)
 }
 
 // CleanupOldMessages удаляет сообщения старше retentionDays дней
