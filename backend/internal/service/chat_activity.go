@@ -242,6 +242,11 @@ func (s *ChatActivityService) LookupUserIDByUsername(chatID int64, username stri
 	return s.repo.LookupUserIDByUsername(chatID, username)
 }
 
+// LookupUserIDByUsernameAny — без привязки к чату; для глобальных команд.
+func (s *ChatActivityService) LookupUserIDByUsernameAny(username string) (int64, error) {
+	return s.repo.LookupUserIDByUsernameAny(username)
+}
+
 // CleanupOldMessages удаляет сообщения старше retentionDays дней
 func (s *ChatActivityService) CleanupOldMessages(retentionDays int) {
 	beforeDate := time.Now().AddDate(0, 0, -retentionDays)

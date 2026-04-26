@@ -161,6 +161,22 @@ func (b *TelegramBot) kickUserFunc() func(int64, int64) {
 // handleSubCommand checks subscription and grants access.
 func (b *TelegramBot) handleSubCommand(message *tgbotapi.Message) {
 	user := message.From
+
+	// Глобально заблокированных не пускаем дальше — иначе /sub попытается
+	// раздать им invite-ссылки, а через минуту их снова кикнут наши же
+	// модерационные хуки. Лучше один внятный отказ.
+	if active, gb, _ := b.moderationService.IsGloballyBanned(user.ID); active && gb != nil {
+		text := "Доступ ограничен."
+		if gb.Reason != nil && *gb.Reason != "" {
+			text += "\nПричина: " + *gb.Reason
+		}
+		if gb.ExpiresAt != nil {
+			text += "\nДо: " + gb.ExpiresAt.Format("2006-01-02 15:04")
+		}
+		b.sendMessage(message.Chat.ID, text)
+		return
+	}
+
 	result, err := b.subscriptionService.OnboardUser(
 		user.ID, strPtr(user.UserName), user.FirstName+" "+user.LastName,
 		b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),

@@ -252,3 +252,52 @@ var (
 	ErrVotebanClosed      = errors.New("voteban: голосование закрыто")
 	ErrVoteSelfTarget     = errors.New("voteban: цель голосования не может голосовать")
 )
+
+// --- Global bans ---
+
+// UpsertGlobalBan создаёт/обновляет запись глобального бана.
+func (s *ModerationService) UpsertGlobalBan(userID, bannedBy int64, reason *string, duration time.Duration) (*models.GlobalBan, error) {
+	b := &models.GlobalBan{
+		UserID:   userID,
+		BannedBy: bannedBy,
+		Reason:   reason,
+	}
+	if duration > 0 {
+		t := time.Now().Add(duration)
+		b.ExpiresAt = &t
+	}
+	if err := s.repo.UpsertGlobalBan(b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// GetGlobalBan возвращает запись или nil. Запись с истёкшим expires_at
+// возвращается, чтобы вызывающий мог сам решить (например, считать неактивной).
+func (s *ModerationService) GetGlobalBan(userID int64) (*models.GlobalBan, error) {
+	return s.repo.GetGlobalBan(userID)
+}
+
+// IsGloballyBanned — true, если запись существует и активна на now.
+func (s *ModerationService) IsGloballyBanned(userID int64) (bool, *models.GlobalBan, error) {
+	b, err := s.repo.GetGlobalBan(userID)
+	if err != nil || b == nil {
+		return false, nil, err
+	}
+	return b.IsActive(time.Now()), b, nil
+}
+
+// DeleteGlobalBan снимает глобальный бан.
+func (s *ModerationService) DeleteGlobalBan(userID int64) error {
+	return s.repo.DeleteGlobalBan(userID)
+}
+
+// ListActiveGlobalBans — список действующих банов для /globalbans.
+func (s *ModerationService) ListActiveGlobalBans() ([]models.GlobalBan, error) {
+	return s.repo.ListActiveGlobalBans(time.Now())
+}
+
+// KnownChatIDs возвращает все известные боту чаты (subscription + tracked).
+func (s *ModerationService) KnownChatIDs() ([]int64, error) {
+	return s.repo.KnownChatIDs()
+}

@@ -770,6 +770,283 @@ func (b *TelegramBot) finalizeVotebanFailed(vb *models.Voteban) {
 	}
 }
 
+// --- /globalban /globalunban /globalbans ---
+
+// handleGlobalBanCommand: super-admin блокирует юзера во всех известных боту
+// чатах разом. Формат:
+//
+//	/globalban (reply) [duration] [reason...]
+//	/globalban @user [duration] [reason...]
+//	/globalban <user_id> [duration] [reason...]
+//
+// reason — всё, что после duration (если есть). Без duration → permanent.
+func (b *TelegramBot) handleGlobalBanCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+
+	var (
+		targetID    int64
+		display     string
+		argsAfter   []string
+	)
+
+	args := commandArgs(message)
+	if message.ReplyToMessage != nil && message.ReplyToMessage.From != nil {
+		targetID = message.ReplyToMessage.From.ID
+		display = targetDisplay(message.ReplyToMessage.From)
+		argsAfter = args
+	} else {
+		if len(args) == 0 {
+			b.replyAndAutoDelete(message,
+				"Использование: /globalban в reply | /globalban @user [duration] [reason] | /globalban &lt;id&gt; [duration] [reason]")
+			return
+		}
+		// Без привязки к чату ищем глобально (NULL chatID).
+		id, d, ok := b.resolveTargetGlobally(args[0])
+		if !ok {
+			b.replyAndAutoDelete(message,
+				"Не нашёл пользователя. Передай user_id или @username, который писал хотя бы в одном из наших чатов.")
+			return
+		}
+		targetID = id
+		display = html.EscapeString(d)
+		argsAfter = args[1:]
+	}
+
+	if targetID == b.bot.Self.ID {
+		b.replyAndAutoDelete(message, "Нельзя забанить бота.")
+		return
+	}
+	if b.isSubscriptionAdmin(targetID) || b.isAdmin(targetID) {
+		b.replyAndAutoDelete(message, "Нельзя глобально забанить администратора.")
+		return
+	}
+
+	var duration time.Duration
+	if len(argsAfter) > 0 {
+		if d, err := service.ParseHumanDuration(argsAfter[0]); err == nil && d > 0 {
+			duration = d
+			argsAfter = argsAfter[1:]
+		}
+	}
+	var reasonPtr *string
+	if len(argsAfter) > 0 {
+		r := strings.TrimSpace(strings.Join(argsAfter, " "))
+		if r != "" {
+			reasonPtr = &r
+		}
+	}
+
+	chats, err := b.moderationService.KnownChatIDs()
+	if err != nil {
+		log.Printf("globalban: KnownChatIDs failed: %v", err)
+		b.replyAndAutoDelete(message, "Не смог получить список чатов.")
+		return
+	}
+
+	if _, err := b.moderationService.UpsertGlobalBan(targetID, message.From.ID, reasonPtr, duration); err != nil {
+		log.Printf("globalban: upsert failed for user %d: %v", targetID, err)
+		b.replyAndAutoDelete(message, "Не смог сохранить запись о бане.")
+		return
+	}
+
+	// Команду в чате убираем сразу — отчёт прилетит в DM админу.
+	b.tryDelete(message.Chat.ID, message.MessageID)
+
+	go b.runGlobalBan(targetID, message.From.ID, display, duration, reasonPtr, chats)
+}
+
+func (b *TelegramBot) runGlobalBan(targetID, actorID int64, display string, duration time.Duration, reason *string, chats []int64) {
+	until := int64(0)
+	var expiresAt *time.Time
+	if duration > 0 {
+		t := time.Now().Add(duration)
+		until = t.Unix()
+		expiresAt = &t
+	}
+
+	banned, failed := 0, 0
+	for _, chatID := range chats {
+		_, err := b.bot.Request(tgbotapi.BanChatMemberConfig{
+			ChatMemberConfig: tgbotapi.ChatMemberConfig{
+				ChatID: chatID,
+				UserID: targetID,
+			},
+			UntilDate: until,
+		})
+		if err != nil {
+			failed++
+			log.Printf("globalban: ban in chat %d for user %d failed: %v", chatID, targetID, err)
+			continue
+		}
+		banned++
+		// Telegram лимиты по «административным» вызовам мягче, чем по send,
+		// но для 50+ чатов всё равно ставим небольшую паузу.
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	durSec := int(duration.Seconds())
+	durPtr := &durSec
+	if duration == 0 {
+		durPtr = nil
+	}
+	meta := map[string]interface{}{
+		"chats_total":  len(chats),
+		"chats_banned": banned,
+		"chats_failed": failed,
+	}
+	if reason != nil {
+		meta["reason"] = *reason
+	}
+	_ = b.moderationService.LogActionWithMeta(&models.ModerationAction{
+		ChatID:          0,
+		TargetUserID:    targetID,
+		ActorUserID:     actorID,
+		Action:          models.ModerationActionGlobalBan,
+		DurationSeconds: durPtr,
+		ExpiresAt:       expiresAt,
+		Reason:          reason,
+	}, meta)
+
+	durStr := service.FormatDurationHuman(duration)
+	reasonStr := ""
+	if reason != nil {
+		reasonStr = "\nПричина: " + html.EscapeString(*reason)
+	}
+	b.SendDirectMessage(actorID, fmt.Sprintf(
+		"⛔ Глобальный бан применён.\nЦель: %s\nЧатов: %d (успех %d, ошибок %d)\nСрок: %s%s",
+		display, len(chats), banned, failed, durStr, reasonStr))
+}
+
+// handleGlobalUnbanCommand снимает запись и пытается разбанить во всех чатах.
+func (b *TelegramBot) handleGlobalUnbanCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+
+	var (
+		targetID int64
+		display  string
+	)
+	if message.ReplyToMessage != nil && message.ReplyToMessage.From != nil {
+		targetID = message.ReplyToMessage.From.ID
+		display = targetDisplay(message.ReplyToMessage.From)
+	} else {
+		args := commandArgs(message)
+		if len(args) == 0 {
+			b.replyAndAutoDelete(message, "Использование: /globalunban в reply | /globalunban @user | /globalunban <id>")
+			return
+		}
+		id, d, ok := b.resolveTargetGlobally(args[0])
+		if !ok {
+			b.replyAndAutoDelete(message, "Не нашёл пользователя.")
+			return
+		}
+		targetID = id
+		display = html.EscapeString(d)
+	}
+
+	chats, err := b.moderationService.KnownChatIDs()
+	if err != nil {
+		log.Printf("globalunban: KnownChatIDs failed: %v", err)
+		b.replyAndAutoDelete(message, "Не смог получить список чатов.")
+		return
+	}
+	if err := b.moderationService.DeleteGlobalBan(targetID); err != nil {
+		log.Printf("globalunban: delete record failed for user %d: %v", targetID, err)
+	}
+	b.tryDelete(message.Chat.ID, message.MessageID)
+
+	go b.runGlobalUnban(targetID, message.From.ID, display, chats)
+}
+
+func (b *TelegramBot) runGlobalUnban(targetID, actorID int64, display string, chats []int64) {
+	unbanned, failed := 0, 0
+	for _, chatID := range chats {
+		_, err := b.bot.Request(tgbotapi.UnbanChatMemberConfig{
+			ChatMemberConfig: tgbotapi.ChatMemberConfig{
+				ChatID: chatID,
+				UserID: targetID,
+			},
+			OnlyIfBanned: true,
+		})
+		if err != nil {
+			failed++
+			log.Printf("globalunban: unban in chat %d for user %d failed: %v", chatID, targetID, err)
+			continue
+		}
+		unbanned++
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	_ = b.moderationService.LogActionWithMeta(&models.ModerationAction{
+		ChatID:       0,
+		TargetUserID: targetID,
+		ActorUserID:  actorID,
+		Action:       models.ModerationActionGlobalUnban,
+	}, map[string]interface{}{
+		"chats_total":    len(chats),
+		"chats_unbanned": unbanned,
+		"chats_failed":   failed,
+	})
+
+	b.SendDirectMessage(actorID, fmt.Sprintf(
+		"✅ Глобальный бан снят.\nЦель: %s\nЧатов: %d (успех %d, ошибок %d)",
+		display, len(chats), unbanned, failed))
+}
+
+// handleGlobalBansListCommand — короткая сводка по активным записям.
+func (b *TelegramBot) handleGlobalBansListCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+	bans, err := b.moderationService.ListActiveGlobalBans()
+	if err != nil {
+		log.Printf("globalbans: list failed: %v", err)
+		return
+	}
+	if len(bans) == 0 {
+		b.SendDirectMessage(message.Chat.ID, "Активных глобальных банов нет.")
+		return
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("<b>Глобальные баны (%d):</b>\n\n", len(bans)))
+	for _, gb := range bans {
+		expires := "permanent"
+		if gb.ExpiresAt != nil {
+			expires = "до " + gb.ExpiresAt.Format("2006-01-02 15:04")
+		}
+		reason := ""
+		if gb.Reason != nil && *gb.Reason != "" {
+			reason = " · " + html.EscapeString(*gb.Reason)
+		}
+		sb.WriteString(fmt.Sprintf("• <code>%d</code> — %s%s\n", gb.UserID, expires, reason))
+	}
+	b.SendDirectMessage(message.Chat.ID, sb.String())
+}
+
+// resolveTargetGlobally ищет user_id по числу или @username (в любом
+// chat_messages — без привязки к конкретному чату). Возвращает displayName.
+func (b *TelegramBot) resolveTargetGlobally(arg string) (int64, string, bool) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return 0, "", false
+	}
+	if id, err := strconv.ParseInt(arg, 10, 64); err == nil {
+		return id, fmt.Sprintf("id=%d", id), true
+	}
+	username := strings.TrimPrefix(arg, "@")
+	if username == "" {
+		return 0, "", false
+	}
+	id, err := b.chatActivityService.LookupUserIDByUsernameAny(username)
+	if err != nil || id == 0 {
+		return 0, "", false
+	}
+	return id, "@" + username, true
+}
+
 // startVotebanWatcher финализирует протёкшие голосования и шлёт алерты
 // «срок санкции истёк» для ban/mute/voteban_kick. Telegram сам снимает ban
 // при наступлении until_date — нам нужно только уведомить чат.
