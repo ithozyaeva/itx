@@ -144,7 +144,7 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 	chatHighlightService := service.NewChatHighlightService()
 	subscriptionService := service.NewSubscriptionService(redisClient)
 	supportService := service.NewSupportService(redisClient)
-	moderationService := service.NewModerationService()
+	moderationService := service.NewModerationServiceWithRedis(redisClient)
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -176,6 +176,10 @@ func (b *TelegramBot) Start() {
 
 	// Финализация протёкших voteban-голосований.
 	go b.startVotebanWatcher()
+
+	// Подписка на канал moderation:revoke — backend (RU) кладёт команды
+	// «снять санкцию» из админки, бот выполняет в Telegram.
+	b.moderationService.SubscribeRevoke(context.Background(), b.handleRevokeEvent)
 
 	// Слушаем Redis pub/sub от бэкенда: когда админ через UI привязывает чат
 	// к новому тиру, приходит событие — бот рассылает invite-ссылки всем

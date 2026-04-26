@@ -230,6 +230,26 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	feedbackHandler := handler.NewFeedbackHandler()
 	feedback := protected.Group("/feedback", authMiddleware.RequirePermission(models.PermissionCanViewAdminFeedback))
 	feedback.Get("/", feedbackHandler.AdminList)
+
+	// Маршруты модерации (списки санкций/глобальных банов/голосований + снятие).
+	// Действия выполняет бот через Redis pub/sub — backend в РФ, TG API заблокирован.
+	if redisClient != nil {
+		moderationHandler := handler.NewModerationHandler(redisClient)
+		moderation := protected.Group("/moderation", authMiddleware.RequirePermission(models.PermissionCanViewAdminModeration))
+		moderation.Get("/sanctions", moderationHandler.GetActiveSanctions)
+		moderation.Get("/actions", moderationHandler.GetRecentActions)
+		moderation.Get("/global-bans", moderationHandler.GetGlobalBans)
+		moderation.Get("/votebans", moderationHandler.GetOpenVotebans)
+		moderation.Post("/sanctions/:id/revoke",
+			authMiddleware.RequirePermission(models.PermissionCanEditAdminModeration),
+			moderationHandler.RevokeSanction)
+		moderation.Delete("/global-bans/:user_id",
+			authMiddleware.RequirePermission(models.PermissionCanEditAdminModeration),
+			moderationHandler.RevokeGlobalBan)
+		moderation.Post("/votebans/:id/cancel",
+			authMiddleware.RequirePermission(models.PermissionCanEditAdminModeration),
+			moderationHandler.CancelVoteban)
+	}
 }
 
 func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
