@@ -201,6 +201,100 @@ func (r *ModerationRepository) ListActiveGlobalBans(now time.Time) ([]models.Glo
 	return list, err
 }
 
+// --- Admin UI listing с обогащением ---
+
+// ModerationActionView — строка для админки: action + display-поля
+// (username/first_name + chat_title), полученные join'ами.
+type ModerationActionView struct {
+	models.ModerationAction
+	TargetUsername  string `json:"targetUsername" gorm:"column:target_username"`
+	TargetFirstName string `json:"targetFirstName" gorm:"column:target_first_name"`
+	ChatTitle       string `json:"chatTitle" gorm:"column:chat_title"`
+}
+
+// VotebanView — voteban + раскладка голосов.
+type VotebanView struct {
+	models.Voteban
+	VotesFor     int `json:"votesFor" gorm:"column:votes_for"`
+	VotesAgainst int `json:"votesAgainst" gorm:"column:votes_against"`
+}
+
+// listEnrichedActions возвращает список с username/first_name из последнего
+// сообщения юзера в чате (если есть) и chat_title из tracked_chats или
+// subscription_chats. Сортировка по created_at DESC.
+func (r *ModerationRepository) listEnrichedActions(where string, args ...interface{}) ([]ModerationActionView, error) {
+	var rows []ModerationActionView
+	q := `
+		SELECT
+			a.*,
+			COALESCE((
+				SELECT cm.telegram_username FROM chat_messages cm
+				WHERE cm.telegram_user_id = a.target_user_id
+				  AND cm.telegram_username <> ''
+				ORDER BY cm.sent_at DESC LIMIT 1
+			), '') AS target_username,
+			COALESCE((
+				SELECT cm.telegram_first_name FROM chat_messages cm
+				WHERE cm.telegram_user_id = a.target_user_id
+				  AND cm.telegram_first_name <> ''
+				ORDER BY cm.sent_at DESC LIMIT 1
+			), '') AS target_first_name,
+			COALESCE((
+				SELECT title FROM tracked_chats WHERE chat_id = a.chat_id LIMIT 1
+			), (
+				SELECT title FROM subscription_chats WHERE id = a.chat_id LIMIT 1
+			), '') AS chat_title
+		FROM bot_moderation_actions a
+		WHERE ` + where + `
+		ORDER BY a.created_at DESC
+		LIMIT 200
+	`
+	err := database.DB.Raw(q, args...).Scan(&rows).Error
+	return rows, err
+}
+
+// ListActiveSanctions возвращает действующие санкции (ban/mute/voteban_*),
+// у которых expires_at IS NULL OR > NOW(). Список типов задаётся строками,
+// а не константами, чтобы покрыть и legacy `voteban_mute`, и будущий
+// `voteban_kick` (#295) без жёсткого зависания на других PR.
+func (r *ModerationRepository) ListActiveSanctions() ([]ModerationActionView, error) {
+	return r.listEnrichedActions(
+		"a.action IN ('ban','mute','voteban_mute','voteban_kick') AND (a.expires_at IS NULL OR a.expires_at > NOW())",
+	)
+}
+
+// ListRecentActions — лог последних 200 модерационных действий (любой тип).
+func (r *ModerationRepository) ListRecentActions() ([]ModerationActionView, error) {
+	return r.listEnrichedActions("1=1")
+}
+
+// GetActionByID — действие по id с обогащением.
+func (r *ModerationRepository) GetActionByID(id int64) (*ModerationActionView, error) {
+	rows, err := r.listEnrichedActions("a.id = ?", id)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return &rows[0], nil
+}
+
+// ListOpenVotebansEnriched — открытые голосования с раскладкой голосов.
+func (r *ModerationRepository) ListOpenVotebansEnriched() ([]VotebanView, error) {
+	var rows []VotebanView
+	err := database.DB.Raw(`
+		SELECT
+			v.*,
+			COALESCE((SELECT COUNT(*) FROM bot_voteban_votes WHERE voteban_id = v.id AND vote = 1), 0)  AS votes_for,
+			COALESCE((SELECT COUNT(*) FROM bot_voteban_votes WHERE voteban_id = v.id AND vote = -1), 0) AS votes_against
+		FROM bot_votebans v
+		WHERE v.status = ?
+		ORDER BY v.created_at DESC
+	`, models.VotebanStatusOpen).Scan(&rows).Error
+	return rows, err
+}
+
 // KnownChatIDs возвращает уникальные chat_id из subscription_chats и активных
 // tracked_chats — тот набор, по которому проходим при глобальном бане/анбане.
 func (r *ModerationRepository) KnownChatIDs() ([]int64, error) {

@@ -12,6 +12,7 @@ import Gift from '~icons/lucide/gift'
 import Home from '~icons/lucide/home'
 import Link from '~icons/lucide/link'
 import MessageSquare from '~icons/lucide/message-square'
+import ShieldAlert from '~icons/lucide/shield-alert'
 import Star from '~icons/lucide/star'
 import User from '~icons/lucide/user'
 import Users from '~icons/lucide/users'
@@ -138,6 +139,12 @@ export function useSidebar() {
           path: '/subscriptions',
           icon: CreditCard,
           requiredPermission: 'can_view_admin_subscriptions',
+        },
+        {
+          title: 'Модерация',
+          path: '/moderation',
+          icon: ShieldAlert,
+          requiredPermission: 'can_view_admin_moderation',
         },
         {
           title: 'Рефералы',

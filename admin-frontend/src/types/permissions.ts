@@ -24,6 +24,8 @@ export type Permission
     | 'can_view_admin_subscriptions'
     | 'can_edit_admin_subscriptions'
     | 'can_view_admin_feedback'
+    | 'can_view_admin_moderation'
+    | 'can_edit_admin_moderation'
     | 'is_super_admin'
 
 /**
@@ -51,6 +53,8 @@ export function isPermission(value: string): value is Permission {
     'can_view_admin_subscriptions',
     'can_edit_admin_subscriptions',
     'can_view_admin_feedback',
+    'can_view_admin_moderation',
+    'can_edit_admin_moderation',
     'is_super_admin',
   ]
 

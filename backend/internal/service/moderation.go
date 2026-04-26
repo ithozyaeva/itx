@@ -1,22 +1,92 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
+// Redis pub/sub для админ-UI: backend кладёт команду «снять санкцию», бот её
+// читает и выполняет в Telegram (бэкенд в РФ, TG API заблокирован — слать
+// напрямую нельзя).
+const ModerationRevokeChannel = "moderation:revoke"
+
+const (
+	RevokeKindSanction   = "sanction"   // снять конкретный action (ban/mute/voteban_kick)
+	RevokeKindGlobalBan  = "global_ban" // снять global-ban во всех чатах
+	RevokeKindVoteban    = "voteban"    // отменить открытое voteban-голосование
+)
+
+// ModerationRevokeEvent — payload в Redis-канал.
+type ModerationRevokeEvent struct {
+	Kind         string `json:"kind"`
+	ActionID     int64  `json:"action_id,omitempty"`
+	VotebanID    int64  `json:"voteban_id,omitempty"`
+	ChatID       int64  `json:"chat_id,omitempty"`
+	TargetUserID int64  `json:"target_user_id"`
+	ActorMember  int64  `json:"actor_member_id"`
+}
+
 type ModerationService struct {
-	repo *repository.ModerationRepository
+	repo  *repository.ModerationRepository
+	redis *redis.Client
 }
 
 func NewModerationService() *ModerationService {
 	return &ModerationService{repo: repository.NewModerationRepository()}
+}
+
+// NewModerationServiceWithRedis — для backend handler'а: с Redis-клиентом,
+// чтобы публиковать события снятия санкций.
+func NewModerationServiceWithRedis(client *redis.Client) *ModerationService {
+	return &ModerationService{
+		repo:  repository.NewModerationRepository(),
+		redis: client,
+	}
+}
+
+// PublishRevoke кладёт событие в pub/sub-канал ModerationRevokeChannel.
+// Если redis client не задан (например, бот-side создание сервиса), функция
+// возвращает nil молча — это значит «нет канала, делаем локально».
+func (s *ModerationService) PublishRevoke(ctx context.Context, ev ModerationRevokeEvent) error {
+	if s.redis == nil {
+		return nil
+	}
+	payload, err := json.Marshal(ev)
+	if err != nil {
+		return err
+	}
+	return s.redis.Publish(ctx, ModerationRevokeChannel, payload).Err()
+}
+
+// SubscribeRevoke — для бота: подписаться и обрабатывать события снятия.
+// Запускает горутину; ошибки парсинга только логирует.
+func (s *ModerationService) SubscribeRevoke(ctx context.Context, handler func(ModerationRevokeEvent)) {
+	if s.redis == nil {
+		log.Printf("moderation: SubscribeRevoke called without redis client — noop")
+		return
+	}
+	pubsub := s.redis.Subscribe(ctx, ModerationRevokeChannel)
+	go func() {
+		ch := pubsub.Channel()
+		for msg := range ch {
+			var ev ModerationRevokeEvent
+			if err := json.Unmarshal([]byte(msg.Payload), &ev); err != nil {
+				log.Printf("moderation: bad revoke payload: %v", err)
+				continue
+			}
+			handler(ev)
+		}
+	}()
 }
 
 // ParseHumanDuration принимает "30m", "1h", "1d", "7d", "12h30m" и пр.
@@ -280,4 +350,41 @@ func (s *ModerationService) ListActiveGlobalBans() ([]models.GlobalBan, error) {
 // KnownChatIDs возвращает все известные боту чаты (subscription + tracked).
 func (s *ModerationService) KnownChatIDs() ([]int64, error) {
 	return s.repo.KnownChatIDs()
+}
+
+// --- Admin UI listings ---
+
+// ListActiveSanctionsView — обогащённый список действующих санкций.
+func (s *ModerationService) ListActiveSanctionsView() ([]repository.ModerationActionView, error) {
+	return s.repo.ListActiveSanctions()
+}
+
+// ListRecentActionsView — последние 200 модерационных действий (любой тип).
+func (s *ModerationService) ListRecentActionsView() ([]repository.ModerationActionView, error) {
+	return s.repo.ListRecentActions()
+}
+
+// GetActionByID — обогащённое действие по id.
+func (s *ModerationService) GetActionByID(id int64) (*repository.ModerationActionView, error) {
+	return s.repo.GetActionByID(id)
+}
+
+// ListOpenVotebansEnriched — открытые голосования с tally.
+func (s *ModerationService) ListOpenVotebansEnriched() ([]repository.VotebanView, error) {
+	return s.repo.ListOpenVotebansEnriched()
+}
+
+// CancelOpenVoteban — закрыть голосование без санкции (status='cancelled').
+func (s *ModerationService) CancelOpenVoteban(id int64) (*models.Voteban, bool, error) {
+	v, err := s.repo.GetVoteban(id)
+	if err != nil {
+		return nil, false, err
+	}
+	if v.Status != models.VotebanStatusOpen {
+		return v, false, nil
+	}
+	if err := s.repo.FinalizeVoteban(id, models.VotebanStatusCancelled); err != nil {
+		return v, false, err
+	}
+	return v, true, nil
 }

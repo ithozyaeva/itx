@@ -1020,6 +1020,134 @@ func (b *TelegramBot) startVotebanWatcher() {
 	}
 }
 
+// --- Revoke from admin UI (Redis pub/sub) ---
+
+// handleRevokeEvent применяет команду снятия санкции, пришедшую от backend'а.
+// Срабатывает на канал moderation:revoke. Идемпотентно: повторный вызов с тем
+// же payload не сломает состояние.
+func (b *TelegramBot) handleRevokeEvent(ev service.ModerationRevokeEvent) {
+	switch ev.Kind {
+	case service.RevokeKindSanction:
+		b.revokeSingleSanction(ev)
+	case service.RevokeKindGlobalBan:
+		b.revokeGlobalBan(ev)
+	case service.RevokeKindVoteban:
+		b.revokeVoteban(ev)
+	default:
+		log.Printf("revoke: unknown kind %q", ev.Kind)
+	}
+}
+
+// revokeSingleSanction читает action из БД, в зависимости от типа делает
+// UnbanChatMember или RestrictChatMember с открытыми правами.
+func (b *TelegramBot) revokeSingleSanction(ev service.ModerationRevokeEvent) {
+	action, err := b.moderationService.GetActionByID(ev.ActionID)
+	if err != nil || action == nil {
+		log.Printf("revoke: action not found id=%d: %v", ev.ActionID, err)
+		return
+	}
+	chatID := action.ChatID
+	userID := action.TargetUserID
+	target := &tgbotapi.User{
+		ID:        userID,
+		UserName:  action.TargetUsername,
+		FirstName: action.TargetFirstName,
+	}
+
+	switch action.Action {
+	case models.ModerationActionBan,
+		"voteban_kick":     // forward-compat с #295
+		if _, err := b.bot.Request(tgbotapi.UnbanChatMemberConfig{
+			ChatMemberConfig: tgbotapi.ChatMemberConfig{ChatID: chatID, UserID: userID},
+			OnlyIfBanned:     true,
+		}); err != nil {
+			log.Printf("revoke ban: chat=%d user=%d: %v", chatID, userID, err)
+			return
+		}
+		_ = b.moderationService.LogAction(&models.ModerationAction{
+			ChatID:       chatID,
+			TargetUserID: userID,
+			ActorUserID:  0,
+			Action:       models.ModerationActionUnban,
+		})
+		b.sendChatHTML(chatID, fmt.Sprintf("✅ %s разбанен (по решению админа).", targetDisplay(target)))
+
+	case models.ModerationActionMute,
+		models.ModerationActionVotebanMute:
+		if _, err := b.bot.Request(tgbotapi.RestrictChatMemberConfig{
+			ChatMemberConfig: tgbotapi.ChatMemberConfig{ChatID: chatID, UserID: userID},
+			Permissions:      restrictPermissionsAllow(),
+		}); err != nil {
+			log.Printf("revoke mute: chat=%d user=%d: %v", chatID, userID, err)
+			return
+		}
+		_ = b.moderationService.LogAction(&models.ModerationAction{
+			ChatID:       chatID,
+			TargetUserID: userID,
+			ActorUserID:  0,
+			Action:       models.ModerationActionUnmute,
+		})
+		b.sendChatHTML(chatID, fmt.Sprintf("🔊 %s размучен (по решению админа).", targetDisplay(target)))
+	default:
+		log.Printf("revoke: nothing to revoke for action %q", action.Action)
+	}
+}
+
+// revokeGlobalBan снимает запись и проходит UnbanChatMember по всем известным чатам.
+func (b *TelegramBot) revokeGlobalBan(ev service.ModerationRevokeEvent) {
+	if err := b.moderationService.DeleteGlobalBan(ev.TargetUserID); err != nil {
+		log.Printf("revoke globalban: delete record user=%d: %v", ev.TargetUserID, err)
+	}
+	chats, err := b.moderationService.KnownChatIDs()
+	if err != nil {
+		log.Printf("revoke globalban: KnownChatIDs failed: %v", err)
+		return
+	}
+	unbanned, failed := 0, 0
+	for _, chatID := range chats {
+		if _, err := b.bot.Request(tgbotapi.UnbanChatMemberConfig{
+			ChatMemberConfig: tgbotapi.ChatMemberConfig{ChatID: chatID, UserID: ev.TargetUserID},
+			OnlyIfBanned:     true,
+		}); err != nil {
+			failed++
+			continue
+		}
+		unbanned++
+		time.Sleep(50 * time.Millisecond)
+	}
+	_ = b.moderationService.LogActionWithMeta(&models.ModerationAction{
+		ChatID:       0,
+		TargetUserID: ev.TargetUserID,
+		ActorUserID:  0,
+		Action:       models.ModerationActionGlobalUnban,
+	}, map[string]interface{}{
+		"chats_total":    len(chats),
+		"chats_unbanned": unbanned,
+		"chats_failed":   failed,
+		"source":         "admin_ui",
+	})
+	b.SendDirectMessage(subscriptionAdminID(), fmt.Sprintf(
+		"✅ Глобальный бан снят из админ-UI.\nЦель: id=<code>%d</code>\nЧатов: %d (успех %d, ошибок %d)",
+		ev.TargetUserID, len(chats), unbanned, failed))
+}
+
+// revokeVoteban отменяет открытое голосование (без санкции). Запись в БД уже
+// переведена в 'cancelled' backend'ом — нам нужно только отредактировать poll.
+func (b *TelegramBot) revokeVoteban(ev service.ModerationRevokeEvent) {
+	vb, err := b.moderationService.GetVoteban(ev.VotebanID)
+	if err != nil || vb == nil {
+		log.Printf("revoke voteban: not found id=%d: %v", ev.VotebanID, err)
+		return
+	}
+	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
+	text := fmt.Sprintf("⚖️ Голосование отменено админом. %s остаётся в чате.", targetDisplay(target))
+	edit := tgbotapi.NewEditMessageText(vb.ChatID, vb.PollMessageID, text)
+	edit.ParseMode = "HTML"
+	if _, err := b.bot.Send(edit); err != nil {
+		log.Printf("revoke voteban: edit poll failed: %v", err)
+	}
+}
+
 // --- helpers ---
 
 // sendChatHTML отправляет HTML-сообщение в чат, без preview.

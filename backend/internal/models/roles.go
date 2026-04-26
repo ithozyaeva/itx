@@ -35,6 +35,8 @@ const (
 	PermissionCanViewAdminSubscriptions    Permission = "can_view_admin_subscriptions"
 	PermissionCanEditAdminSubscriptions    Permission = "can_edit_admin_subscriptions"
 	PermissionCanViewAdminFeedback         Permission = "can_view_admin_feedback"
+	PermissionCanViewAdminModeration       Permission = "can_view_admin_moderation"
+	PermissionCanEditAdminModeration       Permission = "can_edit_admin_moderation"
 )
 
 type PermissionModel struct {
