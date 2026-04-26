@@ -285,6 +285,15 @@ func (b *TelegramBot) Start() {
 			case "voteban":
 				b.handleVotebanCommand(update.Message)
 				continue
+			case "globalban":
+				b.handleGlobalBanCommand(update.Message)
+				continue
+			case "globalunban":
+				b.handleGlobalUnbanCommand(update.Message)
+				continue
+			case "globalbans":
+				b.handleGlobalBansListCommand(update.Message)
+				continue
 			}
 		}
 
@@ -438,6 +447,13 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 			"/subcheckall - Проверить всех\n" +
 			"/substats - Статистика\n" +
 			"/subpin <anchor_chat_id> - Запостить и закрепить приветствие в anchor-чате"
+	}
+
+	if b.isSubscriptionAdmin(message.From.ID) {
+		text += "\n\nGlobal-бан (только super-admin):\n" +
+			"/globalban (reply | @user | <id>) [duration] [reason] — забанить во всех чатах сразу\n" +
+			"/globalunban (reply | @user | <id>) — снять глобальный бан\n" +
+			"/globalbans — список активных глобальных банов"
 	}
 
 	b.sendMessage(message.Chat.ID, text)
