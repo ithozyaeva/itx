@@ -279,6 +279,16 @@ func (r *ChatActivityRepository) DeleteOldMessages(beforeDate time.Time) (int64,
 	return result.RowsAffected, result.Error
 }
 
+// CountUserMessagesInChatSince — сколько сообщений у юзера в чате с момента since.
+// Используется voteban'ом для отсечки голосов «свежезашедших» аккаунтов.
+func (r *ChatActivityRepository) CountUserMessagesInChatSince(chatID, userID int64, since time.Time) (int64, error) {
+	var count int64
+	err := database.DB.Model(&models.ChatMessage{}).
+		Where("chat_id = ? AND telegram_user_id = ? AND sent_at >= ?", chatID, userID, since).
+		Count(&count).Error
+	return count, err
+}
+
 // LookupUserIDByUsername ищет telegram_user_id по последнему совпадению
 // telegram_username в указанном чате. Регистронезависимо. 0 = не найдено.
 func (r *ChatActivityRepository) LookupUserIDByUsername(chatID int64, username string) (int64, error) {

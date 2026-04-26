@@ -17,8 +17,19 @@ import (
 // Параметры голосования по умолчанию.
 const (
 	votebanRequiredVotes = 5
-	votebanWindowSeconds = 30 * 60 // 30 минут
-	votebanMuteSeconds   = 60 * 60 // 1 час
+	votebanWindowSeconds = 15 * 60 // 15 минут — окно сбора голосов
+	// votebanKickSeconds — длительность санкции (BanChatMember с UntilDate).
+	// В БД хранится в колонке voteban.mute_seconds (имя оставлено по
+	// совместимости с уже отгруженной миграцией T1-модерации).
+	votebanKickSeconds = 60 * 60 // 1 час
+
+	// Anti-abuse cooldowns / стаж голосующего.
+	votebanCooldownChatSeconds      = 5 * 60        // не чаще одного /voteban в чате раз в 5 мин (любым target'ом)
+	votebanCooldownInitiatorSeconds = 30 * 60       // не чаще /voteban от одного инициатора в чате раз в 30 мин
+	voterMinActivityWindow          = 7 * 24 * time.Hour
+	// Юзер может голосовать только если за последние 7 дней написал хотя бы
+	// одно сообщение в этом чате — отсекает «свежезашедших проходящих мимо».
+	voterMinMessages = 1
 
 	cleanupDefaultPeriod = 24 * time.Hour
 	cleanupMaxPeriod     = 7 * 24 * time.Hour
@@ -484,6 +495,23 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		return
 	}
 
+	// Cooldown по чату — защита от спама голосований подряд.
+	if last, _ := b.moderationService.LatestVotebanCreatedInChat(message.Chat.ID); last != nil {
+		if remain := time.Duration(votebanCooldownChatSeconds)*time.Second - time.Since(*last); remain > 0 {
+			b.replyAndAutoDelete(message, fmt.Sprintf(
+				"В чате уже было голосование недавно. Попробуйте через %s.", service.FormatDurationHuman(remain.Round(time.Second))))
+			return
+		}
+	}
+	// Cooldown по инициатору — защита от одного активного троля.
+	if last, _ := b.moderationService.LatestVotebanCreatedByInitiator(message.Chat.ID, message.From.ID); last != nil {
+		if remain := time.Duration(votebanCooldownInitiatorSeconds)*time.Second - time.Since(*last); remain > 0 {
+			b.replyAndAutoDelete(message, fmt.Sprintf(
+				"Ваш предыдущий /voteban был недавно. Подождите %s.", service.FormatDurationHuman(remain.Round(time.Second))))
+			return
+		}
+	}
+
 	triggerID := message.ReplyToMessage.MessageID
 	triggerPtr := &triggerID
 	chatTitle := message.Chat.Title
@@ -511,7 +539,7 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		TriggerMessageID: triggerPtr,
 		PollMessageID:    sent.MessageID,
 		RequiredVotes:    votebanRequiredVotes,
-		MuteSeconds:      votebanMuteSeconds,
+		MuteSeconds:      votebanKickSeconds, // длительность kick-санкции (БД-колонка из T1)
 		WindowSeconds:    votebanWindowSeconds,
 	})
 	if err != nil {
@@ -545,16 +573,16 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 
 func (b *TelegramBot) formatVotebanPoll(target, initiator *tgbotapi.User, tally models.VotebanTally, required int, window time.Duration) string {
 	return fmt.Sprintf(
-		"⚖️ <b>Голосование за бан</b>\n\n"+
+		"⚖️ <b>Голосование за кик</b>\n\n"+
 			"Кого: %s\n"+
 			"Кто запустил: %s\n"+
-			"Окно: %s · нужно «за»: %d\n\n"+
-			"Голосуют участники чата. Цель не голосует. Через %s — мут на час, иначе — закрываем.",
+			"Окно: %s · нужно «за»: %d · санкция: кик на %s\n\n"+
+			"Голосуют участники чата (с активностью за последние 7 дней). Цель не голосует.",
 		targetDisplay(target),
 		targetDisplay(initiator),
 		service.FormatDurationHuman(window),
 		required,
-		service.FormatDurationHuman(window),
+		service.FormatDurationHuman(time.Duration(votebanKickSeconds)*time.Second),
 	) + b.formatVotebanTally(tally, required)
 }
 
@@ -626,6 +654,17 @@ func (b *TelegramBot) handleVotebanCallback(callback *tgbotapi.CallbackQuery) {
 		b.answerCallbackQuery(callback.ID, "Голосовать могут только участники чата.")
 		return
 	}
+	// Стаж: голосует только тот, кто реально пишет в этом чате. Цель и
+	// инициатор автоматически проходят (инициатор уже проверен на cooldown,
+	// цель отсекается чуть ниже в CastVote → ErrVoteSelfTarget).
+	if callback.From.ID != vb.TargetUserID && callback.From.ID != vb.InitiatorUserID {
+		count, _ := b.chatActivityService.CountUserMessagesInChatSince(
+			vb.ChatID, callback.From.ID, time.Now().Add(-voterMinActivityWindow))
+		if count < int64(voterMinMessages) {
+			b.answerCallbackQuery(callback.ID, "Голосовать могут активные участники чата за последние 7 дней.")
+			return
+		}
+	}
 
 	res, err := b.moderationService.CastVote(votebanID, callback.From.ID, vote)
 	if err != nil {
@@ -653,8 +692,12 @@ func (b *TelegramBot) handleVotebanCallback(callback *tgbotapi.CallbackQuery) {
 	}
 }
 
-// finalizeVotebanPassed применяет санкцию: мут на vb.MuteSeconds + удаление trigger.
-// Идемпотентно: если запись уже не open, ничего не делает.
+// finalizeVotebanPassed применяет санкцию: kick (BanChatMember с UntilDate) на
+// vb.MuteSeconds + удаление триггер-сообщения. Идемпотентно: повторный вызов
+// после успешной финализации ничего не делает (запись уже не open).
+//
+// Имя поля MuteSeconds в БД сохранено по совместимости с T1-миграцией,
+// фактически в нём лежит длительность санкции.
 func (b *TelegramBot) finalizeVotebanPassed(vb *models.Voteban) {
 	ok, err := b.moderationService.FinalizeVoteban(vb.Id, models.VotebanStatusPassed)
 	if err != nil {
@@ -666,8 +709,14 @@ func (b *TelegramBot) finalizeVotebanPassed(vb *models.Voteban) {
 	}
 
 	until := time.Now().Add(time.Duration(vb.MuteSeconds) * time.Second)
-	if err := b.muteUserInChat(vb.ChatID, vb.TargetUserID, until.Unix()); err != nil {
-		log.Printf("voteban: mute failed chat=%d user=%d: %v", vb.ChatID, vb.TargetUserID, err)
+	if _, err := b.bot.Request(tgbotapi.BanChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatID: vb.ChatID,
+			UserID: vb.TargetUserID,
+		},
+		UntilDate: until.Unix(),
+	}); err != nil {
+		log.Printf("voteban: ban failed chat=%d user=%d: %v", vb.ChatID, vb.TargetUserID, err)
 	}
 	if vb.TriggerMessageID != nil {
 		b.tryDelete(vb.ChatID, *vb.TriggerMessageID)
@@ -680,7 +729,7 @@ func (b *TelegramBot) finalizeVotebanPassed(vb *models.Voteban) {
 		ChatID:          vb.ChatID,
 		TargetUserID:    vb.TargetUserID,
 		ActorUserID:     0,
-		Action:          models.ModerationActionVotebanMute,
+		Action:          models.ModerationActionVotebanKick,
 		DurationSeconds: &durSec,
 		ExpiresAt:       &expiresAt,
 	}, map[string]interface{}{
@@ -690,7 +739,7 @@ func (b *TelegramBot) finalizeVotebanPassed(vb *models.Voteban) {
 
 	tally, _ := b.moderationService.CountVotes(vb.Id)
 	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
-	text := fmt.Sprintf("⚖️ Голосование завершено: %s замучен на %s (✅ %d / ❌ %d).",
+	text := fmt.Sprintf("⚖️ Голосование завершено: %s кикнут из чата на %s (✅ %d / ❌ %d). Авто-возврат после истечения срока.",
 		targetDisplay(target), service.FormatDurationHuman(dur), tally.For, tally.Against)
 	edit := tgbotapi.NewEditMessageText(vb.ChatID, vb.PollMessageID, text)
 	edit.ParseMode = "HTML"
@@ -721,25 +770,63 @@ func (b *TelegramBot) finalizeVotebanFailed(vb *models.Voteban) {
 	}
 }
 
-// startVotebanWatcher финализирует протёкшие открытые голосования.
+// startVotebanWatcher финализирует протёкшие голосования и шлёт алерты
+// «срок санкции истёк» для ban/mute/voteban_kick. Telegram сам снимает ban
+// при наступлении until_date — нам нужно только уведомить чат.
 func (b *TelegramBot) startVotebanWatcher() {
 	ticker := time.NewTicker(moderationWatcherTick)
 	defer ticker.Stop()
 	for range ticker.C {
-		expired, err := b.moderationService.ListExpiredOpenVotebans(time.Now())
+		now := time.Now()
+
+		// 1) Финализация голосований по истечении окна.
+		expired, err := b.moderationService.ListExpiredOpenVotebans(now)
 		if err != nil {
 			log.Printf("voteban-watcher: list failed: %v", err)
-			continue
-		}
-		for i := range expired {
-			vb := expired[i]
-			tally, _ := b.moderationService.CountVotes(vb.Id)
-			if tally.For >= vb.RequiredVotes {
-				b.finalizeVotebanPassed(&vb)
-			} else {
-				b.finalizeVotebanFailed(&vb)
+		} else {
+			for i := range expired {
+				vb := expired[i]
+				tally, _ := b.moderationService.CountVotes(vb.Id)
+				if tally.For >= vb.RequiredVotes {
+					b.finalizeVotebanPassed(&vb)
+				} else {
+					b.finalizeVotebanFailed(&vb)
+				}
 			}
 		}
+
+		// 2) Алерты «срок санкции истёк» для ban/mute/voteban.
+		actions, err := b.moderationService.ListExpiredUnnotifiedActions(now)
+		if err != nil {
+			log.Printf("expiry-watcher: list failed: %v", err)
+			continue
+		}
+		for i := range actions {
+			b.notifyActionExpired(&actions[i])
+		}
+	}
+}
+
+// notifyActionExpired шлёт сообщение в чат «срок санкции истёк» и помечает
+// запись expired_notified_at, чтобы не дублировать.
+func (b *TelegramBot) notifyActionExpired(action *models.ModerationAction) {
+	if action.ChatID == 0 {
+		// Глобальные баны (chat_id = 0) — отдельный flow в #294 (там же добавим алерты).
+		_ = b.moderationService.MarkActionExpiredNotified(action.Id)
+		return
+	}
+	verb := "разблокирован"
+	switch action.Action {
+	case models.ModerationActionBan, models.ModerationActionVotebanKick, models.ModerationActionVotebanMute:
+		verb = "снова в чате"
+	case models.ModerationActionMute:
+		verb = "может писать снова"
+	}
+	target := &tgbotapi.User{ID: action.TargetUserID}
+	b.sendChatHTML(action.ChatID, fmt.Sprintf("⏰ Срок санкции истёк — %s %s.", targetDisplay(target), verb))
+
+	if err := b.moderationService.MarkActionExpiredNotified(action.Id); err != nil {
+		log.Printf("expiry-watcher: mark notified failed action=%d: %v", action.Id, err)
 	}
 }
 

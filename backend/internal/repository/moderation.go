@@ -156,3 +156,63 @@ func (r *ModerationRepository) ListExpiredOpenVotebans(now time.Time) ([]models.
 		Find(&list).Error
 	return list, err
 }
+
+// LatestVotebanCreatedInChat возвращает время последнего созданного voteban в
+// чате (любой статус), или nil если голосований ещё не было. Используется
+// для cooldown «не чаще одного /voteban в чате раз в N минут».
+func (r *ModerationRepository) LatestVotebanCreatedInChat(chatID int64) (*time.Time, error) {
+	var t time.Time
+	err := database.DB.Model(&models.Voteban{}).
+		Select("created_at").
+		Where("chat_id = ?", chatID).
+		Order("created_at DESC").
+		Limit(1).
+		Scan(&t).Error
+	if err != nil {
+		return nil, err
+	}
+	if t.IsZero() {
+		return nil, nil
+	}
+	return &t, nil
+}
+
+// LatestVotebanCreatedByInitiator возвращает время последнего voteban в чате,
+// запущенного конкретным юзером.
+func (r *ModerationRepository) LatestVotebanCreatedByInitiator(chatID, initiatorID int64) (*time.Time, error) {
+	var t time.Time
+	err := database.DB.Model(&models.Voteban{}).
+		Select("created_at").
+		Where("chat_id = ? AND initiator_user_id = ?", chatID, initiatorID).
+		Order("created_at DESC").
+		Limit(1).
+		Scan(&t).Error
+	if err != nil {
+		return nil, err
+	}
+	if t.IsZero() {
+		return nil, nil
+	}
+	return &t, nil
+}
+
+// ListExpiredUnnotifiedActions возвращает санкции, у которых срок истёк, а
+// уведомление в чат(ы) ещё не отправлено. Watcher шлёт алерт и помечает запись.
+func (r *ModerationRepository) ListExpiredUnnotifiedActions(now time.Time) ([]models.ModerationAction, error) {
+	var list []models.ModerationAction
+	err := database.DB.
+		Where("action IN ? AND expires_at IS NOT NULL AND expires_at <= ? AND expired_notified_at IS NULL",
+			models.ModerationActionsWithExpiry, now).
+		Order("expires_at ASC").
+		Limit(100).
+		Find(&list).Error
+	return list, err
+}
+
+// MarkActionExpiredNotified ставит expired_notified_at = NOW() для записи.
+func (r *ModerationRepository) MarkActionExpiredNotified(id int64) error {
+	now := time.Now()
+	return database.DB.Model(&models.ModerationAction{}).
+		Where("id = ? AND expired_notified_at IS NULL", id).
+		Update("expired_notified_at", now).Error
+}
