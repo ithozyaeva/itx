@@ -115,6 +115,7 @@ type TelegramBot struct {
 	chatHighlightService        *service.ChatHighlightService
 	subscriptionService         *service.SubscriptionService
 	supportService              *service.SupportService
+	moderationService           *service.ModerationService
 }
 
 func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
@@ -143,6 +144,7 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 	chatHighlightService := service.NewChatHighlightService()
 	subscriptionService := service.NewSubscriptionService(redisClient)
 	supportService := service.NewSupportService(redisClient)
+	moderationService := service.NewModerationService()
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -155,6 +157,7 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 		chatHighlightService:        chatHighlightService,
 		subscriptionService:         subscriptionService,
 		supportService:              supportService,
+		moderationService:           moderationService,
 	}, nil
 }
 
@@ -170,6 +173,9 @@ func (b *TelegramBot) Start() {
 
 	// Start subscription checker
 	go b.startSubscriptionChecker()
+
+	// Финализация протёкших voteban-голосований.
+	go b.startVotebanWatcher()
 
 	// Слушаем Redis pub/sub от бэкенда: когда админ через UI привязывает чат
 	// к новому тиру, приходит событие — бот рассылает invite-ссылки всем
@@ -259,6 +265,27 @@ func (b *TelegramBot) Start() {
 		if update.Message.IsCommand() && update.Message.Command() == "whois" {
 			b.handleWhoisCommand(update.Message)
 			continue
+		}
+
+		// Модерационные команды (работают в групповых чатах).
+		if update.Message.IsCommand() {
+			switch update.Message.Command() {
+			case "ban":
+				b.handleBanCommand(update.Message)
+				continue
+			case "unban":
+				b.handleUnbanCommand(update.Message)
+				continue
+			case "mute":
+				b.handleMuteCommand(update.Message)
+				continue
+			case "cleanup":
+				b.handleCleanupCommand(update.Message)
+				continue
+			case "voteban":
+				b.handleVotebanCommand(update.Message)
+				continue
+			}
 		}
 
 		// Голое «/слово» в группе (без аргументов и без другого текста):
@@ -390,7 +417,13 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 	text := "Подписка, чаты, баллы, события, связь с админом — всё через /start с кнопками.\n\n" +
 		"Вспомогательное в группах:\n" +
 		"/summarize [day|week|3d|N] — AI-саммари чата (5/день на юзера)\n" +
-		"/whois — кто участник (reply или /whois @username)"
+		"/whois — кто участник (reply или /whois @username)\n" +
+		"/voteban (reply) — запустить голосование за временный мут (5 голосов «за» за 30 мин → мут на час)\n\n" +
+		"Модерация (админам чата и платформы):\n" +
+		"/ban [duration] — бан в этом чате (reply). Пример: /ban 1h, /ban 1d. Без аргумента — навсегда\n" +
+		"/unban — разбан (reply, /unban @user или /unban <id>)\n" +
+		"/mute [duration] — мут (reply). Пример: /mute 30m\n" +
+		"/cleanup [period] — удалить сообщения юзера в этом чате за период (reply, по умолчанию 24h)"
 
 	if b.isAdmin(message.From.ID) {
 		text += "\n\nАдмин-команды подписок:\n" +
@@ -960,6 +993,12 @@ func (b *TelegramBot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) {
 	// Welcome-wizard (/start) — короткие колбэки wiz:*.
 	if strings.HasPrefix(data, "wiz:") {
 		b.handleWizardCallback(callback)
+		return
+	}
+
+	// Voteban-голосование — vb:{voteban_id}:up|down.
+	if strings.HasPrefix(data, "vb:") {
+		b.handleVotebanCallback(callback)
 		return
 	}
 
