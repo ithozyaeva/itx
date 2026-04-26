@@ -297,6 +297,26 @@ func (s *ModerationService) CountVotes(votebanID int64) (models.VotebanTally, er
 	return s.repo.CountVotes(votebanID)
 }
 
+// LatestVotebanCreatedInChat — для cooldown'a по чату.
+func (s *ModerationService) LatestVotebanCreatedInChat(chatID int64) (*time.Time, error) {
+	return s.repo.LatestVotebanCreatedInChat(chatID)
+}
+
+// LatestVotebanCreatedByInitiator — для cooldown'a по инициатору в чате.
+func (s *ModerationService) LatestVotebanCreatedByInitiator(chatID, initiatorID int64) (*time.Time, error) {
+	return s.repo.LatestVotebanCreatedByInitiator(chatID, initiatorID)
+}
+
+// ListExpiredUnnotifiedActions — для watcher'а алертов «срок истёк».
+func (s *ModerationService) ListExpiredUnnotifiedActions(now time.Time) ([]models.ModerationAction, error) {
+	return s.repo.ListExpiredUnnotifiedActions(now)
+}
+
+// MarkActionExpiredNotified — после успешной отправки алерта.
+func (s *ModerationService) MarkActionExpiredNotified(id int64) error {
+	return s.repo.MarkActionExpiredNotified(id)
+}
+
 var (
 	ErrVotebanAlreadyOpen = errors.New("voteban: на этого пользователя уже идёт голосование")
 	ErrVotebanClosed      = errors.New("voteban: голосование закрыто")

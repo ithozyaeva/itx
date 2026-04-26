@@ -8,23 +8,35 @@ const (
 	ModerationActionMute        = "mute"
 	ModerationActionUnmute      = "unmute"
 	ModerationActionCleanup     = "cleanup"
-	ModerationActionVotebanMute = "voteban_mute"
+	ModerationActionVotebanMute = "voteban_mute" // legacy (T1)
+	ModerationActionVotebanKick = "voteban_kick"
 	ModerationActionGlobalBan   = "globalban"
 	ModerationActionGlobalUnban = "globalunban"
 )
 
+// ModerationActionsWithExpiry — действия, для которых имеет смысл слать
+// алерт «срок истёк» в чат(ы). Глобальный бан обрабатывается отдельно
+// (chat_id=0, нужно слать в каждый из затронутых чатов из meta).
+var ModerationActionsWithExpiry = []string{
+	ModerationActionBan,
+	ModerationActionMute,
+	ModerationActionVotebanMute,
+	ModerationActionVotebanKick,
+}
+
 // ModerationAction — журнал модерационных действий бота.
 type ModerationAction struct {
-	Id              int64      `json:"id" gorm:"primaryKey"`
-	ChatID          int64      `json:"chatId" gorm:"column:chat_id"`
-	TargetUserID    int64      `json:"targetUserId" gorm:"column:target_user_id"`
-	ActorUserID     int64      `json:"actorUserId" gorm:"column:actor_user_id"`
-	Action          string     `json:"action" gorm:"column:action"`
-	Reason          *string    `json:"reason" gorm:"column:reason"`
-	DurationSeconds *int       `json:"durationSeconds" gorm:"column:duration_seconds"`
-	ExpiresAt       *time.Time `json:"expiresAt" gorm:"column:expires_at"`
-	Meta            string     `json:"meta" gorm:"column:meta;type:jsonb;default:'{}'"`
-	CreatedAt       time.Time  `json:"createdAt" gorm:"column:created_at"`
+	Id                int64      `json:"id" gorm:"primaryKey"`
+	ChatID            int64      `json:"chatId" gorm:"column:chat_id"`
+	TargetUserID      int64      `json:"targetUserId" gorm:"column:target_user_id"`
+	ActorUserID       int64      `json:"actorUserId" gorm:"column:actor_user_id"`
+	Action            string     `json:"action" gorm:"column:action"`
+	Reason            *string    `json:"reason" gorm:"column:reason"`
+	DurationSeconds   *int       `json:"durationSeconds" gorm:"column:duration_seconds"`
+	ExpiresAt         *time.Time `json:"expiresAt" gorm:"column:expires_at"`
+	Meta              string     `json:"meta" gorm:"column:meta;type:jsonb;default:'{}'"`
+	ExpiredNotifiedAt *time.Time `json:"expiredNotifiedAt" gorm:"column:expired_notified_at"`
+	CreatedAt         time.Time  `json:"createdAt" gorm:"column:created_at"`
 }
 
 func (ModerationAction) TableName() string {
