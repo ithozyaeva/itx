@@ -235,6 +235,12 @@ func (s *ChatActivityService) CountUserMessagesInChatSince(chatID, userID int64,
 	return s.repo.CountUserMessagesInChatSince(chatID, userID, since)
 }
 
+// CountActiveAuthorsInChatSince — сколько уникальных авторов в чате за период.
+// Voteban использует это для адаптивного порога голосов.
+func (s *ChatActivityService) CountActiveAuthorsInChatSince(chatID int64, since time.Time) (int64, error) {
+	return s.repo.CountActiveAuthorsInChatSince(chatID, since)
+}
+
 // LookupUserIDByUsername ищет telegram_user_id по @username среди сообщений
 // в этом чате. Используется командами модерации, когда есть только @username
 // (например, /unban @user). 0 — не найден.

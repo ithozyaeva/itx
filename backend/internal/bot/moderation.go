@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +17,15 @@ import (
 
 // Параметры голосования по умолчанию.
 const (
-	votebanRequiredVotes = 5
+	// Адаптивный порог: required = clamp(round(active_authors_7d * 0.15), MIN, MAX).
+	// Симметричный — те же N голосов нужно для kick'a и для отмены.
+	votebanRequiredVotesPercent = 0.15
+	votebanRequiredVotesMin     = 3
+	votebanRequiredVotesMax     = 10
+	// Минимум активных за 7 дней, чтобы /voteban имел смысл — иначе порог 3
+	// упирается в самих участников (инициатор + цель уже двое).
+	votebanMinActiveAuthors = 4
+
 	votebanWindowSeconds = 15 * 60 // 15 минут — окно сбора голосов
 	// votebanKickSeconds — длительность санкции (BanChatMember с UntilDate).
 	// В БД хранится в колонке voteban.mute_seconds (имя оставлено по
@@ -37,6 +46,18 @@ const (
 
 	moderationWatcherTick = time.Minute
 )
+
+// computeVotebanThreshold возвращает required = clamp(round(active*15%), 3, 10).
+func computeVotebanThreshold(activeAuthors int64) int {
+	threshold := int(math.Round(float64(activeAuthors) * votebanRequiredVotesPercent))
+	if threshold < votebanRequiredVotesMin {
+		return votebanRequiredVotesMin
+	}
+	if threshold > votebanRequiredVotesMax {
+		return votebanRequiredVotesMax
+	}
+	return threshold
+}
 
 // --- Permissions ---
 
@@ -512,12 +533,27 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		}
 	}
 
+	// Адаптивный порог: 15% от уникальных авторов в этом чате за 7 дней,
+	// clamp [3..10]. Защищает большие чаты от того, что 5 друзей кикнут
+	// кого угодно, а маленькие — от случайного veto'а единичной группой.
+	activeAuthors, err := b.chatActivityService.CountActiveAuthorsInChatSince(
+		message.Chat.ID, time.Now().Add(-voterMinActivityWindow))
+	if err != nil {
+		log.Printf("voteban: count active authors failed: %v", err)
+	}
+	if activeAuthors < votebanMinActiveAuthors {
+		b.replyAndAutoDelete(message,
+			"В чате слишком мало активных участников за последние 7 дней — voteban здесь не имеет смысла.")
+		return
+	}
+	requiredVotes := computeVotebanThreshold(activeAuthors)
+
 	triggerID := message.ReplyToMessage.MessageID
 	triggerPtr := &triggerID
 	chatTitle := message.Chat.Title
 
 	// Сначала отправляем poll-сообщение — нам нужен его MessageID для записи.
-	pollText := b.formatVotebanPoll(target, message.From, models.VotebanTally{}, votebanRequiredVotes, time.Duration(votebanWindowSeconds)*time.Second)
+	pollText := b.formatVotebanPoll(target, message.From, models.VotebanTally{}, requiredVotes, time.Duration(votebanWindowSeconds)*time.Second)
 	pollMsg := tgbotapi.NewMessage(message.Chat.ID, pollText)
 	pollMsg.ParseMode = "HTML"
 	pollMsg.DisableWebPagePreview = true
@@ -538,7 +574,7 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		InitiatorUserID:  message.From.ID,
 		TriggerMessageID: triggerPtr,
 		PollMessageID:    sent.MessageID,
-		RequiredVotes:    votebanRequiredVotes,
+		RequiredVotes:    requiredVotes,
 		MuteSeconds:      votebanKickSeconds, // длительность kick-санкции (БД-колонка из T1)
 		WindowSeconds:    votebanWindowSeconds,
 	})
@@ -563,8 +599,12 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	// Инициатор автоматически голосует «за» — один клик меньше.
 	if res, err := b.moderationService.CastVote(vb.Id, message.From.ID, models.VotebanVoteFor); err == nil {
 		b.refreshVotebanMessage(vb, res.Tally)
+		// Авто-голос инициатора может закрыть голосование сразу, если порог = 1
+		// (теоретически невозможно при MIN=3, но оставим симметрично).
 		if res.Threshold {
 			b.finalizeVotebanPassed(vb)
+		} else if res.ThresholdAgainst {
+			b.finalizeVotebanCancelledByVotes(vb)
 		}
 	}
 
@@ -576,13 +616,15 @@ func (b *TelegramBot) formatVotebanPoll(target, initiator *tgbotapi.User, tally 
 		"⚖️ <b>Голосование за кик</b>\n\n"+
 			"Кого: %s\n"+
 			"Кто запустил: %s\n"+
-			"Окно: %s · нужно «за»: %d · санкция: кик на %s\n\n"+
+			"Окно: %s · санкция: кик на %s\n"+
+			"Нужно %d «за» — кик; или %d «против» — отмена\n\n"+
 			"Голосуют участники чата (с активностью за последние 7 дней). Цель не голосует.",
 		targetDisplay(target),
 		targetDisplay(initiator),
 		service.FormatDurationHuman(window),
-		required,
 		service.FormatDurationHuman(time.Duration(votebanKickSeconds)*time.Second),
+		required,
+		required,
 	) + b.formatVotebanTally(tally, required)
 }
 
@@ -687,8 +729,11 @@ func (b *TelegramBot) handleVotebanCallback(callback *tgbotapi.CallbackQuery) {
 	}
 	b.refreshVotebanMessage(vb, res.Tally)
 
-	if res.Threshold {
+	switch {
+	case res.Threshold:
 		b.finalizeVotebanPassed(vb)
+	case res.ThresholdAgainst:
+		b.finalizeVotebanCancelledByVotes(vb)
 	}
 }
 
@@ -767,6 +812,30 @@ func (b *TelegramBot) finalizeVotebanFailed(vb *models.Voteban) {
 	edit.ParseMode = "HTML"
 	if _, err := b.bot.Send(edit); err != nil {
 		log.Printf("voteban: edit final failed: %v", err)
+	}
+}
+
+// finalizeVotebanCancelledByVotes — голосование отменено достижением порога
+// «против». Цель остаётся в чате, статус cancelled (тот же, что у админ-отмены
+// из UI — отличается только по контексту в логах через CountVotes/Against).
+func (b *TelegramBot) finalizeVotebanCancelledByVotes(vb *models.Voteban) {
+	ok, err := b.moderationService.FinalizeVoteban(vb.Id, models.VotebanStatusCancelled)
+	if err != nil {
+		log.Printf("voteban: finalize-cancelled failed: %v", err)
+		return
+	}
+	if !ok {
+		return
+	}
+
+	tally, _ := b.moderationService.CountVotes(vb.Id)
+	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
+	text := fmt.Sprintf("⚖️ Голосование отменено по голосам «против» (✅ %d / ❌ %d). %s остаётся в чате.",
+		tally.For, tally.Against, targetDisplay(target))
+	edit := tgbotapi.NewEditMessageText(vb.ChatID, vb.PollMessageID, text)
+	edit.ParseMode = "HTML"
+	if _, err := b.bot.Send(edit); err != nil {
+		log.Printf("voteban: edit final cancelled failed: %v", err)
 	}
 }
 

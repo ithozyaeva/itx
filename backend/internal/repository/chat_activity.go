@@ -289,6 +289,18 @@ func (r *ChatActivityRepository) CountUserMessagesInChatSince(chatID, userID int
 	return count, err
 }
 
+// CountActiveAuthorsInChatSince — сколько уникальных авторов написало в чате
+// с момента since. Используется voteban'ом для адаптивного порога: чем
+// активнее чат, тем больше голосов нужно набрать.
+func (r *ChatActivityRepository) CountActiveAuthorsInChatSince(chatID int64, since time.Time) (int64, error) {
+	var count int64
+	err := database.DB.Model(&models.ChatMessage{}).
+		Where("chat_id = ? AND sent_at >= ?", chatID, since).
+		Distinct("telegram_user_id").
+		Count(&count).Error
+	return count, err
+}
+
 // LookupUserIDByUsername ищет telegram_user_id по последнему совпадению
 // telegram_username в указанном чате. Регистронезависимо. 0 = не найдено.
 func (r *ChatActivityRepository) LookupUserIDByUsername(chatID int64, username string) (int64, error) {
