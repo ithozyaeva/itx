@@ -226,10 +226,11 @@ func (s *ModerationService) GetVoteban(id int64) (*models.Voteban, error) {
 
 // CastVoteResult — результат голосования.
 type CastVoteResult struct {
-	Tally    models.VotebanTally
-	Voteban  *models.Voteban
-	Threshold bool // достигнут ли порог "за"
-	Changed   bool // изменился ли голос (false — повторный тот же)
+	Tally            models.VotebanTally
+	Voteban          *models.Voteban
+	Threshold        bool // достигнут ли порог "за" — пора финализировать как passed
+	ThresholdAgainst bool // достигнут ли порог "против" — пора финализировать как cancelled
+	Changed          bool // изменился ли голос (false — повторный тот же)
 }
 
 // CastVote ставит/обновляет голос. Если порог достигнут, возвращает Threshold=true
@@ -263,10 +264,11 @@ func (s *ModerationService) CastVote(votebanID, voterID int64, vote int16) (*Cas
 		return nil, err
 	}
 	return &CastVoteResult{
-		Tally:     tally,
-		Voteban:   v,
-		Threshold: tally.For >= v.RequiredVotes,
-		Changed:   changed,
+		Tally:            tally,
+		Voteban:          v,
+		Threshold:        tally.For >= v.RequiredVotes,
+		ThresholdAgainst: tally.Against >= v.RequiredVotes,
+		Changed:          changed,
 	}, nil
 }
 
