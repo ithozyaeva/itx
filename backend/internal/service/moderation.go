@@ -304,6 +304,11 @@ func (s *ModerationService) LatestVotebanCreatedInChat(chatID int64) (*time.Time
 	return s.repo.LatestVotebanCreatedInChat(chatID)
 }
 
+// FindAnyOpenVotebanInChat — любое открытое голосование в чате.
+func (s *ModerationService) FindAnyOpenVotebanInChat(chatID int64) (*models.Voteban, error) {
+	return s.repo.FindAnyOpenVotebanInChat(chatID)
+}
+
 // LatestVotebanCreatedByInitiator — для cooldown'a по инициатору в чате.
 func (s *ModerationService) LatestVotebanCreatedByInitiator(chatID, initiatorID int64) (*time.Time, error) {
 	return s.repo.LatestVotebanCreatedByInitiator(chatID, initiatorID)
