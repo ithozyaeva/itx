@@ -495,12 +495,32 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	if !b.chatActivityService.IsTrackedChat(message.Chat.ID) {
 		return
 	}
-	if message.ReplyToMessage == nil {
-		b.replyAndAutoDelete(message, "Используйте /voteban в ответ на сообщение нарушителя.")
-		return
+	// Цель — либо автор reply'а, либо @username/id из аргумента.
+	var target *tgbotapi.User
+	if message.ReplyToMessage != nil && message.ReplyToMessage.From != nil {
+		target = message.ReplyToMessage.From
+	} else {
+		args := commandArgs(message)
+		if len(args) == 0 {
+			b.replyAndAutoDelete(message,
+				"Использование: /voteban в ответ на сообщение, или /voteban @username, или /voteban &lt;user_id&gt;.")
+			return
+		}
+		id, _, ok := b.parseTargetFromArg(message.Chat.ID, args[0])
+		if !ok {
+			b.replyAndAutoDelete(message, "Не нашёл такого пользователя в этом чате.")
+			return
+		}
+		username := strings.TrimPrefix(strings.TrimSpace(args[0]), "@")
+		// Если arg был числовой id, username в TrimPrefix останется числом —
+		// это не username, обнуляем чтобы targetDisplay показал «id=…».
+		if _, err := strconv.ParseInt(username, 10, 64); err == nil {
+			username = ""
+		}
+		target = &tgbotapi.User{ID: id, UserName: username}
 	}
-	target := message.ReplyToMessage.From
-	if target == nil || target.IsBot {
+	if target.IsBot || target.ID == b.bot.Self.ID {
+		b.replyAndAutoDelete(message, "На бота голосование не нужно.")
 		return
 	}
 	if target.ID == message.From.ID {
@@ -548,16 +568,26 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	}
 	requiredVotes := computeVotebanThreshold(activeAuthors)
 
-	triggerID := message.ReplyToMessage.MessageID
-	triggerPtr := &triggerID
+	// Триггер — только если был reply: знаем конкретное «вот это сообщение
+	// нарушителя», и при passing удаляем его. В форме /voteban @user
+	// сообщений много / неизвестно какое именно — не удаляем ничего.
+	var triggerPtr *int
+	pollReplyToID := 0
 	chatTitle := message.Chat.Title
+	if message.ReplyToMessage != nil {
+		triggerID := message.ReplyToMessage.MessageID
+		triggerPtr = &triggerID
+		pollReplyToID = triggerID
+	}
 
 	// Сначала отправляем poll-сообщение — нам нужен его MessageID для записи.
 	pollText := b.formatVotebanPoll(target, message.From, models.VotebanTally{}, requiredVotes, time.Duration(votebanWindowSeconds)*time.Second)
 	pollMsg := tgbotapi.NewMessage(message.Chat.ID, pollText)
 	pollMsg.ParseMode = "HTML"
 	pollMsg.DisableWebPagePreview = true
-	pollMsg.ReplyToMessageID = triggerID
+	if pollReplyToID != 0 {
+		pollMsg.ReplyToMessageID = pollReplyToID
+	}
 	// Кнопки добавим после получения id записи (они содержат voteban_id).
 	sent, err := b.bot.Send(pollMsg)
 	if err != nil {
