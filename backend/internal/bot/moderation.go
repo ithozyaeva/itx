@@ -17,11 +17,12 @@ import (
 
 // Параметры голосования по умолчанию.
 const (
-	// Адаптивный порог: required = clamp(round(active_authors_7d * 0.15), MIN, MAX).
+	// Адаптивный порог: required = clamp(round(active_authors_7d * 0.08), MIN, MAX).
 	// Симметричный — те же N голосов нужно для kick'a и для отмены.
-	votebanRequiredVotesPercent = 0.15
+	// В чате на 50 активных = 4, 80 → 6, 100+ → 8 (clamp).
+	votebanRequiredVotesPercent = 0.08
 	votebanRequiredVotesMin     = 3
-	votebanRequiredVotesMax     = 10
+	votebanRequiredVotesMax     = 8
 	// Минимум активных за 7 дней, чтобы /voteban имел смысл — иначе порог 3
 	// упирается в самих участников (инициатор + цель уже двое).
 	votebanMinActiveAuthors = 4
@@ -619,6 +620,17 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		log.Printf("voteban: edit markup failed: %v", err)
 	}
 
+	// Закрепляем сообщение голосования. DisableNotification=true — чтобы не
+	// спамить уведомлением каждому участнику. Если бот не админ или нет
+	// прав — просто логируем и продолжаем (голосование работает и без пина).
+	if _, err := b.bot.Request(tgbotapi.PinChatMessageConfig{
+		ChatID:              message.Chat.ID,
+		MessageID:           sent.MessageID,
+		DisableNotification: true,
+	}); err != nil {
+		log.Printf("voteban: pin failed chat=%d msg=%d: %v", message.Chat.ID, sent.MessageID, err)
+	}
+
 	// Инициатор автоматически голосует «за» — один клик меньше.
 	if res, err := b.moderationService.CastVote(vb.Id, message.From.ID, models.VotebanVoteFor); err == nil {
 		b.refreshVotebanMessage(vb, res.Tally)
@@ -634,6 +646,34 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	b.tryDelete(message.Chat.ID, message.MessageID)
 }
 
+// formatRemainingHuman — «осталось N мин M сек» / «N сек» / «N ч M мин» для
+// произвольной длительности (с округлением до секунды). Отличается от
+// service.FormatDurationHuman, который для «не круглых» значений падает
+// в d.String() (например «13m18.012604577s» в poll-сообщении).
+func formatRemainingHuman(d time.Duration) string {
+	if d <= 0 {
+		return "0с"
+	}
+	d = d.Round(time.Second)
+	h := int(d / time.Hour)
+	m := int((d % time.Hour) / time.Minute)
+	s := int((d % time.Minute) / time.Second)
+	switch {
+	case h > 0:
+		if m == 0 {
+			return fmt.Sprintf("%dч", h)
+		}
+		return fmt.Sprintf("%dч %dм", h, m)
+	case m > 0:
+		if s == 0 {
+			return fmt.Sprintf("%dм", m)
+		}
+		return fmt.Sprintf("%dм %dс", m, s)
+	default:
+		return fmt.Sprintf("%dс", s)
+	}
+}
+
 func (b *TelegramBot) formatVotebanPoll(target, initiator *tgbotapi.User, tally models.VotebanTally, required int, window time.Duration) string {
 	return fmt.Sprintf(
 		"⚖️ <b>Голосование за кик</b>\n\n"+
@@ -644,7 +684,7 @@ func (b *TelegramBot) formatVotebanPoll(target, initiator *tgbotapi.User, tally 
 			"Голосуют участники чата (с активностью за последние 7 дней). Цель не голосует.",
 		targetDisplay(target),
 		targetDisplay(initiator),
-		service.FormatDurationHuman(window),
+		formatRemainingHuman(window),
 		service.FormatDurationHuman(time.Duration(votebanKickSeconds)*time.Second),
 		required,
 		required,
@@ -664,6 +704,34 @@ func (b *TelegramBot) votebanKeyboard(votebanID int64, tally models.VotebanTally
 	)
 }
 
+// unpinVotebanPoll снимает закреп с poll-сообщения голосования. Само
+// сообщение оставляем — оно становится «логом результата» в ленте.
+func (b *TelegramBot) unpinVotebanPoll(vb *models.Voteban) {
+	if _, err := b.bot.Request(tgbotapi.UnpinChatMessageConfig{
+		ChatID:    vb.ChatID,
+		MessageID: vb.PollMessageID,
+	}); err != nil {
+		// «message to unpin not found» — нормально, если уже сняли.
+		if !strings.Contains(err.Error(), "not found") {
+			log.Printf("voteban: unpin chat=%d msg=%d: %v", vb.ChatID, vb.PollMessageID, err)
+		}
+	}
+}
+
+// fetchUserDisplay реконструирует *tgbotapi.User по chat_messages-истории,
+// чтобы targetDisplay() показывал @username/имя, а не «id=...». Имя инициатора
+// в bot_votebans отдельной колонкой не хранится, поэтому ищем по последнему
+// сообщению в этом чате; если ничего не нашли — оставляем только ID.
+func (b *TelegramBot) fetchUserDisplay(chatID, userID int64) *tgbotapi.User {
+	user := &tgbotapi.User{ID: userID}
+	username, firstName, err := b.chatActivityService.LookupDisplayByUserID(chatID, userID)
+	if err == nil {
+		user.UserName = username
+		user.FirstName = firstName
+	}
+	return user
+}
+
 // refreshVotebanMessage обновляет текст и кнопки poll-сообщения с актуальной раскладкой.
 func (b *TelegramBot) refreshVotebanMessage(vb *models.Voteban, tally models.VotebanTally) {
 	target := &tgbotapi.User{
@@ -671,7 +739,7 @@ func (b *TelegramBot) refreshVotebanMessage(vb *models.Voteban, tally models.Vot
 		UserName:  vb.TargetUsername,
 		FirstName: vb.TargetFirstName,
 	}
-	initiator := &tgbotapi.User{ID: vb.InitiatorUserID}
+	initiator := b.fetchUserDisplay(vb.ChatID, vb.InitiatorUserID)
 	window := time.Until(vb.ExpiresAt)
 	if window < 0 {
 		window = 0
@@ -775,6 +843,7 @@ func (b *TelegramBot) finalizeVotebanPassed(vb *models.Voteban) {
 	if !ok {
 		return
 	}
+	b.unpinVotebanPoll(vb)
 
 	until := time.Now().Add(time.Duration(vb.MuteSeconds) * time.Second)
 	if _, err := b.bot.Request(tgbotapi.BanChatMemberConfig{
@@ -826,6 +895,7 @@ func (b *TelegramBot) finalizeVotebanFailed(vb *models.Voteban) {
 	if !ok {
 		return
 	}
+	b.unpinVotebanPoll(vb)
 
 	tally, _ := b.moderationService.CountVotes(vb.Id)
 	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
@@ -850,6 +920,7 @@ func (b *TelegramBot) finalizeVotebanCancelledByVotes(vb *models.Voteban) {
 	if !ok {
 		return
 	}
+	b.unpinVotebanPoll(vb)
 
 	tally, _ := b.moderationService.CountVotes(vb.Id)
 	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
@@ -1318,6 +1389,7 @@ func (b *TelegramBot) revokeVoteban(ev service.ModerationRevokeEvent) {
 		log.Printf("revoke voteban: not found id=%d: %v", ev.VotebanID, err)
 		return
 	}
+	b.unpinVotebanPoll(vb)
 	target := &tgbotapi.User{ID: vb.TargetUserID, UserName: vb.TargetUsername, FirstName: vb.TargetFirstName}
 	text := fmt.Sprintf("⚖️ Голосование отменено админом. %s остаётся в чате.", targetDisplay(target))
 	edit := tgbotapi.NewEditMessageText(vb.ChatID, vb.PollMessageID, text)
