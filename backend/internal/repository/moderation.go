@@ -63,6 +63,23 @@ func (r *ModerationRepository) FindOpenVoteban(chatID, targetUserID int64) (*mod
 	return &v, nil
 }
 
+// FindAnyOpenVotebanInChat — любое открытое голосование в чате (любой target).
+// Используется чтобы запретить параллельные voteban'ы: в чате одновременно
+// идёт максимум одно голосование.
+func (r *ModerationRepository) FindAnyOpenVotebanInChat(chatID int64) (*models.Voteban, error) {
+	var v models.Voteban
+	err := database.DB.Where("chat_id = ? AND status = ?", chatID, models.VotebanStatusOpen).
+		Order("created_at DESC").
+		First(&v).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &v, nil
+}
+
 // CreateVoteban сохраняет новое голосование.
 func (r *ModerationRepository) CreateVoteban(v *models.Voteban) error {
 	return database.DB.Create(v).Error

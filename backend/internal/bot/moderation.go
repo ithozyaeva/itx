@@ -495,12 +495,27 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	if !b.chatActivityService.IsTrackedChat(message.Chat.ID) {
 		return
 	}
-	if message.ReplyToMessage == nil {
-		b.replyAndAutoDelete(message, "Используйте /voteban в ответ на сообщение нарушителя.")
+	// Цель — только @username, чтобы UX был один: «/voteban @user».
+	args := commandArgs(message)
+	if len(args) == 0 {
+		b.replyAndAutoDelete(message, "Использование: /voteban @username")
 		return
 	}
-	target := message.ReplyToMessage.From
-	if target == nil || target.IsBot {
+	rawArg := strings.TrimSpace(args[0])
+	username := strings.TrimPrefix(rawArg, "@")
+	if username == "" || !strings.HasPrefix(rawArg, "@") {
+		b.replyAndAutoDelete(message, "Использование: /voteban @username")
+		return
+	}
+	targetID, err := b.chatActivityService.LookupUserIDByUsername(message.Chat.ID, username)
+	if err != nil || targetID == 0 {
+		b.replyAndAutoDelete(message, "Не нашёл такого пользователя в этом чате.")
+		return
+	}
+	target := &tgbotapi.User{ID: targetID, UserName: username}
+
+	if target.ID == b.bot.Self.ID {
+		b.replyAndAutoDelete(message, "На бота голосование не нужно.")
 		return
 	}
 	if target.ID == message.From.ID {
@@ -513,6 +528,13 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	}
 	if !b.isChatMember(message.Chat.ID, message.From.ID) {
 		// На случай, когда юзер вышел/был удалён, но успел отправить команду.
+		return
+	}
+
+	// В чате одновременно идёт максимум одно голосование (на любого target).
+	if open, _ := b.moderationService.FindAnyOpenVotebanInChat(message.Chat.ID); open != nil {
+		b.replyAndAutoDelete(message,
+			"В чате уже идёт голосование, дождитесь его окончания.")
 		return
 	}
 
@@ -548,8 +570,10 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	}
 	requiredVotes := computeVotebanThreshold(activeAuthors)
 
-	triggerID := message.ReplyToMessage.MessageID
-	triggerPtr := &triggerID
+	// Голосование без триггер-сообщения (форма /voteban @user) — при passing
+	// просто кикаем юзера, ничего не удаляем. Если нужно подчистить —
+	// модератор может сделать /cleanup @user 10m после kick'а.
+	var triggerPtr *int
 	chatTitle := message.Chat.Title
 
 	// Сначала отправляем poll-сообщение — нам нужен его MessageID для записи.
@@ -557,7 +581,6 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 	pollMsg := tgbotapi.NewMessage(message.Chat.ID, pollText)
 	pollMsg.ParseMode = "HTML"
 	pollMsg.DisableWebPagePreview = true
-	pollMsg.ReplyToMessageID = triggerID
 	// Кнопки добавим после получения id записи (они содержат voteban_id).
 	sent, err := b.bot.Send(pollMsg)
 	if err != nil {
