@@ -241,6 +241,11 @@ func (s *ChatActivityService) CountActiveAuthorsInChatSince(chatID int64, since 
 	return s.repo.CountActiveAuthorsInChatSince(chatID, since)
 }
 
+// LookupDisplayByUserID — последние username/first_name юзера в этом чате.
+func (s *ChatActivityService) LookupDisplayByUserID(chatID, userID int64) (string, string, error) {
+	return s.repo.LookupDisplayByUserID(chatID, userID)
+}
+
 // LookupUserIDByUsername ищет telegram_user_id по @username среди сообщений
 // в этом чате. Используется командами модерации, когда есть только @username
 // (например, /unban @user). 0 — не найден.

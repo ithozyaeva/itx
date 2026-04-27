@@ -301,6 +301,23 @@ func (r *ChatActivityRepository) CountActiveAuthorsInChatSince(chatID int64, sin
 	return count, err
 }
 
+// LookupDisplayByUserID — последний username/first_name юзера в этом чате.
+// Используется voteban'ом для восстановления display-имени по telegram_user_id
+// (не сохраняем в bot_votebans отдельной колонкой — берём из истории сообщений).
+func (r *ChatActivityRepository) LookupDisplayByUserID(chatID, userID int64) (username, firstName string, err error) {
+	var row struct {
+		TelegramUsername  string
+		TelegramFirstName string
+	}
+	err = database.DB.Model(&models.ChatMessage{}).
+		Select("telegram_username, telegram_first_name").
+		Where("chat_id = ? AND telegram_user_id = ?", chatID, userID).
+		Order("sent_at DESC").
+		Limit(1).
+		Scan(&row).Error
+	return row.TelegramUsername, row.TelegramFirstName, err
+}
+
 // LookupUserIDByUsername ищет telegram_user_id по последнему совпадению
 // telegram_username в указанном чате. Регистронезависимо. 0 = не найдено.
 func (r *ChatActivityRepository) LookupUserIDByUsername(chatID int64, username string) (int64, error) {
