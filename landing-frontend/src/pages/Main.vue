@@ -54,8 +54,8 @@ const structuredData = computed(() => [
   <StructuredData :data="structuredData" />
   <PromoteSection />
   <WhySection />
+  <TariffSection />
   <MentorsSection />
   <CalendarSection />
-  <TariffSection />
   <FAQSection />
 </template>

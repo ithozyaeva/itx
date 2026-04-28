@@ -38,64 +38,66 @@ function handleBackdropClick(event: MouseEvent) {
 </script>
 
 <template>
-  <Transition name="modal-fade">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm p-4 sm:p-6"
-      @click="handleBackdropClick"
-    >
-      <Transition name="modal-scale">
-        <div
-          v-if="isOpen"
-          class="bg-[#1D2723] rounded-3xl border-2 border-[#2B3D36] p-5 sm:p-9 w-full max-w-3xl relative shadow-xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto"
-        >
-          <button
-            class="absolute right-3 top-3 cursor-pointer hover:opacity-75 transition-opacity"
-            @click="handleClose"
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div
+        v-if="isOpen"
+        class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm p-4 sm:p-6"
+        @click="handleBackdropClick"
+      >
+        <Transition name="modal-scale">
+          <div
+            v-if="isOpen"
+            class="bg-[#1D2723] rounded-3xl border-2 border-[#2B3D36] p-5 sm:p-9 w-full max-w-3xl relative shadow-xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto"
           >
-            <CloseIcon
-              class="h-6 w-6 sm:h-8 sm:w-8"
-            />
-          </button>
-
-          <p
-            class="mb-3 pr-8 text-accent font-display uppercase font-semibold tracking-[0.04em] leading-tight text-lg sm:text-2xl"
-          >
-            Согласие на обработку персональных данных
-          </p>
-
-          <div class="mb-5 sm:mb-7">
-            <p class="font-sans font-medium leading-[1.4] text-sm sm:text-base md:text-lg">
-              Нажимая на кнопку "Принять", Вы соглашаетесь с
-              <a
-                href="/privacy"
-                target="_blank"
-                class="text-accent underline cursor-pointer hover:text-accent/75 transition-colors"
-              >
-                политикой конфиденциальности
-              </a>
-              и даёте согласие на обработку персональных данных согласно Федеральному закону №152-ФЗ.
-            </p>
-          </div>
-
-          <div class="flex flex-col-reverse sm:flex-row justify-start gap-3 sm:gap-5">
-            <Button
-              variant="stroke"
+            <button
+              class="absolute right-3 top-3 cursor-pointer hover:opacity-75 transition-opacity"
               @click="handleClose"
             >
-              Отклонить
-            </Button>
-            <Button
-              variant="filled"
-              @click="handleConfirmed"
+              <CloseIcon
+                class="h-6 w-6 sm:h-8 sm:w-8"
+              />
+            </button>
+
+            <p
+              class="mb-3 pr-8 text-accent font-display uppercase font-semibold tracking-[0.04em] leading-tight text-lg sm:text-2xl"
             >
-              Принять
-            </Button>
+              Согласие на обработку персональных данных
+            </p>
+
+            <div class="mb-5 sm:mb-7">
+              <p class="font-sans font-medium leading-[1.4] text-sm sm:text-base md:text-lg">
+                Нажимая на кнопку "Принять", Вы соглашаетесь с
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  class="text-accent underline cursor-pointer hover:text-accent/75 transition-colors"
+                >
+                  политикой конфиденциальности
+                </a>
+                и даёте согласие на обработку персональных данных согласно Федеральному закону №152-ФЗ.
+              </p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row justify-start gap-3 sm:gap-5">
+              <Button
+                variant="stroke"
+                @click="handleClose"
+              >
+                Отклонить
+              </Button>
+              <Button
+                variant="filled"
+                @click="handleConfirmed"
+              >
+                Принять
+              </Button>
+            </div>
           </div>
-        </div>
-      </Transition>
-    </div>
-  </Transition>
+        </Transition>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
