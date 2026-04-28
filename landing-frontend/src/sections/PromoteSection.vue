@@ -2,6 +2,7 @@
 import type { TelegramUser } from '@/services/auth.ts'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
+import HeroConstellation from '@/components/HeroConstellation.vue'
 import TelegramAuth from '@/components/TelegramAuth.vue'
 import Button from '@/components/ui/UiButton.vue'
 import { useCountUp } from '@/composables/useCountUp'
@@ -22,6 +23,12 @@ function trackPlatformClick() {
   yandexMetrika.reachGoal('platform_redirect_click', {
     location: 'promote_section',
     isAuthenticated: !!tgUser.value,
+  } as any)
+}
+
+function trackHeroPricingClick() {
+  yandexMetrika.reachGoal('pricing_teaser_click', {
+    location: 'hero',
   } as any)
 }
 
@@ -121,20 +128,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
       class="pointer-events-none absolute inset-0 opacity-[0.12]"
       style="background-image: radial-gradient(circle at 80% 30%, hsl(var(--accent)) 0, transparent 55%), radial-gradient(circle at 20% 80%, #ffb547 0, transparent 45%);"
     />
-    <div
-      aria-hidden="true"
-      class="pointer-events-none absolute top-[18%] right-[6%] hidden lg:block crosshair-spin"
-    >
-      <div class="w-[520px] h-[520px] rounded-full border border-accent/10">
-        <div class="absolute inset-8 rounded-full border border-accent/15 crosshair-spin-reverse" />
-        <div class="absolute inset-20 rounded-full border border-accent/20" />
-        <div class="absolute inset-32 rounded-full border border-accent/25 crosshair-spin-reverse" />
-        <div class="absolute top-1/2 left-0 right-0 h-px bg-accent/20" />
-        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-accent/20" />
-        <!-- Scanning dot -->
-        <div class="absolute w-2 h-2 bg-accent rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_12px_hsl(var(--accent))] scan-dot" />
-      </div>
-    </div>
+    <HeroConstellation />
 
     <!-- Terminal status bar -->
     <div
@@ -229,12 +223,13 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
             </Button>
           </div>
           <a
-            href="#why"
-            class="font-mono text-xs md:text-sm text-foreground/50 hover:text-accent transition-colors flex items-center gap-2 group"
+            href="#tariffs"
+            class="font-mono text-xs md:text-sm text-foreground/60 hover:text-accent transition-colors flex items-center gap-2 group"
+            @click="trackHeroPricingClick"
           >
             <span class="text-accent group-hover:animate-pulse">$</span>
-            <span>./листать_вниз --подробнее</span>
-            <span class="inline-block transition-transform group-hover:translate-y-0.5">↓</span>
+            <span>./тарифы --от_520₽</span>
+            <span class="inline-block transition-transform group-hover:translate-x-0.5">→</span>
           </a>
         </div>
 
@@ -301,27 +296,5 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
 }
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-}
-
-/* Crosshair slow spin */
-.crosshair-spin {
-  animation: spin-slow 90s linear infinite;
-}
-.crosshair-spin-reverse {
-  animation: spin-slow 60s linear infinite reverse;
-}
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-
-/* Scanning dot on crosshair */
-.scan-dot {
-  animation: scan-orbit 4s ease-in-out infinite;
-}
-@keyframes scan-orbit {
-  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
-  25% { transform: translate(-50%, -50%) translate(80px, -80px); }
-  50% { transform: translate(-50%, -50%) translate(0, -120px); }
-  75% { transform: translate(-50%, -50%) translate(-80px, -40px); }
 }
 </style>
