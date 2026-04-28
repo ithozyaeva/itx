@@ -11,10 +11,10 @@ import Button from '@/components/ui/Button.vue'
       <div class="flex flex-col items-center justify-center space-y-4 text-center">
         <div>
           <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-2">
-            Готовы стать IT-ХОЗЯИНОМ?
+            Готовы стать ХОЗЯИНОМ?
           </h2>
           <p class="mx-auto max-w-[700px] text-primary-foreground/80 md:text-xl mb-4">
-            Присоединяйтесь к IT-сообществу 250+ специалистов — менторство, вайбкодинг, AI-практики, нетворкинг, подготовка к собеседованиям и еженедельные встречи. Подписка от 520 ₽/мес.
+            Присоединяйтесь к ИТ-сообществу 250+ специалистов — менторство, вайбкодинг, ИИ-практики, нетворкинг, подготовка к собеседованиям и еженедельные встречи. Подписка от 520 ₽/мес.
           </p>
         </div>
         <div class="w-full max-w-sm text-black">

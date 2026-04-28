@@ -51,7 +51,7 @@ function trackJointimerClick() {
 
         <h2 class="reveal font-display uppercase text-[38px] sm:text-[56px] md:text-[80px] lg:text-[104px] leading-[0.9] tracking-tight text-[#0b0d0c]">
           Стань<br>
-          <span class="text-[#0b0d0c]/50">IT-хозяином</span>
+          <span class="text-[#0b0d0c]/50">хозяином</span>
         </h2>
 
         <div class="mt-8 md:mt-12 flex flex-col md:flex-row md:items-center gap-5 md:gap-8">

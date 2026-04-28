@@ -27,10 +27,10 @@ function trackPlatformClick() {
 
 const phrases = [
   'менторство_',
-  'vibe_coding_',
-  'AI-практики_',
+  'вайбкодинг_',
+  'ИИ-практики_',
   'нетворкинг_',
-  'собесы_',
+  'собеседования_',
 ]
 const typed = ref('')
 const phraseIdx = ref(0)
@@ -145,13 +145,13 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
         <div class="flex items-center gap-4 md:gap-6">
           <div class="flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] animate-pulse" />
-            <span class="text-accent">ONLINE</span>
+            <span class="text-accent">ОНЛАЙН</span>
           </div>
           <span class="hidden sm:inline">uptime: <span class="text-foreground/80 tabular-nums">{{ uptime }}</span></span>
           <span class="hidden md:inline">v4.2.1</span>
         </div>
         <div class="flex items-center gap-4 md:gap-6">
-          <span class="hidden sm:inline">250+ users</span>
+          <span class="hidden sm:inline">250+ участников</span>
           <span>msk/ru</span>
         </div>
       </div>
@@ -166,7 +166,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
           :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
         >
           <span class="text-accent">community@ithozyaeva</span>:<span class="text-term-amber">~</span>$
-          <span class="text-foreground/80">./welcome --new-user</span>
+          <span class="text-foreground/80">./добро_пожаловать --новый пользователь</span>
         </div>
 
         <!-- Main title with glitch -->
@@ -194,14 +194,14 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
 
           <div class="mt-5 md:mt-7 font-mono text-sm md:text-base text-foreground/75 flex flex-wrap items-center gap-x-2">
             <span class="text-accent/60">&gt;&gt;</span>
-            <span class="text-foreground/60">exec:</span>
+            <span class="text-foreground/60">запуск:</span>
             <span class="text-term-amber min-w-[1ch]">{{ typed }}</span>
             <span class="inline-block w-[0.6ch] h-[1.1em] bg-term-amber align-middle animate-type-caret" />
           </div>
 
           <p class="mt-4 md:mt-5 text-base md:text-lg text-foreground/70 leading-relaxed max-w-2xl">
-            250+ специалистов из Яндекса, Tinkoff, VK и стартапов.
-            Менторство, AI, нетворкинг и подготовка к собеседованиям.
+            250+ специалистов из Яндекса, Тинькофф, VK и стартапов.
+            Менторство, ИИ, нетворкинг и подготовка к собеседованиям.
           </p>
         </div>
 
@@ -233,7 +233,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
             class="font-mono text-xs md:text-sm text-foreground/50 hover:text-accent transition-colors flex items-center gap-2 group"
           >
             <span class="text-accent group-hover:animate-pulse">$</span>
-            <span>./scroll-down --see-more</span>
+            <span>./листать_вниз --подробнее</span>
             <span class="inline-block transition-transform group-hover:translate-y-0.5">↓</span>
           </a>
         </div>
@@ -264,7 +264,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
               {{ stat3.value.value }}×
             </div>
             <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
-              встреч в мес.
+              встреч в месяц.
             </div>
           </div>
         </div>

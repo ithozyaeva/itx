@@ -8,7 +8,7 @@ useRevealObserver()
 
 usePageMeta({
   title: 'Вайбкодинг (vibe coding) — что это, как научиться и где практиковать',
-  description: 'Вайбкодинг — разработка в паре с LLM, где программист описывает результат, а код пишет и правит AI. Разбираем термин, инструменты (Cursor, Claude Code, Windsurf), практики и где освоить в IT-сообществе.',
+  description: 'Вайбкодинг — разработка в паре с языковой ИИ-моделью (LLM), где программист описывает результат, а код пишет и правит ИИ. Разбираем термин, инструменты (Cursor, Claude Code, Windsurf), практики и где освоить в ИТ-сообществе.',
   url: 'https://ithozyaeva.ru/vibe-coding',
   type: 'article',
 })
@@ -26,7 +26,7 @@ const structuredData = [
     '@context': 'https://schema.org',
     '@type': 'Article',
     'headline': 'Вайбкодинг (vibe coding) — что это, как научиться и где практиковать',
-    'description': 'Разбор термина vibe coding, инструменты и практики разработки в паре с AI.',
+    'description': 'Разбор термина «вайбкодинг» (vibe coding), инструменты и практики разработки в паре с ИИ.',
     'author': { '@type': 'Organization', 'name': 'IT-ХОЗЯЕВА', 'url': 'https://ithozyaeva.ru' },
     'publisher': {
       '@type': 'Organization',
