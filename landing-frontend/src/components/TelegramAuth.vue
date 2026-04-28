@@ -60,7 +60,7 @@ function handleClick() {
       class="h-full"
       @click="handleClick"
     >
-      <slot>Стать IT-хозяином</slot>
+      <slot>Стать Хозяином</slot>
     </Button>
   </div>
   <ConfirmServiceModal

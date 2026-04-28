@@ -59,11 +59,11 @@ const discount = computed(() => {
         class="flex items-center justify-between font-mono text-[11px] tracking-[0.1em] uppercase mb-4"
         :class="variant === 'highlighted' ? 'text-[#0b0d0c]/70' : 'text-foreground/50'"
       >
-        <span>[ tier.{{ tierIndex }} ]</span>
+        <span>[ уровень.{{ tierIndex }} ]</span>
         <span
           v-if="variant === 'highlighted'"
           class="px-2 py-0.5 bg-[#0b0d0c] text-accent"
-        >recommended</span>
+        >выбор</span>
         <span v-else-if="tierLabel">{{ tierLabel }}</span>
       </div>
       <h3

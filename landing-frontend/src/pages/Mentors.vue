@@ -7,8 +7,8 @@ import MentorsSection from '@/sections/MentorsSection.vue'
 useRevealObserver()
 
 usePageMeta({
-  title: 'База менторов — senior-разработчики, AI-инженеры, тимлиды',
-  description: 'База из 60+ IT-менторов: senior-разработчики, тимлиды, архитекторы и AI-инженеры из Яндекса, Tinkoff, VK. Помогают с карьерой, сменой грейда, переходом в AI и подготовкой к собеседованиям.',
+  title: 'База менторов — старшие разработчики, ИИ-инженеры, тимлиды',
+  description: 'База из 60+ ИТ-менторов: старшие (senior) разработчики, тимлиды, архитекторы и ИИ-инженеры из Яндекса, Тинькофф, VK. Помогают с карьерой, сменой уровня, переходом в ИИ и подготовкой к собеседованиям.',
   url: 'https://ithozyaeva.ru/mentors',
   type: 'website',
 })
@@ -19,16 +19,16 @@ const structuredData = [
     '@type': 'BreadcrumbList',
     'itemListElement': [
       { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': 'https://ithozyaeva.ru/' },
-      { '@type': 'ListItem', 'position': 2, 'name': 'Менторы', 'item': 'https://ithozyaeva.ru/mentors' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Наставники', 'item': 'https://ithozyaeva.ru/mentors' },
     ],
   },
   {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    'serviceType': 'Менторство в IT',
+    'serviceType': 'Наставничество в ИТ',
     'provider': { '@type': 'Organization', 'name': 'IT-ХОЗЯЕВА', 'url': 'https://ithozyaeva.ru' },
     'areaServed': { '@type': 'Country', 'name': 'Россия' },
-    'description': 'Индивидуальные консультации с senior-разработчиками, архитекторами и AI-инженерами. Карьерное менторство, ревью резюме, подготовка к собеседованиям, смена грейда, переход в AI.',
+    'description': 'Индивидуальные консультации со старшими разработчиками, архитекторами и ИИ-инженерами. Карьерное менторство, разбор резюме, подготовка к собеседованиям, смена уровня, переход в ИИ.',
     'offers': {
       '@type': 'Offer',
       'priceCurrency': 'RUB',
@@ -60,9 +60,9 @@ const structuredData = [
           База менторов
         </h1>
         <p class="mt-6 md:mt-8 text-base md:text-lg text-foreground/75 leading-relaxed max-w-3xl">
-          60+ IT-менторов: senior-разработчики, тимлиды, архитекторы и AI-инженеры из топовых российских IT-компаний —
-          Яндекс, Tinkoff, VK, Ozon, Сбер, Kaspersky, JetBrains. Помогаем расти по грейду, сменить направление, подготовиться
-          к собеседованию и разобраться в AI и вайбкодинге.
+          60+ ИТ-менторов: старшие разработчики, тимлиды, архитекторы и ИИ-инженеры из топовых российских ИТ-компаний —
+          Яндекс, Тинькофф, VK, Ozon, Сбер, Kaspersky, JetBrains. Помогаем расти по уровням, сменить направление, подготовиться
+          к собеседованию и разобраться в ИИ и вайбкодинге.
         </p>
 
         <div class="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-3 gap-px bg-accent/15 border border-accent/15">
@@ -71,7 +71,7 @@ const structuredData = [
               Кто в базе
             </h2>
             <p class="text-sm md:text-base text-foreground/70 leading-relaxed">
-              Senior и lead разработчики, архитекторы, AI-инженеры, DevOps, QA-лиды. Ребята, которые реально собеседуют
+              Старшие и ведущие разработчики, архитекторы, ИИ-инженеры, DevOps-инженеры, руководители тестирования. Ребята, которые реально собеседуют
               и принимают в топовых командах.
             </p>
           </div>
@@ -80,8 +80,8 @@ const structuredData = [
               С чем помогают
             </h2>
             <p class="text-sm md:text-base text-foreground/70 leading-relaxed">
-              Карьерное планирование, ревью резюме, мок-интервью, подготовка к системному дизайну, разбор PR, переход
-              в AI-разработку, смена стека.
+              Карьерное планирование, разбор резюме, тренировочные собеседования, подготовка к системному дизайну, разбор пул-реквестов, переход
+              в ИИ-разработку, смена стека.
             </p>
           </div>
           <div class="bg-background/95 p-6 md:p-7">

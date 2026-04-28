@@ -2,7 +2,7 @@ import { useHead, useSeoMeta } from '@unhead/vue'
 
 const SITE_BASE = {
   name: 'IT-ХОЗЯЕВА',
-  description: 'IT-сообщество на стыке технологий и AI: менторство, вайбкодинг, нетворкинг. Ценим опыт, юмор и профессионализм',
+  description: 'ИТ-сообщество на стыке технологий и ИИ: менторство, вайбкодинг, нетворкинг. Ценим опыт, юмор и профессионализм',
   url: 'https://ithozyaeva.ru',
   image: 'https://ithozyaeva.ru/og-image.png',
   locale: 'ru_RU',
