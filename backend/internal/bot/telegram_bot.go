@@ -491,7 +491,20 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 			return
 		}
 		username := strings.TrimPrefix(args, "@")
-		member, err = b.member.GetByUsername(username)
+
+		// Сначала резолвим @username → Telegram ID через API: пользователь
+		// мог сменить username на платформе или в Telegram, и поиск по
+		// строке username в БД даст не того человека (как @durov у разных
+		// аккаунтов). Поиск по tgid — единственный надёжный ключ.
+		if chat, chatErr := b.bot.GetChat(tgbotapi.ChatInfoConfig{
+			ChatConfig: tgbotapi.ChatConfig{SuperGroupUsername: "@" + username},
+		}); chatErr == nil && chat.ID != 0 {
+			member, err = b.member.GetByTelegramID(chat.ID)
+		} else {
+			// Fallback: getChat недоступен (приватный аккаунт или нет
+			// общего контекста с ботом) — ищем по username в БД.
+			member, err = b.member.GetByUsername(username)
+		}
 	}
 
 	if err != nil || member == nil {
