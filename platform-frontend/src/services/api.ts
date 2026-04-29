@@ -42,14 +42,16 @@ export const apiClient = ky.create({
         return response
 
       // Backend гейтит премиум-эндпоинты для UNSUBSCRIBER через 403
-      // {"error":"subscription_required","redirect":"/tariffs"}.
-      // Перебрасываем юзера на страницу тарифов, чтобы видел путь к оплате.
+      // {"error":"subscription_required","redirect":"/"}.
+      // Уводим юзера на главную, где есть teaser «Открой полный доступ» —
+      // лобовое приземление на /tariffs из любого экрана воспринимается как
+      // принудительная продажа, особенно если пришли по ссылке из бота.
       if (response.status === 403) {
         try {
           const body = await response.clone().json() as { error?: string, redirect?: string }
           if (body?.error === 'subscription_required') {
             const router = (await import('@/router')).default
-            const target = body.redirect || '/tariffs'
+            const target = body.redirect || '/'
             if (router.currentRoute.value.path !== target) {
               router.push(target)
             }

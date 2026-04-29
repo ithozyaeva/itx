@@ -288,6 +288,11 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	mentors := protected.Group("/mentors")
 	mentors.Get("/:id", mentorsHandler.GetById)
 
+	// Публичная карточка участника — открыта всем авторизованным. Юзер,
+	// перешедший по ссылке /members/:id из /whois в боте, не должен
+	// упираться в гейт подписки и улетать на /tariffs прямо с профиля.
+	members.Get("/:id", memberHandler.GetPublicProfile)
+
 	// Уведомления и их настройки — нужны и UNSUBSCRIBER'у (например, подписка
 	// истекла → push-уведомление, или анонс снижения цены).
 	notificationHandler := handler.NewNotificationHandler()
@@ -313,10 +318,6 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	protected.Post("/feedback", feedbackHandler.Create)
 
 	// --- subscribed (только для подписчиков) ---
-
-	// Публичный профиль другого участника — глубокая витрина за подпиской.
-	subscribedMembers := subscribed.Group("/members")
-	subscribedMembers.Get("/:id", memberHandler.GetPublicProfile)
 
 	// Контакт ментора (отзыв) — write-эндпоинт.
 	subscribedMentors := subscribed.Group("/mentors")

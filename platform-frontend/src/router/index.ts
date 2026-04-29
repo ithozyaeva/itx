@@ -24,16 +24,19 @@ import Resumes from '@/pages/Resumes.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
 
-// requiresSubscription: true — UNSUBSCRIBER редиректится на /tariffs.
+// requiresSubscription: true — UNSUBSCRIBER редиректится на главную.
+// Главная сама показывает teaser «Открой полный доступ» с кнопкой на /tariffs,
+// в отличие от лобового приземления на витрину тарифов из любого
+// гейтнутого роута.
 // Открытые для UNSUBSCRIBER (преимущественно «прогрев»): /, /me, /mentors,
-// /mentors/:id, /faq, /tariffs.
+// /mentors/:id, /members/:id, /faq, /tariffs.
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Dashboard, name: 'dashboard' },
   { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
   { path: '/tariffs', name: 'tariffs', component: () => import('@/pages/Tariffs.vue'), meta: { breadcrumb: [{ label: 'Тарифы' }] } },
   { path: '/events', component: Events, name: 'events', meta: { breadcrumb: [{ label: 'События' }], requiresSubscription: true } },
   { path: '/content', redirect: '/events?tab=content' },
-  { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { breadcrumb: [{ label: 'Рейтинг', to: '/leaderboard' }, { label: 'Профиль участника' }], requiresSubscription: true } },
+  { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { breadcrumb: [{ label: 'Рейтинг', to: '/leaderboard' }, { label: 'Профиль участника' }] } },
   { path: '/mentors', component: Mentors, name: 'mentors', meta: { breadcrumb: [{ label: 'Менторы' }] } },
   { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile', meta: { breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
   { path: '/referals', component: ReferalLinks, name: 'referals', meta: { breadcrumb: [{ label: 'Рефералы' }], requiresSubscription: true } },
@@ -62,8 +65,10 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const subscribed = isUserSubscribed().value
+  // UNSUBSCRIBER на гейтнутом роуте → дашборд. Дашборд сам рендерит
+  // subscription-teaser, оттуда юзер сам идёт на /tariffs.
   if (to.meta.requiresSubscription && !subscribed) {
-    return { name: 'tariffs' }
+    return { name: 'dashboard' }
   }
   // /tariffs — витрина для UNSUBSCRIBER. Подписчику тут делать нечего,
   // отправляем на главную (Sidebar этот пункт у него и так скрывает).

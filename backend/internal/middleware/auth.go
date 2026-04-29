@@ -147,9 +147,13 @@ func (m *AuthMiddleware) RequireSubscription(c *fiber.Ctx) error {
 
 	user, err := m.subscriptionRepo.GetUser(member.TelegramID)
 	if err != nil || user == nil || user.EffectiveTierID() == nil {
+		// Кидаем на главную: на дашборде есть мягкий subscription-teaser,
+		// а лобовое падение на /tariffs из любого премиум-эндпоинта (особенно
+		// при переходе из бота по /members/:id) даёт ощущение «бот меня
+		// продаёт» и сбивает контекст.
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error":    "subscription_required",
-			"redirect": "/tariffs",
+			"redirect": "/",
 		})
 	}
 
