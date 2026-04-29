@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -536,9 +537,11 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		builder.WriteString(fmt.Sprintf("\n💼 %s", strings.Join(parts, " · ")))
 	}
 
-	// Био
+	// Био — единственное поле, где пользователь может вставлять Telegram-разметку
+	// (<b>, <i>, <code>, <a href> и т.д.). Остальное — структурированные поля,
+	// рендерим как plain text.
 	if member.Bio != "" {
-		builder.WriteString(fmt.Sprintf("\n📝 %s\n", html.EscapeString(member.Bio)))
+		builder.WriteString(fmt.Sprintf("\n📝 %s\n", sanitizeTelegramHTML(member.Bio)))
 	}
 
 	// Давность участия
@@ -1691,6 +1694,45 @@ func (b *TelegramBot) checkRepeatingEventOccurrences(event *models.Event, now ti
 
 func (b *TelegramBot) getReminderInterval() time.Duration {
 	return time.Duration(config.CFG.AlertReminderIntervalMinutes) * time.Minute
+}
+
+// telegramSafeTags — парные HTML-теги, которые Telegram поддерживает в
+// ParseMode=HTML без атрибутов. Атрибуты (a href, blockquote expandable,
+// pre code class) обрабатываем отдельно.
+var telegramSafeTags = []string{
+	"b", "strong",
+	"i", "em",
+	"u", "ins",
+	"s", "strike", "del",
+	"tg-spoiler",
+	"code", "pre",
+	"blockquote",
+}
+
+// telegramAnchorRe матчит пару <a href="URL">...</a> целиком в уже
+// эскейпнутой строке. Берём именно пару, чтобы орфанный </a> или
+// открывающий тег с лишними атрибутами не «разэкранировались» по половинке
+// и не сломали парсинг.
+var telegramAnchorRe = regexp.MustCompile(`&lt;a href=&#34;((?:https?|tg|mailto):[^\s"<>]+?)&#34;&gt;(.*?)&lt;/a&gt;`)
+
+// telegramPreCodeRe — <code class="language-XYZ"> внутри <pre> для подсветки.
+var telegramPreCodeRe = regexp.MustCompile(`&lt;code class=&#34;language-([a-zA-Z0-9_+\-]+)&#34;&gt;`)
+
+// sanitizeTelegramHTML экранирует строку для ParseMode=HTML и затем
+// «разэкранирует» только теги, которые Telegram умеет парсить. Это даёт
+// нам два качества: <b>жирный</b> в био рендерится форматированием, а
+// произвольные теги вроде <script> остаются текстом и не валят отправку
+// сообщения с can't parse entities.
+func sanitizeTelegramHTML(s string) string {
+	out := html.EscapeString(s)
+	for _, tag := range telegramSafeTags {
+		out = strings.ReplaceAll(out, "&lt;"+tag+"&gt;", "<"+tag+">")
+		out = strings.ReplaceAll(out, "&lt;/"+tag+"&gt;", "</"+tag+">")
+	}
+	out = strings.ReplaceAll(out, "&lt;blockquote expandable&gt;", "<blockquote expandable>")
+	out = telegramAnchorRe.ReplaceAllString(out, `<a href="$1">$2</a>`)
+	out = telegramPreCodeRe.ReplaceAllString(out, `<code class="language-$1">`)
+	return out
 }
 
 // isTelegramBlockedError возвращает true, если Telegram сообщает, что
