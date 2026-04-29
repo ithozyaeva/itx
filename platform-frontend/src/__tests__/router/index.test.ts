@@ -141,6 +141,38 @@ describe('router', () => {
       localStorage.removeItem('tg_user:v2')
     })
 
+    it('redirects ADMIN without subscription tier away from /tariffs', async () => {
+      // У админа subscriptionTier обычно null, но он не должен видеть
+      // витрину тарифов: ему уровень в UI отдаётся как King.
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: { id: 1, telegramID: 1, roles: ['ADMIN'] },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push('/tariffs')
+      await r.isReady()
+      expect(r.currentRoute.value.name).toBe('dashboard')
+      localStorage.removeItem('tg_user:v2')
+    })
+
+    it('redirects MENTOR without subscription tier away from /tariffs', async () => {
+      // MENTOR без оплаченного tier — getSubscriptionLevel = «Хозяин»,
+      // ему /tariffs тоже бесполезна.
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: { id: 1, telegramID: 1, roles: ['MENTOR'] },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push('/tariffs')
+      await r.isReady()
+      expect(r.currentRoute.value.name).toBe('dashboard')
+      localStorage.removeItem('tg_user:v2')
+    })
+
     it('allows UNSUBSCRIBER to view /tariffs', async () => {
       // tg_user без subscriptionTier — UNSUBSCRIBER в новой логике.
       localStorage.setItem('tg_user:v2', JSON.stringify({
