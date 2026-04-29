@@ -20,8 +20,6 @@ server {
   ssl_protocols TLSv1.2 TLSv1.3;
   ssl_prefer_server_ciphers off;
 
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
   return 301 https://${DOMAIN}$request_uri;
 }
 
@@ -46,8 +44,6 @@ server {
 
   ssl_protocols TLSv1.2 TLSv1.3;
   ssl_prefer_server_ciphers off;
-
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
   location /api/ {
     proxy_pass http://${BACKEND_CONTAINER}:3000;
