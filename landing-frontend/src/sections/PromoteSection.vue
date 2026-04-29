@@ -120,7 +120,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
 
 <template>
   <section
-    class="relative w-full min-h-[100svh] md:min-h-[calc(100svh-var(--header-height))] flex flex-col justify-between overflow-hidden"
+    class="relative w-full md:min-h-[calc(100svh-var(--header-height))] flex flex-col md:justify-between overflow-hidden"
   >
     <!-- Decorative grid / crosshair -->
     <div
@@ -136,31 +136,47 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
       :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'"
     >
       <div class="flex items-center justify-between font-mono text-[11px] md:text-xs tracking-[0.08em] text-foreground/50">
-        <div class="flex items-center gap-4 md:gap-6">
+        <div class="flex items-center gap-3 md:gap-6">
           <div class="flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] animate-pulse" />
             <span class="text-accent">ОНЛАЙН</span>
           </div>
-          <span class="hidden sm:inline">uptime: <span class="text-foreground/80 tabular-nums">{{ uptime }}</span></span>
+          <span class="flex items-center gap-1">
+            <span class="text-accent/40">↑</span>
+            <span class="text-foreground/70 tabular-nums">{{ uptime }}</span>
+          </span>
           <span class="hidden md:inline">v4.2.1</span>
         </div>
-        <div class="flex items-center gap-4 md:gap-6">
+        <div class="flex items-center gap-3 md:gap-6">
           <span class="hidden sm:inline">250+ участников</span>
-          <span>msk/ru</span>
+          <span class="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              class="signal-bars"
+            >
+              <span /><span /><span /><span />
+            </span>
+            <span>msk/ru</span>
+          </span>
         </div>
       </div>
     </div>
 
     <!-- Main hero content -->
-    <div class="container px-6 md:px-10 flex-1 flex items-center py-12 md:py-16 relative z-10">
+    <div class="container px-6 md:px-10 md:flex-1 md:flex md:items-center pt-10 pb-10 md:py-16 relative z-10">
       <div class="w-full max-w-5xl">
         <!-- Prompt line -->
         <div
           class="font-mono text-xs md:text-sm text-foreground/50 mb-5 md:mb-6 transition-all duration-700 delay-100"
           :class="heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
         >
-          <span class="text-accent">community@ithozyaeva</span>:<span class="text-term-amber">~</span>$
-          <span class="text-foreground/80">./добро_пожаловать --новый пользователь</span>
+          <div>
+            <span class="text-accent">community@ithozyaeva</span>:<span class="text-term-amber">~</span>$
+            <span class="text-foreground/80">./добро_пожаловать<span class="hidden md:inline"> --новый пользователь</span><span class="md:hidden text-foreground/30"> \</span></span>
+          </div>
+          <div class="md:hidden mt-1 text-foreground/80">
+            <span class="text-foreground/30">&gt;</span> --новый пользователь
+          </div>
         </div>
 
         <!-- Main title with glitch -->
@@ -263,6 +279,17 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
             </div>
           </div>
         </div>
+
+        <!-- Mobile scroll cue (terminal-flavored) -->
+        <a
+          href="#why"
+          class="md:hidden mt-7 flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/40 group"
+        >
+          <span class="text-accent/60">$</span>
+          <span class="text-foreground/60">./след_секция</span>
+          <span class="text-accent inline-block animate-bounce-soft">↓</span>
+          <span class="flex-1 border-t border-dashed border-accent/15 ml-1" />
+        </a>
       </div>
     </div>
 
@@ -296,5 +323,40 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
 }
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Cellular-style signal bars in status bar */
+.signal-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 0.7em;
+}
+.signal-bars > span {
+  display: block;
+  width: 2px;
+  background: hsl(var(--accent));
+  opacity: 0.85;
+  border-radius: 1px;
+}
+.signal-bars > span:nth-child(1) { height: 25%; }
+.signal-bars > span:nth-child(2) { height: 50%; }
+.signal-bars > span:nth-child(3) { height: 75%; }
+.signal-bars > span:nth-child(4) { height: 100%; opacity: 0.35; }
+.signal-bars > span:nth-child(4) {
+  animation: signal-pulse 2.4s ease-in-out infinite;
+}
+@keyframes signal-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
+/* Soft bounce for mobile scroll cue */
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+.animate-bounce-soft {
+  animation: bounce-soft 1.8s ease-in-out infinite;
 }
 </style>
