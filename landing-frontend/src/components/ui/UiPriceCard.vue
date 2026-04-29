@@ -134,6 +134,7 @@ const discount = computed(() => {
         as="a"
         :href="link"
         target="_blank"
+        rel="noopener noreferrer"
         :variant="variant === 'highlighted' ? 'dark-filled' : 'filled'"
         class="w-full text-center"
       >

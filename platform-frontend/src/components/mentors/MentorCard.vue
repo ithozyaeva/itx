@@ -73,6 +73,7 @@ function getInitials(mentor: Mentor) {
         v-if="mentor.tg"
         :href="`https://t.me/${mentor.tg}`"
         target="_blank"
+        rel="noopener noreferrer"
         class="text-sm text-primary underline mt-auto"
         @click.stop
       >
