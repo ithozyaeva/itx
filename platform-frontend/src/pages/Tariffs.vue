@@ -107,7 +107,7 @@ function formatPrice(price: number) {
         <a
           :href="tier.boosty_url"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           class="block text-center px-4 py-3 rounded-sm bg-accent text-accent-foreground font-medium hover:bg-accent/90 transition-colors"
         >
           Оформить на Boosty →
