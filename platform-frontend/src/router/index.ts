@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
-import { isUserSubscribed } from '@/composables/useUser'
+import { isUserSubscribed, useUserLevel } from '@/composables/useUser'
 import Achievements from '@/pages/Achievements.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Casino from '@/pages/Casino.vue'
@@ -70,9 +70,13 @@ router.beforeEach((to) => {
   if (to.meta.requiresSubscription && !subscribed) {
     return { name: 'dashboard' }
   }
-  // /tariffs — витрина для UNSUBSCRIBER. Подписчику тут делать нечего,
-  // отправляем на главную (Sidebar этот пункт у него и так скрывает).
-  if (to.name === 'tariffs' && subscribed) {
+  // /tariffs — витрина для UNSUBSCRIBER. Кому показывать нечего:
+  //   - подписчики любого тира (есть subscriptionTier);
+  //   - ADMIN/MENTOR — у них levelIndex > 0 даже без оплаченного тира,
+  //     иначе админ/ментор приземляется на витрину тарифов из ссылок
+  //     бота / прямого URL и видит «купи подписку», что нелепо.
+  const { levelIndex } = useUserLevel()
+  if (to.name === 'tariffs' && (subscribed || levelIndex.value > 0)) {
     return { name: 'dashboard' }
   }
   return true
