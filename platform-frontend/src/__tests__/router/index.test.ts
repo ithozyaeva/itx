@@ -96,8 +96,6 @@ describe('router', () => {
 
     it('allows navigation to gated route when user has tier', async () => {
       // Имитируем подписчика — useUser читает tg_user:v2 из localStorage.
-      const TG_USER_TTL_MS = 60 * 60 * 1000
-      const _ = TG_USER_TTL_MS
       localStorage.setItem('tg_user:v2', JSON.stringify({
         data: {
           id: 1,
@@ -113,6 +111,40 @@ describe('router', () => {
       await r.push('/events')
       await r.isReady()
       expect(r.currentRoute.value.name).toBe('events')
+      localStorage.removeItem('tg_user:v2')
+    })
+
+    it('redirects subscriber away from /tariffs to dashboard', async () => {
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: {
+          id: 1,
+          telegramID: 1,
+          roles: ['SUBSCRIBER'],
+          subscriptionTier: { id: 3, slug: 'master', name: 'Хозяин', level: 3 },
+        },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push('/tariffs')
+      await r.isReady()
+      expect(r.currentRoute.value.name).toBe('dashboard')
+      localStorage.removeItem('tg_user:v2')
+    })
+
+    it('allows UNSUBSCRIBER to view /tariffs', async () => {
+      // tg_user без subscriptionTier — UNSUBSCRIBER в новой логике.
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: { id: 1, telegramID: 1, roles: ['UNSUBSCRIBER'] },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push('/tariffs')
+      await r.isReady()
+      expect(r.currentRoute.value.name).toBe('tariffs')
       localStorage.removeItem('tg_user:v2')
     })
   })

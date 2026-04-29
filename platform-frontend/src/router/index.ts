@@ -61,8 +61,14 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (to.meta.requiresSubscription && !isUserSubscribed().value) {
+  const subscribed = isUserSubscribed().value
+  if (to.meta.requiresSubscription && !subscribed) {
     return { name: 'tariffs' }
+  }
+  // /tariffs — витрина для UNSUBSCRIBER. Подписчику тут делать нечего,
+  // отправляем на главную (Sidebar этот пункт у него и так скрывает).
+  if (to.name === 'tariffs' && subscribed) {
+    return { name: 'dashboard' }
   }
   return true
 })
