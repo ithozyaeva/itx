@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -508,16 +510,18 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	// Формируем карточку участника
+	// Формируем карточку участника. Все пользовательские поля экранируем,
+	// иначе Telegram при ParseMode=HTML ломается на тегах из bio/компании
+	// («Unsupported start tag "script"…») и сообщение не отправляется.
 	var builder strings.Builder
 
 	name := strings.TrimSpace(fmt.Sprintf("%s %s", member.FirstName, member.LastName))
 	if name == "" {
 		name = member.Username
 	}
-	builder.WriteString(fmt.Sprintf("👤 <b>%s</b>", name))
+	builder.WriteString(fmt.Sprintf("👤 <b>%s</b>", html.EscapeString(name)))
 	if member.Username != "" {
-		builder.WriteString(fmt.Sprintf(" (@%s)", member.Username))
+		builder.WriteString(fmt.Sprintf(" (@%s)", html.EscapeString(member.Username)))
 	}
 	builder.WriteString("\n")
 
@@ -525,17 +529,19 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	if member.Grade != "" || member.Company != "" {
 		parts := []string{}
 		if member.Grade != "" {
-			parts = append(parts, member.Grade)
+			parts = append(parts, html.EscapeString(member.Grade))
 		}
 		if member.Company != "" {
-			parts = append(parts, member.Company)
+			parts = append(parts, html.EscapeString(member.Company))
 		}
 		builder.WriteString(fmt.Sprintf("\n💼 %s", strings.Join(parts, " · ")))
 	}
 
-	// Био
+	// Био — единственное поле, где пользователь может вставлять Telegram-разметку
+	// (<b>, <i>, <code>, <a href> и т.д.). Остальное — структурированные поля,
+	// рендерим как plain text.
 	if member.Bio != "" {
-		builder.WriteString(fmt.Sprintf("\n📝 %s\n", member.Bio))
+		builder.WriteString(fmt.Sprintf("\n📝 %s\n", sanitizeTelegramHTML(member.Bio)))
 	}
 
 	// Давность участия
@@ -562,15 +568,15 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	mentor, mentorErr := b.member.GetMentor(member.Id)
 	if mentorErr == nil && mentor != nil {
 		if mentor.Occupation != "" {
-			builder.WriteString(fmt.Sprintf("\n💼 %s", mentor.Occupation))
+			builder.WriteString(fmt.Sprintf("\n💼 %s", html.EscapeString(mentor.Occupation)))
 		}
 		if mentor.Experience != "" {
-			builder.WriteString(fmt.Sprintf("\n📊 Опыт: %s", mentor.Experience))
+			builder.WriteString(fmt.Sprintf("\n📊 Опыт: %s", html.EscapeString(mentor.Experience)))
 		}
 		if len(mentor.ProfTags) > 0 {
 			var tags []string
 			for _, tag := range mentor.ProfTags {
-				tags = append(tags, tag.Title)
+				tags = append(tags, html.EscapeString(tag.Title))
 			}
 			builder.WriteString(fmt.Sprintf("\n🔧 %s", strings.Join(tags, ", ")))
 		}
@@ -592,14 +598,6 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	if _, sendErr := b.bot.Send(msg); sendErr != nil {
 		log.Printf("Failed to send /whois reply in chat %d: %v", message.Chat.ID, sendErr)
 		return
-	}
-
-	// В группе чистим команду, чтобы в чате оставалась только карточка бота
-	// и не плодились кликабельные /whois, по которым тапают соседи.
-	if message.Chat.Type != "private" {
-		if _, delErr := b.bot.Request(tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)); delErr != nil {
-			log.Printf("Failed to delete /whois command %d in chat %d: %v", message.MessageID, message.Chat.ID, delErr)
-		}
 	}
 }
 
@@ -1698,6 +1696,59 @@ func (b *TelegramBot) getReminderInterval() time.Duration {
 	return time.Duration(config.CFG.AlertReminderIntervalMinutes) * time.Minute
 }
 
+// telegramSafeTags — парные HTML-теги, которые Telegram поддерживает в
+// ParseMode=HTML без атрибутов. Атрибуты (a href, blockquote expandable,
+// pre code class) обрабатываем отдельно.
+var telegramSafeTags = []string{
+	"b", "strong",
+	"i", "em",
+	"u", "ins",
+	"s", "strike", "del",
+	"tg-spoiler",
+	"code", "pre",
+	"blockquote",
+}
+
+// telegramAnchorRe матчит пару <a href="URL">...</a> целиком в уже
+// эскейпнутой строке. Берём именно пару, чтобы орфанный </a> или
+// открывающий тег с лишними атрибутами не «разэкранировались» по половинке
+// и не сломали парсинг.
+var telegramAnchorRe = regexp.MustCompile(`&lt;a href=&#34;((?:https?|tg|mailto):[^\s"<>]+?)&#34;&gt;(.*?)&lt;/a&gt;`)
+
+// telegramPreCodeRe — <code class="language-XYZ"> внутри <pre> для подсветки.
+var telegramPreCodeRe = regexp.MustCompile(`&lt;code class=&#34;language-([a-zA-Z0-9_+\-]+)&#34;&gt;`)
+
+// sanitizeTelegramHTML экранирует строку для ParseMode=HTML и затем
+// «разэкранирует» только теги, которые Telegram умеет парсить. Это даёт
+// нам два качества: <b>жирный</b> в био рендерится форматированием, а
+// произвольные теги вроде <script> остаются текстом и не валят отправку
+// сообщения с can't parse entities.
+func sanitizeTelegramHTML(s string) string {
+	out := html.EscapeString(s)
+	for _, tag := range telegramSafeTags {
+		out = strings.ReplaceAll(out, "&lt;"+tag+"&gt;", "<"+tag+">")
+		out = strings.ReplaceAll(out, "&lt;/"+tag+"&gt;", "</"+tag+">")
+	}
+	out = strings.ReplaceAll(out, "&lt;blockquote expandable&gt;", "<blockquote expandable>")
+	out = telegramAnchorRe.ReplaceAllString(out, `<a href="$1">$2</a>`)
+	out = telegramPreCodeRe.ReplaceAllString(out, `<code class="language-$1">`)
+	return out
+}
+
+// isTelegramBlockedError возвращает true, если Telegram сообщает, что
+// сообщение в личку доставить нельзя из-за состояния получателя
+// (заблокировал бота, удалил аккаунт, чат не инициирован).
+func isTelegramBlockedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "bot was blocked by the user") ||
+		strings.Contains(msg, "user is deactivated") ||
+		strings.Contains(msg, "bot can't initiate conversation") ||
+		strings.Contains(msg, "USER_IS_BLOCKED")
+}
+
 func (b *TelegramBot) checkReminderAlert(event *models.Event, now time.Time) {
 	subscriptions, err := b.eventAlertSubscription.GetPendingSubscriptionsForEvent(event.Id)
 	if err != nil {
@@ -1732,6 +1783,18 @@ func (b *TelegramBot) checkReminderAlert(event *models.Event, now time.Time) {
 			err = b.SendEventAlert(member.TelegramID, event, true)
 			if err != nil {
 				if strings.Contains(err.Error(), "chat not found") {
+					continue
+				}
+				// Юзер заблокировал бота / удалил аккаунт — отписываем, иначе
+				// каждый тик планировщика мы будем биться об одну и ту же ошибку.
+				if isTelegramBlockedError(err) {
+					if _, uerr := b.eventAlertSubscription.UpdateSubscriptionStatus(
+						subscription.EventId,
+						subscription.MemberId,
+						models.EventAlertStatusUnsubscribed,
+					); uerr != nil {
+						log.Printf("Error unsubscribing blocked user %d: %v", member.TelegramID, uerr)
+					}
 					continue
 				}
 				log.Printf("Error sending reminder alert to user %d: %v", member.TelegramID, err)
