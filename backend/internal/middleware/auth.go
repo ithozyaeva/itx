@@ -11,14 +11,16 @@ import (
 )
 
 type AuthMiddleware struct {
-	userRepo   *repository.AuthTokenRepository
-	memberRepo *repository.MemberRepository
+	userRepo         *repository.AuthTokenRepository
+	memberRepo       *repository.MemberRepository
+	subscriptionRepo *repository.SubscriptionRepository
 }
 
 func NewAuthMiddleware(db *gorm.DB) *AuthMiddleware {
 	return &AuthMiddleware{
-		userRepo:   repository.NewAuthTokenRepository(),
-		memberRepo: repository.NewMemberRepository(),
+		userRepo:         repository.NewAuthTokenRepository(),
+		memberRepo:       repository.NewMemberRepository(),
+		subscriptionRepo: repository.NewSubscriptionRepository(),
 	}
 }
 
@@ -121,6 +123,37 @@ func (m *AuthMiddleware) RequireSuperAdmin(c *fiber.Ctx) error {
 		})
 	}
 
+	return c.Next()
+}
+
+// RequireSubscription гейтит платформенные эндпоинты под активную подписку.
+// Источник правды — subscription_users.EffectiveTierID() (manual override
+// либо tier, разрешённый по членству в anchor-чате).
+//
+// Включается переменной SUBSCRIPTION_GATE_ENABLED — пока выключен, middleware
+// no-op. Это позволяет смержить и задеплоить код, разослать анонс через бота,
+// и только затем включить флаг в проде.
+func (m *AuthMiddleware) RequireSubscription(c *fiber.Ctx) error {
+	if !config.CFG.SubscriptionGateEnabled {
+		return c.Next()
+	}
+
+	member, ok := c.Locals("member").(*models.Member)
+	if !ok || member == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	user, err := m.subscriptionRepo.GetUser(member.TelegramID)
+	if err != nil || user == nil || user.EffectiveTierID() == nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":    "subscription_required",
+			"redirect": "/tariffs",
+		})
+	}
+
+	c.Locals("subscription_tier_id", user.EffectiveTierID())
 	return c.Next()
 }
 

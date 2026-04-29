@@ -3,10 +3,15 @@ package models
 import "time"
 
 type SubscriptionTier struct {
-	ID    uint   `json:"id" gorm:"primaryKey"`
-	Slug  string `json:"slug" gorm:"uniqueIndex;size:50"`
-	Name  string `json:"name" gorm:"size:100"`
-	Level int    `json:"level" gorm:"uniqueIndex"`
+	ID                uint    `json:"id" gorm:"primaryKey"`
+	Slug              string  `json:"slug" gorm:"uniqueIndex;size:50"`
+	Name              string  `json:"name" gorm:"size:100"`
+	Level             int     `json:"level" gorm:"uniqueIndex"`
+	PriceCents        *int    `json:"price_cents" gorm:"column:price_cents"`
+	BoostyURL         *string `json:"boosty_url" gorm:"size:255"`
+	PublicDescription *string `json:"public_description"`
+	Features          string  `json:"features" gorm:"type:jsonb;default:'[]'"`
+	IsPublic          bool    `json:"is_public" gorm:"default:false"`
 }
 
 func (SubscriptionTier) TableName() string { return "subscription_tiers" }

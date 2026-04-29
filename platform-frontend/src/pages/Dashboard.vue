@@ -45,7 +45,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useSSE } from '@/composables/useSSE'
-import { useUser, useUserLevel } from '@/composables/useUser'
+import { isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
 import { dateFormatter, formatShortDate } from '@/lib/utils'
 import { SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { achievementsService } from '@/services/achievements'
@@ -91,6 +91,7 @@ const achievementIconMap: Record<string, any> = {
 
 const user = useUser()
 const { level, levelIndex } = useUserLevel()
+const isSubscribed = isUserSubscribed()
 
 const isLoading = ref(true)
 const nearestEvents = ref<CommunityEvent[]>([])
@@ -314,6 +315,30 @@ onMounted(async () => {
     </div>
 
     <template v-else>
+      <!-- Subscription teaser — показываем UNSUBSCRIBER'у, чтобы понимал куда платить -->
+      <RouterLink
+        v-if="!isSubscribed"
+        to="/tariffs"
+        class="block relative rounded-sm border border-accent/40 bg-accent/[0.04] hover:bg-accent/[0.07] p-5 md:p-6 transition-colors group"
+      >
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="font-mono text-[10px] uppercase tracking-widest text-accent/70 mb-1.5">
+              // подписка
+            </div>
+            <h3 class="font-semibold text-lg mb-1">
+              Открой полный доступ к платформе
+            </h3>
+            <p class="text-sm text-muted-foreground">
+              События, биржа заданий, ИИ-чаты и менторские контакты — от 259 ₽/мес.
+            </p>
+          </div>
+          <span class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-accent text-accent-foreground font-medium text-sm group-hover:bg-accent/90 transition-colors">
+            Выбрать тариф →
+          </span>
+        </div>
+      </RouterLink>
+
       <!-- Hero Greeting -->
       <div
         data-onboarding="dashboard"

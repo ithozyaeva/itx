@@ -261,6 +261,60 @@ func (s *SubscriptionService) GetAllTiers() ([]models.SubscriptionTier, error) {
 	return s.repo.GetAllTiers()
 }
 
+// TierPublic — публичная карточка тарифа для UI лендинга/платформы и сообщений
+// бота. Цена отдаётся в рублях (price_cents переведён). Features — массив строк.
+type TierPublic struct {
+	ID          uint     `json:"id"`
+	Slug        string   `json:"slug"`
+	Name        string   `json:"name"`
+	Level       int      `json:"level"`
+	Price       int      `json:"price"`
+	BoostyURL   string   `json:"boosty_url"`
+	Description string   `json:"description"`
+	Features    []string `json:"features"`
+}
+
+// GetPublicTiers возвращает только тарифы с is_public=true, отсортированные
+// по level. Используется как единый источник правды для /tariffs, прогрева
+// в боте и SEO-блока на лендинге.
+func (s *SubscriptionService) GetPublicTiers() ([]TierPublic, error) {
+	tiers, err := s.repo.GetPublicTiers()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]TierPublic, 0, len(tiers))
+	for _, t := range tiers {
+		features := []string{}
+		if t.Features != "" {
+			_ = json.Unmarshal([]byte(t.Features), &features)
+		}
+		public := TierPublic{
+			ID:       t.ID,
+			Slug:     t.Slug,
+			Name:     t.Name,
+			Level:    t.Level,
+			Features: features,
+		}
+		if t.PriceCents != nil {
+			public.Price = *t.PriceCents / 100
+		}
+		if t.BoostyURL != nil {
+			public.BoostyURL = *t.BoostyURL
+		}
+		if t.PublicDescription != nil {
+			public.Description = *t.PublicDescription
+		}
+		result = append(result, public)
+	}
+	return result, nil
+}
+
+// GetSubscriptionUser возвращает запись subscription_users по telegram-id.
+// Используется RequireSubscription middleware и онбордингом в боте.
+func (s *SubscriptionService) GetSubscriptionUser(userID int64) (*models.SubscriptionUser, error) {
+	return s.repo.GetUser(userID)
+}
+
 func (s *SubscriptionService) GetTierBySlug(slug string) (*models.SubscriptionTier, error) {
 	return s.repo.GetTierBySlug(slug)
 }

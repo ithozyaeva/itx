@@ -19,6 +19,78 @@ import (
 
 const msgAccessRevoked = "Уровень вашей подписки изменился. Доступ к некоторым чатам был отозван."
 
+// resolveUserTier возвращает имя тира и флаг «подписчик» для юзера.
+// Используется при онбординге в боте — определяет, какой welcome-wizard
+// показать (полный для подписчиков, прогрев с тарифами для UNSUBSCRIBER).
+// Источник правды — subscription_users.EffectiveTierID().
+func (b *TelegramBot) resolveUserTier(userID int64) (tierName string, isSubscriber bool) {
+	user, err := b.subscriptionService.GetSubscriptionUser(userID)
+	if err != nil || user == nil {
+		return "", false
+	}
+	tierID := user.EffectiveTierID()
+	if tierID == nil {
+		return "", false
+	}
+	tier, err := b.subscriptionService.GetTier(*tierID)
+	if err != nil || tier == nil {
+		// Запись о тире есть, но название не достали — всё равно подписчик.
+		return "", true
+	}
+	return tier.Name, true
+}
+
+// sendTariffsMessage показывает публичные тарифы с кнопками на Boosty.
+// Источник цен/ссылок — subscription_tiers.is_public=true (см. service.GetPublicTiers).
+// Используется в welcome-wizard для UNSUBSCRIBER и доступен подписчикам через
+// callback wiz:tariffs (например, чтобы апгрейдиться).
+func (b *TelegramBot) sendTariffsMessage(chatID int64) {
+	tiers, err := b.subscriptionService.GetPublicTiers()
+	if err != nil || len(tiers) == 0 {
+		b.sendMessage(chatID, "Не удалось загрузить тарифы. Напишите админу: /support")
+		return
+	}
+
+	var text strings.Builder
+	text.WriteString("<b>Тарифы IT-ХОЗЯЕВА</b>\n\n")
+	for _, t := range tiers {
+		text.WriteString("💎 <b>")
+		text.WriteString(html.EscapeString(t.Name))
+		text.WriteString("</b>")
+		if t.Price > 0 {
+			text.WriteString(fmt.Sprintf(" — %d ₽/мес", t.Price))
+		}
+		if t.Description != "" {
+			text.WriteString(". ")
+			text.WriteString(html.EscapeString(t.Description))
+		}
+		text.WriteString("\n")
+	}
+	text.WriteString("\nПосле оплаты нажмите /sub — бот выдаст инвайты в чаты по вашему тиру.")
+
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0, len(tiers)+1)
+	for _, t := range tiers {
+		if t.BoostyURL == "" {
+			continue
+		}
+		label := fmt.Sprintf("%s — %d ₽", t.Name, t.Price)
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL(label, t.BoostyURL),
+		))
+	}
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("✅ Я оплатил → проверить", "wiz:sub"),
+	))
+
+	msg := tgbotapi.NewMessage(chatID, text.String())
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	if _, err := b.bot.Send(msg); err != nil {
+		log.Printf("sendTariffsMessage: send failed for chat %d: %v", chatID, err)
+	}
+}
+
 // strPtr returns a pointer to s if non-empty, nil otherwise.
 func strPtr(s string) *string {
 	if s == "" {

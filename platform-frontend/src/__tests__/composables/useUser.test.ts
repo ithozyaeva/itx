@@ -63,7 +63,7 @@ describe('useUser', () => {
   })
 
   describe('isUserSubscribed()', () => {
-    it('returns true when user does not have UNSUBSCRIBER role', async () => {
+    it('returns true when user has effective subscription tier', async () => {
       const user: TelegramUser = {
         id: 1,
         telegramID: 1,
@@ -76,6 +76,7 @@ describe('useUser', () => {
         company: '',
         avatarUrl: '',
         roles: ['SUBSCRIBER'],
+        subscriptionTier: { id: 2, slug: 'foreman', name: 'Бригадир', level: 2 },
       }
       setStoredUser(user)
 
@@ -84,7 +85,7 @@ describe('useUser', () => {
       expect(result.value).toBe(true)
     })
 
-    it('returns false when user has UNSUBSCRIBER role', async () => {
+    it('returns false when user has no subscription tier', async () => {
       const user: TelegramUser = {
         id: 1,
         telegramID: 1,

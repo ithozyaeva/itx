@@ -43,6 +43,14 @@ func (r *SubscriptionRepository) GetAllTiers() ([]models.SubscriptionTier, error
 	return tiers, nil
 }
 
+func (r *SubscriptionRepository) GetPublicTiers() ([]models.SubscriptionTier, error) {
+	var tiers []models.SubscriptionTier
+	if err := r.db.Where("is_public = ?", true).Order("level ASC").Find(&tiers).Error; err != nil {
+		return nil, err
+	}
+	return tiers, nil
+}
+
 func (r *SubscriptionRepository) GetAllTiersDesc() ([]models.SubscriptionTier, error) {
 	var tiers []models.SubscriptionTier
 	if err := r.db.Order("level DESC").Find(&tiers).Error; err != nil {

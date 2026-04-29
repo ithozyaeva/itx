@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import type { MentorWithReviews } from '@/services/mentors'
-import { ArrowLeft, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, Loader2, Lock } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
 import { Typography } from '@/components/ui/typography'
+import { isUserSubscribed } from '@/composables/useUser'
 import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { mentorsService } from '@/services/mentors'
+
+const isSubscribed = isUserSubscribed()
 
 const route = useRoute()
 const mentor = ref<MentorWithReviews | null>(null)
@@ -72,16 +75,24 @@ onMounted(loadMentor)
           </span>
         </div>
         <a
-          v-if="mentor.tg"
+          v-if="mentor.tg && isSubscribed"
           :href="`https://t.me/${mentor.tg}`"
           target="_blank"
           class="text-sm text-primary underline"
         >
           @{{ mentor.tg }}
         </a>
+        <RouterLink
+          v-else-if="mentor.tg"
+          to="/tariffs"
+          class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-accent transition-colors"
+        >
+          <Lock class="h-3.5 w-3.5" />
+          Telegram ментора — по подписке
+        </RouterLink>
       </div>
 
-      <div v-if="mentor.contacts?.length" class="bg-card rounded-sm terminal-card border p-6">
+      <div v-if="mentor.contacts?.length && isSubscribed" class="bg-card rounded-sm terminal-card border p-6">
         <Typography variant="h3" as="h2" class="mb-4">
           Контакты
         </Typography>
@@ -92,6 +103,22 @@ onMounted(loadMentor)
             </a>
           </div>
         </div>
+      </div>
+
+      <div v-else-if="mentor.contacts?.length" class="bg-card/50 rounded-sm terminal-card border border-dashed p-6">
+        <Typography variant="h3" as="h2" class="mb-2 flex items-center gap-2">
+          <Lock class="h-5 w-5" />
+          Контакты ментора
+        </Typography>
+        <p class="text-sm text-muted-foreground mb-3">
+          Контакты для прямой связи доступны участникам с подпиской.
+        </p>
+        <RouterLink
+          to="/tariffs"
+          class="inline-block text-sm text-accent hover:underline"
+        >
+          Открыть тарифы →
+        </RouterLink>
       </div>
 
       <div v-if="mentor.services?.length" class="bg-card rounded-sm terminal-card border p-6">
@@ -132,7 +159,7 @@ onMounted(loadMentor)
         </div>
       </div>
 
-      <div v-if="mentor.services?.length" class="bg-card rounded-sm terminal-card border p-6">
+      <div v-if="mentor.services?.length && isSubscribed" class="bg-card rounded-sm terminal-card border p-6">
         <ReviewForm
           :mentor-id="mentor.id"
           :services="mentor.services"

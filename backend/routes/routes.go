@@ -14,7 +14,7 @@ import (
 func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	SetupPublicRoutes(app, db)
 	SetupAdminRoutes(app, db, redisClient)
-	SetupPlatformRoutes(app, db)
+	SetupPlatformRoutes(app, db, redisClient)
 }
 func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	// Инициализация сервисов и репозиториев
@@ -252,13 +252,21 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	}
 }
 
-func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
+func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	authMiddleware := middleware.NewAuthMiddleware(db)
 
-	// Защищенные маршруты
+	// protected — все авторизованные через Telegram, без проверки подписки.
+	// Сюда попадают «прогревные» эндпоинты, которые видит UNSUBSCRIBER:
+	// профиль, тарифы, FAQ, отзывы, базовый список менторов.
 	protected := app.Group("/api/platform", authMiddleware.RequireTGAuth)
 
-	// Маршруты для отзывов о сообществе
+	// subscribed — только для активных подписчиков (EffectiveTierID != nil).
+	// Гейтится через RequireSubscription за SUBSCRIPTION_GATE_ENABLED флагом.
+	subscribed := app.Group("/api/platform", authMiddleware.RequireTGAuth, authMiddleware.RequireSubscription)
+
+	// --- protected (доступно UNSUBSCRIBER'ам для прогрева) ---
+
+	// Отзывы о сообществе — нужно UNSUBSCRIBER'у тоже, чтобы оставить отклик.
 	reviewHandler := handler.NewReviewOnCommunityHandler()
 	reviews := protected.Group("/reviews")
 	reviews.Post("/add", reviewHandler.AddReview)
@@ -266,52 +274,22 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	reviews.Patch("/:id", reviewHandler.UpdateMyReview)
 	reviews.Delete("/:id", reviewHandler.DeleteMyReview)
 
-	// Маршруты для участников
+	// Профиль (включая редактирование). UNSUBSCRIBER должен иметь возможность
+	// заполнить аватар/био заранее — после оплаты данные не теряются.
 	memberHandler := handler.NewMembersHandler()
 	members := protected.Group("/members")
 	members.Get("/me", memberHandler.Me)
-	members.Get("/:id", memberHandler.GetPublicProfile)
 	members.Patch("/me", memberHandler.UpdateProfile)
 	members.Post("/me/avatar", memberHandler.UploadAvatar)
 
-	// Маршруты для менторов
+	// Менторы — список и детали read-only открыты UNSUBSCRIBER'у (витрина).
+	// Действия с менторами (написать отзыв, контакт) требуют подписки.
 	mentorsHandler := handler.NewMentorHandler()
 	mentors := protected.Group("/mentors")
 	mentors.Get("/:id", mentorsHandler.GetById)
-	mentors.Post("/:id/reviews", mentorsHandler.AddReviewFromPlatform)
 
-	mentorsMe := protected.Group("/mentors/me")
-	mentorsMe.Post("/update-info", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateInfo)
-	mentorsMe.Post("/update-prof-tags", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateProfTags)
-	mentorsMe.Post("/update-services", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateServices)
-	mentorsMe.Post("/update-contacts", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateContacts)
-
-	// Маршруты для ивентов
-	eventHandler := handler.NewEventsHandler()
-	events := protected.Group("/events")
-	events.Get("/", eventHandler.Search)
-	events.Get("/:id", eventHandler.GetById)
-	events.Post("/apply", eventHandler.AddMember)
-	events.Post("/decline", eventHandler.RemoveMember)
-
-	// Маршурты для таблицы рефералов
-	referalsHandler := handler.NewReferalLinkHandler()
-	referals := protected.Group("/referals")
-	referals.Get("/", referalsHandler.Search)
-	referals.Post("/add-link", referalsHandler.AddLink)
-	referals.Put("/update-link", referalsHandler.UpdateLink)
-	referals.Delete("/delete-link", referalsHandler.DeleteLink)
-	referals.Post("/track-conversion", referalsHandler.TrackConversion)
-
-	resumeHandler := handler.NewResumeHandler()
-	resumes := protected.Group("/resumes")
-	resumes.Post("/", resumeHandler.Upload)
-	resumes.Get("/me", resumeHandler.ListMy)
-	resumes.Get("/:id/download", resumeHandler.DownloadMy)
-	resumes.Patch("/:id", resumeHandler.UpdateMy)
-	resumes.Delete("/:id", resumeHandler.DeleteMy)
-
-	// Маршруты для уведомлений
+	// Уведомления и их настройки — нужны и UNSUBSCRIBER'у (например, подписка
+	// истекла → push-уведомление, или анонс снижения цены).
 	notificationHandler := handler.NewNotificationHandler()
 	notifications := protected.Group("/notifications")
 	notifications.Get("/", notificationHandler.GetMy)
@@ -319,27 +297,85 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	notifications.Patch("/:id/read", notificationHandler.MarkAsRead)
 	notifications.Post("/read-all", notificationHandler.MarkAllAsRead)
 
-	// Маршруты для баллов
+	notifSettingsHandler := handler.NewNotificationSettingsHandler()
+	notifSettings := protected.Group("/notification-settings")
+	notifSettings.Get("/", notifSettingsHandler.GetMy)
+	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
+
+	// Публичные тарифы для /tariffs и прогрева в боте.
+	if redisClient != nil {
+		subscriptionHandler := handler.NewSubscriptionHandler(redisClient)
+		protected.Get("/subscriptions/tiers", subscriptionHandler.PublicTiers)
+	}
+
+	// Обратная связь о платформе — должен мочь оставить кто угодно.
+	feedbackHandler := handler.NewFeedbackHandler()
+	protected.Post("/feedback", feedbackHandler.Create)
+
+	// --- subscribed (только для подписчиков) ---
+
+	// Публичный профиль другого участника — глубокая витрина за подпиской.
+	subscribedMembers := subscribed.Group("/members")
+	subscribedMembers.Get("/:id", memberHandler.GetPublicProfile)
+
+	// Контакт ментора (отзыв) — write-эндпоинт.
+	subscribedMentors := subscribed.Group("/mentors")
+	subscribedMentors.Post("/:id/reviews", mentorsHandler.AddReviewFromPlatform)
+
+	// Менторские админ-эндпоинты (только для самих менторов с пермишеном).
+	mentorsMe := subscribed.Group("/mentors/me")
+	mentorsMe.Post("/update-info", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateInfo)
+	mentorsMe.Post("/update-prof-tags", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateProfTags)
+	mentorsMe.Post("/update-services", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateServices)
+	mentorsMe.Post("/update-contacts", authMiddleware.RequirePermission(models.PermissionCanEditPlatformMentors), mentorsHandler.UpdateContacts)
+
+	// События
+	eventHandler := handler.NewEventsHandler()
+	events := subscribed.Group("/events")
+	events.Get("/", eventHandler.Search)
+	events.Get("/:id", eventHandler.GetById)
+	events.Post("/apply", eventHandler.AddMember)
+	events.Post("/decline", eventHandler.RemoveMember)
+
+	// Реферальные ссылки
+	referalsHandler := handler.NewReferalLinkHandler()
+	referals := subscribed.Group("/referals")
+	referals.Get("/", referalsHandler.Search)
+	referals.Post("/add-link", referalsHandler.AddLink)
+	referals.Put("/update-link", referalsHandler.UpdateLink)
+	referals.Delete("/delete-link", referalsHandler.DeleteLink)
+	referals.Post("/track-conversion", referalsHandler.TrackConversion)
+
+	// Резюме
+	resumeHandler := handler.NewResumeHandler()
+	resumes := subscribed.Group("/resumes")
+	resumes.Post("/", resumeHandler.Upload)
+	resumes.Get("/me", resumeHandler.ListMy)
+	resumes.Get("/:id/download", resumeHandler.DownloadMy)
+	resumes.Patch("/:id", resumeHandler.UpdateMy)
+	resumes.Delete("/:id", resumeHandler.DeleteMy)
+
+	// Баллы и лидерборд
 	pointsHandler := handler.NewPointsHandler()
-	points := protected.Group("/points")
+	points := subscribed.Group("/points")
 	points.Get("/me", pointsHandler.GetMyPoints)
 	points.Get("/leaderboard", pointsHandler.GetLeaderboard)
 
-	// Маршруты для заданий чатов (платформа)
+	// Чат-квесты
 	chatQuestHandler := handler.NewChatQuestHandler()
-	chatQuests := protected.Group("/chat-quests")
+	chatQuests := subscribed.Group("/chat-quests")
 	chatQuests.Get("/all", chatQuestHandler.GetAllForMember)
 	chatQuests.Get("/active", chatQuestHandler.GetActive)
 
-	// Маршруты для достижений
+	// Достижения
 	achievementHandler := handler.NewAchievementHandler()
-	achievements := protected.Group("/achievements")
+	achievements := subscribed.Group("/achievements")
 	achievements.Get("/me", achievementHandler.GetMyAchievements)
 	achievements.Get("/member/:id", achievementHandler.GetMemberAchievements)
 
-	// Маршруты для биржи заданий
+	// Биржа заданий
 	taskExchangeHandler := handler.NewTaskExchangeHandler()
-	tasks := protected.Group("/tasks")
+	tasks := subscribed.Group("/tasks")
 	tasks.Get("/", taskExchangeHandler.Search)
 	tasks.Get("/:id", taskExchangeHandler.GetById)
 	tasks.Post("/", taskExchangeHandler.Create)
@@ -352,21 +388,15 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	tasks.Post("/:id/reject", authMiddleware.RequirePermission(models.PermissionCanApprovePlatformTasks), taskExchangeHandler.Reject)
 	tasks.Delete("/:id", taskExchangeHandler.Delete)
 
-	// Маршруты для настроек уведомлений
-	notifSettingsHandler := handler.NewNotificationSettingsHandler()
-	notifSettings := protected.Group("/notification-settings")
-	notifSettings.Get("/", notifSettingsHandler.GetMy)
-	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
-
-	// Маршруты для хайлайтов из чатов
+	// Хайлайты из чатов
 	highlightHandler := handler.NewChatHighlightHandler()
-	highlights := protected.Group("/highlights")
+	highlights := subscribed.Group("/highlights")
 	highlights.Get("/recent", highlightHandler.GetRecent)
 	highlights.Get("/", highlightHandler.Search)
 
-	// Маршруты для барахолки
+	// Барахолка
 	marketplaceHandler := handler.NewMarketplaceHandler()
-	marketplace := protected.Group("/marketplace")
+	marketplace := subscribed.Group("/marketplace")
 	marketplace.Get("/", marketplaceHandler.Search)
 	marketplace.Get("/:id", marketplaceHandler.GetById)
 	marketplace.Post("/", marketplaceHandler.Create)
@@ -376,21 +406,21 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	marketplace.Post("/:id/sold", marketplaceHandler.MarkSold)
 	marketplace.Delete("/:id", marketplaceHandler.Delete)
 
-	// Маршруты для стены благодарностей
+	// Стена благодарностей
 	kudosHandler := handler.NewKudosHandler()
-	kudos := protected.Group("/kudos")
+	kudos := subscribed.Group("/kudos")
 	kudos.Get("/", kudosHandler.GetRecent)
 	kudos.Post("/", kudosHandler.Send)
 
-	// Маршруты для розыгрышей
+	// Розыгрыши
 	raffleHandler := handler.NewRaffleHandler()
-	raffles := protected.Group("/raffles")
+	raffles := subscribed.Group("/raffles")
 	raffles.Get("/", raffleHandler.GetAll)
 	raffles.Post("/:id/buy", raffleHandler.BuyTickets)
 
-	// Маршруты для казино
+	// Казино
 	casinoHandler := handler.NewCasinoHandler()
-	casino := protected.Group("/minigames")
+	casino := subscribed.Group("/minigames")
 	casino.Post("/coin-flip", casinoHandler.PlayCoinFlip)
 	casino.Post("/dice-roll", casinoHandler.PlayDiceRoll)
 	casino.Post("/wheel", casinoHandler.PlayWheel)
@@ -398,17 +428,13 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB) {
 	casino.Get("/feed", casinoHandler.GetGlobalFeed)
 	casino.Get("/stats", casinoHandler.GetStats)
 
-	// Маршруты для статистики профиля
+	// Статистика профиля
 	profileStatsHandler := handler.NewProfileStatsHandler()
-	profileStats := protected.Group("/profile-stats")
+	profileStats := subscribed.Group("/profile-stats")
 	profileStats.Get("/me", profileStatsHandler.GetMyStats)
 	profileStats.Get("/:id", profileStatsHandler.GetMemberStats)
 
-	// SSE (Server-Sent Events) для real-time обновлений
+	// SSE — реал-тайм обновления (events, casino, и т.п. — премиум-функции).
 	sseHandler := handler.NewSSEHandler()
-	protected.Get("/sse", sseHandler.Stream)
-
-	// Маршруты для обратной связи (NPS)
-	feedbackHandler := handler.NewFeedbackHandler()
-	protected.Post("/feedback", feedbackHandler.Create)
+	subscribed.Get("/sse", sseHandler.Stream)
 }

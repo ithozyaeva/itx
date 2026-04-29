@@ -70,6 +70,16 @@ func (h *SubscriptionHandler) GetStats(c *fiber.Ctx) error {
 	})
 }
 
+// PublicTiers отдаёт публичные тарифы (is_public=true) для /tariffs страницы
+// и прогрева в боте. Цены в рублях, features распарсены из JSONB.
+func (h *SubscriptionHandler) PublicTiers(c *fiber.Ctx) error {
+	tiers, err := h.svc.GetPublicTiers()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить тарифы"})
+	}
+	return c.JSON(fiber.Map{"items": tiers})
+}
+
 func (h *SubscriptionHandler) GetTiers(c *fiber.Ctx) error {
 	tiers, err := h.svc.GetAllTiers()
 	if err != nil {
