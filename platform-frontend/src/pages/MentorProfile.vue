@@ -78,6 +78,7 @@ onMounted(loadMentor)
           v-if="mentor.tg && isSubscribed"
           :href="`https://t.me/${mentor.tg}`"
           target="_blank"
+          rel="noopener noreferrer"
           class="text-sm text-primary underline"
         >
           @{{ mentor.tg }}
@@ -98,7 +99,7 @@ onMounted(loadMentor)
         </Typography>
         <div class="space-y-2">
           <div v-for="contact in mentor.contacts" :key="contact.id" class="flex items-center gap-2 text-sm min-w-0">
-            <a :href="contact.link" target="_blank" class="text-accent underline break-all">
+            <a :href="contact.link" target="_blank" rel="noopener noreferrer" class="text-accent underline break-all">
               {{ contact.link }}
             </a>
           </div>
