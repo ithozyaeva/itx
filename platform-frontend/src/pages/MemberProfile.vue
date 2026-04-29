@@ -206,6 +206,7 @@ onMounted(loadProfile)
               v-if="profile.member.tg"
               :href="`https://t.me/${profile.member.tg}`"
               target="_blank"
+              rel="noopener noreferrer"
               class="text-sm text-primary underline"
             >
               @{{ profile.member.tg }}
