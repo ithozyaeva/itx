@@ -88,10 +88,18 @@ describe('router', () => {
       expect(router.currentRoute.value.name).toBe('dashboard')
     })
 
-    it('redirects gated route to /tariffs when no subscription tier', async () => {
+    it('redirects gated route to dashboard when no subscription tier', async () => {
       await router.push('/events')
       await router.isReady()
-      expect(router.currentRoute.value.name).toBe('tariffs')
+      expect(router.currentRoute.value.name).toBe('dashboard')
+    })
+
+    it('allows navigation to /members/:id without subscription', async () => {
+      // Профиль участника — публичная карточка, не должен быть за гейтом
+      // (ссылку даёт бот в /whois, юзер не должен улетать на /tariffs).
+      await router.push('/members/42')
+      await router.isReady()
+      expect(router.currentRoute.value.name).toBe('memberProfile')
     })
 
     it('allows navigation to gated route when user has tier', async () => {
