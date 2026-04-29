@@ -41,6 +41,25 @@ export const apiClient = ky.create({
       if (response.ok)
         return response
 
+      // Backend гейтит премиум-эндпоинты для UNSUBSCRIBER через 403
+      // {"error":"subscription_required","redirect":"/tariffs"}.
+      // Перебрасываем юзера на страницу тарифов, чтобы видел путь к оплате.
+      if (response.status === 403) {
+        try {
+          const body = await response.clone().json() as { error?: string, redirect?: string }
+          if (body?.error === 'subscription_required') {
+            const router = (await import('@/router')).default
+            const target = body.redirect || '/tariffs'
+            if (router.currentRoute.value.path !== target) {
+              router.push(target)
+            }
+          }
+        }
+        catch {
+          // Ignored — body не JSON, передадим ошибку дальше как есть.
+        }
+      }
+
       if (response.status === 401) {
         try {
           if (!isRefreshing) {

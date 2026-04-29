@@ -82,16 +82,38 @@ describe('router', () => {
   })
 
   describe('navigation', () => {
-    it('allows navigation to dashboard', async () => {
+    it('allows navigation to dashboard (open without subscription)', async () => {
       await router.push('/')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('dashboard')
     })
 
-    it('allows navigation to events page', async () => {
+    it('redirects gated route to /tariffs when no subscription tier', async () => {
       await router.push('/events')
       await router.isReady()
-      expect(router.currentRoute.value.name).toBe('events')
+      expect(router.currentRoute.value.name).toBe('tariffs')
+    })
+
+    it('allows navigation to gated route when user has tier', async () => {
+      // Имитируем подписчика — useUser читает tg_user:v2 из localStorage.
+      const TG_USER_TTL_MS = 60 * 60 * 1000
+      const _ = TG_USER_TTL_MS
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: {
+          id: 1,
+          telegramID: 1,
+          roles: ['SUBSCRIBER'],
+          subscriptionTier: { id: 2, slug: 'foreman', name: 'Бригадир', level: 2 },
+        },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push('/events')
+      await r.isReady()
+      expect(r.currentRoute.value.name).toBe('events')
+      localStorage.removeItem('tg_user:v2')
     })
   })
 })

@@ -41,7 +41,11 @@ export function useUser<TUser extends TelegramUser | Mentor = TelegramUser>(): R
 export function isUserSubscribed() {
   const user = useUser()
 
-  return computed(() => !user.value?.roles.includes('UNSUBSCRIBER'))
+  // Источник правды — наличие effective tier (manual override или resolved
+  // через anchor-чат). Старый признак roles.includes('UNSUBSCRIBER') не
+  // различал «в main chat без оплаченного тира», поэтому переключились
+  // на tier.id напрямую — синхронно с backend RequireSubscription.
+  return computed(() => user.value?.subscriptionTier?.id != null)
 }
 
 export function isUserMentor() {

@@ -682,44 +682,68 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 		return
 	}
 
-	b.sendWelcomeWizard(message.Chat.ID)
+	_, isSubscriber := b.resolveUserTier(message.From.ID)
+	b.sendWelcomeWizard(message.Chat.ID, isSubscriber)
 }
 
-// sendWelcomeWizard — первое сообщение новому юзеру в ЛС бота: короткий
-// текст «что это» + набор inline-кнопок, которые покрывают 90% флоу
-// (подписка, список чатов, авторизация на платформе, FAQ). Остальные
-// команды (/events, /mypoints, …) остаются доступны в меню бота, но в
-// первый экран не тащим, чтобы не пугать длинным списком.
-func (b *TelegramBot) sendWelcomeWizard(chatID int64) {
-	text := "<b>Привет! Я бот сообщества IT-X.</b>\n\n" +
-		"Через меня можно:\n" +
-		"• получить инвайт-ссылки в чаты по твоей подписке,\n" +
-		"• посмотреть свой тир, баллы и ближайшие события,\n" +
-		"• авторизоваться на платформе " +
-		"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>,\n" +
-		"• написать админу.\n\n" +
-		"Выбери, с чего начать:"
+// sendWelcomeWizard — первое сообщение в ЛС бота. Адаптируется под статус юзера:
+// для подписчиков — полный набор пунктов (чаты, события, баллы), для UNSUBSCRIBER —
+// прогрев (тарифы, проверка оплаты, платформа для preview).
+func (b *TelegramBot) sendWelcomeWizard(chatID int64, isSubscriber bool) {
+	var text string
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+
+	if isSubscriber {
+		text = "<b>Привет! Я бот сообщества IT-X.</b>\n\n" +
+			"Через меня можно:\n" +
+			"• получить инвайт-ссылки в чаты по твоей подписке,\n" +
+			"• посмотреть свой тир, баллы и ближайшие события,\n" +
+			"• авторизоваться на платформе " +
+			"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>,\n" +
+			"• написать админу.\n\n" +
+			"Выбери, с чего начать:"
+		keyboard = [][]tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🔑 Проверить подписку", "wiz:sub"),
+				tgbotapi.NewInlineKeyboardButtonData("📚 Мои чаты", "wiz:status"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🆕 Куда ещё зайти", "wiz:mygroups"),
+				tgbotapi.NewInlineKeyboardButtonData("🎓 События", "wiz:events"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("⭐ Мои баллы", "wiz:points"),
+				tgbotapi.NewInlineKeyboardButtonData("🌐 Платформа", "wiz:auth"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("📨 Написать админу", "wiz:support"),
+				tgbotapi.NewInlineKeyboardButtonData("❓ Как это работает", "wiz:help"),
+			),
+		}
+	} else {
+		text = "<b>Привет! Я бот сообщества IT-X.</b>\n\n" +
+			"Здесь оформляется подписка на закрытые чаты, менторство и платформу " +
+			"<a href=\"https://ithozyaeva.ru\">ithozyaeva.ru</a>.\n\n" +
+			"Выбери, с чего начать:"
+		keyboard = [][]tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("💎 Тарифы", "wiz:tariffs"),
+				tgbotapi.NewInlineKeyboardButtonData("🔑 Проверить оплату", "wiz:sub"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🌐 Платформа", "wiz:auth"),
+				tgbotapi.NewInlineKeyboardButtonData("❓ Как это работает", "wiz:help"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("📨 Написать админу", "wiz:support"),
+			),
+		}
+	}
+
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
 	msg.DisableWebPagePreview = true
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🔑 Проверить подписку", "wiz:sub"),
-			tgbotapi.NewInlineKeyboardButtonData("📚 Мои чаты", "wiz:status"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🆕 Куда ещё зайти", "wiz:mygroups"),
-			tgbotapi.NewInlineKeyboardButtonData("🎓 События", "wiz:events"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⭐ Мои баллы", "wiz:points"),
-			tgbotapi.NewInlineKeyboardButtonData("🌐 Платформа", "wiz:auth"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("📨 Написать админу", "wiz:support"),
-			tgbotapi.NewInlineKeyboardButtonData("❓ Как это работает", "wiz:help"),
-		),
-	)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 	if _, err := b.bot.Send(msg); err != nil {
 		log.Printf("Error sending welcome wizard: %v", err)
 	}
@@ -1129,6 +1153,8 @@ func (b *TelegramBot) handleWizardCallback(callback *tgbotapi.CallbackQuery) {
 		b.handleMyPointsCommand(synth)
 	case "auth":
 		b.sendAuthButton(callback.From, callback.Message.Chat.ID)
+	case "tariffs":
+		b.sendTariffsMessage(callback.Message.Chat.ID)
 	case "support":
 		b.beginSupportTicket(callback.From.ID, callback.Message.Chat.ID)
 	case "help":

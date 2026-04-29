@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Shield, X } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
@@ -11,6 +11,25 @@ import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
 
 const { sidebarGroups, isOpen, toggleSidebar } = useSidebar()
+const isSubscribedRef = isUserSubscribed()
+
+// Скрываем платные пункты меню для UNSUBSCRIBER и наоборот пункт «Тарифы»
+// прячем у подписчиков. Группы без видимых пунктов целиком убираем,
+// чтобы не оставались пустые «// Сообщество».
+const visibleGroups = computed(() => {
+  return sidebarGroups.value
+    .map(group => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.requiresSubscription && !isSubscribedRef.value)
+          return false
+        if (item.visibleFor === 'unsubscribed' && isSubscribedRef.value)
+          return false
+        return true
+      }),
+    }))
+    .filter(group => group.items.length > 0)
+})
 const route = useRoute()
 const router = useRouter()
 const user = useUser()
@@ -28,7 +47,7 @@ function navigateTo(path: string) {
 }
 
 const isModalOpen = ref(false)
-const isSubscribed = isUserSubscribed()
+const isSubscribed = isSubscribedRef
 const isAdmin = canViewAdminPanel()
 
 async function handleSaveReview(text: string) {
@@ -77,7 +96,7 @@ async function handleSaveReview(text: string) {
           </div>
           <div class="flex-1 py-4">
             <div
-              v-for="(group, groupIndex) in sidebarGroups"
+              v-for="(group, groupIndex) in visibleGroups"
               :key="groupIndex"
               :class="groupIndex > 0 ? 'mt-4' : ''"
             >

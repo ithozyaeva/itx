@@ -48,6 +48,7 @@ type Config struct {
 
 	SubscriptionCheckIntervalHours int
 	SubscriptionAutoKickEnabled    bool
+	SubscriptionGateEnabled        bool
 
 	AlertReminderIntervalMinutes       int64
 	AlertReminderFirstIntervalMinutes  int64
@@ -190,6 +191,7 @@ func LoadConfig() {
 
 		SubscriptionCheckIntervalHours: subCheckInterval,
 		SubscriptionAutoKickEnabled:    viper.GetBool("SUBSCRIPTION_AUTO_KICK_ENABLED"),
+		SubscriptionGateEnabled:        viper.GetBool("SUBSCRIPTION_GATE_ENABLED"),
 		AlertReminderIntervalMinutes:       alertReminderInterval,
 		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
 		AlertReminderSecondIntervalMinutes: alertReminderSecond,
