@@ -7,8 +7,18 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"gorm.io/gorm"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+)
+
+// Sentinel-ошибки сервиса. Хендлер мапит их на HTTP-коды:
+// ErrNotFound → 404, ErrForbidden → 403, всё остальное (валидация и пр.) → 400.
+var (
+	ErrAIMaterialNotFound  = errors.New("материал не найден")
+	ErrAIMaterialForbidden = errors.New("недостаточно прав")
+	ErrAIMaterialCommentNotFound = errors.New("комментарий не найден")
 )
 
 type AIMaterialService struct {
@@ -23,13 +33,20 @@ func (s *AIMaterialService) Search(f repository.AIMaterialFilter) ([]models.AIMa
 	return s.repo.Search(f)
 }
 
-func (s *AIMaterialService) GetByID(id int64, viewerID int64) (*models.AIMaterial, error) {
+// GetByID — единая точка проверки видимости материала. Скрытые материалы
+// возвращаются автору и админу, остальным отдаётся ErrNotFound (без утечки
+// факта существования). Все интерактивные эндпоинты должны идти через этот
+// метод, чтобы лайки/закладки/комменты не лились на скрытое.
+func (s *AIMaterialService) GetByID(id, viewerID int64, isAdmin bool) (*models.AIMaterial, error) {
 	m, err := s.repo.GetByID(id, viewerID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAIMaterialNotFound
+		}
 		return nil, err
 	}
-	if m.IsHidden && m.AuthorId != viewerID {
-		return nil, errors.New("материал скрыт")
+	if m.IsHidden && !isAdmin && m.AuthorId != viewerID {
+		return nil, ErrAIMaterialNotFound
 	}
 	return m, nil
 }
@@ -61,10 +78,13 @@ func (s *AIMaterialService) Create(req *models.CreateAIMaterialRequest, authorID
 func (s *AIMaterialService) Update(id int64, req *models.UpdateAIMaterialRequest, memberID int64, isAdmin bool) (*models.AIMaterial, error) {
 	existing, err := s.repo.GetByID(id, 0)
 	if err != nil {
-		return nil, errors.New("материал не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAIMaterialNotFound
+		}
+		return nil, err
 	}
 	if !isAdmin && existing.AuthorId != memberID {
-		return nil, errors.New("только автор может редактировать материал")
+		return nil, ErrAIMaterialForbidden
 	}
 
 	normalized, tags, err := s.validateAndNormalize(req)
@@ -88,25 +108,30 @@ func (s *AIMaterialService) Update(id int64, req *models.UpdateAIMaterialRequest
 	return s.repo.GetByID(id, memberID)
 }
 
-func (s *AIMaterialService) Delete(id int64, memberID int64, isAdmin bool) error {
+func (s *AIMaterialService) Delete(id, memberID int64, isAdmin bool) error {
 	existing, err := s.repo.GetByID(id, 0)
 	if err != nil {
-		return errors.New("материал не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrAIMaterialNotFound
+		}
+		return err
 	}
 	if !isAdmin && existing.AuthorId != memberID {
-		return errors.New("только автор может удалить материал")
+		return ErrAIMaterialForbidden
 	}
 	return s.repo.Delete(id)
 }
 
-// SetHidden — только для админов: мягкое скрытие материала из листинга.
-// Автор не получает этого права (хочет убрать — пусть удаляет).
-func (s *AIMaterialService) SetHidden(id int64, hidden bool, isAdmin bool) error {
+// SetHidden — admin-only мягкое скрытие материала из листинга.
+func (s *AIMaterialService) SetHidden(id int64, hidden, isAdmin bool) error {
 	if !isAdmin {
-		return errors.New("недостаточно прав")
+		return ErrAIMaterialForbidden
 	}
 	if _, err := s.repo.GetByID(id, 0); err != nil {
-		return errors.New("материал не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrAIMaterialNotFound
+		}
+		return err
 	}
 	return s.repo.SetHidden(id, hidden)
 }
@@ -115,16 +140,16 @@ func (s *AIMaterialService) TopTags(q string, limit int) ([]string, error) {
 	return s.repo.TopTags(strings.ToLower(strings.TrimSpace(q)), limit)
 }
 
-func (s *AIMaterialService) ToggleLike(materialID, memberID int64) (bool, int, error) {
-	if _, err := s.repo.GetByID(materialID, 0); err != nil {
-		return false, 0, errors.New("материал не найден")
+func (s *AIMaterialService) ToggleLike(materialID, memberID int64, isAdmin bool) (bool, int, error) {
+	if _, err := s.GetByID(materialID, memberID, isAdmin); err != nil {
+		return false, 0, err
 	}
 	return s.repo.ToggleLike(materialID, memberID)
 }
 
-func (s *AIMaterialService) ToggleBookmark(materialID, memberID int64) (bool, int, error) {
-	if _, err := s.repo.GetByID(materialID, 0); err != nil {
-		return false, 0, errors.New("материал не найден")
+func (s *AIMaterialService) ToggleBookmark(materialID, memberID int64, isAdmin bool) (bool, int, error) {
+	if _, err := s.GetByID(materialID, memberID, isAdmin); err != nil {
+		return false, 0, err
 	}
 	return s.repo.ToggleBookmark(materialID, memberID)
 }
@@ -134,16 +159,17 @@ const (
 	AIMaterialCommentMaxLen = 4_000
 )
 
-func (s *AIMaterialService) ListComments(materialID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
-	if _, err := s.repo.GetByID(materialID, 0); err != nil {
-		return nil, errors.New("материал не найден")
+func (s *AIMaterialService) ListComments(materialID, viewerID int64, isAdmin bool) ([]models.AIMaterialComment, error) {
+	if _, err := s.GetByID(materialID, viewerID, isAdmin); err != nil {
+		return nil, err
 	}
-	return s.repo.ListComments(materialID, includeHidden)
+	// Скрытые комментарии видит только админ.
+	return s.repo.ListComments(materialID, isAdmin)
 }
 
-func (s *AIMaterialService) CreateComment(materialID, authorID int64, body string) (*models.AIMaterialComment, error) {
-	if _, err := s.repo.GetByID(materialID, 0); err != nil {
-		return nil, errors.New("материал не найден")
+func (s *AIMaterialService) CreateComment(materialID, authorID int64, body string, isAdmin bool) (*models.AIMaterialComment, error) {
+	if _, err := s.GetByID(materialID, authorID, isAdmin); err != nil {
+		return nil, err
 	}
 	body = strings.TrimSpace(body)
 	if l := utf8.RuneCountInString(body); l < AIMaterialCommentMinLen || l > AIMaterialCommentMaxLen {
@@ -160,10 +186,13 @@ func (s *AIMaterialService) CreateComment(materialID, authorID int64, body strin
 func (s *AIMaterialService) UpdateComment(commentID, memberID int64, body string, isAdmin bool) (*models.AIMaterialComment, error) {
 	existing, err := s.repo.GetCommentByID(commentID)
 	if err != nil {
-		return nil, errors.New("комментарий не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAIMaterialCommentNotFound
+		}
+		return nil, err
 	}
 	if !isAdmin && existing.AuthorId != memberID {
-		return nil, errors.New("только автор может редактировать комментарий")
+		return nil, ErrAIMaterialForbidden
 	}
 	body = strings.TrimSpace(body)
 	if l := utf8.RuneCountInString(body); l < AIMaterialCommentMinLen || l > AIMaterialCommentMaxLen {
@@ -179,22 +208,27 @@ func (s *AIMaterialService) UpdateComment(commentID, memberID int64, body string
 func (s *AIMaterialService) DeleteComment(commentID, memberID int64, isAdmin bool) error {
 	existing, err := s.repo.GetCommentByID(commentID)
 	if err != nil {
-		return errors.New("комментарий не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrAIMaterialCommentNotFound
+		}
+		return err
 	}
 	if !isAdmin && existing.AuthorId != memberID {
-		return errors.New("только автор может удалить комментарий")
+		return ErrAIMaterialForbidden
 	}
 	return s.repo.DeleteComment(commentID)
 }
 
-// SetCommentHidden — admin-only (мягкое скрытие). Автор для своего
-// комментария всегда может удалить — отдельной hide-логики ему не нужно.
+// SetCommentHidden — admin-only.
 func (s *AIMaterialService) SetCommentHidden(commentID int64, hidden, isAdmin bool) error {
 	if !isAdmin {
-		return errors.New("недостаточно прав")
+		return ErrAIMaterialForbidden
 	}
 	if _, err := s.repo.GetCommentByID(commentID); err != nil {
-		return errors.New("комментарий не найден")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrAIMaterialCommentNotFound
+		}
+		return err
 	}
 	return s.repo.SetCommentHidden(commentID, hidden)
 }

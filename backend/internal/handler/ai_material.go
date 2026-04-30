@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -21,6 +22,21 @@ func NewAIMaterialHandler() *AIMaterialHandler {
 	return &AIMaterialHandler{svc: service.NewAIMaterialService()}
 }
 
+// respondAIMaterialErr мапит sentinel-ошибки сервиса на HTTP-коды.
+// Всё остальное (валидация и пр.) — 400.
+func respondAIMaterialErr(c *fiber.Ctx, err error) error {
+	switch {
+	case errors.Is(err, service.ErrAIMaterialNotFound),
+		errors.Is(err, service.ErrAIMaterialCommentNotFound),
+		errors.Is(err, gorm.ErrRecordNotFound):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+	case errors.Is(err, service.ErrAIMaterialForbidden):
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+}
+
 func (h *AIMaterialHandler) Search(c *fiber.Ctx) error {
 	member, err := getMember(c)
 	if err != nil {
@@ -32,7 +48,9 @@ func (h *AIMaterialHandler) Search(c *fiber.Ctx) error {
 
 	filter := repository.AIMaterialFilter{
 		Kind:     c.Query("kind"),
-		Tag:      c.Query("tag"),
+		// Теги хранятся в lowercase (см. service.normalizeTags), поэтому
+		// фильтр должен быть case-insensitive — нормализуем на входе.
+		Tag:      strings.ToLower(strings.TrimSpace(c.Query("tag"))),
 		Query:    c.Query("q"),
 		Sort:     c.Query("sort"),
 		ViewerID: member.Id,
@@ -70,12 +88,9 @@ func (h *AIMaterialHandler) GetByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 
-	item, err := h.svc.GetByID(id, member.Id)
+	item, err := h.svc.GetByID(id, member.Id, hasAdminRole(member))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Материал не найден"})
-		}
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(item)
 }
@@ -93,7 +108,7 @@ func (h *AIMaterialHandler) Create(c *fiber.Ctx) error {
 
 	item, err := h.svc.Create(&req, member.Id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(item)
 }
@@ -115,7 +130,7 @@ func (h *AIMaterialHandler) Update(c *fiber.Ctx) error {
 
 	item, err := h.svc.Update(id, &req, member.Id, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(item)
 }
@@ -131,7 +146,7 @@ func (h *AIMaterialHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(id, member.Id, hasAdminRole(member)); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -156,7 +171,7 @@ func (h *AIMaterialHandler) SetHidden(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.SetHidden(id, b.Hidden, hasAdminRole(member)); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -170,9 +185,9 @@ func (h *AIMaterialHandler) ToggleLike(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
-	liked, count, err := h.svc.ToggleLike(id, member.Id)
+	liked, count, err := h.svc.ToggleLike(id, member.Id, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(fiber.Map{"liked": liked, "likesCount": count})
 }
@@ -186,9 +201,9 @@ func (h *AIMaterialHandler) ToggleBookmark(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
-	bookmarked, count, err := h.svc.ToggleBookmark(id, member.Id)
+	bookmarked, count, err := h.svc.ToggleBookmark(id, member.Id, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(fiber.Map{"bookmarked": bookmarked, "bookmarksCount": count})
 }
@@ -202,10 +217,9 @@ func (h *AIMaterialHandler) ListComments(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
-	includeHidden := hasAdminRole(member)
-	items, err := h.svc.ListComments(id, includeHidden)
+	items, err := h.svc.ListComments(id, member.Id, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(fiber.Map{"items": items})
 }
@@ -227,9 +241,9 @@ func (h *AIMaterialHandler) CreateComment(c *fiber.Ctx) error {
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
 	}
-	created, err := h.svc.CreateComment(id, member.Id, body.Body)
+	created, err := h.svc.CreateComment(id, member.Id, body.Body, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(created)
 }
@@ -249,7 +263,7 @@ func (h *AIMaterialHandler) UpdateComment(c *fiber.Ctx) error {
 	}
 	updated, err := h.svc.UpdateComment(id, member.Id, body.Body, hasAdminRole(member))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(updated)
 }
@@ -264,7 +278,7 @@ func (h *AIMaterialHandler) DeleteComment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
 	if err := h.svc.DeleteComment(id, member.Id, hasAdminRole(member)); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -286,7 +300,7 @@ func (h *AIMaterialHandler) SetCommentHidden(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
 	}
 	if err := h.svc.SetCommentHidden(id, b.Hidden, hasAdminRole(member)); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+		return respondAIMaterialErr(c, err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }

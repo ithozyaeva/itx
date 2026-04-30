@@ -404,7 +404,9 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	aiMaterials.Get("/tags", aiMaterialHandler.TopTags)
 	aiMaterials.Post("/", aiMaterialHandler.Create)
 	aiMaterials.Get("/:id", aiMaterialHandler.GetByID)
-	aiMaterials.Patch("/:id", aiMaterialHandler.Update)
+	// PUT, не PATCH — UpdateAIMaterialRequest требует все поля и валидируется
+	// целиком; partial-update семантика не поддерживается.
+	aiMaterials.Put("/:id", aiMaterialHandler.Update)
 	aiMaterials.Delete("/:id", aiMaterialHandler.Delete)
 	aiMaterials.Post("/:id/hidden", aiMaterialHandler.SetHidden)
 	aiMaterials.Post("/:id/like", aiMaterialHandler.ToggleLike)

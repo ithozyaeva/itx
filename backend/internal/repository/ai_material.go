@@ -1,11 +1,25 @@
 package repository
 
 import (
+	"strings"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+// escapeLike экранирует спецсимволы LIKE/ILIKE (`%`, `_`, `\`) в
+// пользовательском вводе. PostgreSQL по умолчанию использует `\` как escape,
+// при этом GORM параметризует значение целиком — escape происходит на уровне
+// LIKE-паттерна, а не SQL-инъекции. См. ai_material.go usages с `ESCAPE '\'`.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
 
 type AIMaterialRepository struct{}
 
@@ -39,8 +53,8 @@ func (r *AIMaterialRepository) Search(f AIMaterialFilter) ([]models.AIMaterial, 
 		q = q.Where("author_id = ?", f.AuthorID)
 	}
 	if f.Query != "" {
-		like := "%" + f.Query + "%"
-		q = q.Where("title ILIKE ? OR summary ILIKE ?", like, like)
+		like := "%" + escapeLike(f.Query) + "%"
+		q = q.Where(`title ILIKE ? ESCAPE '\' OR summary ILIKE ? ESCAPE '\'`, like, like)
 	}
 	if f.Tag != "" {
 		q = q.Where("EXISTS (SELECT 1 FROM ai_material_tags t WHERE t.material_id = ai_materials.id AND t.tag = ?)", f.Tag)
@@ -198,7 +212,8 @@ func (r *AIMaterialRepository) SetHidden(id int64, hidden bool) error {
 }
 
 // TopTags возвращает популярные теги для autocomplete; q — необязательный
-// фильтр-префикс. Сортировка по частоте использования.
+// фильтр-префикс. Сортировка по частоте использования. JOIN с ai_materials +
+// фильтр is_hidden=false, чтобы скрытые материалы не «протекали» в подсказки.
 func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
@@ -208,12 +223,13 @@ func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 	}
 	var rows []row
 	query := database.DB.
-		Table("ai_material_tags").
-		Select("tag").
-		Group("tag").
+		Table("ai_material_tags AS t").
+		Select("t.tag").
+		Joins("JOIN ai_materials m ON m.id = t.material_id AND m.is_hidden = FALSE").
+		Group("t.tag").
 		Order("COUNT(*) DESC")
 	if q != "" {
-		query = query.Where("tag ILIKE ?", q+"%")
+		query = query.Where(`t.tag ILIKE ? ESCAPE '\'`, escapeLike(q)+"%")
 	}
 	if err := query.Limit(limit).Scan(&rows).Error; err != nil {
 		return nil, err
@@ -270,30 +286,29 @@ func (r *AIMaterialRepository) SetCommentHidden(id int64, hidden bool) error {
 		Update("is_hidden", hidden).Error
 }
 
-// ToggleLike — атомарный переключатель лайка для material/member пары:
-// если запись есть, удаляет; если нет, создаёт. Триггеры в миграции
-// поддерживают likes_count в синхроне. Возвращает финальное состояние
-// (liked) и актуальный счётчик.
+// ToggleLike — атомарный переключатель лайка. Сначала пытаемся вставить с
+// ON CONFLICT DO NOTHING: либо запись появилась (liked=true), либо строка
+// уже была — тогда удаляем (liked=false). Это защищает от гонки двух
+// параллельных POST-ов на одну (material, member) пару, которая в наивном
+// check-then-act падала бы с PK violation.
+// Триггеры в миграции поддерживают likes_count в синхроне.
 func (r *AIMaterialRepository) ToggleLike(materialID, memberID int64) (bool, int, error) {
 	var liked bool
 	var count int
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		var existing models.AIMaterialLike
-		err := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
-			First(&existing).Error
-		if err == nil {
-			if delErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
-				Delete(&models.AIMaterialLike{}).Error; delErr != nil {
-				return delErr
-			}
-			liked = false
-		} else if err == gorm.ErrRecordNotFound {
-			if cErr := tx.Create(&models.AIMaterialLike{MaterialId: materialID, MemberId: memberID}).Error; cErr != nil {
-				return cErr
-			}
+		res := tx.Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&models.AIMaterialLike{MaterialId: materialID, MemberId: memberID})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 1 {
 			liked = true
 		} else {
-			return err
+			if dErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+				Delete(&models.AIMaterialLike{}).Error; dErr != nil {
+				return dErr
+			}
+			liked = false
 		}
 
 		var item models.AIMaterial
@@ -310,22 +325,19 @@ func (r *AIMaterialRepository) ToggleBookmark(materialID, memberID int64) (bool,
 	var bookmarked bool
 	var count int
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		var existing models.AIMaterialBookmark
-		err := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
-			First(&existing).Error
-		if err == nil {
-			if delErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
-				Delete(&models.AIMaterialBookmark{}).Error; delErr != nil {
-				return delErr
-			}
-			bookmarked = false
-		} else if err == gorm.ErrRecordNotFound {
-			if cErr := tx.Create(&models.AIMaterialBookmark{MaterialId: materialID, MemberId: memberID}).Error; cErr != nil {
-				return cErr
-			}
+		res := tx.Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&models.AIMaterialBookmark{MaterialId: materialID, MemberId: memberID})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 1 {
 			bookmarked = true
 		} else {
-			return err
+			if dErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+				Delete(&models.AIMaterialBookmark{}).Error; dErr != nil {
+				return dErr
+			}
+			bookmarked = false
 		}
 
 		var item models.AIMaterial

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -164,7 +166,7 @@ func TestAIMaterialService_ToggleLike_RoundTrip(t *testing.T) {
 	}
 
 	// Первый toggle — лайк ставится, count=1
-	liked, count, err := svc.ToggleLike(m.Id, liker.Id)
+	liked, count, err := svc.ToggleLike(m.Id, liker.Id, false)
 	if err != nil {
 		t.Fatalf("toggle 1: %v", err)
 	}
@@ -173,7 +175,7 @@ func TestAIMaterialService_ToggleLike_RoundTrip(t *testing.T) {
 	}
 
 	// Повторный toggle — лайк снимается, count=0
-	liked, count, err = svc.ToggleLike(m.Id, liker.Id)
+	liked, count, err = svc.ToggleLike(m.Id, liker.Id, false)
 	if err != nil {
 		t.Fatalf("toggle 2: %v", err)
 	}
@@ -182,7 +184,7 @@ func TestAIMaterialService_ToggleLike_RoundTrip(t *testing.T) {
 	}
 
 	// Toggle несуществующего материала
-	if _, _, err := svc.ToggleLike(99999, liker.Id); err == nil {
+	if _, _, err := svc.ToggleLike(99999, liker.Id, false); err == nil {
 		t.Error("expected error for non-existing material")
 	}
 }
@@ -207,7 +209,7 @@ func TestAIMaterialService_ToggleBookmark_RoundTrip(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	bookmarked, count, err := svc.ToggleBookmark(m.Id, saver.Id)
+	bookmarked, count, err := svc.ToggleBookmark(m.Id, saver.Id, false)
 	if err != nil {
 		t.Fatalf("toggle 1: %v", err)
 	}
@@ -229,7 +231,7 @@ func TestAIMaterialService_ToggleBookmark_RoundTrip(t *testing.T) {
 		t.Error("Bookmarked флаг должен быть true для saver")
 	}
 
-	bookmarked, count, err = svc.ToggleBookmark(m.Id, saver.Id)
+	bookmarked, count, err = svc.ToggleBookmark(m.Id, saver.Id, false)
 	if err != nil {
 		t.Fatalf("toggle 2: %v", err)
 	}
@@ -260,7 +262,7 @@ func TestAIMaterialService_Comments_CRUD(t *testing.T) {
 	}
 
 	// Create
-	c1, err := svc.CreateComment(m.Id, commenter.Id, "  Полезный материал, спасибо!  ")
+	c1, err := svc.CreateComment(m.Id, commenter.Id, "  Полезный материал, спасибо!  ", false)
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
 	}
@@ -269,7 +271,7 @@ func TestAIMaterialService_Comments_CRUD(t *testing.T) {
 	}
 
 	// Триггер увеличил counter материала
-	got, err := svc.GetByID(m.Id, 0)
+	got, err := svc.GetByID(m.Id, 0, true)
 	if err != nil {
 		t.Fatalf("get material: %v", err)
 	}
@@ -278,12 +280,12 @@ func TestAIMaterialService_Comments_CRUD(t *testing.T) {
 	}
 
 	// Пустой комментарий — ошибка
-	if _, err := svc.CreateComment(m.Id, commenter.Id, "   "); err == nil {
+	if _, err := svc.CreateComment(m.Id, commenter.Id, "   ", false); err == nil {
 		t.Error("expected error for empty comment")
 	}
 
 	// List
-	list, err := svc.ListComments(m.Id, false)
+	list, err := svc.ListComments(m.Id, 0, false)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -316,12 +318,151 @@ func TestAIMaterialService_Comments_CRUD(t *testing.T) {
 	}
 
 	// Триггер обнулил счётчик
-	got, err = svc.GetByID(m.Id, 0)
+	got, err = svc.GetByID(m.Id, 0, true)
 	if err != nil {
 		t.Fatalf("get after delete: %v", err)
 	}
 	if got.CommentsCount != 0 {
 		t.Errorf("CommentsCount после delete = %d, want 0", got.CommentsCount)
+	}
+}
+
+func TestAIMaterialService_Hidden_VisibilityAndInteractions(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db,
+		"ai_material_likes", "ai_material_bookmarks", "ai_material_comments",
+		"ai_material_tags", "ai_materials", "members")
+
+	author := seedMember(t, db, 9601)
+	stranger := seedMember(t, db, 9602)
+	svc := NewAIMaterialService()
+
+	m, err := svc.Create(&models.CreateAIMaterialRequest{
+		Title:        "Title",
+		Summary:      strings.Repeat("a", 35),
+		ContentType:  models.AIMaterialContentTypePrompt,
+		MaterialKind: models.AIMaterialKindPrompt,
+		PromptBody:   "x",
+	}, author.Id)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// Скрываем как админ
+	if err := svc.SetHidden(m.Id, true, true); err != nil {
+		t.Fatalf("hide: %v", err)
+	}
+
+	// Чужой пользователь получает «не найден» — без утечки факта существования
+	if _, err := svc.GetByID(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
+		t.Errorf("stranger should get ErrNotFound, got %v", err)
+	}
+	// Автор по-прежнему видит свой скрытый материал
+	if _, err := svc.GetByID(m.Id, author.Id, false); err != nil {
+		t.Errorf("author should still see hidden material: %v", err)
+	}
+	// Админ видит даже чужой скрытый
+	if _, err := svc.GetByID(m.Id, stranger.Id, true); err != nil {
+		t.Errorf("admin should see hidden material: %v", err)
+	}
+
+	// Чужой не может лайкать/закладывать/комментить скрытое
+	if _, _, err := svc.ToggleLike(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
+		t.Errorf("stranger toggle-like on hidden: want ErrNotFound, got %v", err)
+	}
+	if _, _, err := svc.ToggleBookmark(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
+		t.Errorf("stranger bookmark on hidden: want ErrNotFound, got %v", err)
+	}
+	if _, err := svc.CreateComment(m.Id, stranger.Id, "hi", false); !errors.Is(err, ErrAIMaterialNotFound) {
+		t.Errorf("stranger comment on hidden: want ErrNotFound, got %v", err)
+	}
+	if _, err := svc.ListComments(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
+		t.Errorf("stranger list comments on hidden: want ErrNotFound, got %v", err)
+	}
+}
+
+func TestAIMaterialService_TopTags_DoesNotLeakHiddenTags(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db,
+		"ai_material_tags", "ai_materials", "members")
+
+	author := seedMember(t, db, 9701)
+	svc := NewAIMaterialService()
+
+	mVisible, err := svc.Create(&models.CreateAIMaterialRequest{
+		Title: "Visible", Summary: strings.Repeat("a", 35),
+		ContentType: models.AIMaterialContentTypePrompt, MaterialKind: models.AIMaterialKindPrompt,
+		PromptBody: "x", Tags: []string{"open"},
+	}, author.Id)
+	if err != nil {
+		t.Fatalf("create visible: %v", err)
+	}
+	_ = mVisible
+
+	mHidden, err := svc.Create(&models.CreateAIMaterialRequest{
+		Title: "Hidden", Summary: strings.Repeat("a", 35),
+		ContentType: models.AIMaterialContentTypePrompt, MaterialKind: models.AIMaterialKindPrompt,
+		PromptBody: "x", Tags: []string{"secret-leak"},
+	}, author.Id)
+	if err != nil {
+		t.Fatalf("create hidden: %v", err)
+	}
+	if err := svc.SetHidden(mHidden.Id, true, true); err != nil {
+		t.Fatalf("hide: %v", err)
+	}
+
+	tags, err := svc.TopTags("", 50)
+	if err != nil {
+		t.Fatalf("top tags: %v", err)
+	}
+	for _, tag := range tags {
+		if tag == "secret-leak" {
+			t.Errorf("hidden tag leaked into TopTags: %v", tags)
+		}
+	}
+}
+
+func TestAIMaterialService_Search_QueryEscapesLikeWildcards(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db, "ai_material_tags", "ai_materials", "members")
+
+	author := seedMember(t, db, 9801)
+	svc := NewAIMaterialService()
+
+	// Без `%` в заголовках/описании
+	for i := 0; i < 3; i++ {
+		if _, err := svc.Create(&models.CreateAIMaterialRequest{
+			Title: fmt.Sprintf("Plain title %d", i), Summary: strings.Repeat("a", 35),
+			ContentType: models.AIMaterialContentTypePrompt, MaterialKind: models.AIMaterialKindPrompt,
+			PromptBody: "x",
+		}, author.Id); err != nil {
+			t.Fatalf("create %d: %v", i, err)
+		}
+	}
+	// С `%` — ищем именно его
+	withPercent, err := svc.Create(&models.CreateAIMaterialRequest{
+		Title: "Скидка 50% на курс", Summary: strings.Repeat("a", 35),
+		ContentType: models.AIMaterialContentTypePrompt, MaterialKind: models.AIMaterialKindPrompt,
+		PromptBody: "x",
+	}, author.Id)
+	if err != nil {
+		t.Fatalf("create with %%: %v", err)
+	}
+
+	_, total, err := svc.Search(repository.AIMaterialFilter{Query: "%"})
+	if err != nil {
+		t.Fatalf("search %%: %v", err)
+	}
+	if total != 1 {
+		t.Errorf("Search(q=%%): total=%d, want 1 (only the title with literal %%); without escape it would return all 4", total)
+	}
+
+	items, _, err := svc.Search(repository.AIMaterialFilter{Query: "50%"})
+	if err != nil {
+		t.Fatalf("search 50%%: %v", err)
+	}
+	if len(items) != 1 || items[0].Id != withPercent.Id {
+		t.Errorf("Search(q=50%%) returned %d items, want exactly the percent-title", len(items))
 	}
 }
 
@@ -357,7 +498,7 @@ func TestAIMaterialService_LikesTrigger_UpdatesCount(t *testing.T) {
 		t.Fatalf("insert like: %v", err)
 	}
 
-	got, err := svc.GetByID(m.Id, liker.Id)
+	got, err := svc.GetByID(m.Id, liker.Id, false)
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -373,7 +514,7 @@ func TestAIMaterialService_LikesTrigger_UpdatesCount(t *testing.T) {
 		Delete(&models.AIMaterialLike{}).Error; err != nil {
 		t.Fatalf("delete like: %v", err)
 	}
-	got2, err := svc.GetByID(m.Id, liker.Id)
+	got2, err := svc.GetByID(m.Id, liker.Id, false)
 	if err != nil {
 		t.Fatalf("get after delete: %v", err)
 	}

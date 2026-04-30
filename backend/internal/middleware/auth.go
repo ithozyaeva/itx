@@ -181,6 +181,16 @@ func (m *AuthMiddleware) RequireMinTier(minLevel int) fiber.Handler {
 			})
 		}
 
+		// ADMIN — универсальный модератор; пускаем без проверки тира,
+		// синхронно с frontend hasMinTier и handler-level admin bypass'ами
+		// (SetHidden, UpdateComment и т.п.). Без этого админ без master+
+		// получал бы 403 на собственных moderation-эндпоинтах.
+		for _, role := range member.Roles {
+			if role == models.MemberRoleAdmin {
+				return c.Next()
+			}
+		}
+
 		level, ok := m.subscriptionRepo.GetUserEffectiveTierLevel(member.TelegramID)
 		if !ok {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
