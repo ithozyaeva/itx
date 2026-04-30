@@ -285,12 +285,12 @@ func TestAIMaterialService_Comments_CRUD(t *testing.T) {
 	}
 
 	// List
-	list, err := svc.ListComments(m.Id, 0, false)
+	list, total, err := svc.ListComments(m.Id, 0, false, 20, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if len(list) != 1 || list[0].Id != c1.Id {
-		t.Errorf("list mismatch: %+v", list)
+	if total != 1 || len(list) != 1 || list[0].Id != c1.Id {
+		t.Errorf("list mismatch: total=%d items=%+v", total, list)
 	}
 
 	// Update — чужой не может
@@ -361,7 +361,7 @@ func TestAIMaterialService_ToggleCommentLike_RoundTrip(t *testing.T) {
 	}
 
 	// ListComments под viewer=liker — поле Liked=true
-	list, err := svc.ListComments(m.Id, liker.Id, false)
+	list, _, err := svc.ListComments(m.Id, liker.Id, false, 20, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestAIMaterialService_ToggleCommentLike_RoundTrip(t *testing.T) {
 	}
 
 	// Под другим viewer — Liked=false, но count=1
-	list2, err := svc.ListComments(m.Id, author.Id, false)
+	list2, _, err := svc.ListComments(m.Id, author.Id, false, 20, 0)
 	if err != nil {
 		t.Fatalf("list under author: %v", err)
 	}
@@ -474,7 +474,7 @@ func TestAIMaterialService_Hidden_VisibilityAndInteractions(t *testing.T) {
 	if _, err := svc.CreateComment(m.Id, stranger.Id, "hi", false); !errors.Is(err, ErrAIMaterialNotFound) {
 		t.Errorf("stranger comment on hidden: want ErrNotFound, got %v", err)
 	}
-	if _, err := svc.ListComments(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
+	if _, _, err := svc.ListComments(m.Id, stranger.Id, false, 20, 0); !errors.Is(err, ErrAIMaterialNotFound) {
 		t.Errorf("stranger list comments on hidden: want ErrNotFound, got %v", err)
 	}
 }

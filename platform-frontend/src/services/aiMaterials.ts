@@ -74,8 +74,11 @@ export const aiMaterialsService = {
     return apiClient.post(`ai-materials/${id}/bookmark`).json<ToggleBookmarkResponse>()
   },
 
-  async listComments(id: number) {
-    return apiClient.get(`ai-materials/${id}/comments`).json<AIMaterialCommentsResponse>()
+  async listComments(id: number, limit = 20, offset = 0) {
+    const params = new URLSearchParams()
+    params.set('limit', limit.toString())
+    params.set('offset', offset.toString())
+    return apiClient.get(`ai-materials/${id}/comments`, { searchParams: params }).json<AIMaterialCommentsResponse>()
   },
 
   async createComment(id: number, body: string) {

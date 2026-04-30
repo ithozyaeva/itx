@@ -23,7 +23,9 @@ const isAdmin = isUserAdmin()
 const { toast } = useToast()
 
 const comments = ref<AIMaterialComment[]>([])
+const total = ref(0)
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
 const loadError = ref<string | null>(null)
 
 const newBody = ref('')
@@ -34,24 +36,43 @@ const editingBody = ref('')
 const editing = ref(false)
 
 const COMMENT_MAX = 4_000
+const PAGE_SIZE = 20
 
-function emitCount() {
-  emit('update:count', comments.value.length)
+const hasMore = computed(() => comments.value.length < total.value)
+
+function syncCountUp() {
+  emit('update:count', total.value)
 }
 
-async function fetchComments() {
-  isLoading.value = true
-  loadError.value = null
+async function fetchComments(append = false) {
+  if (append) {
+    if (isLoadingMore.value || !hasMore.value)
+      return
+    isLoadingMore.value = true
+  }
+  else {
+    isLoading.value = true
+    loadError.value = null
+  }
   try {
-    const res = await aiMaterialsService.listComments(props.materialId)
-    comments.value = res.items ?? []
-    emitCount()
+    const offset = append ? comments.value.length : 0
+    const res = await aiMaterialsService.listComments(props.materialId, PAGE_SIZE, offset)
+    if (append)
+      comments.value.push(...(res.items ?? []))
+    else
+      comments.value = res.items ?? []
+    total.value = res.total
+    syncCountUp()
   }
   catch (error) {
-    loadError.value = (await handleError(error)).message
+    if (append)
+      handleError(error)
+    else
+      loadError.value = (await handleError(error)).message
   }
   finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
@@ -63,8 +84,9 @@ async function postComment() {
   try {
     const created = await aiMaterialsService.createComment(props.materialId, body)
     comments.value.push(created)
+    total.value += 1
     newBody.value = ''
-    emitCount()
+    syncCountUp()
   }
   catch (error) {
     handleError(error)
@@ -138,8 +160,9 @@ async function deleteComment(c: AIMaterialComment) {
   try {
     await aiMaterialsService.deleteComment(c.id)
     comments.value = comments.value.filter(it => it.id !== c.id)
+    total.value = Math.max(0, total.value - 1)
     toast({ title: 'Комментарий удалён' })
-    emitCount()
+    syncCountUp()
   }
   catch (error) {
     handleError(error)
@@ -165,11 +188,11 @@ function formatDate(iso: string): string {
   return `${date}, ${time}`
 }
 
-const visibleCount = computed(() => comments.value.length || props.initialCount)
+const visibleCount = computed(() => total.value || props.initialCount)
 
-onMounted(fetchComments)
+onMounted(() => fetchComments(false))
 
-defineExpose({ refresh: fetchComments })
+defineExpose({ refresh: () => fetchComments(false) })
 </script>
 
 <template>
@@ -222,7 +245,7 @@ defineExpose({ refresh: fetchComments })
       Пока нет комментариев. Будьте первым.
     </p>
 
-    <ul v-else class="space-y-3">
+    <ul v-else-if="comments.length" class="space-y-3">
       <li
         v-for="c in comments"
         :key="c.id"
@@ -324,5 +347,17 @@ defineExpose({ refresh: fetchComments })
         </p>
       </li>
     </ul>
+
+    <div v-if="hasMore" class="flex justify-center">
+      <button
+        type="button"
+        class="px-3 py-1.5 rounded-sm border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        :disabled="isLoadingMore"
+        @click="fetchComments(true)"
+      >
+        <Loader2 v-if="isLoadingMore" class="h-3 w-3 animate-spin inline mr-1" />
+        Показать ещё ({{ total - comments.length }})
+      </button>
+    </div>
   </section>
 </template>

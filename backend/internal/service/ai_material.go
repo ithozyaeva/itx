@@ -159,12 +159,12 @@ const (
 	AIMaterialCommentMaxLen = 4_000
 )
 
-func (s *AIMaterialService) ListComments(materialID, viewerID int64, isAdmin bool) ([]models.AIMaterialComment, error) {
+func (s *AIMaterialService) ListComments(materialID, viewerID int64, isAdmin bool, limit, offset int) ([]models.AIMaterialComment, int64, error) {
 	if _, err := s.GetByID(materialID, viewerID, isAdmin); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// Скрытые комментарии видит только админ.
-	return s.repo.ListComments(materialID, viewerID, isAdmin)
+	return s.repo.ListComments(materialID, viewerID, isAdmin, limit, offset)
 }
 
 // ToggleCommentLike — лайк/анлайк комментария. Доступно только если родительский

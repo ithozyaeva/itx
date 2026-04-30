@@ -217,11 +217,13 @@ func (h *AIMaterialHandler) ListComments(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
 	}
-	items, err := h.svc.ListComments(id, member.Id, hasAdminRole(member))
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
+	items, total, err := h.svc.ListComments(id, member.Id, hasAdminRole(member), limit, offset)
 	if err != nil {
 		return respondAIMaterialErr(c, err)
 	}
-	return c.JSON(fiber.Map{"items": items})
+	return c.JSON(fiber.Map{"items": items, "total": total})
 }
 
 type aiMaterialCommentBody struct {

@@ -46,6 +46,7 @@ export interface AIMaterialComment {
 
 export interface AIMaterialCommentsResponse {
   items: AIMaterialComment[]
+  total: number
 }
 
 export interface ToggleLikeResponse {

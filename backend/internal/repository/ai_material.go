@@ -243,15 +243,32 @@ func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 
 // --- Comments ---
 
-func (r *AIMaterialRepository) ListComments(materialID, viewerID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
+func (r *AIMaterialRepository) ListComments(materialID, viewerID int64, includeHidden bool, limit, offset int) ([]models.AIMaterialComment, int64, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	countQ := database.DB.Model(&models.AIMaterialComment{}).Where("material_id = ?", materialID)
+	if !includeHidden {
+		countQ = countQ.Where("is_hidden = ?", false)
+	}
+	var total int64
+	if err := countQ.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	var comments []models.AIMaterialComment
 	q := database.DB.Preload("Author").Where("material_id = ?", materialID)
 	if !includeHidden {
 		q = q.Where("is_hidden = ?", false)
 	}
-	if err := q.Order("created_at ASC").Find(&comments).Error; err != nil {
-		return nil, err
+	if err := q.Order("created_at ASC").Limit(limit).Offset(offset).Find(&comments).Error; err != nil {
+		return nil, 0, err
 	}
+
 	if viewerID > 0 && len(comments) > 0 {
 		ids := make([]int64, len(comments))
 		for i, c := range comments {
@@ -259,13 +276,13 @@ func (r *AIMaterialRepository) ListComments(materialID, viewerID int64, includeH
 		}
 		liked, err := r.fetchCommentLikedByViewer(ids, viewerID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		for i := range comments {
 			comments[i].Liked = liked[comments[i].Id]
 		}
 	}
-	return comments, nil
+	return comments, total, nil
 }
 
 func (r *AIMaterialRepository) fetchCommentLikedByViewer(ids []int64, viewerID int64) (map[int64]bool, error) {
