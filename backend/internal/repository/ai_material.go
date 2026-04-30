@@ -225,6 +225,119 @@ func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 	return tags, nil
 }
 
+// --- Comments ---
+
+func (r *AIMaterialRepository) ListComments(materialID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
+	var comments []models.AIMaterialComment
+	q := database.DB.Preload("Author").Where("material_id = ?", materialID)
+	if !includeHidden {
+		q = q.Where("is_hidden = ?", false)
+	}
+	if err := q.Order("created_at ASC").Find(&comments).Error; err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+func (r *AIMaterialRepository) GetCommentByID(id int64) (*models.AIMaterialComment, error) {
+	var c models.AIMaterialComment
+	if err := database.DB.Preload("Author").First(&c, id).Error; err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (r *AIMaterialRepository) CreateComment(c *models.AIMaterialComment) (*models.AIMaterialComment, error) {
+	if err := database.DB.Create(c).Error; err != nil {
+		return nil, err
+	}
+	return r.GetCommentByID(c.Id)
+}
+
+func (r *AIMaterialRepository) UpdateComment(id int64, body string) error {
+	return database.DB.Model(&models.AIMaterialComment{}).
+		Where("id = ?", id).
+		Update("body", body).Error
+}
+
+func (r *AIMaterialRepository) DeleteComment(id int64) error {
+	return database.DB.Delete(&models.AIMaterialComment{}, id).Error
+}
+
+func (r *AIMaterialRepository) SetCommentHidden(id int64, hidden bool) error {
+	return database.DB.Model(&models.AIMaterialComment{}).
+		Where("id = ?", id).
+		Update("is_hidden", hidden).Error
+}
+
+// ToggleLike — атомарный переключатель лайка для material/member пары:
+// если запись есть, удаляет; если нет, создаёт. Триггеры в миграции
+// поддерживают likes_count в синхроне. Возвращает финальное состояние
+// (liked) и актуальный счётчик.
+func (r *AIMaterialRepository) ToggleLike(materialID, memberID int64) (bool, int, error) {
+	var liked bool
+	var count int
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var existing models.AIMaterialLike
+		err := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+			First(&existing).Error
+		if err == nil {
+			if delErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+				Delete(&models.AIMaterialLike{}).Error; delErr != nil {
+				return delErr
+			}
+			liked = false
+		} else if err == gorm.ErrRecordNotFound {
+			if cErr := tx.Create(&models.AIMaterialLike{MaterialId: materialID, MemberId: memberID}).Error; cErr != nil {
+				return cErr
+			}
+			liked = true
+		} else {
+			return err
+		}
+
+		var item models.AIMaterial
+		if err := tx.Select("likes_count").First(&item, materialID).Error; err != nil {
+			return err
+		}
+		count = item.LikesCount
+		return nil
+	})
+	return liked, count, err
+}
+
+func (r *AIMaterialRepository) ToggleBookmark(materialID, memberID int64) (bool, int, error) {
+	var bookmarked bool
+	var count int
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var existing models.AIMaterialBookmark
+		err := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+			First(&existing).Error
+		if err == nil {
+			if delErr := tx.Where("material_id = ? AND member_id = ?", materialID, memberID).
+				Delete(&models.AIMaterialBookmark{}).Error; delErr != nil {
+				return delErr
+			}
+			bookmarked = false
+		} else if err == gorm.ErrRecordNotFound {
+			if cErr := tx.Create(&models.AIMaterialBookmark{MaterialId: materialID, MemberId: memberID}).Error; cErr != nil {
+				return cErr
+			}
+			bookmarked = true
+		} else {
+			return err
+		}
+
+		var item models.AIMaterial
+		if err := tx.Select("bookmarks_count").First(&item, materialID).Error; err != nil {
+			return err
+		}
+		count = item.BookmarksCount
+		return nil
+	})
+	return bookmarked, count, err
+}
+
 func (r *AIMaterialRepository) fetchTagsForMaterials(ids []int64) (map[int64][]string, error) {
 	if len(ids) == 0 {
 		return map[int64][]string{}, nil

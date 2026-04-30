@@ -407,6 +407,16 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	aiMaterials.Patch("/:id", aiMaterialHandler.Update)
 	aiMaterials.Delete("/:id", aiMaterialHandler.Delete)
 	aiMaterials.Post("/:id/hidden", aiMaterialHandler.SetHidden)
+	aiMaterials.Post("/:id/like", aiMaterialHandler.ToggleLike)
+	aiMaterials.Post("/:id/bookmark", aiMaterialHandler.ToggleBookmark)
+	aiMaterials.Get("/:id/comments", aiMaterialHandler.ListComments)
+	aiMaterials.Post("/:id/comments", aiMaterialHandler.CreateComment)
+	// Комменты редактируются/удаляются по своему ID, не через материал —
+	// фронт оперирует commentId без знания материала.
+	aiMaterialComments := tierMaster.Group("/ai-material-comments")
+	aiMaterialComments.Patch("/:id", aiMaterialHandler.UpdateComment)
+	aiMaterialComments.Delete("/:id", aiMaterialHandler.DeleteComment)
+	aiMaterialComments.Post("/:id/hidden", aiMaterialHandler.SetCommentHidden)
 
 	// Барахолка
 	marketplaceHandler := handler.NewMarketplaceHandler()

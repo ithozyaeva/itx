@@ -115,6 +115,90 @@ func (s *AIMaterialService) TopTags(q string, limit int) ([]string, error) {
 	return s.repo.TopTags(strings.ToLower(strings.TrimSpace(q)), limit)
 }
 
+func (s *AIMaterialService) ToggleLike(materialID, memberID int64) (bool, int, error) {
+	if _, err := s.repo.GetByID(materialID, 0); err != nil {
+		return false, 0, errors.New("материал не найден")
+	}
+	return s.repo.ToggleLike(materialID, memberID)
+}
+
+func (s *AIMaterialService) ToggleBookmark(materialID, memberID int64) (bool, int, error) {
+	if _, err := s.repo.GetByID(materialID, 0); err != nil {
+		return false, 0, errors.New("материал не найден")
+	}
+	return s.repo.ToggleBookmark(materialID, memberID)
+}
+
+const (
+	AIMaterialCommentMinLen = 1
+	AIMaterialCommentMaxLen = 4_000
+)
+
+func (s *AIMaterialService) ListComments(materialID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
+	if _, err := s.repo.GetByID(materialID, 0); err != nil {
+		return nil, errors.New("материал не найден")
+	}
+	return s.repo.ListComments(materialID, includeHidden)
+}
+
+func (s *AIMaterialService) CreateComment(materialID, authorID int64, body string) (*models.AIMaterialComment, error) {
+	if _, err := s.repo.GetByID(materialID, 0); err != nil {
+		return nil, errors.New("материал не найден")
+	}
+	body = strings.TrimSpace(body)
+	if l := utf8.RuneCountInString(body); l < AIMaterialCommentMinLen || l > AIMaterialCommentMaxLen {
+		return nil, fmt.Errorf("длина комментария должна быть от %d до %d символов",
+			AIMaterialCommentMinLen, AIMaterialCommentMaxLen)
+	}
+	return s.repo.CreateComment(&models.AIMaterialComment{
+		MaterialId: materialID,
+		AuthorId:   authorID,
+		Body:       body,
+	})
+}
+
+func (s *AIMaterialService) UpdateComment(commentID, memberID int64, body string, isAdmin bool) (*models.AIMaterialComment, error) {
+	existing, err := s.repo.GetCommentByID(commentID)
+	if err != nil {
+		return nil, errors.New("комментарий не найден")
+	}
+	if !isAdmin && existing.AuthorId != memberID {
+		return nil, errors.New("только автор может редактировать комментарий")
+	}
+	body = strings.TrimSpace(body)
+	if l := utf8.RuneCountInString(body); l < AIMaterialCommentMinLen || l > AIMaterialCommentMaxLen {
+		return nil, fmt.Errorf("длина комментария должна быть от %d до %d символов",
+			AIMaterialCommentMinLen, AIMaterialCommentMaxLen)
+	}
+	if err := s.repo.UpdateComment(commentID, body); err != nil {
+		return nil, err
+	}
+	return s.repo.GetCommentByID(commentID)
+}
+
+func (s *AIMaterialService) DeleteComment(commentID, memberID int64, isAdmin bool) error {
+	existing, err := s.repo.GetCommentByID(commentID)
+	if err != nil {
+		return errors.New("комментарий не найден")
+	}
+	if !isAdmin && existing.AuthorId != memberID {
+		return errors.New("только автор может удалить комментарий")
+	}
+	return s.repo.DeleteComment(commentID)
+}
+
+// SetCommentHidden — admin-only (мягкое скрытие). Автор для своего
+// комментария всегда может удалить — отдельной hide-логики ему не нужно.
+func (s *AIMaterialService) SetCommentHidden(commentID int64, hidden, isAdmin bool) error {
+	if !isAdmin {
+		return errors.New("недостаточно прав")
+	}
+	if _, err := s.repo.GetCommentByID(commentID); err != nil {
+		return errors.New("комментарий не найден")
+	}
+	return s.repo.SetCommentHidden(commentID, hidden)
+}
+
 func (s *AIMaterialService) validateAndNormalize(req *models.CreateAIMaterialRequest) (*models.CreateAIMaterialRequest, []string, error) {
 	out := &models.CreateAIMaterialRequest{
 		Title:        strings.TrimSpace(req.Title),
