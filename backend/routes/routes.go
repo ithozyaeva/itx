@@ -418,6 +418,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	aiMaterialComments := tierMaster.Group("/ai-material-comments")
 	aiMaterialComments.Patch("/:id", aiMaterialHandler.UpdateComment)
 	aiMaterialComments.Delete("/:id", aiMaterialHandler.DeleteComment)
+	aiMaterialComments.Post("/:id/like", aiMaterialHandler.ToggleCommentLike)
 	aiMaterialComments.Post("/:id/hidden", aiMaterialHandler.SetCommentHidden)
 
 	// Барахолка

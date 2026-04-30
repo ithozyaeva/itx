@@ -90,13 +90,27 @@ type AIMaterialComment struct {
 	AuthorId   int64     `json:"authorId" gorm:"column:author_id;not null"`
 	Author     *Member   `json:"author,omitempty" gorm:"foreignKey:AuthorId"`
 	Body       string    `json:"body" gorm:"not null"`
+	LikesCount int       `json:"likesCount" gorm:"column:likes_count;default:0"`
 	IsHidden   bool      `json:"isHidden" gorm:"column:is_hidden;default:false"`
 	CreatedAt  time.Time `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
+
+	// Заполняется сервисом — флаг «текущий viewer лайкнул».
+	Liked bool `json:"liked" gorm:"-:all"`
 }
 
 func (AIMaterialComment) TableName() string {
 	return "ai_material_comments"
+}
+
+type AIMaterialCommentLike struct {
+	CommentId int64     `gorm:"primaryKey;column:comment_id"`
+	MemberId  int64     `gorm:"primaryKey;column:member_id"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+}
+
+func (AIMaterialCommentLike) TableName() string {
+	return "ai_material_comment_likes"
 }
 
 type CreateAIMaterialRequest struct {

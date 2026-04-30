@@ -283,6 +283,22 @@ func (h *AIMaterialHandler) DeleteComment(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *AIMaterialHandler) ToggleCommentLike(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+	liked, count, err := h.svc.ToggleCommentLike(id, member.Id, hasAdminRole(member))
+	if err != nil {
+		return respondAIMaterialErr(c, err)
+	}
+	return c.JSON(fiber.Map{"liked": liked, "likesCount": count})
+}
+
 func (h *AIMaterialHandler) SetCommentHidden(c *fiber.Ctx) error {
 	member, err := getMember(c)
 	if err != nil {

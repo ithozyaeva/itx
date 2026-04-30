@@ -164,7 +164,23 @@ func (s *AIMaterialService) ListComments(materialID, viewerID int64, isAdmin boo
 		return nil, err
 	}
 	// Скрытые комментарии видит только админ.
-	return s.repo.ListComments(materialID, isAdmin)
+	return s.repo.ListComments(materialID, viewerID, isAdmin)
+}
+
+// ToggleCommentLike — лайк/анлайк комментария. Доступно только если родительский
+// материал виден пользователю (скрытое нельзя «накрутить» по прямому ID комментария).
+func (s *AIMaterialService) ToggleCommentLike(commentID, memberID int64, isAdmin bool) (bool, int, error) {
+	c, err := s.repo.GetCommentByID(commentID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, 0, ErrAIMaterialCommentNotFound
+		}
+		return false, 0, err
+	}
+	if _, err := s.GetByID(c.MaterialId, memberID, isAdmin); err != nil {
+		return false, 0, err
+	}
+	return s.repo.ToggleCommentLike(commentID, memberID)
 }
 
 func (s *AIMaterialService) CreateComment(materialID, authorID int64, body string, isAdmin bool) (*models.AIMaterialComment, error) {

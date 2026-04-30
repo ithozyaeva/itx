@@ -243,7 +243,7 @@ func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 
 // --- Comments ---
 
-func (r *AIMaterialRepository) ListComments(materialID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
+func (r *AIMaterialRepository) ListComments(materialID, viewerID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
 	var comments []models.AIMaterialComment
 	q := database.DB.Preload("Author").Where("material_id = ?", materialID)
 	if !includeHidden {
@@ -252,7 +252,68 @@ func (r *AIMaterialRepository) ListComments(materialID int64, includeHidden bool
 	if err := q.Order("created_at ASC").Find(&comments).Error; err != nil {
 		return nil, err
 	}
+	if viewerID > 0 && len(comments) > 0 {
+		ids := make([]int64, len(comments))
+		for i, c := range comments {
+			ids[i] = c.Id
+		}
+		liked, err := r.fetchCommentLikedByViewer(ids, viewerID)
+		if err != nil {
+			return nil, err
+		}
+		for i := range comments {
+			comments[i].Liked = liked[comments[i].Id]
+		}
+	}
 	return comments, nil
+}
+
+func (r *AIMaterialRepository) fetchCommentLikedByViewer(ids []int64, viewerID int64) (map[int64]bool, error) {
+	m := make(map[int64]bool, len(ids))
+	if len(ids) == 0 {
+		return m, nil
+	}
+	var rows []models.AIMaterialCommentLike
+	if err := database.DB.Where("comment_id IN ? AND member_id = ?", ids, viewerID).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		m[r.CommentId] = true
+	}
+	return m, nil
+}
+
+// ToggleCommentLike — атомарный переключатель лайка комментария.
+// Использует ON CONFLICT DO NOTHING для защиты от гонок параллельных POST'ов
+// (зеркально к ToggleLike на материалах). Триггеры в миграции
+// 20260430010000_add_ai_material_comment_likes держат likes_count в синхроне.
+func (r *AIMaterialRepository) ToggleCommentLike(commentID, memberID int64) (bool, int, error) {
+	var liked bool
+	var count int
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&models.AIMaterialCommentLike{CommentId: commentID, MemberId: memberID})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 1 {
+			liked = true
+		} else {
+			if dErr := tx.Where("comment_id = ? AND member_id = ?", commentID, memberID).
+				Delete(&models.AIMaterialCommentLike{}).Error; dErr != nil {
+				return dErr
+			}
+			liked = false
+		}
+
+		var c models.AIMaterialComment
+		if err := tx.Select("likes_count").First(&c, commentID).Error; err != nil {
+			return err
+		}
+		count = c.LikesCount
+		return nil
+	})
+	return liked, count, err
 }
 
 func (r *AIMaterialRepository) GetCommentByID(id int64) (*models.AIMaterialComment, error) {
