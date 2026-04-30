@@ -21,7 +21,6 @@ import Button from '@/components/ui/Button.vue'
           <a
             href="https://boosty.to/jointime?isFromFeed=true"
             target="_blank"
-            rel="noopener noreferrer"
           >
             <Button type="outline">Присоединиться сейчас</Button>
           </a>

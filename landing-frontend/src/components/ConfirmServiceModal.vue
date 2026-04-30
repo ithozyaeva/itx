@@ -71,7 +71,6 @@ function handleBackdropClick(event: MouseEvent) {
                 <a
                   href="/privacy"
                   target="_blank"
-                  rel="noopener noreferrer"
                   class="text-accent underline cursor-pointer hover:text-accent/75 transition-colors"
                 >
                   политикой конфиденциальности
