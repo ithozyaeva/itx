@@ -14,8 +14,24 @@ import (
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	SetupPublicRoutes(app, db)
+	SetupInternalRoutes(app, db, redisClient)
 	SetupAdminRoutes(app, db, redisClient)
 	SetupPlatformRoutes(app, db, redisClient)
+}
+
+// SetupInternalRoutes — server-to-server API для соседних сервисов.
+// Защита: shared secret в заголовке X-Internal-Secret (RequireInternalSecret).
+// CORS НЕ выступает защитой — секрет проверяется на каждом запросе через
+// constant-time compare.
+func SetupInternalRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
+	authMiddleware := middleware.NewAuthMiddleware(db)
+
+	internal := app.Group("/api/internal", authMiddleware.RequireInternalSecret)
+
+	if redisClient != nil {
+		subscriptionHandler := handler.NewSubscriptionHandler(redisClient)
+		internal.Get("/subscription/:tg_id", subscriptionHandler.GetInternalUserSubscription)
+	}
 }
 func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	// Инициализация сервисов и репозиториев

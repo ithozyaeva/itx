@@ -38,6 +38,7 @@ type Config struct {
 	BackendDomain      string
 	AllowedOrigins     string
 	BotSharedSecret    string
+	InternalAPISecret  string
 	S3                 S3Config
 
 	OpenAIKey     string
@@ -131,6 +132,11 @@ func LoadConfig() {
 		log.Println("WARNING: BOT_SHARED_SECRET not set. /telegram-from-bot endpoint will reject all requests.")
 	}
 
+	internalAPISecret := viper.GetString("INTERNAL_API_SECRET")
+	if internalAPISecret == "" {
+		log.Println("WARNING: INTERNAL_API_SECRET not set. /api/internal/* endpoints will reject all requests.")
+	}
+
 	// Redis config
 	redisHost := viper.GetString("REDIS_HOST")
 	if redisHost == "" {
@@ -185,6 +191,7 @@ func LoadConfig() {
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,
+		InternalAPISecret:  internalAPISecret,
 		OpenAIKey:     viper.GetString("OPENAI_API_KEY"),
 		OpenAIBaseURL: viper.GetString("OPENAI_BASE_URL"),
 		OpenAIModel:   viper.GetString("OPENAI_MODEL"),

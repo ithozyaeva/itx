@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
@@ -209,6 +210,21 @@ func (m *AuthMiddleware) RequireMinTier(minLevel int) fiber.Handler {
 		c.Locals("subscription_tier_level", level)
 		return c.Next()
 	}
+}
+
+// RequireInternalSecret гейтит /api/internal/* эндпоинты shared-секретом
+// в заголовке X-Internal-Secret. Используется для server-to-server вызовов
+// от соседних сервисов (например, проверка статуса подписки по tg_id).
+// Сравнение через subtle.ConstantTimeCompare защищает от timing-атак.
+func (m *AuthMiddleware) RequireInternalSecret(c *fiber.Ctx) error {
+	secret := c.Get("X-Internal-Secret")
+	expected := config.CFG.InternalAPISecret
+	if expected == "" || subtle.ConstantTimeCompare([]byte(secret), []byte(expected)) != 1 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+	return c.Next()
 }
 
 func (m *AuthMiddleware) RequirePermission(permission models.Permission) fiber.Handler {
