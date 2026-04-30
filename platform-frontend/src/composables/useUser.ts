@@ -1,8 +1,19 @@
 import type { RemovableRef } from '@vueuse/core'
-import type { Mentor, TelegramUser } from '@/models/profile'
+import type { Mentor, SubscriptionTierSlug, TelegramUser } from '@/models/profile'
 import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } from '@/models/profile'
+
+// Минимальный level для каждого slug — должен совпадать с миграцией
+// 20260319000000_create_subscription_system + 20260424150000_add_king_tier:
+// beginner=1, foreman=2, master=3, king=4. Используется для фронтенд-гейтинга
+// разделов с meta.requiresMinTier (источник правды — backend RequireMinTier).
+const TIER_SLUG_LEVELS: Record<SubscriptionTierSlug, number> = {
+  beginner: 1,
+  foreman: 2,
+  master: 3,
+  king: 4,
+}
 
 // Версионируем ключ, чтобы при добавлении новых полей в TelegramUser/Mentor
 // (например subscriptionTier) старый кэш не блокировал свежие данные.
@@ -74,6 +85,22 @@ export function useUserLevel() {
   const maxLevel = SUBSCRIPTION_LEVELS.length - 1
 
   return { level, levelIndex, maxLevel }
+}
+
+// hasMinTier — гейт по минимальному уровню подписки (mirror к backend
+// AuthMiddleware.RequireMinTier). ADMIN всегда проходит — синхронно с
+// бэкенд-логикой ролей. Возвращает Ref<boolean>, чтобы использовать
+// в реактивных guard'ах (роутер, сайдбар).
+export function hasMinTier(slug: SubscriptionTierSlug) {
+  const user = useUser()
+  return computed(() => {
+    if (user.value?.roles?.includes('ADMIN'))
+      return true
+    const tierLevel = user.value?.subscriptionTier?.level
+    if (tierLevel == null)
+      return false
+    return tierLevel >= TIER_SLUG_LEVELS[slug]
+  })
 }
 
 function isMentor(user: TelegramUser | Mentor): user is Mentor {

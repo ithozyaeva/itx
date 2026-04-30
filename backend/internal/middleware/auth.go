@@ -161,6 +161,56 @@ func (m *AuthMiddleware) RequireSubscription(c *fiber.Ctx) error {
 	return c.Next()
 }
 
+// RequireMinTier гейтит эндпоинты по минимальному уровню подписки. Используется
+// для премиум-фич, которые открыты только начиная с конкретного тира (например,
+// «AI-материалы» — только master+, level >= 3).
+//
+// Как и RequireSubscription, отключается флагом SUBSCRIPTION_GATE_ENABLED —
+// пока флаг выключен, проверка не выполняется (единая точка переключения для
+// всей системы подписок).
+func (m *AuthMiddleware) RequireMinTier(minLevel int) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !config.CFG.SubscriptionGateEnabled {
+			return c.Next()
+		}
+
+		member, ok := c.Locals("member").(*models.Member)
+		if !ok || member == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Unauthorized",
+			})
+		}
+
+		// ADMIN — универсальный модератор; пускаем без проверки тира,
+		// синхронно с frontend hasMinTier и handler-level admin bypass'ами
+		// (SetHidden, UpdateComment и т.п.). Без этого админ без master+
+		// получал бы 403 на собственных moderation-эндпоинтах.
+		for _, role := range member.Roles {
+			if role == models.MemberRoleAdmin {
+				return c.Next()
+			}
+		}
+
+		level, ok := m.subscriptionRepo.GetUserEffectiveTierLevel(member.TelegramID)
+		if !ok {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":    "subscription_required",
+				"redirect": "/",
+			})
+		}
+		if level < minLevel {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":         "tier_too_low",
+				"required_tier": minLevel,
+				"current_tier":  level,
+			})
+		}
+
+		c.Locals("subscription_tier_level", level)
+		return c.Next()
+	}
+}
+
 func (m *AuthMiddleware) RequirePermission(permission models.Permission) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get user from context (set by RequireAuth)

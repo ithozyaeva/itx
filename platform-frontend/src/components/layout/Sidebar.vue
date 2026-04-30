@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
 import { useSidebar } from '@/composables/useSidebar'
-import { canViewAdminPanel, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
+import { canViewAdminPanel, hasMinTier, isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { reviewService } from '@/services/reviews'
 import ReviewModal from '../ReviewModal.vue'
@@ -24,6 +24,8 @@ const visibleGroups = computed(() => {
         if (item.requiresSubscription && !isSubscribedRef.value)
           return false
         if (item.visibleFor === 'unsubscribed' && isSubscribedRef.value)
+          return false
+        if (item.requiresMinTier && !hasMinTier(item.requiresMinTier).value)
           return false
         return true
       }),

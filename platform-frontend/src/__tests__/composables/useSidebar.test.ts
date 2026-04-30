@@ -29,17 +29,17 @@ describe('useSidebar', () => {
     expect(isOpen.value).toBe(false)
   })
 
-  it('sidebarGroups has 3 groups', () => {
+  it('sidebarGroups has 4 groups', () => {
     const { sidebarGroups } = useSidebar()
 
-    expect(sidebarGroups.value).toHaveLength(3)
+    expect(sidebarGroups.value).toHaveLength(4)
   })
 
   it('sidebarGroups contain expected labels', () => {
     const { sidebarGroups } = useSidebar()
     const labels = sidebarGroups.value.map(g => g.label)
 
-    expect(labels).toEqual([undefined, 'Сообщество', 'Активность'])
+    expect(labels).toEqual([undefined, 'Сообщество', 'Знания', 'Активность'])
   })
 
   it('multiple calls return the same singleton state', () => {
