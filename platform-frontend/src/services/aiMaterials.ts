@@ -1,7 +1,5 @@
 import type {
   AIMaterial,
-  AIMaterialComment,
-  AIMaterialCommentsResponse,
   AIMaterialFilters,
   AIMaterialSearchResponse,
   CreateAIMaterialRequest,
@@ -74,26 +72,4 @@ export const aiMaterialsService = {
     return apiClient.post(`ai-materials/${id}/bookmark`).json<ToggleBookmarkResponse>()
   },
 
-  async listComments(id: number, limit = 20, offset = 0) {
-    const params = new URLSearchParams()
-    params.set('limit', limit.toString())
-    params.set('offset', offset.toString())
-    return apiClient.get(`ai-materials/${id}/comments`, { searchParams: params }).json<AIMaterialCommentsResponse>()
-  },
-
-  async createComment(id: number, body: string) {
-    return apiClient.post(`ai-materials/${id}/comments`, { json: { body } }).json<AIMaterialComment>()
-  },
-
-  async updateComment(commentId: number, body: string) {
-    return apiClient.patch(`ai-material-comments/${commentId}`, { json: { body } }).json<AIMaterialComment>()
-  },
-
-  async deleteComment(commentId: number) {
-    return apiClient.delete(`ai-material-comments/${commentId}`)
-  },
-
-  async toggleCommentLike(commentId: number) {
-    return apiClient.post(`ai-material-comments/${commentId}/like`).json<ToggleLikeResponse>()
-  },
 }

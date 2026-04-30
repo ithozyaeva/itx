@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import type { AIMaterialComment } from '@/models/aiMaterial'
+import type { Comment, CommentEntityType } from '@/models/comment'
 import { Heart, Loader2, MessageCircle, Pencil, Send, Trash2, X } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToast } from '@/components/ui/toast'
 import { isUserAdmin, useUser } from '@/composables/useUser'
-import { aiMaterialsService } from '@/services/aiMaterials'
+import { COMMENT_MAX_LEN } from '@/models/comment'
+import { commentsService } from '@/services/comments'
 import { handleError } from '@/services/errorService'
 
 const props = defineProps<{
-  materialId: number
+  entityType: CommentEntityType
+  entityId: number
   initialCount: number
+  // autoLoad — если false, fetchComments не вызывается на mount.
+  // Используется в раскрывающихся блоках (EventCard accordion), чтобы не
+  // дёргать API для свёрнутых событий.
+  autoLoad?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -22,9 +28,12 @@ const user = useUser()
 const isAdmin = isUserAdmin()
 const { toast } = useToast()
 
-const comments = ref<AIMaterialComment[]>([])
+const PAGE_SIZE = 20
+
+const comments = ref<Comment[]>([])
 const total = ref(0)
-const isLoading = ref(true)
+const loaded = ref(false)
+const isLoading = ref(false)
 const isLoadingMore = ref(false)
 const loadError = ref<string | null>(null)
 
@@ -35,10 +44,10 @@ const editingId = ref<number | null>(null)
 const editingBody = ref('')
 const editing = ref(false)
 
-const COMMENT_MAX = 4_000
-const PAGE_SIZE = 20
+const likeBusy = ref<Set<number>>(new Set())
 
 const hasMore = computed(() => comments.value.length < total.value)
+const visibleCount = computed(() => total.value || props.initialCount)
 
 function syncCountUp() {
   emit('update:count', total.value)
@@ -56,12 +65,13 @@ async function fetchComments(append = false) {
   }
   try {
     const offset = append ? comments.value.length : 0
-    const res = await aiMaterialsService.listComments(props.materialId, PAGE_SIZE, offset)
+    const res = await commentsService.list(props.entityType, props.entityId, PAGE_SIZE, offset)
     if (append)
       comments.value.push(...(res.items ?? []))
     else
       comments.value = res.items ?? []
     total.value = res.total
+    loaded.value = true
     syncCountUp()
   }
   catch (error) {
@@ -82,7 +92,7 @@ async function postComment() {
     return
   submitting.value = true
   try {
-    const created = await aiMaterialsService.createComment(props.materialId, body)
+    const created = await commentsService.create(props.entityType, props.entityId, body)
     comments.value.push(created)
     total.value += 1
     newBody.value = ''
@@ -96,7 +106,7 @@ async function postComment() {
   }
 }
 
-function startEdit(c: AIMaterialComment) {
+function startEdit(c: Comment) {
   editingId.value = c.id
   editingBody.value = c.body
 }
@@ -114,7 +124,7 @@ async function saveEdit() {
     return
   editing.value = true
   try {
-    const updated = await aiMaterialsService.updateComment(editingId.value, body)
+    const updated = await commentsService.update(editingId.value, body)
     const idx = comments.value.findIndex(c => c.id === updated.id)
     if (idx !== -1)
       comments.value[idx] = updated
@@ -128,21 +138,29 @@ async function saveEdit() {
   }
 }
 
-// Локальный busy-set по comment.id, чтобы спам-кликами не плодить запросы
-// и не перепутать ответы для разных комментов в одном тике.
-const likeBusy = ref<Set<number>>(new Set())
+async function deleteComment(c: Comment) {
+  try {
+    await commentsService.remove(c.id)
+    comments.value = comments.value.filter(it => it.id !== c.id)
+    total.value = Math.max(0, total.value - 1)
+    toast({ title: 'Комментарий удалён' })
+    syncCountUp()
+  }
+  catch (error) {
+    handleError(error)
+  }
+}
 
-async function toggleLike(c: AIMaterialComment) {
+async function toggleLike(c: Comment) {
   if (likeBusy.value.has(c.id))
     return
   likeBusy.value.add(c.id)
-  // Оптимистичный апдейт
   const prevLiked = c.liked
   const prevCount = c.likesCount
   c.liked = !prevLiked
   c.likesCount = prevCount + (prevLiked ? -1 : 1)
   try {
-    const res = await aiMaterialsService.toggleCommentLike(c.id)
+    const res = await commentsService.toggleLike(c.id)
     c.liked = res.liked
     c.likesCount = res.likesCount
   }
@@ -156,24 +174,11 @@ async function toggleLike(c: AIMaterialComment) {
   }
 }
 
-async function deleteComment(c: AIMaterialComment) {
-  try {
-    await aiMaterialsService.deleteComment(c.id)
-    comments.value = comments.value.filter(it => it.id !== c.id)
-    total.value = Math.max(0, total.value - 1)
-    toast({ title: 'Комментарий удалён' })
-    syncCountUp()
-  }
-  catch (error) {
-    handleError(error)
-  }
-}
-
-function canManage(c: AIMaterialComment) {
+function canManage(c: Comment) {
   return isAdmin.value || user.value?.id === c.authorId
 }
 
-function authorName(c: AIMaterialComment): string {
+function authorName(c: Comment): string {
   const a = c.author
   if (!a)
     return 'Аноним'
@@ -188,9 +193,18 @@ function formatDate(iso: string): string {
   return `${date}, ${time}`
 }
 
-const visibleCount = computed(() => total.value || props.initialCount)
+watch(() => [props.entityType, props.entityId], () => {
+  comments.value = []
+  total.value = 0
+  loaded.value = false
+  if (props.autoLoad !== false)
+    fetchComments(false)
+})
 
-onMounted(() => fetchComments(false))
+onMounted(() => {
+  if (props.autoLoad !== false)
+    fetchComments(false)
+})
 
 defineExpose({ refresh: () => fetchComments(false) })
 </script>
@@ -211,12 +225,12 @@ defineExpose({ refresh: () => fetchComments(false) })
     >
       <textarea
         v-model="newBody"
-        :maxlength="COMMENT_MAX"
+        :maxlength="COMMENT_MAX_LEN"
         class="w-full bg-transparent text-sm focus:outline-none resize-none min-h-16"
-        placeholder="Поделитесь впечатлением, спросите автора, оставьте свой опыт..."
+        placeholder="Поделитесь мнением, спросите автора, оставьте свой опыт..."
       />
       <div class="flex items-center justify-between">
-        <span class="text-xs text-muted-foreground">{{ newBody.length }} / {{ COMMENT_MAX }}</span>
+        <span class="text-xs text-muted-foreground">{{ newBody.length }} / {{ COMMENT_MAX_LEN }}</span>
         <button
           type="submit"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -241,7 +255,7 @@ defineExpose({ refresh: () => fetchComments(false) })
       {{ loadError }}
     </p>
 
-    <p v-else-if="comments.length === 0" class="text-sm text-muted-foreground">
+    <p v-else-if="loaded && comments.length === 0" class="text-sm text-muted-foreground">
       Пока нет комментариев. Будьте первым.
     </p>
 
@@ -316,7 +330,7 @@ defineExpose({ refresh: () => fetchComments(false) })
         <div v-if="editingId === c.id" class="space-y-2">
           <textarea
             v-model="editingBody"
-            :maxlength="COMMENT_MAX"
+            :maxlength="COMMENT_MAX_LEN"
             class="w-full rounded-sm border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
           />
           <div class="flex items-center gap-2">

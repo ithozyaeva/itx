@@ -28,6 +28,7 @@ export interface CommunityEvent {
   hosts: TelegramUser[]
   members: TelegramUser[]
   eventTags: EventTag[]
+  commentsCount: number
 }
 
 export type PlaceType = 'ONLINE' | 'OFFLINE' | 'HYBRID'

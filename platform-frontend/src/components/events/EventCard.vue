@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { CommunityEvent } from '@/models/event'
-import { Calendar, ChevronDown, Crown, Loader2, MapPin } from 'lucide-vue-next'
+import { Calendar, ChevronDown, Crown, Loader2, MapPin, MessageCircle } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import Comments from '@/components/comments/Comments.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Typography } from '@/components/ui/typography'
@@ -21,6 +22,15 @@ const event = ref(props.event)
 
 const user = useUser()
 const isMembersExpanded = ref(false)
+const isCommentsExpanded = ref(false)
+
+function toggleComments() {
+  isCommentsExpanded.value = !isCommentsExpanded.value
+}
+
+function patchCommentsCount(v: number) {
+  event.value.commentsCount = v
+}
 
 const nextOccurrenceDate = computed(() => getNextOccurrenceDate(event.value))
 const formattedDate = computed(() => dateFormatter.format(nextOccurrenceDate.value))
@@ -309,6 +319,34 @@ const { openInGoogleCalendar } = useGoogleCalendar()
         <Loader2 v-if="isApplying" class="h-4 w-4 animate-spin mr-1" />
         {{ isFull ? 'Мест нет' : 'Участвую!' }}
       </Button>
+    </div>
+
+    <!--
+      Комментарии-аккордеон. autoLoad=false — пока свёрнуто, API не дёргаем,
+      чтобы листинг событий не превращался в N+1 по комментам.
+    -->
+    <div class="border-t border-border/40 pt-3">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        :aria-expanded="isCommentsExpanded"
+        @click="toggleComments"
+      >
+        <MessageCircle class="h-4 w-4" />
+        Комментарии ({{ event.commentsCount ?? 0 }})
+        <ChevronDown
+          class="h-4 w-4 transition-transform"
+          :class="isCommentsExpanded ? 'rotate-180' : ''"
+        />
+      </button>
+      <div v-if="isCommentsExpanded" class="mt-3">
+        <Comments
+          entity-type="event"
+          :entity-id="event.id"
+          :initial-count="event.commentsCount ?? 0"
+          @update:count="patchCommentsCount"
+        />
+      </div>
     </div>
   </div>
 </template>

@@ -3,10 +3,10 @@ import type { AIMaterial, CreateAIMaterialRequest } from '@/models/aiMaterial'
 import { ArrowLeft, ExternalLink, FileCode2, Loader2, Pencil, Sparkles, Trash2 } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AIMaterialComments from '@/components/ai-materials/AIMaterialComments.vue'
 import AIMaterialContentBlock from '@/components/ai-materials/AIMaterialContentBlock.vue'
 import AIMaterialEditor from '@/components/ai-materials/AIMaterialEditor.vue'
 import AIMaterialReactions from '@/components/ai-materials/AIMaterialReactions.vue'
+import Comments from '@/components/comments/Comments.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToast } from '@/components/ui/toast'
@@ -220,8 +220,9 @@ onMounted(fetchItem)
       </div>
 
       <div ref="commentsRef" class="border-t border-border pt-4">
-        <AIMaterialComments
-          :material-id="item.id"
+        <Comments
+          entity-type="ai_material"
+          :entity-id="item.id"
           :initial-count="item.commentsCount"
           @update:count="(v) => patch('commentsCount', v)"
         />
