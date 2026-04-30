@@ -250,13 +250,13 @@ const { openInGoogleCalendar } = useGoogleCalendar()
     <!-- Video/recording links -->
     <div v-if="event.videoLink" class="flex items-center gap-2 text-sm">
       <span class="shrink-0">Трансляция:</span>
-      <a :href="event.videoLink" target="_blank" class="underline break-all line-clamp-1">
+      <a :href="event.videoLink" target="_blank" rel="noopener noreferrer" class="underline break-all line-clamp-1">
         {{ event.videoLink }}
       </a>
     </div>
     <div v-if="event.recordingUrl" class="flex items-center gap-2 text-sm">
       <span class="shrink-0">Запись:</span>
-      <a :href="event.recordingUrl" target="_blank" class="underline break-all text-accent line-clamp-1">
+      <a :href="event.recordingUrl" target="_blank" rel="noopener noreferrer" class="underline break-all text-accent line-clamp-1">
         {{ event.recordingUrl }}
       </a>
     </div>

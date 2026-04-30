@@ -11,10 +11,14 @@ server {
 
 server {
   listen 443 ssl;
+  http2 on;
   server_name www.${DOMAIN};
 
   ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
 
   return 301 https://${DOMAIN}$request_uri;
 }
@@ -32,10 +36,14 @@ server {
 
 server {
   listen 443 ssl;
+  http2 on;
   server_name ${DOMAIN};
 
   ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
 
   location /api/ {
     proxy_pass http://${BACKEND_CONTAINER}:3000;
@@ -49,27 +57,18 @@ server {
     try_files $uri $uri.html $uri/ =404;
     index index.html;
     error_page 404 /404.html;
-    location ~* \.html$ {
-      add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
   }
 
   location /admin {
     alias /static/admin-frontend;
     try_files $uri $uri/ /admin/index.html;
     index index.html;
-    location ~* /admin/.*\.html$ {
-      add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
   }
 
   location /platform {
     alias /static/platform-frontend;
     try_files $uri $uri/ /platform/index.html;
     index index.html;
-    location ~* /platform/.*\.html$ {
-      add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
   }
 
 }
