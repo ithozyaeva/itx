@@ -7,9 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"ithozyeva/config"
 	"ithozyeva/internal/models"
-	"ithozyeva/internal/repository"
 	"ithozyeva/internal/testutil"
 )
 
@@ -200,84 +198,38 @@ func TestCommentService_ToggleLike_DeniedWhenEntityHidden(t *testing.T) {
 	}
 }
 
-// withSubscriptionGate временно переключает глобальный
-// config.CFG.SubscriptionGateEnabled и восстанавливает его в Cleanup.
-// Используем напрямую вместо config.LoadConfig — последний требует
-// JWT_SECRET и других env-переменных, которых нет в тестовой среде.
-// Тесты в одном пакете идут последовательно, поэтому глобал безопасен.
-func withSubscriptionGate(t *testing.T, enabled bool) {
-	t.Helper()
-	if config.CFG == nil {
-		// CFG nil в тестах, где LoadConfig не вызывался; ставим минимально
-		// валидный, чтобы наши флаги имели куда писаться.
-		config.CFG = &config.Config{}
-		t.Cleanup(func() { config.CFG = nil })
-	}
-	prev := config.CFG.SubscriptionGateEnabled
-	config.CFG.SubscriptionGateEnabled = enabled
-	t.Cleanup(func() { config.CFG.SubscriptionGateEnabled = prev })
-}
-
-func TestAIMaterialVisibilityChecker_ForBidsLowerTier(t *testing.T) {
+func TestAIMaterialVisibilityChecker_HiddenForStranger_VisibleForAuthorAndAdmin(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	testutil.TruncateAll(t, db,
-		"comment_likes", "comments", "subscription_user_chat_access",
-		"subscription_users", "ai_material_tags", "ai_materials", "members")
-	withSubscriptionGate(t, true)
+		"comment_likes", "comments", "ai_material_tags", "ai_materials", "members")
 
 	author := seedMember(t, db, 10301)
-	low := seedMember(t, db, 10302)
+	stranger := seedMember(t, db, 10302)
+	admin := seedAdminMember(t, db, 10303)
 	materialID := seedAIMaterial(t, author)
-
-	// foreman = level 2, не master+. Создаём прямо в БД, чтобы checker
-	// видел реальный tier через GetUserEffectiveTierLevel.
-	foremanTierID := uint(2)
-	if err := db.Create(&models.SubscriptionUser{
-		ID:             low.TelegramID,
-		FullName:       "Low Tier",
-		ManualTierID:   &foremanTierID,
-		IsActive:       true,
-	}).Error; err != nil {
-		t.Fatalf("seed sub user: %v", err)
-	}
-
-	gate := NewSubscriptionTierGate(repository.NewSubscriptionRepository())
 	aiSvc := NewAIMaterialService()
-	checker := AIMaterialVisibilityChecker(aiSvc, gate)
-	if err := checker(materialID, low); !errors.Is(err, ErrEntityNotFound) {
-		t.Errorf("foreman: want ErrEntityNotFound, got %v", err)
+	checker := AIMaterialVisibilityChecker(aiSvc)
+
+	// Видимый материал — все проходят
+	for _, m := range []*models.Member{author, stranger, admin} {
+		if err := checker(materialID, m); err != nil {
+			t.Errorf("visible material: got %v for %d", err, m.Id)
+		}
 	}
 
-	// Поднимаем до master (level 3) — теперь должен пройти.
-	masterTierID := uint(3)
-	if err := db.Model(&models.SubscriptionUser{}).
-		Where("id = ?", low.TelegramID).
-		Update("manual_tier_id", masterTierID).Error; err != nil {
-		t.Fatalf("upgrade tier: %v", err)
+	// Скрываем
+	if err := aiSvc.SetHidden(materialID, true, true); err != nil {
+		t.Fatalf("hide: %v", err)
 	}
-	if err := checker(materialID, low); err != nil {
-		t.Errorf("master: should pass, got %v", err)
+	// Чужой получает not-found, автор и админ — видят
+	if err := checker(materialID, stranger); !errors.Is(err, ErrEntityNotFound) {
+		t.Errorf("stranger on hidden: want ErrNotFound, got %v", err)
 	}
-}
-
-func TestAIMaterialVisibilityChecker_GateDisabled_AllowsAnyTier(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	testutil.TruncateAll(t, db,
-		"comment_likes", "comments", "subscription_user_chat_access",
-		"subscription_users", "ai_material_tags", "ai_materials", "members")
-	// Главное условие теста — gate выключен. Раньше checker всё равно
-	// проверял tier и расходился с middleware при выключенном флаге;
-	// теперь оба идут через SubscriptionTierGate и поведение совпадает.
-	withSubscriptionGate(t, false)
-
-	author := seedMember(t, db, 10401)
-	low := seedMember(t, db, 10402)
-	materialID := seedAIMaterial(t, author)
-
-	gate := NewSubscriptionTierGate(repository.NewSubscriptionRepository())
-	checker := AIMaterialVisibilityChecker(NewAIMaterialService(), gate)
-	if err := checker(materialID, low); err != nil {
-		t.Errorf("gate disabled — low-tier should pass, got %v", err)
+	if err := checker(materialID, author); err != nil {
+		t.Errorf("author on hidden: should pass, got %v", err)
+	}
+	if err := checker(materialID, admin); err != nil {
+		t.Errorf("admin on hidden: should pass, got %v", err)
 	}
 }
 

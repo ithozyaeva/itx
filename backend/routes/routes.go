@@ -4,7 +4,6 @@ import (
 	"ithozyeva/internal/handler"
 	"ithozyeva/internal/middleware"
 	"ithozyeva/internal/models"
-	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"log"
 
@@ -268,15 +267,13 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 
 	// Shared CommentService — единая точка работы со всеми комментами
 	// платформы. Visibility-чекеры per-entity_type инкапсулируют
-	// специфику доступа: AI-материал требует master+ и видимость материала,
-	// event — только сам факт существования. SubscriptionTierGate —
-	// общая логика «доступ при выключенном gate / для admin / по уровню
-	// тира», синхронизированная с middleware.RequireMinTier.
-	tierGate := service.NewSubscriptionTierGate(repository.NewSubscriptionRepository())
+	// специфику доступа: AI-материал и event — только видимость самой
+	// сущности (любой подписчик имеет доступ к разделу — гейт на уровне
+	// /ai-materials и /events).
 	aiMaterialSvc := service.NewAIMaterialService()
 	eventsSvc := service.NewEventsService()
 	commentSvc := service.NewCommentService(map[models.CommentEntityType]service.EntityVisibilityChecker{
-		models.CommentEntityAIMaterial: service.AIMaterialVisibilityChecker(aiMaterialSvc, tierGate),
+		models.CommentEntityAIMaterial: service.AIMaterialVisibilityChecker(aiMaterialSvc),
 		models.CommentEntityEvent:      service.EventVisibilityChecker(eventsSvc),
 	})
 	commentHandler := handler.NewCommentHandler(commentSvc)
@@ -426,11 +423,11 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	highlights.Get("/recent", highlightHandler.GetRecent)
 	highlights.Get("/", highlightHandler.Search)
 
-	// AI-материалы (только подписчики master+ — level >= 3, slug "master").
-	// Ограничение задано миграцией создания тиров: beginner=1, foreman=2, master=3, king=4.
-	tierMaster := app.Group("/api/platform", authMiddleware.RequireTGAuth, authMiddleware.RequireMinTier(3))
+	// AI-материалы — открыты любому подписчику. Раньше были master+,
+	// но раздел оказался полезным как точка притяжения для всей платной
+	// аудитории, поэтому перенесли с tierMaster на subscribed.
 	aiMaterialHandler := handler.NewAIMaterialHandler()
-	aiMaterials := tierMaster.Group("/ai-materials")
+	aiMaterials := subscribed.Group("/ai-materials")
 	aiMaterials.Get("/", aiMaterialHandler.Search)
 	aiMaterials.Get("/tags", aiMaterialHandler.TopTags)
 	aiMaterials.Post("/", aiMaterialHandler.Create)
