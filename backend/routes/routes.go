@@ -4,6 +4,8 @@ import (
 	"ithozyeva/internal/handler"
 	"ithozyeva/internal/middleware"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/repository"
+	"ithozyeva/internal/service"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -264,6 +266,19 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	// Гейтится через RequireSubscription за SUBSCRIPTION_GATE_ENABLED флагом.
 	subscribed := app.Group("/api/platform", authMiddleware.RequireTGAuth, authMiddleware.RequireSubscription)
 
+	// Shared CommentService — единая точка работы со всеми комментами
+	// платформы. Visibility-чекеры per-entity_type инкапсулируют
+	// специфику доступа: AI-материал требует master+ и видимость материала,
+	// event — только сам факт существования.
+	subscriptionRepo := repository.NewSubscriptionRepository()
+	aiMaterialSvc := service.NewAIMaterialService()
+	eventsSvc := service.NewEventsService()
+	commentSvc := service.NewCommentService(map[models.CommentEntityType]service.EntityVisibilityChecker{
+		models.CommentEntityAIMaterial: service.AIMaterialVisibilityChecker(aiMaterialSvc, subscriptionRepo),
+		models.CommentEntityEvent:      service.EventVisibilityChecker(eventsSvc),
+	})
+	commentHandler := handler.NewCommentHandler(commentSvc)
+
 	// --- protected (доступно UNSUBSCRIBER'ам для прогрева) ---
 
 	// Отзывы о сообществе — нужно UNSUBSCRIBER'у тоже, чтобы оставить отклик.
@@ -337,6 +352,20 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	events.Get("/:id", eventHandler.GetById)
 	events.Post("/apply", eventHandler.AddMember)
 	events.Post("/decline", eventHandler.RemoveMember)
+	// Комменты к событиям — открыты любому подписчику (как остальные
+	// /events). Гейт по master+ не требуется, в отличие от AI-материалов.
+	events.Get("/:id/comments", commentHandler.ListForEntity(models.CommentEntityEvent))
+	events.Post("/:id/comments", commentHandler.CreateForEntity(models.CommentEntityEvent))
+
+	// Индивидуальные операции над комментами — отдельная группа /comments/:id.
+	// Доступна на subscribed (любой подписчик), потому что включает комменты
+	// к event'ам. Доступ к конкретному комменту контролируется визибилити
+	// родительской сущности через visibility-checker внутри CommentService.
+	comments := subscribed.Group("/comments")
+	comments.Patch("/:id", commentHandler.Update)
+	comments.Delete("/:id", commentHandler.Delete)
+	comments.Post("/:id/like", commentHandler.ToggleLike)
+	comments.Post("/:id/hidden", commentHandler.SetHidden)
 
 	// Реферальные ссылки
 	referalsHandler := handler.NewReferalLinkHandler()
@@ -411,15 +440,11 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	aiMaterials.Post("/:id/hidden", aiMaterialHandler.SetHidden)
 	aiMaterials.Post("/:id/like", aiMaterialHandler.ToggleLike)
 	aiMaterials.Post("/:id/bookmark", aiMaterialHandler.ToggleBookmark)
-	aiMaterials.Get("/:id/comments", aiMaterialHandler.ListComments)
-	aiMaterials.Post("/:id/comments", aiMaterialHandler.CreateComment)
-	// Комменты редактируются/удаляются по своему ID, не через материал —
-	// фронт оперирует commentId без знания материала.
-	aiMaterialComments := tierMaster.Group("/ai-material-comments")
-	aiMaterialComments.Patch("/:id", aiMaterialHandler.UpdateComment)
-	aiMaterialComments.Delete("/:id", aiMaterialHandler.DeleteComment)
-	aiMaterialComments.Post("/:id/like", aiMaterialHandler.ToggleCommentLike)
-	aiMaterialComments.Post("/:id/hidden", aiMaterialHandler.SetCommentHidden)
+
+	// Comments к AI-материалу — list/create на /<entity>/:id/comments,
+	// действия над комментом — на /comments/:id (см. блок ниже).
+	aiMaterials.Get("/:id/comments", commentHandler.ListForEntity(models.CommentEntityAIMaterial))
+	aiMaterials.Post("/:id/comments", commentHandler.CreateForEntity(models.CommentEntityAIMaterial))
 
 	// Барахолка
 	marketplaceHandler := handler.NewMarketplaceHandler()

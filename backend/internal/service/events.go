@@ -24,6 +24,19 @@ func NewEventsService() *EventsService {
 	}
 }
 
+// EventVisibilityChecker — visibility-checker для CommentService.
+// События открыты любому подписчику; ограничивающую проверку делает
+// RequireSubscription на уровне группы /events. Здесь только наличие
+// конкретного event'а.
+func EventVisibilityChecker(s *EventsService) func(entityID int64, member *models.Member) error {
+	return func(entityID int64, _ *models.Member) error {
+		if _, err := s.repo.GetById(entityID); err != nil {
+			return ErrEntityNotFound
+		}
+		return nil
+	}
+}
+
 func (s *EventsService) AddMember(eventId int, memberId int) (*models.Event, error) {
 	event, err := s.repo.GetById(int64(eventId))
 	if err != nil {

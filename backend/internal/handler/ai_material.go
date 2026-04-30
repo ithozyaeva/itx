@@ -27,7 +27,6 @@ func NewAIMaterialHandler() *AIMaterialHandler {
 func respondAIMaterialErr(c *fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, service.ErrAIMaterialNotFound),
-		errors.Is(err, service.ErrAIMaterialCommentNotFound),
 		errors.Is(err, gorm.ErrRecordNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, service.ErrAIMaterialForbidden):
@@ -206,121 +205,6 @@ func (h *AIMaterialHandler) ToggleBookmark(c *fiber.Ctx) error {
 		return respondAIMaterialErr(c, err)
 	}
 	return c.JSON(fiber.Map{"bookmarked": bookmarked, "bookmarksCount": count})
-}
-
-func (h *AIMaterialHandler) ListComments(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	limit, _ := strconv.Atoi(c.Query("limit", "20"))
-	offset, _ := strconv.Atoi(c.Query("offset", "0"))
-	items, total, err := h.svc.ListComments(id, member.Id, hasAdminRole(member), limit, offset)
-	if err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.JSON(fiber.Map{"items": items, "total": total})
-}
-
-type aiMaterialCommentBody struct {
-	Body string `json:"body"`
-}
-
-func (h *AIMaterialHandler) CreateComment(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	var body aiMaterialCommentBody
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
-	}
-	created, err := h.svc.CreateComment(id, member.Id, body.Body, hasAdminRole(member))
-	if err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.Status(fiber.StatusCreated).JSON(created)
-}
-
-func (h *AIMaterialHandler) UpdateComment(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	var body aiMaterialCommentBody
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
-	}
-	updated, err := h.svc.UpdateComment(id, member.Id, body.Body, hasAdminRole(member))
-	if err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.JSON(updated)
-}
-
-func (h *AIMaterialHandler) DeleteComment(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	if err := h.svc.DeleteComment(id, member.Id, hasAdminRole(member)); err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-func (h *AIMaterialHandler) ToggleCommentLike(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	liked, count, err := h.svc.ToggleCommentLike(id, member.Id, hasAdminRole(member))
-	if err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.JSON(fiber.Map{"liked": liked, "likesCount": count})
-}
-
-func (h *AIMaterialHandler) SetCommentHidden(c *fiber.Ctx) error {
-	member, err := getMember(c)
-	if err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
-	}
-	type body struct {
-		Hidden bool `json:"hidden"`
-	}
-	var b body
-	if err := c.BodyParser(&b); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
-	}
-	if err := h.svc.SetCommentHidden(id, b.Hidden, hasAdminRole(member)); err != nil {
-		return respondAIMaterialErr(c, err)
-	}
-	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *AIMaterialHandler) TopTags(c *fiber.Ctx) error {
