@@ -176,6 +176,23 @@ func (r *SubscriptionRepository) DeleteChat(chatID int64) error {
 	return r.db.Delete(&models.SubscriptionChat{}, chatID).Error
 }
 
+// GetUserEffectiveTierLevel возвращает уровень эффективного тира пользователя
+// (manual override либо resolved). Если tier не назначен — 0, ok=false.
+// Используется middleware'ом RequireMinTier для гейта по уровню подписки.
+func (r *SubscriptionRepository) GetUserEffectiveTierLevel(userID int64) (int, bool) {
+	type row struct{ Level int }
+	var res row
+	err := r.db.Raw(`
+		SELECT st.level FROM subscription_users su
+		JOIN subscription_tiers st ON st.id = COALESCE(su.manual_tier_id, su.resolved_tier_id)
+		WHERE su.id = ? AND su.is_active = TRUE
+	`, userID).Scan(&res).Error
+	if err != nil || res.Level == 0 {
+		return 0, false
+	}
+	return res.Level, true
+}
+
 // --- Users ---
 
 func (r *SubscriptionRepository) GetUser(userID int64) (*models.SubscriptionUser, error) {

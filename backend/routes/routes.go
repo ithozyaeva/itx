@@ -395,6 +395,19 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	highlights.Get("/recent", highlightHandler.GetRecent)
 	highlights.Get("/", highlightHandler.Search)
 
+	// AI-материалы (только подписчики master+ — level >= 3, slug "master").
+	// Ограничение задано миграцией создания тиров: beginner=1, foreman=2, master=3, king=4.
+	tierMaster := app.Group("/api/platform", authMiddleware.RequireTGAuth, authMiddleware.RequireMinTier(3))
+	aiMaterialHandler := handler.NewAIMaterialHandler()
+	aiMaterials := tierMaster.Group("/ai-materials")
+	aiMaterials.Get("/", aiMaterialHandler.Search)
+	aiMaterials.Get("/tags", aiMaterialHandler.TopTags)
+	aiMaterials.Post("/", aiMaterialHandler.Create)
+	aiMaterials.Get("/:id", aiMaterialHandler.GetByID)
+	aiMaterials.Patch("/:id", aiMaterialHandler.Update)
+	aiMaterials.Delete("/:id", aiMaterialHandler.Delete)
+	aiMaterials.Post("/:id/hidden", aiMaterialHandler.SetHidden)
+
 	// Барахолка
 	marketplaceHandler := handler.NewMarketplaceHandler()
 	marketplace := subscribed.Group("/marketplace")
