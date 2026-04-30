@@ -49,7 +49,7 @@ const state = {
     {
       label: 'Знания',
       items: [
-        { title: 'AI-материалы', path: '/ai-materials', icon: Sparkles, requiresSubscription: true, requiresMinTier: 'master' },
+        { title: 'AI-материалы', path: '/ai-materials', icon: Sparkles, requiresSubscription: true },
       ],
     },
     {

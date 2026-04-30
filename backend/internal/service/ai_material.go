@@ -153,22 +153,13 @@ func (s *AIMaterialService) ToggleBookmark(materialID, memberID int64, isAdmin b
 	return s.repo.ToggleBookmark(materialID, memberID)
 }
 
-// MasterTierLevel — уровень тира master (см. миграцию create_subscription_system).
-// Соответствует slug "master" / отображаемому названию «Хозяин».
-const MasterTierLevel = 3
-
 // AIMaterialVisibilityChecker — фабрика visibility-checker'а для CommentService.
-// Раздел master+ закрытый, поэтому checker дублирует логику RequireMinTier
-// через единый SubscriptionTierGate (он же используется middleware'ом):
-// без gate'а через `/comments/:id/like` foreman мог бы обойти tierMaster
-// middleware на /ai-materials/*. С gate'ом — поведение асимметрично с
-// middleware при SUBSCRIPTION_GATE_ENABLED=false, поэтому используем
-// общий helper.
-func AIMaterialVisibilityChecker(svc *AIMaterialService, gate *SubscriptionTierGate) func(entityID int64, member *models.Member) error {
+// Раздел открыт любому подписчику; ограничение по подписке делает
+// RequireSubscription на уровне группы /ai-materials. Здесь только
+// видимость самого материала: автор и admin видят даже скрытое,
+// остальным is_hidden=true возвращает ErrEntityNotFound (без утечки факта).
+func AIMaterialVisibilityChecker(svc *AIMaterialService) func(entityID int64, member *models.Member) error {
 	return func(entityID int64, member *models.Member) error {
-		if !gate.AllowsMinTier(member, MasterTierLevel) {
-			return ErrEntityNotFound
-		}
 		isAdmin := false
 		for _, role := range member.Roles {
 			if role == models.MemberRoleAdmin {
