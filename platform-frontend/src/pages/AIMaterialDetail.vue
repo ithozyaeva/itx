@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { AIMaterial, CreateAIMaterialRequest } from '@/models/aiMaterial'
-import { ArrowLeft, Bookmark, ExternalLink, FileCode2, Heart, Loader2, MessageCircle, Pencil, Sparkles, Trash2 } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { ArrowLeft, ExternalLink, FileCode2, Loader2, Pencil, Sparkles, Trash2 } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AIMaterialComments from '@/components/ai-materials/AIMaterialComments.vue'
 import AIMaterialContentBlock from '@/components/ai-materials/AIMaterialContentBlock.vue'
 import AIMaterialEditor from '@/components/ai-materials/AIMaterialEditor.vue'
+import AIMaterialReactions from '@/components/ai-materials/AIMaterialReactions.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToast } from '@/components/ui/toast'
@@ -25,6 +27,7 @@ const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const showEditDialog = ref(false)
 const isSubmitting = ref(false)
+const commentsRef = ref<HTMLElement | null>(null)
 
 const isAuthor = computed(() => !!item.value && user.value?.id === item.value.authorId)
 const canManage = computed(() => isAuthor.value || isAdmin.value)
@@ -103,6 +106,17 @@ async function deleteItem() {
   }
 }
 
+function patch<K extends keyof AIMaterial>(field: K, value: AIMaterial[K]) {
+  if (!item.value)
+    return
+  item.value = { ...item.value, [field]: value }
+}
+
+async function jumpToComments() {
+  await nextTick()
+  commentsRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 watch(() => route.params.id, () => {
   if (route.name === 'aiMaterialDetail')
     fetchItem()
@@ -164,20 +178,20 @@ onMounted(fetchItem)
 
       <AIMaterialContentBlock :item="item" />
 
-      <div class="flex items-center gap-4 text-sm text-muted-foreground border-t border-border pt-4">
-        <span class="inline-flex items-center gap-1">
-          <Heart class="h-4 w-4" :class="item.liked ? 'fill-red-500 text-red-500' : ''" />
-          {{ item.likesCount }}
-        </span>
-        <span class="inline-flex items-center gap-1">
-          <Bookmark class="h-4 w-4" :class="item.bookmarked ? 'fill-current' : ''" />
-          {{ item.bookmarksCount }}
-        </span>
-        <span class="inline-flex items-center gap-1">
-          <MessageCircle class="h-4 w-4" />
-          {{ item.commentsCount }}
-        </span>
-        <span class="ml-auto text-xs">Лайки и комментарии скоро появятся</span>
+      <div class="border-t border-border pt-4">
+        <AIMaterialReactions
+          :material-id="item.id"
+          :liked="item.liked"
+          :bookmarked="item.bookmarked"
+          :likes-count="item.likesCount"
+          :bookmarks-count="item.bookmarksCount"
+          :comments-count="item.commentsCount"
+          @update:liked="(v) => patch('liked', v)"
+          @update:bookmarked="(v) => patch('bookmarked', v)"
+          @update:likes-count="(v) => patch('likesCount', v)"
+          @update:bookmarks-count="(v) => patch('bookmarksCount', v)"
+          @jump-to-comments="jumpToComments"
+        />
       </div>
 
       <div v-if="canManage" class="flex flex-wrap gap-2 border-t border-border pt-4">
@@ -203,6 +217,14 @@ onMounted(fetchItem)
             </button>
           </template>
         </ConfirmDialog>
+      </div>
+
+      <div ref="commentsRef" class="border-t border-border pt-4">
+        <AIMaterialComments
+          :material-id="item.id"
+          :initial-count="item.commentsCount"
+          @update:count="(v) => patch('commentsCount', v)"
+        />
       </div>
 
       <AIMaterialEditor

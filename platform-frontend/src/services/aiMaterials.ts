@@ -1,4 +1,13 @@
-import type { AIMaterial, AIMaterialFilters, AIMaterialSearchResponse, CreateAIMaterialRequest } from '@/models/aiMaterial'
+import type {
+  AIMaterial,
+  AIMaterialComment,
+  AIMaterialCommentsResponse,
+  AIMaterialFilters,
+  AIMaterialSearchResponse,
+  CreateAIMaterialRequest,
+  ToggleBookmarkResponse,
+  ToggleLikeResponse,
+} from '@/models/aiMaterial'
 import { apiClient } from './api'
 
 function buildSearchParams(filters: AIMaterialFilters): URLSearchParams {
@@ -55,5 +64,29 @@ export const aiMaterialsService = {
       params.set('q', q)
     params.set('limit', limit.toString())
     return apiClient.get('ai-materials/tags', { searchParams: params }).json<{ tags: string[] }>()
+  },
+
+  async toggleLike(id: number) {
+    return apiClient.post(`ai-materials/${id}/like`).json<ToggleLikeResponse>()
+  },
+
+  async toggleBookmark(id: number) {
+    return apiClient.post(`ai-materials/${id}/bookmark`).json<ToggleBookmarkResponse>()
+  },
+
+  async listComments(id: number) {
+    return apiClient.get(`ai-materials/${id}/comments`).json<AIMaterialCommentsResponse>()
+  },
+
+  async createComment(id: number, body: string) {
+    return apiClient.post(`ai-materials/${id}/comments`, { json: { body } }).json<AIMaterialComment>()
+  },
+
+  async updateComment(commentId: number, body: string) {
+    return apiClient.patch(`ai-material-comments/${commentId}`, { json: { body } }).json<AIMaterialComment>()
+  },
+
+  async deleteComment(commentId: number) {
+    return apiClient.delete(`ai-material-comments/${commentId}`)
   },
 }

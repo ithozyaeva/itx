@@ -163,13 +163,16 @@ onMounted(() => fetchItems(true))
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         <button
-          v-for="item in items"
+          v-for="(item, idx) in items"
           :key="item.id"
           type="button"
           class="text-left appearance-none"
           @click="openMaterial(item)"
         >
-          <AIMaterialCard :item="item" />
+          <AIMaterialCard
+            :item="item"
+            @update:item="(v) => (items[idx] = v)"
+          />
         </button>
       </div>
 

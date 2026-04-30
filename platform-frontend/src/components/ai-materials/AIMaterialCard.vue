@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import type { AIMaterial } from '@/models/aiMaterial'
-import { Bookmark, ExternalLink, FileCode2, Heart, MessageCircle, Sparkles } from 'lucide-vue-next'
+import { ExternalLink, FileCode2, Sparkles } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { AI_MATERIAL_KIND_LABELS } from '@/models/aiMaterial'
+import AIMaterialReactions from './AIMaterialReactions.vue'
 
 const props = defineProps<{ item: AIMaterial }>()
+
+const emit = defineEmits<{
+  'update:item': [v: AIMaterial]
+}>()
 
 const contentIcon = computed(() => {
   switch (props.item.contentType) {
@@ -24,11 +29,15 @@ function authorName(): string {
   const name = [a.firstName, a.lastName].filter(Boolean).join(' ')
   return name || (a.tg ? `@${a.tg}` : 'Аноним')
 }
+
+function patch(field: keyof AIMaterial, value: AIMaterial[keyof AIMaterial]) {
+  emit('update:item', { ...props.item, [field]: value })
+}
 </script>
 
 <template>
   <article
-    class="group flex flex-col gap-3 rounded-sm border border-border bg-card p-4 transition-colors hover:border-accent terminal-card"
+    class="group flex flex-col gap-3 rounded-sm border border-border bg-card p-4 transition-colors hover:border-accent terminal-card h-full"
   >
     <header class="flex items-start gap-2">
       <span
@@ -60,20 +69,20 @@ function authorName(): string {
 
     <footer class="mt-auto flex items-center justify-between text-xs text-muted-foreground">
       <span class="truncate">{{ authorName() }}</span>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-0.5">
-          <Heart class="h-3 w-3" :class="item.liked ? 'fill-red-500 text-red-500' : ''" />
-          {{ item.likesCount }}
-        </span>
-        <span class="inline-flex items-center gap-0.5">
-          <Bookmark class="h-3 w-3" :class="item.bookmarked ? 'fill-current' : ''" />
-          {{ item.bookmarksCount }}
-        </span>
-        <span class="inline-flex items-center gap-0.5">
-          <MessageCircle class="h-3 w-3" />
-          {{ item.commentsCount }}
-        </span>
-      </div>
+      <AIMaterialReactions
+        :material-id="item.id"
+        :liked="item.liked"
+        :bookmarked="item.bookmarked"
+        :likes-count="item.likesCount"
+        :bookmarks-count="item.bookmarksCount"
+        :comments-count="item.commentsCount"
+        :stop-propagation="true"
+        size="sm"
+        @update:liked="(v: boolean) => patch('liked', v)"
+        @update:bookmarked="(v: boolean) => patch('bookmarked', v)"
+        @update:likes-count="(v: number) => patch('likesCount', v)"
+        @update:bookmarks-count="(v: number) => patch('bookmarksCount', v)"
+      />
     </footer>
   </article>
 </template>
