@@ -566,6 +566,47 @@ func (h *SubscriptionHandler) ResolveChat(c *fiber.Ctx) error {
 	})
 }
 
+// GetInternalUserSubscription отдаёт статус подписки по telegram-id для
+// server-to-server вызовов от соседних сервисов (защищён shared secret через
+// RequireInternalSecret). Если пользователь не найден или нет активного тира —
+// возвращает 200 с is_subscriber=false и tier=null, чтобы консьюмеру не нужно
+// было различать 404 и пустой ответ.
+func (h *SubscriptionHandler) GetInternalUserSubscription(c *fiber.Ctx) error {
+	tgID, err := strconv.ParseInt(c.Params("tg_id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный tg_id"})
+	}
+
+	resp := fiber.Map{
+		"tg_id":         tgID,
+		"is_subscriber": false,
+		"tier":          nil,
+	}
+
+	user, err := h.svc.GetUser(tgID)
+	if err != nil || user == nil {
+		return c.JSON(resp)
+	}
+
+	effTierID := user.EffectiveTierID()
+	if effTierID == nil {
+		return c.JSON(resp)
+	}
+
+	tier, err := h.svc.GetTier(*effTierID)
+	if err != nil {
+		return c.JSON(resp)
+	}
+
+	resp["is_subscriber"] = true
+	resp["tier"] = fiber.Map{
+		"slug":  tier.Slug,
+		"name":  tier.Name,
+		"level": tier.Level,
+	}
+	return c.JSON(resp)
+}
+
 func (h *SubscriptionHandler) RevokeAccess(c *fiber.Ctx) error {
 	userID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
