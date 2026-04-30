@@ -480,7 +480,6 @@ onMounted(() => {
               <a
                 :href="`https://t.me/${item.contactTelegram.replace('@', '')}`"
                 target="_blank"
-                rel="noopener noreferrer"
                 class="text-xs text-accent hover:underline"
               >
                 @{{ item.contactTelegram.replace('@', '') }}

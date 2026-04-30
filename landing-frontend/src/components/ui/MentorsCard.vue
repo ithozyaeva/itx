@@ -146,7 +146,6 @@ function getLink(contact: Contact) {
             class="transition-colors duration-200 cursor-pointer"
             :href="getLink(contact)"
             target="_blank"
-            rel="noopener noreferrer"
             :class="contact.colorType === 'primary' ? 'text-blue-500 hover:text-blue-700' : 'text-gray-500 hover:text-gray-700'"
           >
             <TgIcon

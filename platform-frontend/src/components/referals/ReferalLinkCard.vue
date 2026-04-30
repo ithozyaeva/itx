@@ -132,7 +132,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
         </div>
       </div>
       <p class="text-sm text-muted-foreground">
-        Автор: <a v-if="link.author.tg" :href="`https://t.me/${link.author.tg}`" target="_blank" rel="noopener noreferrer" class="underline">{{ link.author.firstName }} {{ link.author.lastName }}</a><span v-else>{{ link.author.firstName }} {{ link.author.lastName }}</span>
+        Автор: <a v-if="link.author.tg" :href="`https://t.me/${link.author.tg}`" target="_blank" class="underline">{{ link.author.firstName }} {{ link.author.lastName }}</a><span v-else>{{ link.author.firstName }} {{ link.author.lastName }}</span>
       </p>
       <div class="space-y-1 text-sm">
         <div class="space-x-2">

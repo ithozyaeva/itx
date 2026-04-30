@@ -115,7 +115,6 @@ onMounted(async () => {
       as="a"
       :href="link"
       target="_blank"
-      rel="noopener noreferrer"
       variant="stroke"
       class="button"
     >
