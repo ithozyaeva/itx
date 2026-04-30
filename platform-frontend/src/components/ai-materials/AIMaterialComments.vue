@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { AIMaterialComment } from '@/models/aiMaterial'
-import { Loader2, MessageCircle, Pencil, Send, Trash2, X } from 'lucide-vue-next'
+import { Heart, Loader2, MessageCircle, Pencil, Send, Trash2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToast } from '@/components/ui/toast'
 import { isUserAdmin, useUser } from '@/composables/useUser'
@@ -105,6 +106,34 @@ async function saveEdit() {
   }
 }
 
+// Локальный busy-set по comment.id, чтобы спам-кликами не плодить запросы
+// и не перепутать ответы для разных комментов в одном тике.
+const likeBusy = ref<Set<number>>(new Set())
+
+async function toggleLike(c: AIMaterialComment) {
+  if (likeBusy.value.has(c.id))
+    return
+  likeBusy.value.add(c.id)
+  // Оптимистичный апдейт
+  const prevLiked = c.liked
+  const prevCount = c.likesCount
+  c.liked = !prevLiked
+  c.likesCount = prevCount + (prevLiked ? -1 : 1)
+  try {
+    const res = await aiMaterialsService.toggleCommentLike(c.id)
+    c.liked = res.liked
+    c.likesCount = res.likesCount
+  }
+  catch (error) {
+    c.liked = prevLiked
+    c.likesCount = prevCount
+    handleError(error)
+  }
+  finally {
+    likeBusy.value.delete(c.id)
+  }
+}
+
 async function deleteComment(c: AIMaterialComment) {
   try {
     await aiMaterialsService.deleteComment(c.id)
@@ -201,7 +230,14 @@ defineExpose({ refresh: fetchComments })
       >
         <header class="flex items-center justify-between gap-2 mb-1.5 text-xs text-muted-foreground">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="font-medium text-foreground truncate">{{ authorName(c) }}</span>
+            <RouterLink
+              v-if="c.author"
+              :to="{ name: 'memberProfile', params: { id: c.authorId } }"
+              class="font-medium text-foreground truncate hover:text-accent hover:underline"
+            >
+              {{ authorName(c) }}
+            </RouterLink>
+            <span v-else class="font-medium text-foreground truncate">{{ authorName(c) }}</span>
             <span class="truncate">{{ formatDate(c.createdAt) }}</span>
             <span
               v-if="c.updatedAt && c.updatedAt !== c.createdAt"
@@ -212,31 +248,45 @@ defineExpose({ refresh: fetchComments })
               class="px-1.5 py-0.5 rounded-full bg-yellow-500/15 text-yellow-600"
             >Скрыт</span>
           </div>
-          <div v-if="canManage(c) && editingId !== c.id" class="flex items-center gap-1 shrink-0">
+          <div class="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              aria-label="Редактировать"
-              class="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              @click="startEdit(c)"
+              :aria-label="c.liked ? 'Убрать лайк' : 'Поставить лайк'"
+              :aria-pressed="c.liked"
+              :disabled="likeBusy.has(c.id)"
+              class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-1 transition-colors hover:text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+              :class="c.liked ? 'text-red-500' : ''"
+              @click="toggleLike(c)"
             >
-              <Pencil class="h-3.5 w-3.5" />
+              <Heart class="h-3 w-3" :class="c.liked ? 'fill-red-500' : ''" />
+              {{ c.likesCount }}
             </button>
-            <ConfirmDialog
-              title="Удалить комментарий?"
-              description="Удаление безвозвратно."
-              confirm-label="Удалить"
-              @confirm="deleteComment(c)"
-            >
-              <template #trigger>
-                <button
-                  type="button"
-                  aria-label="Удалить"
-                  class="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
-                >
-                  <Trash2 class="h-3.5 w-3.5" />
-                </button>
-              </template>
-            </ConfirmDialog>
+            <template v-if="canManage(c) && editingId !== c.id">
+              <button
+                type="button"
+                aria-label="Редактировать"
+                class="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                @click="startEdit(c)"
+              >
+                <Pencil class="h-3.5 w-3.5" />
+              </button>
+              <ConfirmDialog
+                title="Удалить комментарий?"
+                description="Удаление безвозвратно."
+                confirm-label="Удалить"
+                @confirm="deleteComment(c)"
+              >
+                <template #trigger>
+                  <button
+                    type="button"
+                    aria-label="Удалить"
+                    class="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </button>
+                </template>
+              </ConfirmDialog>
+            </template>
           </div>
         </header>
 

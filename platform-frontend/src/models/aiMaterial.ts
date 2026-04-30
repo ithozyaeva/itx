@@ -37,6 +37,8 @@ export interface AIMaterialComment {
   authorId: number
   author?: import('@/models/profile').TelegramUser
   body: string
+  likesCount: number
+  liked: boolean
   isHidden: boolean
   createdAt: string
   updatedAt: string

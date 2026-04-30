@@ -89,4 +89,8 @@ export const aiMaterialsService = {
   async deleteComment(commentId: number) {
     return apiClient.delete(`ai-material-comments/${commentId}`)
   },
+
+  async toggleCommentLike(commentId: number) {
+    return apiClient.post(`ai-material-comments/${commentId}/like`).json<ToggleLikeResponse>()
+  },
 }
