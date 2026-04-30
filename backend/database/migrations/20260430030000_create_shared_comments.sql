@@ -96,32 +96,51 @@ CREATE TRIGGER trg_comment_likes_dec
     AFTER DELETE ON comment_likes
     FOR EACH ROW EXECUTE FUNCTION comments_likes_count_dec();
 
--- 6b. Пересчёт comments_count на parent через CASE по entity_type.
---    Любой новый entity-type подключается дополнением CASE внутри функции.
+-- 6b. comments_count на parent — INC/DEC через TG_OP вместо COUNT(*).
+--    COUNT(*) на каждое изменение даёт O(N) на популярном треде; INC/DEC
+--    держится константой и согласован по стилю с triggers на likes_count.
+--    Любой новый entity_type подключается дополнением одной CASE-ветки.
 
-CREATE OR REPLACE FUNCTION comments_count_recalc(p_entity_type VARCHAR, p_entity_id BIGINT) RETURNS VOID AS $$
-DECLARE
-    cnt INTEGER;
+CREATE OR REPLACE FUNCTION comments_count_apply_delta(p_entity_type VARCHAR, p_entity_id BIGINT, p_delta INTEGER) RETURNS VOID AS $$
 BEGIN
-    SELECT COUNT(*) INTO cnt FROM comments
-        WHERE entity_type = p_entity_type AND entity_id = p_entity_id AND is_hidden = FALSE;
+    IF p_delta = 0 THEN
+        RETURN;
+    END IF;
     IF p_entity_type = 'ai_material' THEN
-        UPDATE ai_materials SET comments_count = cnt WHERE id = p_entity_id;
+        UPDATE ai_materials
+            SET comments_count = GREATEST(comments_count + p_delta, 0)
+            WHERE id = p_entity_id;
     ELSIF p_entity_type = 'event' THEN
-        UPDATE events SET comments_count = cnt WHERE id = p_entity_id;
+        UPDATE events
+            SET comments_count = GREATEST(comments_count + p_delta, 0)
+            WHERE id = p_entity_id;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION comments_count_after_change() RETURNS TRIGGER AS $$
 BEGIN
-    IF TG_OP = 'DELETE' THEN
-        PERFORM comments_count_recalc(OLD.entity_type, OLD.entity_id);
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.is_hidden = FALSE THEN
+            PERFORM comments_count_apply_delta(NEW.entity_type, NEW.entity_id, 1);
+        END IF;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        IF OLD.is_hidden = FALSE THEN
+            PERFORM comments_count_apply_delta(OLD.entity_type, OLD.entity_id, -1);
+        END IF;
         RETURN OLD;
-    ELSE
-        PERFORM comments_count_recalc(NEW.entity_type, NEW.entity_id);
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- Триггер срабатывает только на UPDATE OF is_hidden (см. CREATE TRIGGER ниже),
+        -- поэтому достаточно проверить смену значения.
+        IF OLD.is_hidden = FALSE AND NEW.is_hidden = TRUE THEN
+            PERFORM comments_count_apply_delta(NEW.entity_type, NEW.entity_id, -1);
+        ELSIF OLD.is_hidden = TRUE AND NEW.is_hidden = FALSE THEN
+            PERFORM comments_count_apply_delta(NEW.entity_type, NEW.entity_id, 1);
+        END IF;
         RETURN NEW;
     END IF;
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -132,6 +151,7 @@ CREATE TRIGGER trg_comments_recalc
 
 -- 7. Восстанавливаем corrected counts на parent после миграции данных
 --    (старые ai_materials.comments_count могли разойтись с фактом).
+--    Делается ровно один раз здесь, дальше живёт через INC/DEC триггер.
 
 UPDATE ai_materials SET comments_count = (
     SELECT COUNT(*) FROM comments

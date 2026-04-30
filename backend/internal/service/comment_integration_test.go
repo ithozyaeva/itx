@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"ithozyeva/config"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/testutil"
@@ -199,11 +200,30 @@ func TestCommentService_ToggleLike_DeniedWhenEntityHidden(t *testing.T) {
 	}
 }
 
+// withSubscriptionGate временно переключает глобальный
+// config.CFG.SubscriptionGateEnabled и восстанавливает его в Cleanup.
+// Используем напрямую вместо config.LoadConfig — последний требует
+// JWT_SECRET и других env-переменных, которых нет в тестовой среде.
+// Тесты в одном пакете идут последовательно, поэтому глобал безопасен.
+func withSubscriptionGate(t *testing.T, enabled bool) {
+	t.Helper()
+	if config.CFG == nil {
+		// CFG nil в тестах, где LoadConfig не вызывался; ставим минимально
+		// валидный, чтобы наши флаги имели куда писаться.
+		config.CFG = &config.Config{}
+		t.Cleanup(func() { config.CFG = nil })
+	}
+	prev := config.CFG.SubscriptionGateEnabled
+	config.CFG.SubscriptionGateEnabled = enabled
+	t.Cleanup(func() { config.CFG.SubscriptionGateEnabled = prev })
+}
+
 func TestAIMaterialVisibilityChecker_ForBidsLowerTier(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	testutil.TruncateAll(t, db,
 		"comment_likes", "comments", "subscription_user_chat_access",
 		"subscription_users", "ai_material_tags", "ai_materials", "members")
+	withSubscriptionGate(t, true)
 
 	author := seedMember(t, db, 10301)
 	low := seedMember(t, db, 10302)
@@ -221,9 +241,9 @@ func TestAIMaterialVisibilityChecker_ForBidsLowerTier(t *testing.T) {
 		t.Fatalf("seed sub user: %v", err)
 	}
 
-	subRepo := repository.NewSubscriptionRepository()
+	gate := NewSubscriptionTierGate(repository.NewSubscriptionRepository())
 	aiSvc := NewAIMaterialService()
-	checker := AIMaterialVisibilityChecker(aiSvc, subRepo)
+	checker := AIMaterialVisibilityChecker(aiSvc, gate)
 	if err := checker(materialID, low); !errors.Is(err, ErrEntityNotFound) {
 		t.Errorf("foreman: want ErrEntityNotFound, got %v", err)
 	}
@@ -237,5 +257,86 @@ func TestAIMaterialVisibilityChecker_ForBidsLowerTier(t *testing.T) {
 	}
 	if err := checker(materialID, low); err != nil {
 		t.Errorf("master: should pass, got %v", err)
+	}
+}
+
+func TestAIMaterialVisibilityChecker_GateDisabled_AllowsAnyTier(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db,
+		"comment_likes", "comments", "subscription_user_chat_access",
+		"subscription_users", "ai_material_tags", "ai_materials", "members")
+	// Главное условие теста — gate выключен. Раньше checker всё равно
+	// проверял tier и расходился с middleware при выключенном флаге;
+	// теперь оба идут через SubscriptionTierGate и поведение совпадает.
+	withSubscriptionGate(t, false)
+
+	author := seedMember(t, db, 10401)
+	low := seedMember(t, db, 10402)
+	materialID := seedAIMaterial(t, author)
+
+	gate := NewSubscriptionTierGate(repository.NewSubscriptionRepository())
+	checker := AIMaterialVisibilityChecker(NewAIMaterialService(), gate)
+	if err := checker(materialID, low); err != nil {
+		t.Errorf("gate disabled — low-tier should pass, got %v", err)
+	}
+}
+
+func TestEventVisibilityChecker_OnlyChecksExistence(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db,
+		"comment_likes", "comments", "event_event_tags", "event_hosts",
+		"event_members", "events", "members")
+
+	member := seedMember(t, db, 10501)
+
+	evt := &models.Event{
+		Title:       "Test event",
+		Description: "test",
+		PlaceType:   models.EventOnline,
+		EventType:   "MEETUP",
+	}
+	if err := db.Create(evt).Error; err != nil {
+		t.Fatalf("seed event: %v", err)
+	}
+
+	checker := EventVisibilityChecker(NewEventsService())
+	if err := checker(evt.Id, member); err != nil {
+		t.Errorf("existing event: should pass, got %v", err)
+	}
+	if err := checker(99999, member); !errors.Is(err, ErrEntityNotFound) {
+		t.Errorf("missing event: want ErrEntityNotFound, got %v", err)
+	}
+}
+
+func TestSharedComments_PreservesIDsAcrossEntities(t *testing.T) {
+	// Регрессия: после миграции 20260430030000_create_shared_comments.sql
+	// id комментов сохраняются (sequence подкручен через setval) и
+	// FK comment_likes.comment_id → comments.id остаётся валидным.
+	// Тест проверяет это через свежие insert'ы — а не через ручную
+	// эмуляцию старой схемы (которая в testcontainer уже не существует).
+	db := testutil.SetupTestDB(t)
+	testutil.TruncateAll(t, db,
+		"comment_likes", "comments", "ai_material_tags", "ai_materials", "members")
+
+	author := seedMember(t, db, 10601)
+	liker := seedMember(t, db, 10602)
+	materialID := seedAIMaterial(t, author)
+	svc := commentSvcWithMockedAIVisibility(true)
+
+	c1, err := svc.Create(models.CommentEntityAIMaterial, materialID, author, "first")
+	if err != nil {
+		t.Fatalf("create c1: %v", err)
+	}
+	c2, err := svc.Create(models.CommentEntityAIMaterial, materialID, author, "second")
+	if err != nil {
+		t.Fatalf("create c2: %v", err)
+	}
+	if c2.Id <= c1.Id {
+		t.Errorf("sequence не работает: c1.id=%d c2.id=%d", c1.Id, c2.Id)
+	}
+
+	// Лайк на c1 — FK comment_likes.comment_id → comments.id должен сработать
+	if _, _, err := svc.ToggleLike(c1.Id, liker); err != nil {
+		t.Errorf("FK через comment_likes сломан: %v", err)
 	}
 }

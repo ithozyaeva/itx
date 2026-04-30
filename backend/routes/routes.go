@@ -269,12 +269,14 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	// Shared CommentService — единая точка работы со всеми комментами
 	// платформы. Visibility-чекеры per-entity_type инкапсулируют
 	// специфику доступа: AI-материал требует master+ и видимость материала,
-	// event — только сам факт существования.
-	subscriptionRepo := repository.NewSubscriptionRepository()
+	// event — только сам факт существования. SubscriptionTierGate —
+	// общая логика «доступ при выключенном gate / для admin / по уровню
+	// тира», синхронизированная с middleware.RequireMinTier.
+	tierGate := service.NewSubscriptionTierGate(repository.NewSubscriptionRepository())
 	aiMaterialSvc := service.NewAIMaterialService()
 	eventsSvc := service.NewEventsService()
 	commentSvc := service.NewCommentService(map[models.CommentEntityType]service.EntityVisibilityChecker{
-		models.CommentEntityAIMaterial: service.AIMaterialVisibilityChecker(aiMaterialSvc, subscriptionRepo),
+		models.CommentEntityAIMaterial: service.AIMaterialVisibilityChecker(aiMaterialSvc, tierGate),
 		models.CommentEntityEvent:      service.EventVisibilityChecker(eventsSvc),
 	})
 	commentHandler := handler.NewCommentHandler(commentSvc)
