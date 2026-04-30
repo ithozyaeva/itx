@@ -87,6 +87,19 @@ func formatMonths(months int) string {
 	return fmt.Sprintf("%d месяцев", months)
 }
 
+// truncateRunes обрезает строку до n рун с многоточием, если что-то срезано.
+// Считаем именно руны, а не байты: иначе на кириллице порежется в середине
+// символа и Telegram отдаст «can't decode message text in UTF-8».
+func truncateRunes(s string, n int) string {
+	runes := []rune(s)
+	if len(runes) <= n {
+		return s
+	}
+	return strings.TrimRightFunc(string(runes[:n]), func(r rune) bool {
+		return r == ' ' || r == '\n' || r == '\t'
+	}) + "…"
+}
+
 // GetGlobalBot возвращает глобальный экземпляр бота
 func GetGlobalBot() *TelegramBot {
 	botMutex.RLock()
@@ -553,8 +566,11 @@ func (b *TelegramBot) handleWhoisCommand(message *tgbotapi.Message) {
 	// Био — единственное поле, где пользователь может вставлять Telegram-разметку
 	// (<b>, <i>, <code>, <a href> и т.д.). Остальное — структурированные поля,
 	// рендерим как plain text.
+	// На платформе bio не ограничено по длине — режем здесь, иначе общий
+	// текст карточки переваливает за 4096 символов и Telegram молча роняет
+	// отправку (MESSAGE_TOO_LONG).
 	if member.Bio != "" {
-		builder.WriteString(fmt.Sprintf("\n📝 %s\n", sanitizeTelegramHTML(member.Bio)))
+		builder.WriteString(fmt.Sprintf("\n📝 %s\n", sanitizeTelegramHTML(truncateRunes(member.Bio, 600))))
 	}
 
 	// Давность участия
