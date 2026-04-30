@@ -47,7 +47,7 @@ export const aiMaterialsService = {
   },
 
   async update(id: number, data: CreateAIMaterialRequest) {
-    return apiClient.patch(`ai-materials/${id}`, { json: data }).json<AIMaterial>()
+    return apiClient.put(`ai-materials/${id}`, { json: data }).json<AIMaterial>()
   },
 
   async remove(id: number) {

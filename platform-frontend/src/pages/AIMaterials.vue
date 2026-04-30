@@ -40,8 +40,22 @@ let queryDebounce: ReturnType<typeof setTimeout> | null = null
 watch(
   () => filters.value,
   (next, prev) => {
+    if (!prev)
+      return
+    // Offset — это курсор пагинации, не фильтр. Изменение только offset
+    // (через loadMore) не должно триггерить reset, иначе append-запрос
+    // отменяется reset-запросом и список схлопывается обратно к page 1.
+    if (
+      next.offset !== prev.offset
+      && next.q === prev.q
+      && next.kind === prev.kind
+      && next.sort === prev.sort
+      && next.tag === prev.tag
+    ) {
+      return
+    }
     // Дебаунсим только query — kind/sort должны срабатывать сразу.
-    if (prev && next.q !== prev.q && next.kind === prev.kind && next.sort === prev.sort) {
+    if (next.q !== prev.q && next.kind === prev.kind && next.sort === prev.sort) {
       if (queryDebounce)
         clearTimeout(queryDebounce)
       queryDebounce = setTimeout(fetchItems, 250, true)
@@ -162,18 +176,28 @@ onMounted(() => fetchItems(true))
         v-else
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        <button
+        <!--
+          role="button" + tabindex/keydown — нельзя обернуть карточку в <button>,
+          потому что внутри AIMaterialReactions есть свои <button>'ы
+          (лайк/закладка/комментарии). Вложенные buttons — невалидный HTML,
+          парсер закрывает внешний button раньше → клик по нижней части
+          карточки перестаёт навигировать.
+        -->
+        <div
           v-for="(item, idx) in items"
           :key="item.id"
-          type="button"
-          class="text-left appearance-none"
+          role="button"
+          tabindex="0"
+          class="text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
           @click="openMaterial(item)"
+          @keydown.enter.prevent="openMaterial(item)"
+          @keydown.space.prevent="openMaterial(item)"
         >
           <AIMaterialCard
             :item="item"
             @update:item="(v) => (items[idx] = v)"
           />
-        </button>
+        </div>
       </div>
 
       <div v-if="hasMore" class="mt-6 flex justify-center">
