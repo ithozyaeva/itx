@@ -10,15 +10,21 @@ import { COMMENT_MAX_LEN } from '@/models/comment'
 import { commentsService } from '@/services/comments'
 import { handleError } from '@/services/errorService'
 
-const props = defineProps<{
+// withDefaults обязателен для autoLoad: type Boolean без явного default
+// в Vue 3 трактуется как false, а не undefined. Без него `props.autoLoad`
+// всегда `false`, и fetchComments никогда не запускался — на проде
+// Comments монтировался, но GET к /comments не уходил, после refresh
+// список оставался пустым (только что отправленный коммент исчезал).
+const props = withDefaults(defineProps<{
   entityType: CommentEntityType
   entityId: number
   initialCount: number
-  // autoLoad — если false, fetchComments не вызывается на mount.
-  // Используется в раскрывающихся блоках (EventCard accordion), чтобы не
-  // дёргать API для свёрнутых событий.
+  // autoLoad=false подавляет fetch на mount — для раскрывающихся
+  // блоков типа EventCard accordion, чтобы не дёргать API на свёрнутых.
   autoLoad?: boolean
-}>()
+}>(), {
+  autoLoad: true,
+})
 
 const emit = defineEmits<{
   'update:count': [v: number]
@@ -47,7 +53,9 @@ const editing = ref(false)
 const likeBusy = ref<Set<number>>(new Set())
 
 const hasMore = computed(() => comments.value.length < total.value)
-const visibleCount = computed(() => total.value || props.initialCount)
+// До первой загрузки показываем initialCount (с карточки), после — actual total.
+// Раньше fallback `total || initialCount` врал когда total реально 0.
+const visibleCount = computed(() => loaded.value ? total.value : props.initialCount)
 
 function syncCountUp() {
   emit('update:count', total.value)
@@ -255,9 +263,24 @@ defineExpose({ refresh: () => fetchComments(false) })
       {{ loadError }}
     </p>
 
-    <p v-else-if="loaded && comments.length === 0" class="text-sm text-muted-foreground">
+    <p v-else-if="loaded && total === 0" class="text-sm text-muted-foreground">
       Пока нет комментариев. Будьте первым.
     </p>
+
+    <!--
+      Рассинхрон: счётчик на parent показывает N, но API вернул items=[].
+      Может случиться при race в денормализации; даём явный retry, не молчим.
+    -->
+    <div v-else-if="loaded && total > 0 && comments.length === 0" class="text-sm text-muted-foreground space-y-2">
+      <p>Комментарии не подгрузились ({{ total }} в счётчике, 0 в ответе).</p>
+      <button
+        type="button"
+        class="px-2 py-1 rounded-sm border border-border text-xs hover:text-foreground"
+        @click="fetchComments(false)"
+      >
+        Перезагрузить
+      </button>
+    </div>
 
     <ul v-else-if="comments.length" class="space-y-3">
       <li
