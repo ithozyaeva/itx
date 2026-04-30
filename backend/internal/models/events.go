@@ -44,6 +44,7 @@ type Event struct {
 	InitialAlertsSentAt      *time.Time `json:"initialAlertsSentAt" gorm:"column:initial_alerts_sent_at"`
 	ExclusiveChatID         *int64     `json:"exclusiveChatId" gorm:"column:exclusive_chat_id"`
 	ExclusiveChatTitle      string     `json:"exclusiveChatTitle" gorm:"column:exclusive_chat_title;default:''"`
+	CommentsCount           int        `json:"commentsCount" gorm:"column:comments_count;default:0"`
 }
 
 type EventTag struct {

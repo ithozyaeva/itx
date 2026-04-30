@@ -12,6 +12,11 @@ vi.mock('lucide-vue-next', () => ({
   Crown: { template: '<span />' },
   Loader2: { template: '<span />' },
   MapPin: { template: '<span />' },
+  MessageCircle: { template: '<span />' },
+}))
+
+vi.mock('@/components/comments/Comments.vue', () => ({
+  default: { template: '<div data-testid="comments-stub" />', props: ['entityType', 'entityId', 'initialCount'] },
 }))
 
 vi.mock('@/composables/useUser', () => ({

@@ -84,21 +84,6 @@ func (AIMaterialBookmark) TableName() string {
 	return "ai_material_bookmarks"
 }
 
-type AIMaterialComment struct {
-	Id         int64     `json:"id" gorm:"primaryKey"`
-	MaterialId int64     `json:"materialId" gorm:"column:material_id;not null"`
-	AuthorId   int64     `json:"authorId" gorm:"column:author_id;not null"`
-	Author     *Member   `json:"author,omitempty" gorm:"foreignKey:AuthorId"`
-	Body       string    `json:"body" gorm:"not null"`
-	IsHidden   bool      `json:"isHidden" gorm:"column:is_hidden;default:false"`
-	CreatedAt  time.Time `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
-}
-
-func (AIMaterialComment) TableName() string {
-	return "ai_material_comments"
-}
-
 type CreateAIMaterialRequest struct {
 	Title        string                `json:"title"`
 	Summary      string                `json:"summary"`

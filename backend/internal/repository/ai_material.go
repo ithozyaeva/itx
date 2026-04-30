@@ -241,51 +241,6 @@ func (r *AIMaterialRepository) TopTags(q string, limit int) ([]string, error) {
 	return tags, nil
 }
 
-// --- Comments ---
-
-func (r *AIMaterialRepository) ListComments(materialID int64, includeHidden bool) ([]models.AIMaterialComment, error) {
-	var comments []models.AIMaterialComment
-	q := database.DB.Preload("Author").Where("material_id = ?", materialID)
-	if !includeHidden {
-		q = q.Where("is_hidden = ?", false)
-	}
-	if err := q.Order("created_at ASC").Find(&comments).Error; err != nil {
-		return nil, err
-	}
-	return comments, nil
-}
-
-func (r *AIMaterialRepository) GetCommentByID(id int64) (*models.AIMaterialComment, error) {
-	var c models.AIMaterialComment
-	if err := database.DB.Preload("Author").First(&c, id).Error; err != nil {
-		return nil, err
-	}
-	return &c, nil
-}
-
-func (r *AIMaterialRepository) CreateComment(c *models.AIMaterialComment) (*models.AIMaterialComment, error) {
-	if err := database.DB.Create(c).Error; err != nil {
-		return nil, err
-	}
-	return r.GetCommentByID(c.Id)
-}
-
-func (r *AIMaterialRepository) UpdateComment(id int64, body string) error {
-	return database.DB.Model(&models.AIMaterialComment{}).
-		Where("id = ?", id).
-		Update("body", body).Error
-}
-
-func (r *AIMaterialRepository) DeleteComment(id int64) error {
-	return database.DB.Delete(&models.AIMaterialComment{}, id).Error
-}
-
-func (r *AIMaterialRepository) SetCommentHidden(id int64, hidden bool) error {
-	return database.DB.Model(&models.AIMaterialComment{}).
-		Where("id = ?", id).
-		Update("is_hidden", hidden).Error
-}
-
 // ToggleLike — атомарный переключатель лайка. Сначала пытаемся вставить с
 // ON CONFLICT DO NOTHING: либо запись появилась (liked=true), либо строка
 // уже была — тогда удаляем (liked=false). Это защищает от гонки двух

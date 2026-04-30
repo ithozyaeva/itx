@@ -31,21 +31,6 @@ export interface AIMaterialSearchResponse {
   total: number
 }
 
-export interface AIMaterialComment {
-  id: number
-  materialId: number
-  authorId: number
-  author?: import('@/models/profile').TelegramUser
-  body: string
-  isHidden: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface AIMaterialCommentsResponse {
-  items: AIMaterialComment[]
-}
-
 export interface ToggleLikeResponse {
   liked: boolean
   likesCount: number

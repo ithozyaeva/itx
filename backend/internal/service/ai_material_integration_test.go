@@ -16,7 +16,7 @@ func TestAIMaterialService_CreateAndSearch_ByTagAndKind(t *testing.T) {
 	testutil.TruncateAll(t, db,
 		"ai_material_likes",
 		"ai_material_bookmarks",
-		"ai_material_comments",
+		"comments",
 		"ai_material_tags",
 		"ai_materials",
 		"members",
@@ -240,97 +240,10 @@ func TestAIMaterialService_ToggleBookmark_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestAIMaterialService_Comments_CRUD(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	testutil.TruncateAll(t, db,
-		"ai_material_comments", "ai_material_tags", "ai_materials", "members")
-
-	author := seedMember(t, db, 9501)
-	commenter := seedMember(t, db, 9502)
-	stranger := seedMember(t, db, 9503)
-	svc := NewAIMaterialService()
-
-	m, err := svc.Create(&models.CreateAIMaterialRequest{
-		Title:        "Title",
-		Summary:      strings.Repeat("a", 35),
-		ContentType:  models.AIMaterialContentTypePrompt,
-		MaterialKind: models.AIMaterialKindPrompt,
-		PromptBody:   "x",
-	}, author.Id)
-	if err != nil {
-		t.Fatalf("create material: %v", err)
-	}
-
-	// Create
-	c1, err := svc.CreateComment(m.Id, commenter.Id, "  Полезный материал, спасибо!  ", false)
-	if err != nil {
-		t.Fatalf("create comment: %v", err)
-	}
-	if c1.Body != "Полезный материал, спасибо!" {
-		t.Errorf("Body не trim: %q", c1.Body)
-	}
-
-	// Триггер увеличил counter материала
-	got, err := svc.GetByID(m.Id, 0, true)
-	if err != nil {
-		t.Fatalf("get material: %v", err)
-	}
-	if got.CommentsCount != 1 {
-		t.Errorf("CommentsCount = %d, want 1", got.CommentsCount)
-	}
-
-	// Пустой комментарий — ошибка
-	if _, err := svc.CreateComment(m.Id, commenter.Id, "   ", false); err == nil {
-		t.Error("expected error for empty comment")
-	}
-
-	// List
-	list, err := svc.ListComments(m.Id, 0, false)
-	if err != nil {
-		t.Fatalf("list: %v", err)
-	}
-	if len(list) != 1 || list[0].Id != c1.Id {
-		t.Errorf("list mismatch: %+v", list)
-	}
-
-	// Update — чужой не может
-	if _, err := svc.UpdateComment(c1.Id, stranger.Id, "Hacked", false); err == nil {
-		t.Error("stranger should not update")
-	}
-
-	// Update — автор может
-	updated, err := svc.UpdateComment(c1.Id, commenter.Id, "Обновлённый текст", false)
-	if err != nil {
-		t.Fatalf("author update: %v", err)
-	}
-	if updated.Body != "Обновлённый текст" {
-		t.Errorf("Body не обновился: %q", updated.Body)
-	}
-
-	// Delete — чужой не может
-	if err := svc.DeleteComment(c1.Id, stranger.Id, false); err == nil {
-		t.Error("stranger should not delete")
-	}
-
-	// Delete — admin может (даже если не автор)
-	if err := svc.DeleteComment(c1.Id, stranger.Id, true); err != nil {
-		t.Fatalf("admin delete: %v", err)
-	}
-
-	// Триггер обнулил счётчик
-	got, err = svc.GetByID(m.Id, 0, true)
-	if err != nil {
-		t.Fatalf("get after delete: %v", err)
-	}
-	if got.CommentsCount != 0 {
-		t.Errorf("CommentsCount после delete = %d, want 0", got.CommentsCount)
-	}
-}
-
 func TestAIMaterialService_Hidden_VisibilityAndInteractions(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	testutil.TruncateAll(t, db,
-		"ai_material_likes", "ai_material_bookmarks", "ai_material_comments",
+		"ai_material_likes", "ai_material_bookmarks", "comments",
 		"ai_material_tags", "ai_materials", "members")
 
 	author := seedMember(t, db, 9601)
@@ -366,18 +279,12 @@ func TestAIMaterialService_Hidden_VisibilityAndInteractions(t *testing.T) {
 		t.Errorf("admin should see hidden material: %v", err)
 	}
 
-	// Чужой не может лайкать/закладывать/комментить скрытое
+	// Чужой не может лайкать/закладывать скрытое (комментарии тестируются в comment_integration_test.go)
 	if _, _, err := svc.ToggleLike(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
 		t.Errorf("stranger toggle-like on hidden: want ErrNotFound, got %v", err)
 	}
 	if _, _, err := svc.ToggleBookmark(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
 		t.Errorf("stranger bookmark on hidden: want ErrNotFound, got %v", err)
-	}
-	if _, err := svc.CreateComment(m.Id, stranger.Id, "hi", false); !errors.Is(err, ErrAIMaterialNotFound) {
-		t.Errorf("stranger comment on hidden: want ErrNotFound, got %v", err)
-	}
-	if _, err := svc.ListComments(m.Id, stranger.Id, false); !errors.Is(err, ErrAIMaterialNotFound) {
-		t.Errorf("stranger list comments on hidden: want ErrNotFound, got %v", err)
 	}
 }
 
