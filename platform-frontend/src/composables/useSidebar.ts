@@ -1,5 +1,6 @@
 import type { Component } from 'vue'
-import { Award, Calendar, ClipboardList, Crown, Dices, Flame, Gift, Heart, HelpCircle, Home, Star, Trophy, User, Users } from 'lucide-vue-next'
+import type { SubscriptionTierSlug } from '@/models/profile'
+import { Award, Calendar, ClipboardList, Crown, Dices, Flame, Gift, Heart, HelpCircle, Home, Sparkles, Star, Trophy, User, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -11,6 +12,10 @@ export interface SidebarItem {
   // requiresSubscription — пункт скрывается у UNSUBSCRIBER. Совпадает с
   // meta.requiresSubscription в роутере, чтобы UI и guard не расходились.
   requiresSubscription?: boolean
+  // requiresMinTier — пункт скрывается у тех, чей tier ниже указанного.
+  // Совпадает с meta.requiresMinTier в роутере (например, 'master' для
+  // премиум-разделов).
+  requiresMinTier?: SubscriptionTierSlug
   // visibleFor — 'unsubscribed' значит виден только без подписки (например,
   // пункт «Тарифы»). Без флага — виден всем авторизованным.
   visibleFor?: 'unsubscribed'
@@ -39,6 +44,12 @@ const state = {
         { title: 'События', path: '/events', icon: Calendar, indicator: true, dataOnboarding: 'events', requiresSubscription: true },
         { title: 'Менторы', path: '/mentors', icon: Users },
         { title: 'Благодарности', path: '/kudos', icon: Heart, requiresSubscription: true },
+      ],
+    },
+    {
+      label: 'Знания',
+      items: [
+        { title: 'AI-материалы', path: '/ai-materials', icon: Sparkles, requiresSubscription: true, requiresMinTier: 'master' },
       ],
     },
     {

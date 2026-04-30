@@ -1,7 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router'
+import type { SubscriptionTierSlug } from '@/models/profile'
 import { createRouter, createWebHistory } from 'vue-router'
-import { isUserSubscribed, useUserLevel } from '@/composables/useUser'
+import { hasMinTier, isUserSubscribed, useUserLevel } from '@/composables/useUser'
 import Achievements from '@/pages/Achievements.vue'
+import AIMaterialDetail from '@/pages/AIMaterialDetail.vue'
+import AIMaterials from '@/pages/AIMaterials.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Casino from '@/pages/Casino.vue'
 
@@ -23,6 +26,15 @@ import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
 import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
+
+declare module 'vue-router' {
+  // requiresMinTier — гейт по минимальному уровню тира. Используется
+  // для премиум-разделов (например, AI-материалы — только master+).
+  // Имя slug совпадает с TIER_SLUG_LEVELS в useUser.
+  interface RouteMeta {
+    requiresMinTier?: SubscriptionTierSlug
+  }
+}
 
 // requiresSubscription: true — UNSUBSCRIBER редиректится на главную.
 // Главная сама показывает teaser «Открой полный доступ» с кнопкой на /tariffs,
@@ -46,6 +58,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/leaderboard', component: Leaderboard, name: 'leaderboard', meta: { breadcrumb: [{ label: 'Рейтинг' }], requiresSubscription: true } },
   { path: '/achievements', component: Achievements, name: 'achievements', meta: { breadcrumb: [{ label: 'Достижения' }], requiresSubscription: true } },
   { path: '/marketplace', component: Marketplace, name: 'marketplace', meta: { breadcrumb: [{ label: 'Барахолка' }], requiresSubscription: true } },
+  { path: '/ai-materials', component: AIMaterials, name: 'aiMaterials', meta: { breadcrumb: [{ label: 'AI-материалы' }], requiresSubscription: true, requiresMinTier: 'master' } },
+  { path: '/ai-materials/:id', component: AIMaterialDetail, name: 'aiMaterialDetail', meta: { breadcrumb: [{ label: 'AI-материалы', to: '/ai-materials' }, { label: 'Материал' }], requiresSubscription: true, requiresMinTier: 'master' } },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }], requiresSubscription: true } },
   { path: '/quests', component: Quests, name: 'quests', meta: { breadcrumb: [{ label: 'Квесты' }], requiresSubscription: true } },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }], requiresSubscription: true } },
@@ -68,6 +82,13 @@ router.beforeEach((to) => {
   // UNSUBSCRIBER на гейтнутом роуте → дашборд. Дашборд сам рендерит
   // subscription-teaser, оттуда юзер сам идёт на /tariffs.
   if (to.meta.requiresSubscription && !subscribed) {
+    return { name: 'dashboard' }
+  }
+  // requiresMinTier — гейт по уровню подписки выше базового (например,
+  // master+ для AI-материалов). Не-достаточный тир кидаем на дашборд
+  // (там подписчик увидит обычный набор; мотивации к апгрейду пока нет
+  // отдельного экрана — это решим, когда раздел станет основным).
+  if (to.meta.requiresMinTier && !hasMinTier(to.meta.requiresMinTier).value) {
     return { name: 'dashboard' }
   }
   // /tariffs — витрина для UNSUBSCRIBER. Кому показывать нечего:
