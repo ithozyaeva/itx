@@ -11,13 +11,32 @@ import (
 )
 
 type RaffleHandler struct {
-	svc *service.RaffleService
+	svc      *service.RaffleService
+	dailySvc *service.DailyRaffleService
 }
 
 func NewRaffleHandler() *RaffleHandler {
 	return &RaffleHandler{
-		svc: service.NewRaffleService(),
+		svc:      service.NewRaffleService(),
+		dailySvc: service.NewDailyRaffleService(),
 	}
+}
+
+// DailyToday — GET /api/platform/raffles/daily/today
+func (h *RaffleHandler) DailyToday(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	pub, err := h.dailySvc.GetTodayPublic(member.Id)
+	if err != nil {
+		log.Printf("daily raffle today (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки ежедневного розыгрыша"})
+	}
+	if pub == nil {
+		return c.JSON(fiber.Map{"raffle": nil})
+	}
+	return c.JSON(pub)
 }
 
 func (h *RaffleHandler) GetAll(c *fiber.Ctx) error {

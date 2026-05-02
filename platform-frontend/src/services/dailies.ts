@@ -1,4 +1,5 @@
 import type { CheckInResponse, DailyTodayResponse, StreakResponse } from '@/models/dailies'
+import type { RaffleItem } from '@/models/raffle'
 import { apiClient } from './api'
 
 export const dailiesService = {
@@ -12,5 +13,9 @@ export const dailiesService = {
 
   async getStreak() {
     return apiClient.get('streak/me').json<StreakResponse>()
+  },
+
+  async getDailyRaffle() {
+    return apiClient.get('raffles/daily/today').json<RaffleItem | { raffle: null }>()
   },
 }

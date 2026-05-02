@@ -19,19 +19,22 @@ type CheckInResult struct {
 	CurrentStreak    int
 	CrossedThreshold []StreakThreshold
 	BasePoints       int
+	RaffleEntered    bool
 }
 
 type CheckInService struct {
-	repo      *repository.CheckInRepository
-	pointRepo *repository.PointsRepository
-	streakSvc *StreakService
+	repo            *repository.CheckInRepository
+	pointRepo       *repository.PointsRepository
+	streakSvc       *StreakService
+	dailyRaffleSvc  *DailyRaffleService
 }
 
 func NewCheckInService() *CheckInService {
 	return &CheckInService{
-		repo:      repository.NewCheckInRepository(),
-		pointRepo: repository.NewPointsRepository(),
-		streakSvc: NewStreakService(),
+		repo:           repository.NewCheckInRepository(),
+		pointRepo:      repository.NewPointsRepository(),
+		streakSvc:      NewStreakService(),
+		dailyRaffleSvc: NewDailyRaffleService(),
 	}
 }
 
@@ -69,6 +72,13 @@ func (s *CheckInService) CheckIn(memberId int64) (*CheckInResult, error) {
 		log.Printf("award base check-in points (member=%d): %v", memberId, err)
 	}
 
+	raffleEntered := false
+	if err := s.dailyRaffleSvc.EnterRaffle(memberId); err != nil {
+		log.Printf("enter daily raffle (member=%d): %v", memberId, err)
+	} else {
+		raffleEntered = true
+	}
+
 	return &CheckInResult{
 		Day:              day,
 		Inserted:         true,
@@ -76,6 +86,7 @@ func (s *CheckInService) CheckIn(memberId int64) (*CheckInResult, error) {
 		CurrentStreak:    current,
 		CrossedThreshold: crossed,
 		BasePoints:       models.PointValues[models.PointReasonDailyCheckIn],
+		RaffleEntered:    raffleEntered,
 	}, nil
 }
 

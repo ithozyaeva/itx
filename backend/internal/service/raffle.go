@@ -104,6 +104,8 @@ func (s *RaffleService) DrawExpiredRaffles() {
 		return
 	}
 
+	dailySvc := NewDailyRaffleService()
+
 	for _, raffle := range raffles {
 		ticketCount, _ := s.repo.GetTicketCount(raffle.Id)
 		if ticketCount == 0 {
@@ -124,5 +126,16 @@ func (s *RaffleService) DrawExpiredRaffles() {
 		}
 
 		log.Printf("Raffle %d winner: member %d", raffle.Id, winnerId)
+
+		// Daily-раффл — выдаём приз победителю автоматически.
+		// Manual-розыгрыши обрабатываются админом отдельно (через UI/manual).
+		if raffle.Kind == models.RaffleKindDaily {
+			if err := dailySvc.AwardWinPoints(winnerId, raffle.Id); err != nil {
+				log.Printf("award daily-raffle win points (raffle=%d, member=%d): %v",
+					raffle.Id, winnerId, err)
+			}
+			GetSSEHub().Publish(winnerId, SSEEvent{Type: "points"})
+		}
+		GetSSEHub().Broadcast(SSEEvent{Type: "raffles"})
 	}
 }

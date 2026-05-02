@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { RaffleItem } from '@/models/raffle'
-import { Gift, Loader2, Ticket, Trophy } from 'lucide-vue-next'
+import { CheckCircle2, Flame, Gift, Loader2, Ticket, Trophy, Users } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
+import { dailiesService } from '@/services/dailies'
 import { handleError } from '@/services/errorService'
 import { raffleService } from '@/services/raffles'
 
@@ -19,8 +21,13 @@ const buyingId = ref<number | null>(null)
 const ticketCounts = ref<Record<number, number>>({})
 const filterMode = ref<'all' | 'my'>('all')
 
+const dailyRaffle = ref<RaffleItem | null>(null)
+
+// Daily-раффл показывается отдельной секцией сверху, поэтому исключаем
+// его из общего списка.
+const manualItems = computed(() => items.value.filter(r => r.kind !== 'daily'))
 const filteredItems = computed(() =>
-  filterMode.value === 'my' ? items.value.filter(r => r.myTickets > 0) : items.value,
+  filterMode.value === 'my' ? manualItems.value.filter(r => r.myTickets > 0) : manualItems.value,
 )
 const activeRaffles = computed(() => filteredItems.value.filter(r => r.status === 'ACTIVE'))
 const finishedRaffles = computed(() => filteredItems.value.filter(r => r.status === 'FINISHED'))
@@ -35,6 +42,19 @@ async function fetchRaffles() {
   }
   finally {
     isLoading.value = false
+  }
+}
+
+async function fetchDailyRaffle() {
+  try {
+    const resp = await dailiesService.getDailyRaffle()
+    if (resp && 'id' in resp)
+      dailyRaffle.value = resp as RaffleItem
+    else
+      dailyRaffle.value = null
+  }
+  catch {
+    dailyRaffle.value = null
   }
 }
 
@@ -84,10 +104,14 @@ function winnerName(r: RaffleItem) {
   return [r.winnerFirstName, r.winnerLastName].filter(Boolean).join(' ') || '—'
 }
 
-useSSE('raffles', () => fetchRaffles())
+useSSE('raffles', () => {
+  fetchRaffles()
+  fetchDailyRaffle()
+})
 
 onMounted(() => {
   fetchRaffles()
+  fetchDailyRaffle()
 })
 </script>
 
@@ -123,6 +147,63 @@ onMounted(() => {
         >
           Мои розыгрыши
         </button>
+      </div>
+    </div>
+
+    <!-- Ежедневный авто-розыгрыш — отдельная секция сверху -->
+    <div
+      v-if="dailyRaffle"
+      class="rounded-sm border-2 border-orange-500/30 bg-gradient-to-br from-orange-500/5 via-card to-yellow-500/5 p-5 md:p-6 mb-6 terminal-card"
+    >
+      <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="flex items-center justify-center w-12 h-12 rounded-sm bg-orange-500/15 shrink-0">
+            <Flame class="h-6 w-6 text-orange-500" />
+          </div>
+          <div class="min-w-0">
+            <p class="font-mono text-[10px] uppercase tracking-widest text-orange-500/80 mb-0.5">
+              // ежедневный авто-розыгрыш
+            </p>
+            <h3 class="font-bold text-lg leading-tight">
+              {{ dailyRaffle.title }}
+            </h3>
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-xs text-muted-foreground">
+            До розыгрыша
+          </div>
+          <div class="font-mono font-bold text-base">
+            {{ timeLeft(dailyRaffle.endsAt) }}
+          </div>
+        </div>
+      </div>
+      <p class="text-sm text-muted-foreground mb-4">
+        {{ dailyRaffle.description || 'Случайный участник получает 100 баллов в 23:59 МСК.' }}
+      </p>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-4 text-sm">
+          <div class="flex items-center gap-1.5">
+            <Users class="h-4 w-4 text-muted-foreground" />
+            <span class="font-medium">{{ dailyRaffle.totalTickets }}</span>
+            <span class="text-muted-foreground">участн.</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-yellow-500 font-medium">
+            <Trophy class="h-4 w-4" />
+            {{ dailyRaffle.prize }}
+          </div>
+        </div>
+        <div v-if="dailyRaffle.myTickets > 0" class="flex items-center gap-1.5 text-sm text-green-500 font-medium">
+          <CheckCircle2 class="h-4 w-4" />
+          Вы участвуете
+        </div>
+        <RouterLink
+          v-else
+          to="/dailies"
+          class="px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+        >
+          Сделай check-in →
+        </RouterLink>
       </div>
     </div>
 

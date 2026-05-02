@@ -1,3 +1,6 @@
+export type RaffleKind = 'manual' | 'daily'
+export type RaffleEntryRule = 'purchase' | 'auto_check_in'
+
 export interface RaffleItem {
   id: number
   title: string
@@ -7,6 +10,9 @@ export interface RaffleItem {
   maxTickets: number
   endsAt: string
   status: 'ACTIVE' | 'FINISHED'
+  kind?: RaffleKind
+  entryRule?: RaffleEntryRule
+  dayKey?: string | null
   totalTickets: number
   myTickets: number
   winnerId: number | null

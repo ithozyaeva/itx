@@ -59,12 +59,14 @@ func (h *DailiesHandler) CheckIn(c *fiber.Ctx) error {
 		PublishToMember(member.Id, "streak")
 		PublishToMember(member.Id, "points")
 		PublishToMember(member.Id, "dailies")
+		PublishToMember(member.Id, "raffles")
 	}
 
 	return c.JSON(models.CheckInResponse{
-		CheckInDone:  true,
-		AlreadyToday: !result.Inserted,
-		Streak:       streak,
+		CheckInDone:   true,
+		AlreadyToday:  !result.Inserted,
+		Streak:        streak,
+		RaffleEntered: result.RaffleEntered,
 	})
 }
 

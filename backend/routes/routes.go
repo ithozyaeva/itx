@@ -483,6 +483,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	raffleHandler := handler.NewRaffleHandler()
 	raffles := subscribed.Group("/raffles")
 	raffles.Get("/", raffleHandler.GetAll)
+	raffles.Get("/daily/today", raffleHandler.DailyToday)
 	raffles.Post("/:id/buy", raffleHandler.BuyTickets)
 
 	// Казино
