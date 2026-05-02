@@ -14,6 +14,8 @@ import Link from '~icons/lucide/link'
 import MessageSquare from '~icons/lucide/message-square'
 import ShieldAlert from '~icons/lucide/shield-alert'
 import Star from '~icons/lucide/star'
+import Sword from '~icons/lucide/sword'
+import Target from '~icons/lucide/target'
 import User from '~icons/lucide/user'
 import Users from '~icons/lucide/users'
 import { usePermissions } from './usePermissions'
@@ -123,6 +125,18 @@ export function useSidebar() {
           title: 'Розыгрыши',
           path: '/raffles',
           icon: Gift,
+        },
+        {
+          title: 'Дейлики',
+          path: '/daily-tasks',
+          icon: Target,
+          requiredPermission: 'can_view_admin_points',
+        },
+        {
+          title: 'Челленджи',
+          path: '/challenges',
+          icon: Sword,
+          requiredPermission: 'can_view_admin_points',
         },
         {
           title: 'Мини-игры',

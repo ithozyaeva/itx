@@ -55,3 +55,39 @@ func (r *DailyTaskRepository) GetMyProgress(memberId int64, day time.Time) ([]mo
 	err := database.DB.Where("member_id = ? AND day = ?", memberId, day).Find(&progress).Error
 	return progress, err
 }
+
+// Admin CRUD ---------------------------------------------------------------
+
+func (r *DailyTaskRepository) GetAllAdmin() ([]models.DailyTask, error) {
+	var tasks []models.DailyTask
+	err := database.DB.Order("active DESC, tier, points").Find(&tasks).Error
+	return tasks, err
+}
+
+func (r *DailyTaskRepository) GetById(id int64) (*models.DailyTask, error) {
+	var t models.DailyTask
+	if err := database.DB.First(&t, id).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *DailyTaskRepository) Create(t *models.DailyTask) error {
+	return database.DB.Create(t).Error
+}
+
+func (r *DailyTaskRepository) Update(t *models.DailyTask) error {
+	return database.DB.Save(t).Error
+}
+
+func (r *DailyTaskRepository) Delete(id int64) error {
+	return database.DB.Delete(&models.DailyTask{}, id).Error
+}
+
+// GetRecentSets — последние N МСК-дней с их составом, свежие сверху.
+// Используется в админке для аудита: что выпадало в какой день.
+func (r *DailyTaskRepository) GetRecentSets(limit int) ([]models.DailyTaskSet, error) {
+	var sets []models.DailyTaskSet
+	err := database.DB.Order("day DESC").Limit(limit).Find(&sets).Error
+	return sets, err
+}

@@ -209,6 +209,23 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	adminRaffles.Post("/", raffleHandler.Create)
 	adminRaffles.Delete("/:id", raffleHandler.Delete)
 
+	// Геймификация (админ): пул дейликов и шаблоны челленджей
+	adminDailyTasks := protected.Group("/daily-tasks", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	adminDailyTaskHandler := handler.NewAdminDailyTaskHandler()
+	adminDailyTasks.Get("/", adminDailyTaskHandler.List)
+	adminDailyTasks.Get("/sets", adminDailyTaskHandler.RecentSets)
+	adminDailyTasks.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Create)
+	adminDailyTasks.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Update)
+	adminDailyTasks.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Delete)
+
+	adminChallenges := protected.Group("/challenges", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	adminChallengeHandler := handler.NewAdminChallengeHandler()
+	adminChallenges.Get("/", adminChallengeHandler.ListTemplates)
+	adminChallenges.Get("/instances", adminChallengeHandler.ListInstances)
+	adminChallenges.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.CreateTemplate)
+	adminChallenges.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.UpdateTemplate)
+	adminChallenges.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.DeleteTemplate)
+
 	// Маршруты для мини-игр (админ)
 	casinoHandler := handler.NewCasinoHandler()
 	adminCasino := protected.Group("/minigames")

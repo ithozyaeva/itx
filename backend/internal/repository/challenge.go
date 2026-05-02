@@ -51,3 +51,39 @@ func (r *ChallengeRepository) GetMyProgress(memberId int64, instanceIds []int64)
 	err := database.DB.Where("member_id = ? AND instance_id IN ?", memberId, instanceIds).Find(&progress).Error
 	return progress, err
 }
+
+// Admin CRUD ---------------------------------------------------------------
+
+func (r *ChallengeRepository) GetAllTemplatesAdmin() ([]models.ChallengeTemplate, error) {
+	var tpls []models.ChallengeTemplate
+	err := database.DB.Order("active DESC, kind, code").Find(&tpls).Error
+	return tpls, err
+}
+
+func (r *ChallengeRepository) GetTemplateById(id int64) (*models.ChallengeTemplate, error) {
+	var t models.ChallengeTemplate
+	if err := database.DB.First(&t, id).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *ChallengeRepository) CreateTemplate(t *models.ChallengeTemplate) error {
+	return database.DB.Create(t).Error
+}
+
+func (r *ChallengeRepository) UpdateTemplate(t *models.ChallengeTemplate) error {
+	return database.DB.Save(t).Error
+}
+
+func (r *ChallengeRepository) DeleteTemplate(id int64) error {
+	return database.DB.Delete(&models.ChallengeTemplate{}, id).Error
+}
+
+// GetRecentInstances — последние N запущенных инстансов независимо от
+// активности. Используется в админке для аудита истории.
+func (r *ChallengeRepository) GetRecentInstances(limit int) ([]models.ChallengeInstance, error) {
+	var insts []models.ChallengeInstance
+	err := database.DB.Order("starts_at DESC").Limit(limit).Find(&insts).Error
+	return insts, err
+}
