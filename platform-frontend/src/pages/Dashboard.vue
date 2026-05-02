@@ -51,6 +51,7 @@ import { SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { achievementsService } from '@/services/achievements'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
+import { useDailies } from '@/composables/useDailies'
 import { eventsService } from '@/services/events'
 import { highlightsService } from '@/services/highlights'
 import { pointsService } from '@/services/points'
@@ -143,6 +144,18 @@ const timeGreeting = computed(() => {
 const activeQuests = computed(() => chatQuests.value.filter(q => !q.completed))
 const completedQuests = computed(() => chatQuests.value.filter(q => q.completed))
 
+// Daily check-in widget — отдельный composable, чтобы не дублировать
+// SSE-подписки и не пинговать /dailies/today из Dashboard напрямую.
+const { today: dailyToday, streak: dailyStreak, checkingIn: dailyCheckingIn, refresh: refreshDailies, checkIn: doCheckIn } = useDailies()
+const dailyCheckInDone = computed(() => dailyToday.value?.checkIn.done ?? false)
+const dailyAwardedCount = computed(() => dailyToday.value?.tasks.filter(t => t.awarded).length ?? 0)
+const dailyTotal = computed(() => dailyToday.value?.tasks.length ?? 5)
+const dailyStreakValue = computed(() => dailyStreak.value?.current ?? 0)
+async function handleDashboardCheckIn() {
+  await doCheckIn()
+  await refreshPoints()
+}
+
 function questProgress(quest: ChatQuestWithProgress) {
   if (!quest.targetCount)
     return 0
@@ -226,6 +239,9 @@ onMounted(async () => {
     }
     if (results[5].status === 'fulfilled')
       highlights.value = results[5].value ?? []
+
+    // Дейлики — отдельным запросом, без блокировки основного skeleton'а
+    refreshDailies()
   }
   catch (error) {
     handleError(error)
@@ -437,6 +453,60 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <!-- Daily check-in CTA -->
+      <RouterLink
+        v-if="isSubscribed"
+        to="/dailies"
+        class="mt-5 block rounded-sm border bg-card p-4 transition-colors terminal-card hover:border-accent/40"
+        :class="dailyCheckInDone ? 'border-green-500/30 bg-green-500/5' : ''"
+      >
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3 min-w-0">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-sm shrink-0"
+              :class="dailyCheckInDone ? 'bg-green-500/15' : 'bg-orange-500/10'"
+            >
+              <Flame
+                v-if="!dailyCheckInDone"
+                class="h-5 w-5 text-orange-500"
+              />
+              <CheckCircle
+                v-else
+                class="h-5 w-5 text-green-500"
+              />
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-baseline gap-2">
+                <p class="text-sm font-semibold">
+                  Стрик: {{ dailyStreakValue }} дн.
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  · {{ dailyAwardedCount }} / {{ dailyTotal }} дейликов
+                </p>
+              </div>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                {{ dailyCheckInDone ? 'Сегодня отмечен — приходи завтра' : 'Сделай check-in и фарми баллы' }}
+              </p>
+            </div>
+          </div>
+
+          <button
+            v-if="!dailyCheckInDone"
+            class="px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            :disabled="dailyCheckingIn"
+            @click.stop.prevent="handleDashboardCheckIn"
+          >
+            {{ dailyCheckingIn ? '...' : 'Check-in (+5)' }}
+          </button>
+          <span
+            v-else
+            class="text-xs text-muted-foreground flex items-center gap-1"
+          >
+            Все детали → <ArrowRight class="h-3 w-3" />
+          </span>
+        </div>
+      </RouterLink>
 
       <!-- Nearest Events -->
       <div
