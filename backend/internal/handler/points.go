@@ -44,6 +44,10 @@ func (h *PointsHandler) GetLeaderboard(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить рейтинг"})
 	}
 
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "view_leaderboard", 1)
+	}
+
 	return c.JSON(fiber.Map{"items": entries})
 }
 

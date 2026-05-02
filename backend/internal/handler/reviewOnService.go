@@ -79,6 +79,9 @@ func (h *ReviewOnServiceHandler) CreateReview(c *fiber.Ctx) error {
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "review_on_service", int64(result.Id), result.Author)
 
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "leave_review", 1)
+	}
 	return c.Status(fiber.StatusCreated).JSON(result)
 }
 

@@ -95,6 +95,7 @@ func (s *PointsService) AwardEventPoints(event *models.Event) error {
 				fmt.Sprintf("Участие в событии: %s", event.Title)); err != nil {
 				return err
 			}
+			TrackDailyTrigger(member.Id, "attend_event", 1)
 		}
 
 		return nil

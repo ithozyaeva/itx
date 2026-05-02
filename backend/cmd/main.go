@@ -150,6 +150,27 @@ func main() {
 			}
 		}()
 
+		// Геймификация: ежечасный watchdog для генерации дейликов и daily-раффла
+		// + триггеры еженедельных/ежемесячных челленджей по МСК-времени.
+		// Идемпотентен через ON CONFLICT, поэтому безопасен при рестартах
+		// и переразвёртывании посреди суток.
+		go func() {
+			dailyTaskSvc := service.NewDailyTaskService()
+			ticker := time.NewTicker(time.Hour)
+			defer ticker.Stop()
+
+			runOnce := func() {
+				if err := dailyTaskSvc.EnsureTodaySet(); err != nil {
+					log.Printf("ensure today daily set: %v", err)
+				}
+			}
+
+			runOnce()
+			for range ticker.C {
+				runOnce()
+			}
+		}()
+
 		// Запускаем сервер
 		go func() {
 			log.Printf("Server starting on port %s", config.CFG.Port)

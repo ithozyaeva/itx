@@ -12,13 +12,29 @@ import (
 type DailiesHandler struct {
 	checkInSvc *service.CheckInService
 	streakSvc  *service.StreakService
+	taskSvc    *service.DailyTaskService
 }
 
 func NewDailiesHandler() *DailiesHandler {
 	return &DailiesHandler{
 		checkInSvc: service.NewCheckInService(),
 		streakSvc:  service.NewStreakService(),
+		taskSvc:    service.NewDailyTaskService(),
 	}
+}
+
+// Today — GET /api/platform/dailies/today
+func (h *DailiesHandler) Today(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	resp, err := h.taskSvc.GetMyToday(member.Id)
+	if err != nil {
+		log.Printf("dailies today (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки заданий"})
+	}
+	return c.JSON(resp)
 }
 
 // CheckIn — POST /api/platform/dailies/check-in

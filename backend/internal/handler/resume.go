@@ -87,6 +87,7 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "resume", resume.Id, fileHeader.Filename)
 	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonResumeUpload, "resume", resume.Id,
 		"Загрузка резюме")
+	service.TrackDailyTrigger(member.Id, "update_resume", 1)
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"resume": resume,
@@ -138,6 +139,7 @@ func (h *ResumeHandler) UpdateMy(c *fiber.Ctx) error {
 		log.Printf("update resume error (id=%d, member=%d): %v", id, member.TelegramID, err)
 		return fiber.NewError(fiber.StatusBadRequest, "Ошибка обновления резюме")
 	}
+	service.TrackDailyTrigger(member.Id, "update_resume", 1)
 	return c.JSON(resume)
 }
 

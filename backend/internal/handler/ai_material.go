@@ -91,6 +91,7 @@ func (h *AIMaterialHandler) GetByID(c *fiber.Ctx) error {
 	if err != nil {
 		return respondAIMaterialErr(c, err)
 	}
+	service.TrackDailyTrigger(member.Id, "view_ai_material", 1)
 	return c.JSON(item)
 }
 
@@ -203,6 +204,9 @@ func (h *AIMaterialHandler) ToggleBookmark(c *fiber.Ctx) error {
 	bookmarked, count, err := h.svc.ToggleBookmark(id, member.Id, hasAdminRole(member))
 	if err != nil {
 		return respondAIMaterialErr(c, err)
+	}
+	if bookmarked {
+		service.TrackDailyTrigger(member.Id, "bookmark_ai", 1)
 	}
 	return c.JSON(fiber.Map{"bookmarked": bookmarked, "bookmarksCount": count})
 }

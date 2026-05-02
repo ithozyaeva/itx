@@ -504,6 +504,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	// Геймификация: ежедневный check-in, дейлики, стрики
 	dailiesHandler := handler.NewDailiesHandler()
 	dailies := subscribed.Group("/dailies")
+	dailies.Get("/today", dailiesHandler.Today)
 	dailies.Post("/check-in", dailiesHandler.CheckIn)
 	streak := subscribed.Group("/streak")
 	streak.Get("/me", dailiesHandler.MyStreak)

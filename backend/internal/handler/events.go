@@ -124,6 +124,10 @@ func (h *EventsHandler) GetNext(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки событий"})
 	}
 
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "view_events", 1)
+	}
+
 	return c.JSON(result)
 }
 
@@ -147,6 +151,7 @@ func (h *EventsHandler) AddMember(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка регистрации на событие"})
 	}
 
+	service.TrackDailyTrigger(member.Id, "register_event", 1)
 	return c.JSON(result)
 }
 

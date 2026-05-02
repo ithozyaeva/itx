@@ -84,7 +84,17 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 		return err
 	}
 
-	return s.repo.BuyTickets(raffleId, memberId, count)
+	if err := s.repo.BuyTickets(raffleId, memberId, count); err != nil {
+		return err
+	}
+
+	// Дейлик «купить билет в обычный розыгрыш» — только за manual.
+	// Для kind=daily билеты приходят из check-in бесплатно и не считаются.
+	if raffle.Kind != models.RaffleKindDaily {
+		TrackDailyTrigger(memberId, "buy_raffle_ticket", 1)
+	}
+
+	return nil
 }
 
 func (s *RaffleService) DrawExpiredRaffles() {
