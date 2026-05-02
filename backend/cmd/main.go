@@ -198,6 +198,12 @@ func main() {
 			// Устанавливаем глобальный экземпляр бота
 			bot.SetGlobalBot(telegramBot)
 
+			// Регистрируем отправитель пушей геймификации (через callback,
+			// чтобы избежать import-cycle service ↔ bot).
+			service.SetTelegramSender(func(chatID int64, text string) {
+				telegramBot.SendDirectMessage(chatID, text)
+			})
+
 			log.Println("Telegram bot started successfully")
 			telegramBot.Start()
 		}()

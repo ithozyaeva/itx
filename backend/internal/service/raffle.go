@@ -135,6 +135,7 @@ func (s *RaffleService) DrawExpiredRaffles() {
 					raffle.Id, winnerId, err)
 			}
 			GetSSEHub().Publish(winnerId, SSEEvent{Type: "points"})
+			go PushDailyRaffleWin(winnerId, raffle.Id, raffle.Prize)
 		}
 		GetSSEHub().Broadcast(SSEEvent{Type: "raffles"})
 	}

@@ -72,6 +72,12 @@ func (s *CheckInService) CheckIn(memberId int64) (*CheckInResult, error) {
 		log.Printf("award base check-in points (member=%d): %v", memberId, err)
 	}
 
+	// Пуш на пересечение порога стрика — асинхронно, чтобы не блокировать
+	// ответ хендлера; функция сама уважает MuteAll/DailyStreak.
+	for _, th := range crossed {
+		go PushStreakThreshold(memberId, th.Days, th.Reward)
+	}
+
 	raffleEntered := false
 	if err := s.dailyRaffleSvc.EnterRaffle(memberId); err != nil {
 		log.Printf("enter daily raffle (member=%d): %v", memberId, err)
