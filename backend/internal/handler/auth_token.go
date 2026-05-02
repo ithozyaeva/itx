@@ -136,7 +136,21 @@ func (h *TelegramAuthHandler) RefreshToken(c *fiber.Ctx) error {
 		})
 	}
 
+	// Обогащаем user тем же набором, что отдаёт /me: SubscriptionTier через
+	// GetEffectiveTier и mentor-поля при наличии. Иначе фронт после
+	// proactive-refresh затирает subscriptionTier и схлопывает сайдбар до
+	// следующего вызова /me.
+	user.SubscriptionTier = h.memberService.GetEffectiveTier(user.TelegramID)
+
 	c.Response().Header.Add("X-Telegram-User-Token", existedToken.Token)
+
+	if mentor, err := h.memberService.GetMentor(user.Id); err == nil {
+		mentor.SubscriptionTier = user.SubscriptionTier
+		return c.JSON(fiber.Map{
+			"token": existedToken.Token,
+			"user":  mentor,
+		})
+	}
 
 	return c.JSON(fiber.Map{
 		"token": existedToken.Token,
