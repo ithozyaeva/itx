@@ -151,7 +151,8 @@ func main() {
 		}()
 
 		// Геймификация: ежечасный watchdog для генерации дейликов, daily-раффла
-		// и текущих челленджей (еженедельных + ежемесячного).
+		// и текущих челленджей (еженедельных + ежемесячного), а также
+		// утренний/вечерний batch-пуши по МСК-времени.
 		// Идемпотентен через ON CONFLICT, поэтому безопасен при рестартах
 		// и переразвёртывании посреди суток.
 		go func() {
@@ -169,6 +170,17 @@ func main() {
 					log.Printf("ensure today daily raffle: %v", err)
 				}
 				challengeSvc.EnsureCurrentInstances()
+
+				// Batch-пуши: на пересечении часовой границы проверяем,
+				// нужно ли запускать утреннюю или вечернюю рассылку.
+				// Идемпотентность — внутри функций (last_*_day_unix).
+				nowMSK := time.Now().In(utils.MSKLocation())
+				switch nowMSK.Hour() {
+				case 10:
+					service.SendDailyMorningPush()
+				case 21:
+					service.SendDailyEveningPush()
+				}
 			}
 
 			runOnce()
