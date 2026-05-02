@@ -158,6 +158,7 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 			h.pointsSvc.AwardIdempotent(link.AuthorId, models.PointReasonReferalConversion, "referal_conversion", req.ReferralLinkId,
 				"Конверсия по реферальной ссылке")
 			CreateNotification(link.AuthorId, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
+			service.TrackChallengeMetric(link.AuthorId, "referal_conversions", 1)
 		}
 	}()
 

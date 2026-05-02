@@ -34,6 +34,10 @@ func (s *PointsService) AwardIdempotent(memberId int64, reason models.PointReaso
 	}
 	if err := s.repo.AwardPoints(tx); err != nil {
 		log.Printf("Error awarding points (reason=%s, member=%d): %v", reason, memberId, err)
+		return
+	}
+	if tx.Amount > 0 {
+		TrackChallengeMetric(memberId, "points_earned", tx.Amount)
 	}
 }
 
@@ -50,6 +54,10 @@ func (s *PointsService) GiveForAction(memberId int64, reason models.PointReason,
 	}
 	if err := s.repo.GivePoints(tx); err != nil {
 		log.Printf("Error giving points (reason=%s, member=%d): %v", reason, memberId, err)
+		return
+	}
+	if tx.Amount > 0 {
+		TrackChallengeMetric(memberId, "points_earned", tx.Amount)
 	}
 }
 
@@ -96,6 +104,7 @@ func (s *PointsService) AwardEventPoints(event *models.Event) error {
 				return err
 			}
 			TrackDailyTrigger(member.Id, "attend_event", 1)
+			TrackChallengeMetric(member.Id, "events_attended", 1)
 		}
 
 		return nil

@@ -336,6 +336,9 @@ func (s *DailyTaskService) maybeAwardAllBonus(memberId int64, day time.Time, set
 		return
 	}
 	GetSSEHub().Publish(memberId, SSEEvent{Type: "points"})
+
+	// Челлендж-метрика «день, когда выполнены все 5 дейликов».
+	TrackChallengeMetric(memberId, "all_dailies_days", 1)
 }
 
 // EnsureTodaySet — публичный хук для cron/watchdog: гарантирует, что

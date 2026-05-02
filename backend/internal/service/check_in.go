@@ -79,6 +79,9 @@ func (s *CheckInService) CheckIn(memberId int64) (*CheckInResult, error) {
 		raffleEntered = true
 	}
 
+	// Челлендж-метрики, привязанные к check-in.
+	TrackChallengeMetric(memberId, "check_ins", 1)
+
 	return &CheckInResult{
 		Day:              day,
 		Inserted:         true,

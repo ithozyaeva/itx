@@ -510,6 +510,11 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	streak := subscribed.Group("/streak")
 	streak.Get("/me", dailiesHandler.MyStreak)
 
+	// Челленджи (еженедельные + ежемесячные)
+	challengesHandler := handler.NewChallengesHandler()
+	challenges := subscribed.Group("/challenges")
+	challenges.Get("/", challengesHandler.GetMyChallenges)
+
 	// SSE — реал-тайм обновления (events, casino, и т.п. — премиум-функции).
 	sseHandler := handler.NewSSEHandler()
 	subscribed.Get("/sse", sseHandler.Stream)

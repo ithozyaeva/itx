@@ -40,6 +40,8 @@ func (h *KudosHandler) Send(c *fiber.Ctx) error {
 	BroadcastEvent("kudos")
 	PublishToMember(req.ToId, "points")
 	service.TrackDailyTrigger(member.Id, "send_kudos", 1)
+	// Метрика receiver-стороны: челлендж «Социалка» / «Легенда комьюнити».
+	service.TrackChallengeMetric(req.ToId, "kudos_received", 1)
 	return c.Status(fiber.StatusCreated).JSON(kudos)
 }
 

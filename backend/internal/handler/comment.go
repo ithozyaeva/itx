@@ -74,6 +74,7 @@ func (h *CommentHandler) CreateForEntity(entityType models.CommentEntityType) fi
 			return respondCommentErr(c, err)
 		}
 		service.TrackDailyTrigger(member.Id, "post_comment", 1)
+		service.TrackChallengeMetric(member.Id, "comments_posted", 1)
 		return c.Status(fiber.StatusCreated).JSON(created)
 	}
 }

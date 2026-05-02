@@ -92,6 +92,7 @@ func (h *AIMaterialHandler) GetByID(c *fiber.Ctx) error {
 		return respondAIMaterialErr(c, err)
 	}
 	service.TrackDailyTrigger(member.Id, "view_ai_material", 1)
+	service.TrackChallengeMetric(member.Id, "ai_materials_read", 1)
 	return c.JSON(item)
 }
 

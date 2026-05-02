@@ -151,12 +151,13 @@ func main() {
 		}()
 
 		// Геймификация: ежечасный watchdog для генерации дейликов, daily-раффла
-		// и (в будущем PR) триггеров еженедельных/ежемесячных челленджей.
+		// и текущих челленджей (еженедельных + ежемесячного).
 		// Идемпотентен через ON CONFLICT, поэтому безопасен при рестартах
 		// и переразвёртывании посреди суток.
 		go func() {
 			dailyTaskSvc := service.NewDailyTaskService()
 			dailyRaffleSvc := service.NewDailyRaffleService()
+			challengeSvc := service.NewChallengeService()
 			ticker := time.NewTicker(time.Hour)
 			defer ticker.Stop()
 
@@ -167,6 +168,7 @@ func main() {
 				if _, err := dailyRaffleSvc.EnsureTodayRaffle(); err != nil {
 					log.Printf("ensure today daily raffle: %v", err)
 				}
+				challengeSvc.EnsureCurrentInstances()
 			}
 
 			runOnce()

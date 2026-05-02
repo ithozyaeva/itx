@@ -33,8 +33,10 @@ func (s *ChatQuestService) ProcessMessage(message *tgbotapi.Message, memberID *i
 		return
 	}
 
-	// Параллельно с чат-квестами — трекаем дейлик «3 сообщения в чате».
+	// Параллельно с чат-квестами — трекаем дейлик «3 сообщения в чате»
+	// и метрику недельного челленджа «Болтун недели».
 	TrackDailyTrigger(*memberID, "chat_message", 1)
+	TrackChallengeMetric(*memberID, "chat_messages", 1)
 
 	quests, err := s.repo.GetActiveQuests()
 	if err != nil {

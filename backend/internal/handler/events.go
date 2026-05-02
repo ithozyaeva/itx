@@ -152,6 +152,7 @@ func (h *EventsHandler) AddMember(c *fiber.Ctx) error {
 	}
 
 	service.TrackDailyTrigger(member.Id, "register_event", 1)
+	service.TrackChallengeMetric(member.Id, "events_registered", 1)
 	return c.JSON(result)
 }
 
