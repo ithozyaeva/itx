@@ -101,15 +101,22 @@ func (s *CheckInService) CheckIn(memberId int64) (*CheckInResult, error) {
 
 // awardBase идемпотентно начисляет базовые +5 за check-in (ключ — unix-день).
 func (s *CheckInService) awardBase(memberId int64, day time.Time) error {
+	amount := models.PointValues[models.PointReasonDailyCheckIn]
 	tx := &models.PointTransaction{
 		MemberId:    memberId,
-		Amount:      models.PointValues[models.PointReasonDailyCheckIn],
+		Amount:      amount,
 		Reason:      models.PointReasonDailyCheckIn,
 		SourceType:  "check_in",
 		SourceId:    day.Unix(),
 		Description: "Ежедневный check-in",
 	}
-	return s.pointRepo.AwardPoints(tx)
+	if err := s.pointRepo.AwardPoints(tx); err != nil {
+		return err
+	}
+	if amount > 0 {
+		TrackChallengeMetric(memberId, "points_earned", amount)
+	}
+	return nil
 }
 
 // HasCheckedInToday — проксирует в repo, удобно для GET /dailies/today.

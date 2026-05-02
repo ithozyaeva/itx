@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"ithozyeva/database"
@@ -16,6 +17,31 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
+
+// triggerCacheState — снапшот trigger_keys, попавших в сегодняшний набор.
+// Используется в TrackDailyTrigger, чтобы не делать SQL для каждого
+// view-эндпоинта, если соответствующего триггера сегодня нет в выборке.
+type triggerCacheState struct {
+	day  time.Time
+	keys map[string]struct{}
+}
+
+var triggerCache atomic.Pointer[triggerCacheState]
+
+// todayHasTrigger возвращает (есть_ли_в_сегодняшнем_сете, кэш_валиден).
+// Если кэш пуст или устарел — возвращаем (true, false), чтобы fallback
+// прошёл через SQL (надёжнее, чем потерять прогресс из-за прогрева).
+func todayHasTrigger(key string) (bool, bool) {
+	state := triggerCache.Load()
+	if state == nil {
+		return true, false
+	}
+	if !state.day.Equal(utils.MSKToday()) {
+		return true, false
+	}
+	_, ok := state.keys[key]
+	return ok, true
+}
 
 const dailyTasksPerDay = 5
 
@@ -294,6 +320,10 @@ func (s *DailyTaskService) bumpAndAward(memberId int64, day time.Time, t models.
 		}
 		return nil
 	})
+	if err == nil && didAward && t.Points > 0 {
+		// Покрываем агрегатную метрику m_owner и т.п.
+		TrackChallengeMetric(memberId, "points_earned", t.Points)
+	}
 	return didAward, err
 }
 
@@ -337,15 +367,47 @@ func (s *DailyTaskService) maybeAwardAllBonus(memberId int64, day time.Time, set
 	}
 	GetSSEHub().Publish(memberId, SSEEvent{Type: "points"})
 
-	// Челлендж-метрика «день, когда выполнены все 5 дейликов».
+	// Челлендж-метрики: «день, когда выполнены все 5 дейликов» и
+	// агрегат points_earned для m_owner.
 	TrackChallengeMetric(memberId, "all_dailies_days", 1)
+	if bonus := models.PointValues[models.PointReasonDailyAllTasksBonus]; bonus > 0 {
+		TrackChallengeMetric(memberId, "points_earned", bonus)
+	}
 }
 
 // EnsureTodaySet — публичный хук для cron/watchdog: гарантирует, что
-// набор на сегодня существует (idempotent). Возвращает ошибку только
-// при сбое БД.
+// набор на сегодня существует (idempotent). Заодно обновляет
+// triggerCache, чтобы hot-path вызовы TrackDailyTrigger не ходили
+// в БД, если триггер не выпал в сегодняшний сет.
 func (s *DailyTaskService) EnsureTodaySet() error {
-	return s.GenerateTodaySet(utils.MSKToday())
+	if err := s.GenerateTodaySet(utils.MSKToday()); err != nil {
+		return err
+	}
+	s.RefreshTriggerCache()
+	return nil
+}
+
+// RefreshTriggerCache подгружает trigger_keys сегодняшнего набора в
+// in-memory atomic-кэш. Дёшево (одна выборка на 5 строк) и сильно
+// сокращает число SQL на view-хендлерах вне сегодняшних задач.
+func (s *DailyTaskService) RefreshTriggerCache() {
+	day := utils.MSKToday()
+	set, err := s.repo.GetSetByDay(day)
+	if err != nil || set == nil {
+		// Не сбрасываем существующий кэш — повторим в следующий watchdog.
+		return
+	}
+	tasks, err := s.repo.GetByIds([]int64(set.TaskIds))
+	if err != nil {
+		return
+	}
+	keys := make(map[string]struct{}, len(tasks))
+	for _, t := range tasks {
+		if t.Active {
+			keys[t.TriggerKey] = struct{}{}
+		}
+	}
+	triggerCache.Store(&triggerCacheState{day: day, keys: keys})
 }
 
 // debug-only — выгрузить ID набора для проверки.

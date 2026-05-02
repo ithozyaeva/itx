@@ -47,6 +47,27 @@ func (s *StreakService) ApplyCheckIn(memberId int64, day time.Time) (int, int, [
 	day = utils.MSKDay(day)
 	prev := streak.CurrentStreak
 
+	streak, crossed := recalcStreak(streak, day, StreakThresholds)
+	streak.MemberId = memberId
+
+	if err := s.repo.Save(streak); err != nil {
+		return prev, streak.CurrentStreak, nil, err
+	}
+
+	if err := s.awardThresholdBonuses(memberId, day, crossed); err != nil {
+		return prev, streak.CurrentStreak, crossed, err
+	}
+
+	return prev, streak.CurrentStreak, crossed, nil
+}
+
+// recalcStreak — pure-функция пересчёта стрика. Берёт текущий streak +
+// сегодняшний день (в МСК, на 00:00) + список порогов, возвращает
+// обновлённый streak и список пересечённых порогов. Не трогает БД, что
+// упрощает юнит-тестирование (см. streak_test.go).
+func recalcStreak(streak *models.MemberStreak, day time.Time, thresholds []StreakThreshold) (*models.MemberStreak, []StreakThreshold) {
+	prev := streak.CurrentStreak
+
 	// Перевыдача freeze в начале новой ISO-недели.
 	yr, wk := day.ISOWeek()
 	if streak.FreezeWeekYear == nil || streak.FreezeWeekNum == nil ||
@@ -61,7 +82,7 @@ func (s *StreakService) ApplyCheckIn(memberId int64, day time.Time) (int, int, [
 		streak.CurrentStreak = 1
 	case utils.MSKDay(*streak.LastCheckInDate).Equal(day):
 		// уже был check-in сегодня — ничего не пересчитываем
-		return prev, streak.CurrentStreak, nil, nil
+		return streak, nil
 	default:
 		gap := utils.DaysBetweenMSK(*streak.LastCheckInDate, day)
 		switch {
@@ -80,23 +101,14 @@ func (s *StreakService) ApplyCheckIn(memberId int64, day time.Time) (int, int, [
 		streak.LongestStreak = streak.CurrentStreak
 	}
 	streak.LastCheckInDate = &day
-	streak.MemberId = memberId
-
-	if err := s.repo.Save(streak); err != nil {
-		return prev, streak.CurrentStreak, nil, err
-	}
 
 	crossed := make([]StreakThreshold, 0)
-	for _, th := range StreakThresholds {
+	for _, th := range thresholds {
 		if prev < th.Days && streak.CurrentStreak >= th.Days {
 			crossed = append(crossed, th)
 		}
 	}
-	if err := s.awardThresholdBonuses(memberId, day, crossed); err != nil {
-		return prev, streak.CurrentStreak, crossed, err
-	}
-
-	return prev, streak.CurrentStreak, crossed, nil
+	return streak, crossed
 }
 
 // awardThresholdBonuses идемпотентно выдаёт баллы за пересечённые пороги.
@@ -114,6 +126,9 @@ func (s *StreakService) awardThresholdBonuses(memberId int64, day time.Time, cro
 		}
 		if err := s.pointRepo.AwardPoints(tx); err != nil {
 			return err
+		}
+		if th.Reward > 0 {
+			TrackChallengeMetric(memberId, "points_earned", th.Reward)
 		}
 	}
 	return nil

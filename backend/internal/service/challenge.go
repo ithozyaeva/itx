@@ -22,14 +22,16 @@ const (
 )
 
 type ChallengeService struct {
-	repo      *repository.ChallengeRepository
-	pointRepo *repository.PointsRepository
+	repo           *repository.ChallengeRepository
+	pointRepo      *repository.PointsRepository
+	achievementSvc *AchievementService
 }
 
 func NewChallengeService() *ChallengeService {
 	return &ChallengeService{
-		repo:      repository.NewChallengeRepository(),
-		pointRepo: repository.NewPointsRepository(),
+		repo:           repository.NewChallengeRepository(),
+		pointRepo:      repository.NewPointsRepository(),
+		achievementSvc: NewAchievementService(),
 	}
 }
 
@@ -259,6 +261,16 @@ func (s *ChallengeService) bumpAndAward(memberId int64, inst models.ChallengeIns
 	if awarded {
 		GetSSEHub().Publish(memberId, SSEEvent{Type: "challenges"})
 		GetSSEHub().Publish(memberId, SSEEvent{Type: "points"})
+		if t.RewardPoints > 0 {
+			TrackChallengeMetric(memberId, "points_earned", t.RewardPoints)
+		}
+		// Если у шаблона прописан achievement_code — выдаём явную ачивку.
+		// Идемпотентно (PRIMARY KEY на (member_id, code)).
+		if t.AchievementCode != nil && *t.AchievementCode != "" {
+			if grantErr := s.achievementSvc.GrantExplicit(memberId, *t.AchievementCode); grantErr != nil {
+				log.Printf("grant achievement %q for member=%d: %v", *t.AchievementCode, memberId, grantErr)
+			}
+		}
 	}
 	return nil
 }

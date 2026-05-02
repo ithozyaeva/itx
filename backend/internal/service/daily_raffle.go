@@ -151,13 +151,20 @@ func (s *DailyRaffleService) GetTodayPublic(memberId int64) (*models.RafflePubli
 // 'daily_raffle_win' (отдельная пара ключей от 'raffle_spend').
 func (s *DailyRaffleService) AwardWinPoints(memberId, raffleId int64) error {
 	pointRepo := repository.NewPointsRepository()
+	amount := models.PointValues[models.PointReasonDailyRaffleWin]
 	tx := &models.PointTransaction{
 		MemberId:    memberId,
-		Amount:      models.PointValues[models.PointReasonDailyRaffleWin],
+		Amount:      amount,
 		Reason:      models.PointReasonDailyRaffleWin,
 		SourceType:  "daily_raffle",
 		SourceId:    raffleId,
 		Description: fmt.Sprintf("Победа в ежедневном розыгрыше #%d", raffleId),
 	}
-	return pointRepo.AwardPoints(tx)
+	if err := pointRepo.AwardPoints(tx); err != nil {
+		return err
+	}
+	if amount > 0 {
+		TrackChallengeMetric(memberId, "points_earned", amount)
+	}
+	return nil
 }
