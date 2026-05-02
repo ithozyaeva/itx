@@ -14,6 +14,7 @@ type NotificationSettingsHandler struct {
 }
 
 type updateNotificationSettingsRequest struct {
+	MuteAll        bool `json:"muteAll"`
 	NewEvents      bool `json:"newEvents"`
 	RemindWeek     bool `json:"remindWeek"`
 	RemindDay      bool `json:"remindDay"`
@@ -21,6 +22,10 @@ type updateNotificationSettingsRequest struct {
 	EventStart     bool `json:"eventStart"`
 	EventUpdates   bool `json:"eventUpdates"`
 	EventCancelled bool `json:"eventCancelled"`
+	DailyMorning   bool `json:"dailyMorning"`
+	DailyEvening   bool `json:"dailyEvening"`
+	DailyStreak    bool `json:"dailyStreak"`
+	DailyRaffle    bool `json:"dailyRaffle"`
 }
 
 func NewNotificationSettingsHandler() *NotificationSettingsHandler {
@@ -56,6 +61,7 @@ func (h *NotificationSettingsHandler) UpdateMy(c *fiber.Ctx) error {
 	}
 
 	settings := &models.NotificationSettings{
+		MuteAll:        req.MuteAll,
 		NewEvents:      req.NewEvents,
 		RemindWeek:     req.RemindWeek,
 		RemindDay:      req.RemindDay,
@@ -63,6 +69,10 @@ func (h *NotificationSettingsHandler) UpdateMy(c *fiber.Ctx) error {
 		EventStart:     req.EventStart,
 		EventUpdates:   req.EventUpdates,
 		EventCancelled: req.EventCancelled,
+		DailyMorning:   req.DailyMorning,
+		DailyEvening:   req.DailyEvening,
+		DailyStreak:    req.DailyStreak,
+		DailyRaffle:    req.DailyRaffle,
 	}
 
 	result, err := h.svc.Update(memberId, settings)

@@ -69,6 +69,10 @@ export interface NotificationSettings {
   eventStart: boolean
   eventUpdates: boolean
   eventCancelled: boolean
+  dailyMorning: boolean
+  dailyEvening: boolean
+  dailyStreak: boolean
+  dailyRaffle: boolean
 }
 
 export const SUBSCRIPTION_LEVELS = [

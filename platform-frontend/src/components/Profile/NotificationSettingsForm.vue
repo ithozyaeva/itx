@@ -20,6 +20,10 @@ const settings = reactive({
   eventStart: true,
   eventUpdates: true,
   eventCancelled: true,
+  dailyMorning: true,
+  dailyEvening: true,
+  dailyStreak: true,
+  dailyRaffle: true,
 })
 
 let originalSettings: Partial<NotificationSettings> = {}
@@ -32,6 +36,10 @@ const toggleItems = [
   { key: 'eventStart' as const, label: 'Начало события', description: 'Когда событие начинается' },
   { key: 'eventUpdates' as const, label: 'Изменения событий', description: 'Когда событие обновляется' },
   { key: 'eventCancelled' as const, label: 'Отмена событий', description: 'Когда событие отменяется' },
+  { key: 'dailyMorning' as const, label: 'Утренний пуш дейликов', description: '10:00 МСК — состав 5 заданий' },
+  { key: 'dailyEvening' as const, label: 'Вечерний нюдж', description: '21:00 МСК — час до розыгрыша, если день не закрыт' },
+  { key: 'dailyStreak' as const, label: 'Стрик-достижения', description: '🔥 на пересечении 3/7/14/30 дней' },
+  { key: 'dailyRaffle' as const, label: 'Победа в розыгрыше', description: 'Когда выиграл ежедневный розыгрыш' },
 ]
 
 function toggleMuteAll() {
@@ -52,6 +60,10 @@ onMounted(async () => {
         eventStart: data.eventStart,
         eventUpdates: data.eventUpdates,
         eventCancelled: data.eventCancelled,
+        dailyMorning: data.dailyMorning ?? true,
+        dailyEvening: data.dailyEvening ?? true,
+        dailyStreak: data.dailyStreak ?? true,
+        dailyRaffle: data.dailyRaffle ?? true,
       })
       originalSettings = { ...settings }
     }
