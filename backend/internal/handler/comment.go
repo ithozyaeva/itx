@@ -73,6 +73,8 @@ func (h *CommentHandler) CreateForEntity(entityType models.CommentEntityType) fi
 		if err != nil {
 			return respondCommentErr(c, err)
 		}
+		service.TrackDailyTrigger(member.Id, "post_comment", 1)
+		service.TrackChallengeMetric(member.Id, "comments_posted", 1)
 		return c.Status(fiber.StatusCreated).JSON(created)
 	}
 }
@@ -124,6 +126,11 @@ func (h *CommentHandler) ToggleLike(c *fiber.Ctx) error {
 	liked, count, err := h.svc.ToggleLike(id, member)
 	if err != nil {
 		return respondCommentErr(c, err)
+	}
+	if liked {
+		// засчитываем дейлик только при переходе off→on, чтобы
+		// тоггл-абуз не накручивал прогресс.
+		service.TrackDailyTrigger(member.Id, "like_comment", 1)
 	}
 	return c.JSON(fiber.Map{"liked": liked, "likesCount": count})
 }

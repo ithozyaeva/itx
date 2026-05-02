@@ -33,6 +33,15 @@ const (
 	PointReasonRaffleSpend         PointReason = "raffle_spend"
 	PointReasonCasinoBet           PointReason = "casino_bet"
 	PointReasonCasinoWin           PointReason = "casino_win"
+	PointReasonDailyCheckIn        PointReason = "daily_checkin"
+	PointReasonDailyStreak3        PointReason = "daily_streak_3"
+	PointReasonDailyStreak7        PointReason = "daily_streak_7"
+	PointReasonDailyStreak14       PointReason = "daily_streak_14"
+	PointReasonDailyStreak30       PointReason = "daily_streak_30"
+	PointReasonDailyTaskComplete   PointReason = "daily_task_complete"
+	PointReasonDailyAllTasksBonus  PointReason = "daily_all_tasks_bonus"
+	PointReasonChallengeComplete   PointReason = "challenge_complete"
+	PointReasonDailyRaffleWin      PointReason = "daily_raffle_win"
 )
 
 var PointValues = map[PointReason]int{
@@ -53,6 +62,13 @@ var PointValues = map[PointReason]int{
 	PointReasonMarketplaceBuy:      10,
 	PointReasonChatterOfWeek:       15,
 	PointReasonKudosReceived:       5,
+	PointReasonDailyCheckIn:        5,
+	PointReasonDailyStreak3:        15,
+	PointReasonDailyStreak7:        50,
+	PointReasonDailyStreak14:       150,
+	PointReasonDailyStreak30:       500,
+	PointReasonDailyAllTasksBonus:  50,
+	PointReasonDailyRaffleWin:      100,
 }
 
 type PointTransaction struct {

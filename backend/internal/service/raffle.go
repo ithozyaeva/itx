@@ -84,7 +84,17 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 		return err
 	}
 
-	return s.repo.BuyTickets(raffleId, memberId, count)
+	if err := s.repo.BuyTickets(raffleId, memberId, count); err != nil {
+		return err
+	}
+
+	// Дейлик «купить билет в обычный розыгрыш» — только за manual.
+	// Для kind=daily билеты приходят из check-in бесплатно и не считаются.
+	if raffle.Kind != models.RaffleKindDaily {
+		TrackDailyTrigger(memberId, "buy_raffle_ticket", 1)
+	}
+
+	return nil
 }
 
 func (s *RaffleService) DrawExpiredRaffles() {
@@ -93,6 +103,8 @@ func (s *RaffleService) DrawExpiredRaffles() {
 		log.Printf("Error getting expired raffles: %v", err)
 		return
 	}
+
+	dailySvc := NewDailyRaffleService()
 
 	for _, raffle := range raffles {
 		ticketCount, _ := s.repo.GetTicketCount(raffle.Id)
@@ -114,5 +126,17 @@ func (s *RaffleService) DrawExpiredRaffles() {
 		}
 
 		log.Printf("Raffle %d winner: member %d", raffle.Id, winnerId)
+
+		// Daily-раффл — выдаём приз победителю автоматически.
+		// Manual-розыгрыши обрабатываются админом отдельно (через UI/manual).
+		if raffle.Kind == models.RaffleKindDaily {
+			if err := dailySvc.AwardWinPoints(winnerId, raffle.Id); err != nil {
+				log.Printf("award daily-raffle win points (raffle=%d, member=%d): %v",
+					raffle.Id, winnerId, err)
+			}
+			GetSSEHub().Publish(winnerId, SSEEvent{Type: "points"})
+			go PushDailyRaffleWin(winnerId, raffle.Prize)
+		}
+		GetSSEHub().Broadcast(SSEEvent{Type: "raffles"})
 	}
 }

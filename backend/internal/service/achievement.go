@@ -53,6 +53,20 @@ var AllAchievements = []models.Achievement{
 	{Id: "first_quest", Title: "Квестер", Description: "Выполнить первое задание в чате", Icon: "target", Category: models.AchievementCategoryActivity, Threshold: 1},
 	{Id: "quests_5", Title: "Охотник за квестами", Description: "Выполнить 5 заданий в чатах", Icon: "swords", Category: models.AchievementCategoryActivity, Threshold: 5},
 	{Id: "chatter_of_week", Title: "Чаттерc недели", Description: "Стать самым активным участником чата за неделю", Icon: "message-circle", Category: models.AchievementCategoryActivity, Threshold: 1},
+	// Месячные челленджи — выдаются явно через achievement_grants (см.
+	// challenge.bumpAndAward). Threshold=1 формально, реальную разблокировку
+	// определяет explicit-grant.
+	{Id: "owner_of_month", Title: "Хозяин месяца", Description: "Закрыть месячный челлендж «Хозяин месяца»", Icon: "crown", Category: models.AchievementCategoryActivity, Threshold: 1},
+	{Id: "perfect_month", Title: "Идеальный месяц", Description: "Закрыть месячный челлендж «Идеальный месяц»", Icon: "calendar-check", Category: models.AchievementCategoryActivity, Threshold: 1},
+	{Id: "kudos_legend", Title: "Легенда комьюнити", Description: "Закрыть месячный челлендж «Легенда комьюнити»", Icon: "heart", Category: models.AchievementCategorySocial, Threshold: 1},
+}
+
+// explicitAchievementIds — ачивки, разблокировка которых не вычисляется по
+// count of point_transactions, а ставится явно через achievement_grants.
+var explicitAchievementIds = map[string]bool{
+	"owner_of_month":  true,
+	"perfect_month":   true,
+	"kudos_legend":    true,
 }
 
 // achievementReasonMap maps achievement IDs to the PointReason they track.
@@ -97,7 +111,12 @@ func (s *AchievementService) GetUserAchievements(memberId int64) (*models.Achiev
 		return nil, err
 	}
 
-	return s.buildAchievements(reasonCounts, balance), nil
+	grants, err := s.repo.GetExplicitGrants(memberId)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.buildAchievements(reasonCounts, balance, grants), nil
 }
 
 // GetAchievementCounts returns only the unlocked/total counts using a pre-computed balance.
@@ -107,11 +126,22 @@ func (s *AchievementService) GetAchievementCounts(memberId int64, balance int) (
 		return 0, 0, err
 	}
 
-	resp := s.buildAchievements(reasonCounts, balance)
+	grants, err := s.repo.GetExplicitGrants(memberId)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	resp := s.buildAchievements(reasonCounts, balance, grants)
 	return resp.UnlockedCount, resp.TotalCount, nil
 }
 
-func (s *AchievementService) buildAchievements(reasonCounts map[models.PointReason]int, balance int) *models.AchievementsResponse {
+// GrantExplicit — явная разблокировка ачивки (используется при completion
+// челленджа с ненулевым achievement_code). Идемпотентно.
+func (s *AchievementService) GrantExplicit(memberId int64, code string) error {
+	return s.repo.GrantExplicit(memberId, code)
+}
+
+func (s *AchievementService) buildAchievements(reasonCounts map[models.PointReason]int, balance int, explicitGrants map[string]bool) *models.AchievementsResponse {
 	// Also count reviews on services
 	reviewCount := reasonCounts[models.PointReasonReviewCommunity] + reasonCounts[models.PointReasonReviewService]
 
@@ -124,10 +154,16 @@ func (s *AchievementService) buildAchievements(reasonCounts map[models.PointReas
 		}
 
 		var progress int
-		switch a.Id {
-		case "points_50", "points_100", "points_500", "points_1000":
+		switch {
+		case explicitAchievementIds[a.Id]:
+			// Явная разблокировка через achievement_grants — игнорируем
+			// reason-counts. progress = 1 если выдана, иначе 0.
+			if explicitGrants[a.Id] {
+				progress = a.Threshold
+			}
+		case a.Id == "points_50" || a.Id == "points_100" || a.Id == "points_500" || a.Id == "points_1000":
 			progress = balance
-		case "first_review", "reviews_5", "reviews_10":
+		case a.Id == "first_review" || a.Id == "reviews_5" || a.Id == "reviews_10":
 			progress = reviewCount
 		default:
 			reason, ok := achievementReasonMap[a.Id]

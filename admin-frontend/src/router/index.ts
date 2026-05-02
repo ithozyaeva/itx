@@ -16,6 +16,8 @@ const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 const ChatQuestsView = () => import('@/views/ChatQuestsView.vue')
 const RafflesView = () => import('@/views/RafflesView.vue')
 const CasinoView = () => import('@/views/CasinoView.vue')
+const DailyTasksView = () => import('@/views/DailyTasksView.vue')
+const ChallengesView = () => import('@/views/ChallengesView.vue')
 const SubscriptionsView = () => import('@/views/SubscriptionsView.vue')
 const FeedbackView = () => import('@/views/FeedbackView.vue')
 const ModerationView = () => import('@/views/ModerationView.vue')
@@ -111,6 +113,18 @@ const router = createRouter({
       path: '/raffles',
       name: 'raffles',
       component: RafflesView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/daily-tasks',
+      name: 'daily-tasks',
+      component: DailyTasksView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/challenges',
+      name: 'challenges',
+      component: ChallengesView,
       meta: { requiresAuth: true },
     },
     {

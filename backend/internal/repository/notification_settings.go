@@ -81,6 +81,10 @@ func (r *NotificationSettingsRepository) Upsert(settings *models.NotificationSet
 	existing.EventStart = settings.EventStart
 	existing.EventUpdates = settings.EventUpdates
 	existing.EventCancelled = settings.EventCancelled
+	existing.DailyMorning = settings.DailyMorning
+	existing.DailyEvening = settings.DailyEvening
+	existing.DailyStreak = settings.DailyStreak
+	existing.DailyRaffle = settings.DailyRaffle
 
 	if err := database.DB.Save(&existing).Error; err != nil {
 		return nil, err

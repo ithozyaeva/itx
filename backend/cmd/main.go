@@ -150,6 +150,45 @@ func main() {
 			}
 		}()
 
+		// Геймификация: ежечасный watchdog для генерации дейликов, daily-раффла
+		// и текущих челленджей (еженедельных + ежемесячного), а также
+		// утренний/вечерний batch-пуши по МСК-времени.
+		// Идемпотентен через ON CONFLICT, поэтому безопасен при рестартах
+		// и переразвёртывании посреди суток.
+		go func() {
+			dailyTaskSvc := service.NewDailyTaskService()
+			dailyRaffleSvc := service.NewDailyRaffleService()
+			challengeSvc := service.NewChallengeService()
+			ticker := time.NewTicker(time.Hour)
+			defer ticker.Stop()
+
+			runOnce := func() {
+				if err := dailyTaskSvc.EnsureTodaySet(); err != nil {
+					log.Printf("ensure today daily set: %v", err)
+				}
+				if _, err := dailyRaffleSvc.EnsureTodayRaffle(); err != nil {
+					log.Printf("ensure today daily raffle: %v", err)
+				}
+				challengeSvc.EnsureCurrentInstances()
+
+				// Batch-пуши: на пересечении часовой границы проверяем,
+				// нужно ли запускать утреннюю или вечернюю рассылку.
+				// Идемпотентность — внутри функций (last_*_day_unix).
+				nowMSK := time.Now().In(utils.MSKLocation())
+				switch nowMSK.Hour() {
+				case 10:
+					service.SendDailyMorningPush()
+				case 21:
+					service.SendDailyEveningPush()
+				}
+			}
+
+			runOnce()
+			for range ticker.C {
+				runOnce()
+			}
+		}()
+
 		// Запускаем сервер
 		go func() {
 			log.Printf("Server starting on port %s", config.CFG.Port)
@@ -170,6 +209,12 @@ func main() {
 
 			// Устанавливаем глобальный экземпляр бота
 			bot.SetGlobalBot(telegramBot)
+
+			// Регистрируем отправитель пушей геймификации (через callback,
+			// чтобы избежать import-cycle service ↔ bot).
+			service.SetTelegramSender(func(chatID int64, text string) {
+				telegramBot.SendDirectMessage(chatID, text)
+			})
 
 			log.Println("Telegram bot started successfully")
 			telegramBot.Start()

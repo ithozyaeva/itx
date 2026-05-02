@@ -11,6 +11,10 @@ type NotificationSettings struct {
 	EventStart     bool  `json:"eventStart" gorm:"column:event_start;default:true"`
 	EventUpdates   bool  `json:"eventUpdates" gorm:"column:event_updates;default:true"`
 	EventCancelled bool  `json:"eventCancelled" gorm:"column:event_cancelled;default:true"`
+	DailyMorning   bool  `json:"dailyMorning" gorm:"column:daily_morning;default:true"`
+	DailyEvening   bool  `json:"dailyEvening" gorm:"column:daily_evening;default:true"`
+	DailyStreak    bool  `json:"dailyStreak" gorm:"column:daily_streak;default:true"`
+	DailyRaffle    bool  `json:"dailyRaffle" gorm:"column:daily_raffle;default:true"`
 }
 
 func (NotificationSettings) TableName() string {

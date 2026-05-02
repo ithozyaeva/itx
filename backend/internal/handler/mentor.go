@@ -43,6 +43,11 @@ func (h *MentorHandler) GetById(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Ментор не найден"})
 	}
 
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "view_mentor", 1)
+		service.TrackChallengeMetric(member.Id, "mentor_profiles_viewed", 1)
+	}
+
 	return c.JSON(entity)
 }
 

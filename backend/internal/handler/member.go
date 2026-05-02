@@ -237,6 +237,7 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	}
 
 	go h.pointsSvc.CheckProfileComplete(result)
+	service.TrackDailyTrigger(member.Id, "update_profile", 1)
 
 	mentor, err := h.svc.GetMentor(member.Id)
 

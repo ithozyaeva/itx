@@ -209,6 +209,23 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	adminRaffles.Post("/", raffleHandler.Create)
 	adminRaffles.Delete("/:id", raffleHandler.Delete)
 
+	// Геймификация (админ): пул дейликов и шаблоны челленджей
+	adminDailyTasks := protected.Group("/daily-tasks", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	adminDailyTaskHandler := handler.NewAdminDailyTaskHandler()
+	adminDailyTasks.Get("/", adminDailyTaskHandler.List)
+	adminDailyTasks.Get("/sets", adminDailyTaskHandler.RecentSets)
+	adminDailyTasks.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Create)
+	adminDailyTasks.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Update)
+	adminDailyTasks.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminDailyTaskHandler.Delete)
+
+	adminChallenges := protected.Group("/challenges", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	adminChallengeHandler := handler.NewAdminChallengeHandler()
+	adminChallenges.Get("/", adminChallengeHandler.ListTemplates)
+	adminChallenges.Get("/instances", adminChallengeHandler.ListInstances)
+	adminChallenges.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.CreateTemplate)
+	adminChallenges.Put("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.UpdateTemplate)
+	adminChallenges.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), adminChallengeHandler.DeleteTemplate)
+
 	// Маршруты для мини-игр (админ)
 	casinoHandler := handler.NewCasinoHandler()
 	adminCasino := protected.Group("/minigames")
@@ -483,6 +500,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	raffleHandler := handler.NewRaffleHandler()
 	raffles := subscribed.Group("/raffles")
 	raffles.Get("/", raffleHandler.GetAll)
+	raffles.Get("/daily/today", raffleHandler.DailyToday)
 	raffles.Post("/:id/buy", raffleHandler.BuyTickets)
 
 	// Казино
@@ -500,6 +518,19 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	profileStats := subscribed.Group("/profile-stats")
 	profileStats.Get("/me", profileStatsHandler.GetMyStats)
 	profileStats.Get("/:id", profileStatsHandler.GetMemberStats)
+
+	// Геймификация: ежедневный check-in, дейлики, стрики
+	dailiesHandler := handler.NewDailiesHandler()
+	dailies := subscribed.Group("/dailies")
+	dailies.Get("/today", dailiesHandler.Today)
+	dailies.Post("/check-in", dailiesHandler.CheckIn)
+	streak := subscribed.Group("/streak")
+	streak.Get("/me", dailiesHandler.MyStreak)
+
+	// Челленджи (еженедельные + ежемесячные)
+	challengesHandler := handler.NewChallengesHandler()
+	challenges := subscribed.Group("/challenges")
+	challenges.Get("/", challengesHandler.GetMyChallenges)
 
 	// SSE — реал-тайм обновления (events, casino, и т.п. — премиум-функции).
 	sseHandler := handler.NewSSEHandler()

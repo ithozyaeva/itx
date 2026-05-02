@@ -1,6 +1,6 @@
 import { onUnmounted, ref } from 'vue'
 
-export type SSEEventType = 'notifications' | 'tasks' | 'raffles' | 'kudos' | 'points' | 'quests' | 'connected'
+export type SSEEventType = 'notifications' | 'tasks' | 'raffles' | 'kudos' | 'points' | 'quests' | 'dailies' | 'streak' | 'challenges' | 'connected'
 
 interface SSEMessage {
   type: SSEEventType

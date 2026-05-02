@@ -41,8 +41,9 @@ describe('router', () => {
   })
 
   describe('route definitions', () => {
-    it('has 19 routes defined', () => {
-      expect(router.getRoutes()).toHaveLength(19)
+    it('has 21 routes defined', () => {
+      // 19 базовых + /daily-tasks + /challenges (геймификация, PR-322)
+      expect(router.getRoutes()).toHaveLength(21)
     })
 
     it('has a login route', () => {

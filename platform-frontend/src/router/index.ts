@@ -8,6 +8,7 @@ import AIMaterials from '@/pages/AIMaterials.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Casino from '@/pages/Casino.vue'
 
+import Dailies from '@/pages/Dailies.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
 import Kudos from '@/pages/Kudos.vue'
@@ -62,6 +63,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/ai-materials/:id', component: AIMaterialDetail, name: 'aiMaterialDetail', meta: { breadcrumb: [{ label: 'AI-материалы', to: '/ai-materials' }, { label: 'Материал' }], requiresSubscription: true } },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }], requiresSubscription: true } },
   { path: '/quests', component: Quests, name: 'quests', meta: { breadcrumb: [{ label: 'Квесты' }], requiresSubscription: true } },
+  { path: '/dailies', component: Dailies, name: 'dailies', meta: { breadcrumb: [{ label: 'Дейлики' }], requiresSubscription: true } },
+  { path: '/challenges', component: () => import('@/pages/Challenges.vue'), name: 'challenges', meta: { breadcrumb: [{ label: 'Челленджи' }], requiresSubscription: true } },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }], requiresSubscription: true } },
   { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }], requiresSubscription: true } },
   { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }], requiresSubscription: true } },

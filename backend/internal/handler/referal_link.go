@@ -88,6 +88,7 @@ func (h *ReferalLinkHandler) AddLink(c *fiber.Ctx) error {
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "referal_link", result.Id, result.Company)
 	go h.pointsSvc.GiveForAction(member.Id, models.PointReasonReferalCreate, "referal_link", result.Id,
 		"Создание реферальной ссылки")
+	service.TrackDailyTrigger(member.Id, "create_referal", 1)
 
 	return c.JSON(result)
 }
@@ -157,6 +158,7 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 			h.pointsSvc.AwardIdempotent(link.AuthorId, models.PointReasonReferalConversion, "referal_conversion", req.ReferralLinkId,
 				"Конверсия по реферальной ссылке")
 			CreateNotification(link.AuthorId, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
+			service.TrackChallengeMetric(link.AuthorId, "referal_conversions", 1)
 		}
 	}()
 

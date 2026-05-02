@@ -60,6 +60,7 @@ func (h *ReviewOnCommunityHandler) AddReview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка добавления отзыва"})
 	}
 
+	service.TrackDailyTrigger(author.Id, "leave_review", 1)
 	return c.SendStatus(fiber.StatusOK)
 }
 

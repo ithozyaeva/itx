@@ -39,6 +39,9 @@ func (h *KudosHandler) Send(c *fiber.Ctx) error {
 
 	BroadcastEvent("kudos")
 	PublishToMember(req.ToId, "points")
+	service.TrackDailyTrigger(member.Id, "send_kudos", 1)
+	// Метрика receiver-стороны: челлендж «Социалка» / «Легенда комьюнити».
+	service.TrackChallengeMetric(req.ToId, "kudos_received", 1)
 	return c.Status(fiber.StatusCreated).JSON(kudos)
 }
 
@@ -50,6 +53,10 @@ func (h *KudosHandler) GetRecent(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("get recent kudos error: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки благодарностей"})
+	}
+
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "view_kudos", 1)
 	}
 
 	return c.JSON(fiber.Map{
