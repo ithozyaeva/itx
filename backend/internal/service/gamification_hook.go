@@ -27,9 +27,16 @@ func ensureGamificationHooks() {
 // Вызывайте сразу после успешного основного действия (создание комментария,
 // отправка kudos и т.п.). Идемпотентность достигается на уровне
 // daily_task_progress (UNIQUE на member+day+task).
+//
+// Перед запуском goroutine consult'имся с triggerCache: если сегодняшний
+// набор не содержит этот trigger_key — выходим без планирования SQL.
+// Это сильно снижает нагрузку на view-эндпоинтах, которые вызываются часто.
 func TrackDailyTrigger(memberId int64, triggerKey string, n int) {
 	ensureGamificationHooks()
 	if memberId == 0 || triggerKey == "" {
+		return
+	}
+	if hasTrigger, cacheValid := todayHasTrigger(triggerKey); cacheValid && !hasTrigger {
 		return
 	}
 	go func() {
