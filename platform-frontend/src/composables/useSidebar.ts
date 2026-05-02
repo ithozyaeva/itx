@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import type { SubscriptionTierSlug } from '@/models/profile'
-import { Award, Calendar, ClipboardList, Crown, Dices, Flame, Gift, Heart, HelpCircle, Home, Sparkles, Star, Trophy, User, Users } from 'lucide-vue-next'
+import { Award, Calendar, ClipboardList, Crown, Dices, Flame, Gift, Heart, HelpCircle, Home, Sparkles, Star, Sword, Target, Trophy, User, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -55,6 +55,8 @@ const state = {
     {
       label: 'Активность',
       items: [
+        { title: 'Дейлики', path: '/dailies', icon: Target, requiresSubscription: true },
+        { title: 'Челленджи', path: '/challenges', icon: Sword, requiresSubscription: true },
         { title: 'Мои баллы', path: '/points', icon: Star, dataOnboarding: 'points', requiresSubscription: true },
         { title: 'Рейтинг', path: '/leaderboard', icon: Trophy, requiresSubscription: true },
         { title: 'Достижения', path: '/achievements', icon: Award, requiresSubscription: true },

@@ -501,6 +501,13 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	profileStats.Get("/me", profileStatsHandler.GetMyStats)
 	profileStats.Get("/:id", profileStatsHandler.GetMemberStats)
 
+	// Геймификация: ежедневный check-in, дейлики, стрики
+	dailiesHandler := handler.NewDailiesHandler()
+	dailies := subscribed.Group("/dailies")
+	dailies.Post("/check-in", dailiesHandler.CheckIn)
+	streak := subscribed.Group("/streak")
+	streak.Get("/me", dailiesHandler.MyStreak)
+
 	// SSE — реал-тайм обновления (events, casino, и т.п. — премиум-функции).
 	sseHandler := handler.NewSSEHandler()
 	subscribed.Get("/sse", sseHandler.Stream)
