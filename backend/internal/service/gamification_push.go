@@ -92,7 +92,7 @@ func PushStreakThreshold(memberId int64, days, reward int) {
 }
 
 // PushDailyRaffleWin уведомляет победителя ежедневного розыгрыша.
-func PushDailyRaffleWin(memberId int64, raffleId int64, prize string) {
+func PushDailyRaffleWin(memberId int64, prize string) {
 	t, err := resolvePushTarget(memberId)
 	if err != nil {
 		log.Printf("push raffle win target (member=%d): %v", memberId, err)
@@ -103,7 +103,6 @@ func PushDailyRaffleWin(memberId int64, raffleId int64, prize string) {
 	}
 	text := fmt.Sprintf("🎉 <b>Ты выиграл ежедневный розыгрыш!</b>\nПриз: %s начислен на твой счёт.", prize)
 	sendTelegram(t.chatID, text)
-	_ = raffleId
 }
 
 // pushBatchPace — пауза между Telegram-сообщениями в массовой рассылке,
@@ -208,7 +207,7 @@ func SendDailyEveningPush() {
 		return
 	}
 
-	// Подгрузим check-ins и набор задач сегодня одной выборкой.
+	// Подгрузим набор задач сегодня одной выборкой.
 	taskRepo := repository.NewDailyTaskRepository()
 	set, err := taskRepo.GetSetByDay(day)
 	if err != nil || set == nil {
@@ -216,22 +215,28 @@ func SendDailyEveningPush() {
 	}
 	totalTasks := len(set.TaskIds)
 
-	// Проходим юзеров и проверяем индивидуально (check-in + awarded count).
+	// Batch: один SQL для check-ins + один для awarded-counts. Раньше
+	// каждый юзер генерировал 2 SQL — на 1000 подписчиков это 2000
+	// запросов подряд. Теперь — 2.
 	checkInRepo := repository.NewCheckInRepository()
+	checkedIn, err := checkInRepo.CheckedInMembers(day)
+	if err != nil {
+		log.Printf("evening push checked-in members: %v", err)
+		return
+	}
+	awardedCounts, err := taskRepo.AwardedCountsForDay(day, []int64(set.TaskIds))
+	if err != nil {
+		log.Printf("evening push awarded counts: %v", err)
+		return
+	}
+
 	go func() {
 		for _, t := range targets {
-			done, _ := checkInRepo.HasCheckedIn(t.MemberId, day)
-			if !done {
+			if !checkedIn[t.MemberId] {
 				continue
 			}
-			var awarded int64
-			if err := database.DB.Model(&models.DailyTaskProgress{}).
-				Where("member_id = ? AND day = ? AND task_id IN ? AND awarded = TRUE",
-					t.MemberId, day, []int64(set.TaskIds)).
-				Count(&awarded).Error; err != nil {
-				continue
-			}
-			if int(awarded) >= totalTasks {
+			awarded := awardedCounts[t.MemberId]
+			if awarded >= totalTasks {
 				continue
 			}
 			text := fmt.Sprintf(

@@ -91,3 +91,33 @@ func (r *DailyTaskRepository) GetRecentSets(limit int) ([]models.DailyTaskSet, e
 	err := database.DB.Order("day DESC").Limit(limit).Find(&sets).Error
 	return sets, err
 }
+
+// AwardedCountsForDay — количество awarded задач каждого юзера за day.
+// Один SQL вместо N. Используется в batch-сценариях (вечерний пуш).
+// taskIds ограничивает выборку сегодняшним сетом, чтобы случайно не
+// захватить устаревшие/удалённые задачи.
+func (r *DailyTaskRepository) AwardedCountsForDay(day time.Time, taskIds []int64) (map[int64]int, error) {
+	if len(taskIds) == 0 {
+		return map[int64]int{}, nil
+	}
+	type row struct {
+		MemberId int64 `gorm:"column:member_id"`
+		Count    int
+	}
+	var rows []row
+	err := database.DB.Raw(
+		`SELECT member_id, COUNT(*) AS count
+		 FROM daily_task_progress
+		 WHERE day = ? AND awarded = TRUE AND task_id IN ?
+		 GROUP BY member_id`,
+		day, taskIds,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]int, len(rows))
+	for _, r := range rows {
+		out[r.MemberId] = r.Count
+	}
+	return out, nil
+}
