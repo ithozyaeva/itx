@@ -8,8 +8,8 @@ import {
   Trophy,
 } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
-import { Typography } from '@/components/ui/typography'
 import { useToast } from '@/components/ui/toast'
+import { Typography } from '@/components/ui/typography'
 import { useDailies } from '@/composables/useDailies'
 
 const { today, streak, loading, checkingIn, refresh, checkIn } = useDailies()

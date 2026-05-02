@@ -333,12 +333,12 @@ onMounted(() => {
             >
               <Trophy class="h-4 w-4 text-yellow-500" />
               <span class="text-muted-foreground">Победитель:</span>
-              <router-link
+              <RouterLink
                 :to="`/members/${raffle.winnerId}`"
                 class="font-medium hover:underline"
               >
                 {{ winnerName(raffle) }}
-              </router-link>
+              </RouterLink>
             </div>
             <p
               v-else
