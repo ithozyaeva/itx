@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ChallengeKind, ChallengeTemplate, ChallengeTemplateRequest } from '@/services/challengeAdminService'
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import type { ChallengeInstance, ChallengeKind, ChallengeTemplate, ChallengeTemplateRequest } from '@/services/challengeAdminService'
+import { Calendar, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,25 @@ import { challengeAdminService } from '@/services/challengeAdminService'
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
 const confirmDeleteId = ref<number | null>(null)
+const recentInstances = ref<ChallengeInstance[]>([])
+const showInstances = ref(false)
+
+const templateById = computed(() => {
+  const map = new Map<number, ChallengeTemplate>()
+  for (const t of challengeAdminService.items.value)
+    map.set(t.id, t)
+  return map
+})
+
+function formatInstanceDate(d: string) {
+  return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
+}
+
+async function toggleInstances() {
+  showInstances.value = !showInstances.value
+  if (showInstances.value && recentInstances.value.length === 0)
+    recentInstances.value = await challengeAdminService.recentInstances(30)
+}
 
 function emptyForm(): ChallengeTemplateRequest {
   return {
@@ -187,6 +206,66 @@ onMounted(() => {
           </div>
         </CardContent>
       </Card>
+
+      <!-- Recent instances audit -->
+      <div>
+        <button
+          type="button"
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+          @click="toggleInstances"
+        >
+          <Calendar class="h-4 w-4" />
+          {{ showInstances ? 'Скрыть историю инстансов' : 'История запущенных челленджей (последние 30)' }}
+        </button>
+        <Card v-if="showInstances" class="mt-3">
+          <CardContent class="p-0">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b">
+                    <th class="text-left py-3 px-4 font-medium">
+                      Period
+                    </th>
+                    <th class="text-left py-3 px-4 font-medium">
+                      Шаблон
+                    </th>
+                    <th class="text-center py-3 px-4 font-medium">
+                      Тип
+                    </th>
+                    <th class="text-left py-3 px-4 font-medium">
+                      Период действия
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="inst in recentInstances" :key="inst.id" class="border-b last:border-0 hover:bg-muted/50">
+                    <td class="py-3 px-4 font-mono text-xs">
+                      {{ inst.periodKey }}
+                    </td>
+                    <td class="py-3 px-4">
+                      {{ templateById.get(inst.templateId)?.title ?? `#${inst.templateId}` }}
+                      <span class="text-xs text-muted-foreground ml-2 font-mono">
+                        {{ templateById.get(inst.templateId)?.code }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-center text-xs text-muted-foreground">
+                      {{ inst.kind }}
+                    </td>
+                    <td class="py-3 px-4 text-xs text-muted-foreground">
+                      {{ formatInstanceDate(inst.startsAt) }} — {{ formatInstanceDate(inst.endsAt) }}
+                    </td>
+                  </tr>
+                  <tr v-if="recentInstances.length === 0">
+                    <td colspan="4" class="py-6 text-center text-muted-foreground">
+                      Истории пока нет
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <!-- Confirm delete -->
       <Teleport to="body">

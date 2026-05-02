@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { DailyTask, DailyTaskCreateRequest, DailyTaskTier } from '@/services/dailyTaskService'
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import type { DailyTask, DailyTaskCreateRequest, DailyTaskSet, DailyTaskTier } from '@/services/dailyTaskService'
+import { Calendar, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,24 @@ import { dailyTaskService } from '@/services/dailyTaskService'
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
 const confirmDeleteId = ref<number | null>(null)
+const recentSets = ref<DailyTaskSet[]>([])
+const showSets = ref(false)
+const taskByCode = computed(() => {
+  const map = new Map<number, DailyTask>()
+  for (const t of dailyTaskService.items.value)
+    map.set(t.id, t)
+  return map
+})
+
+function formatSetDay(day: string) {
+  return new Date(day).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long' })
+}
+
+async function toggleSets() {
+  showSets.value = !showSets.value
+  if (showSets.value && recentSets.value.length === 0)
+    recentSets.value = await dailyTaskService.recentSets(14)
+}
 
 const tierOptions: { value: DailyTaskTier, label: string, points: number }[] = [
   { value: 'engagement', label: 'Engagement', points: 10 },
@@ -195,6 +213,59 @@ onMounted(() => {
           </div>
         </CardContent>
       </Card>
+
+      <!-- Recent sets audit -->
+      <div>
+        <button
+          type="button"
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+          @click="toggleSets"
+        >
+          <Calendar class="h-4 w-4" />
+          {{ showSets ? 'Скрыть историю наборов' : 'История наборов (последние 14 дней)' }}
+        </button>
+        <Card v-if="showSets" class="mt-3">
+          <CardContent class="p-0">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b">
+                    <th class="text-left py-3 px-4 font-medium">
+                      День
+                    </th>
+                    <th class="text-left py-3 px-4 font-medium">
+                      Состав (5 задач)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="set in recentSets" :key="set.day" class="border-b last:border-0 hover:bg-muted/50">
+                    <td class="py-3 px-4 font-medium">
+                      {{ formatSetDay(set.day) }}
+                    </td>
+                    <td class="py-3 px-4">
+                      <div class="flex flex-wrap gap-1.5">
+                        <span
+                          v-for="id in set.taskIds"
+                          :key="id"
+                          class="inline-flex items-center px-2 py-0.5 rounded-sm bg-muted text-xs font-mono"
+                        >
+                          {{ taskByCode.get(id)?.code ?? `#${id}` }}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="recentSets.length === 0">
+                    <td colspan="2" class="py-6 text-center text-muted-foreground">
+                      Истории пока нет
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <!-- Confirm delete -->
       <Teleport to="body">

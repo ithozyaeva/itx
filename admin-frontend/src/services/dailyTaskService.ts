@@ -101,6 +101,23 @@ class DailyTaskService {
       this.isLoading.value = false
     }
   }
+
+  recentSets = async (limit = 14): Promise<DailyTaskSet[]> => {
+    try {
+      const resp = await api.get('daily-tasks/sets', { searchParams: { limit } }).json<{ items: DailyTaskSet[] }>()
+      return resp?.items ?? []
+    }
+    catch (error) {
+      handleError(error)
+      return []
+    }
+  }
+}
+
+export interface DailyTaskSet {
+  day: string
+  taskIds: number[]
+  createdAt: string
 }
 
 export const dailyTaskService = new DailyTaskService()

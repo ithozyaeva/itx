@@ -103,6 +103,27 @@ class ChallengeAdminService {
       this.isLoading.value = false
     }
   }
+
+  recentInstances = async (limit = 30): Promise<ChallengeInstance[]> => {
+    try {
+      const resp = await api.get('challenges/instances', { searchParams: { limit } }).json<{ items: ChallengeInstance[] }>()
+      return resp?.items ?? []
+    }
+    catch (error) {
+      handleError(error)
+      return []
+    }
+  }
+}
+
+export interface ChallengeInstance {
+  id: number
+  templateId: number
+  kind: ChallengeKind
+  startsAt: string
+  endsAt: string
+  periodKey: string
+  createdAt: string
 }
 
 export const challengeAdminService = new ChallengeAdminService()
