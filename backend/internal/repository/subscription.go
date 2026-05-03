@@ -235,6 +235,45 @@ func (r *SubscriptionRepository) GetAllActiveUsers() ([]models.SubscriptionUser,
 	return users, nil
 }
 
+// EnsureUser — лёгкий upsert: создаёт запись с минимальным набором полей,
+// если её ещё нет. В отличие от GetOrCreateUser не апдейтит username/full_name
+// у уже существующего пользователя — это позволяет sweeper-у дёшево
+// заводить «не онбордингенных» юзеров (видим только telegram_user_id и
+// иногда username из chat_messages), не затирая данные, которые мог обновить
+// /start.
+func (r *SubscriptionRepository) EnsureUser(userID int64, username *string, fullName string) error {
+	var u models.SubscriptionUser
+	err := r.db.First(&u, userID).Error
+	if err == nil {
+		return nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return err
+	}
+	return r.db.Create(&models.SubscriptionUser{
+		ID:       userID,
+		Username: username,
+		FullName: fullName,
+		IsActive: true,
+	}).Error
+}
+
+// GetSweepUserIDs — все telegram_user_id, которых имеет смысл прогонять
+// через sweep: записи в subscription_users (is_active=true) ∪ авторы
+// сообщений из chat_messages. Второе нужно, чтобы покрыть людей, которые
+// сидят в чатах сообщества, но никогда не открывали бота — без этого
+// sweep игнорирует их и из контент-чатов их никто не вычистит.
+func (r *SubscriptionRepository) GetSweepUserIDs() ([]int64, error) {
+	var ids []int64
+	err := r.db.Raw(`
+		SELECT id FROM subscription_users WHERE is_active = TRUE
+		UNION
+		SELECT DISTINCT telegram_user_id FROM chat_messages
+		WHERE telegram_user_id IS NOT NULL
+	`).Scan(&ids).Error
+	return ids, err
+}
+
 func (r *SubscriptionRepository) UpdateResolvedTier(userID int64, tierID *uint) error {
 	now := time.Now()
 	return r.db.Model(&models.SubscriptionUser{}).Where("id = ?", userID).

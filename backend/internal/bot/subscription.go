@@ -218,6 +218,13 @@ func (b *TelegramBot) botCheckFunc() func(int64, int64) bool {
 	}
 }
 
+// uncachedCheckFunc — прямой getChatMember без Redis-кэша. Нужен sweep-у
+// и dry-run, иначе после первого прохода они будут читать стейл-данные
+// до 5 минут (TTL membership-кэша).
+func (b *TelegramBot) uncachedCheckFunc() func(int64, int64) bool {
+	return b.isChatMember
+}
+
 // createInviteLinkFunc returns a closure for creating invite links.
 func (b *TelegramBot) createInviteLinkFunc() func(int64) (string, error) {
 	return b.createOneTimeInviteLink
@@ -544,45 +551,64 @@ func (b *TelegramBot) sendSubscriptionLinks(chatID int64, result *service.SyncRe
 
 // --- Chat member event handlers ---
 
-// handleChatMemberUpdated reacts to user join/leave in anchor chats.
+// handleChatMemberUpdated reacts to user join/leave events. Anchor-чаты
+// триггерят полный sync (пересчёт тира + рассылка инвайтов в content-чаты),
+// content-чаты — лёгкое обновление subscription_user_chat_access (без
+// инвайтов и киков): без этого таблица access отражала бы только то, что
+// бот сам выдал ссылкой, и периодик не видел бы реально сидящих в чатах.
 func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated) {
 	chat, err := b.subscriptionService.GetChat(update.Chat.ID)
-	if err != nil || chat.AnchorForTierID == nil {
-		return // Not an anchor chat
+	if err != nil {
+		return // Not a known subscription chat
 	}
 
 	userID := update.NewChatMember.User.ID
 	oldActive := isActiveMemberStatus(update.OldChatMember.Status)
 	newActive := isActiveMemberStatus(update.NewChatMember.Status)
-
 	if oldActive == newActive {
 		return
 	}
 
-	log.Printf("Anchor chat member change: chat=%d user=%d %s->%s",
-		update.Chat.ID, userID, update.OldChatMember.Status, update.NewChatMember.Status)
-
-	// Invalidate membership cache
-	b.subscriptionService.InvalidateMemberCache(update.Chat.ID, userID)
-
-	// Ensure user exists and sync access
 	tgUser := update.NewChatMember.User
 	usernamePtr := strPtr(tgUser.UserName)
-	result, err := b.subscriptionService.OnboardUser(
-		userID, usernamePtr, tgUser.FirstName+" "+tgUser.LastName,
-		b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
-	)
-	if err != nil {
+	fullName := strings.TrimSpace(tgUser.FirstName + " " + tgUser.LastName)
+
+	if chat.AnchorForTierID != nil {
+		log.Printf("Anchor chat member change: chat=%d user=%d %s->%s",
+			update.Chat.ID, userID, update.OldChatMember.Status, update.NewChatMember.Status)
+		b.subscriptionService.InvalidateMemberCache(update.Chat.ID, userID)
+
+		result, err := b.subscriptionService.OnboardUser(
+			userID, usernamePtr, fullName,
+			b.botCheckFunc(), b.createInviteLinkFunc(), b.kickUserFunc(),
+		)
+		if err != nil {
+			return
+		}
+		// Раньше постили персональное "@user, добро пожаловать, нажми кнопку"
+		// прямо в anchor-чат — это видели все участники, и люди жаловались на
+		// спам. Теперь молчим: приветствие/инвайты уходят в ЛС через
+		// notifyUserOfSyncResult (если юзер стартовал бота). Для тех, кто
+		// ещё не нажимал /start, в anchor-чате есть закреплённое сообщение
+		// с deep-link — его ставит pinAnchorWelcome при установке anchor.
+		b.notifyUserOfSyncResult(userID, result)
 		return
 	}
 
-	// Раньше постили персональное "@user, добро пожаловать, нажми кнопку"
-	// прямо в anchor-чат — это видели все участники, и люди жаловались на
-	// спам. Теперь молчим: приветствие/инвайты уходят в ЛС через
-	// notifyUserOfSyncResult (если юзер стартовал бота). Для тех, кто
-	// ещё не нажимал /start, в anchor-чате есть закреплённое сообщение
-	// с deep-link — его ставит pinAnchorWelcome при установке anchor.
-	b.notifyUserOfSyncResult(userID, result)
+	// Content-чат: только фиксируем факт членства. Тир пересчитает
+	// ближайший PeriodicCheck (раз в N часов) — здесь дёргать его
+	// преждевременно дорого (придётся снова обходить все anchor-чаты).
+	log.Printf("Content chat member change: chat=%d user=%d %s->%s",
+		update.Chat.ID, userID, update.OldChatMember.Status, update.NewChatMember.Status)
+	if newActive {
+		if err := b.subscriptionService.SyncContentJoin(userID, update.Chat.ID, usernamePtr, fullName); err != nil {
+			log.Printf("SyncContentJoin failed user=%d chat=%d: %v", userID, update.Chat.ID, err)
+		}
+	} else {
+		if err := b.subscriptionService.SyncContentLeave(userID, update.Chat.ID); err != nil {
+			log.Printf("SyncContentLeave failed user=%d chat=%d: %v", userID, update.Chat.ID, err)
+		}
+	}
 }
 
 // handleMyChatMemberUpdated handles bot being added/removed from chats.
@@ -657,17 +683,35 @@ func isActiveMemberStatus(status string) bool {
 
 func (b *TelegramBot) startSubscriptionChecker() {
 	interval := time.Duration(config.CFG.SubscriptionCheckIntervalHours) * time.Hour
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	tierTicker := time.NewTicker(interval)
+	defer tierTicker.Stop()
 
-	for range ticker.C {
-		b.subscriptionService.PeriodicCheck(
-			b.botCheckFunc(),
-			b.createInviteLinkFunc(),
-			b.kickUserFunc(),
-			b.notifyUserOfSyncResult,
-			50*time.Millisecond,
-		)
+	// Sweep реального членства — отдельный 24-часовой тикер: проход
+	// долгий (≈10 мин на 250 юзеров × 41 чат), а тиры мы перепроверяем
+	// каждые 4 часа. На отдельном тикере sweep не блокирует tier-check.
+	sweepTicker := time.NewTicker(24 * time.Hour)
+	defer sweepTicker.Stop()
+
+	for {
+		select {
+		case <-tierTicker.C:
+			b.subscriptionService.PeriodicCheck(
+				b.botCheckFunc(),
+				b.createInviteLinkFunc(),
+				b.kickUserFunc(),
+				b.notifyUserOfSyncResult,
+				50*time.Millisecond,
+			)
+		case <-sweepTicker.C:
+			stats, err := b.subscriptionService.SweepRealMembership(b.uncachedCheckFunc(), 50*time.Millisecond)
+			if err != nil {
+				log.Printf("Daily membership sweep failed: %v", err)
+			} else {
+				log.Printf("Daily membership sweep done: scanned=%d created=%d checks=%d granted=%d revoked=%d",
+					stats.UsersScanned, stats.UsersCreated, stats.ChecksPerformed,
+					stats.AccessGranted, stats.AccessRevoked)
+			}
+		}
 	}
 }
 
@@ -1089,6 +1133,126 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 			50*time.Millisecond,
 		)
 		b.SendDirectMessage(message.Chat.ID, "Проверка подписок завершена.")
+	}()
+}
+
+// handleSubMemberSweepCommand — backfill реального членства. Идёт по
+// subscription_users ∪ chat_messages.distinct(user_id) × всем
+// subscription_chats и приводит subscription_user_chat_access в
+// соответствие реальности по getChatMember. Долгая команда (~10 мин на
+// 250 юзеров × 41 чат с rateDelay=50ms), запускается в фоне.
+func (b *TelegramBot) handleSubMemberSweepCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+
+	b.sendMessage(message.Chat.ID, "Запуск sweep реального членства... это займёт несколько минут.")
+
+	go func() {
+		stats, err := b.subscriptionService.SweepRealMembership(b.uncachedCheckFunc(), 50*time.Millisecond)
+		if err != nil {
+			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Sweep упал: %v", err))
+			return
+		}
+		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
+			"<b>Sweep завершён</b>\n\n"+
+				"Просканировано юзеров: %d\n"+
+				"Заведено новых в subscription_users: %d\n"+
+				"Запросов getChatMember: %d\n"+
+				"Выдано access (новых): %d\n"+
+				"Снято access (revoke): %d",
+			stats.UsersScanned, stats.UsersCreated, stats.ChecksPerformed,
+			stats.AccessGranted, stats.AccessRevoked,
+		))
+	}()
+}
+
+// handleSubKickDryCommand — прогон PeriodicCheck в режиме «без действий».
+// Считает, кого бот удалил бы из чатов прямо сейчас (по текущему состоянию
+// БД и реальному членству в anchor-чатах). Ничего в БД и в Telegram не
+// меняется. Используется как пред-чек перед включением SUBSCRIPTION_AUTO_KICK_ENABLED.
+func (b *TelegramBot) handleSubKickDryCommand(message *tgbotapi.Message) {
+	if !b.isSubscriptionAdmin(message.From.ID) {
+		return
+	}
+
+	b.sendMessage(message.Chat.ID, "Запуск dry-run проверки... ничего реально не кикается.")
+
+	go func() {
+		results, err := b.subscriptionService.DryRunPeriodicCheck(b.uncachedCheckFunc(), 50*time.Millisecond)
+		if err != nil {
+			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Dry-run упал: %v", err))
+			return
+		}
+
+		// Сворачиваем chat_id → title заранее одним запросом, чтобы в
+		// отчёте показывать человекочитаемые названия.
+		chats, _ := b.subscriptionService.GetAllChats()
+		chatTitle := make(map[int64]string, len(chats))
+		for _, c := range chats {
+			chatTitle[c.ID] = c.Title
+		}
+
+		var totalRevoke, usersWithRevoke, totalGrant int
+		var lines []string
+		for _, r := range results {
+			if len(r.WouldRevoke) == 0 && len(r.WouldGrant) == 0 {
+				continue
+			}
+			totalRevoke += len(r.WouldRevoke)
+			totalGrant += len(r.WouldGrant)
+			if len(r.WouldRevoke) > 0 {
+				usersWithRevoke++
+			}
+
+			uname := ""
+			if r.Username != nil && *r.Username != "" {
+				uname = "@" + *r.Username
+			}
+			line := fmt.Sprintf("<code>%d</code> %s — revoke=%d grant=%d",
+				r.UserID, html.EscapeString(uname), len(r.WouldRevoke), len(r.WouldGrant))
+			if len(r.WouldRevoke) > 0 {
+				names := make([]string, 0, len(r.WouldRevoke))
+				for _, cid := range r.WouldRevoke {
+					t := chatTitle[cid]
+					if t == "" {
+						t = fmt.Sprintf("%d", cid)
+					}
+					names = append(names, html.EscapeString(t))
+				}
+				line += "\n  ↳ из: " + strings.Join(names, ", ")
+			}
+			lines = append(lines, line)
+		}
+
+		header := fmt.Sprintf("<b>Dry-run проверки подписок</b>\n\n"+
+			"Просканировано юзеров: %d\n"+
+			"Юзеров под кик: %d (всего access-revoke действий: %d)\n"+
+			"Access-grant действий: %d\n\n",
+			len(results), usersWithRevoke, totalRevoke, totalGrant)
+
+		// Telegram режет сообщения на 4096 символов — режем сами по строкам.
+		body := strings.Join(lines, "\n\n")
+		const maxLen = 3500
+		if len(body) <= maxLen {
+			b.SendDirectMessage(message.Chat.ID, header+body)
+			return
+		}
+		b.SendDirectMessage(message.Chat.ID, header+"(полный отчёт ниже частями)")
+		var buf strings.Builder
+		for _, l := range lines {
+			if buf.Len()+len(l)+2 > maxLen {
+				b.SendDirectMessage(message.Chat.ID, buf.String())
+				buf.Reset()
+			}
+			if buf.Len() > 0 {
+				buf.WriteString("\n\n")
+			}
+			buf.WriteString(l)
+		}
+		if buf.Len() > 0 {
+			b.SendDirectMessage(message.Chat.ID, buf.String())
+		}
 	}()
 }
 
