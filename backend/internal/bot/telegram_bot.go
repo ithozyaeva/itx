@@ -372,6 +372,10 @@ func (b *TelegramBot) Start() {
 				b.handleSubOverrideCommand(update.Message)
 			case "subcheckall":
 				b.handleSubCheckAllCommand(update.Message)
+			case "submembersweep":
+				b.handleSubMemberSweepCommand(update.Message)
+			case "subkickdry":
+				b.handleSubKickDryCommand(update.Message)
 			case "substats":
 				b.handleSubStatsCommand(update.Message)
 			case "subpin":
@@ -464,6 +468,8 @@ func (b *TelegramBot) handleHelpCommand(message *tgbotapi.Message) {
 			"/subuserinfo <user_id> - Инфо о пользователе\n" +
 			"/suboverride <user_id> <tier_slug|clear> - Ручной тир\n" +
 			"/subcheckall - Проверить всех\n" +
+			"/submembersweep - Backfill реального членства (~10 мин)\n" +
+			"/subkickdry - Dry-run кика: показать, кого удалили бы, без действий\n" +
 			"/substats - Статистика\n" +
 			"/subpin <anchor_chat_id> - Запостить и закрепить приветствие в anchor-чате"
 	}

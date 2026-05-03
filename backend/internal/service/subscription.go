@@ -225,6 +225,206 @@ func (s *SubscriptionService) OnboardUser(
 	return s.CheckAndSyncUser(userID, botCheckFunc, createInviteLink, kickUser)
 }
 
+// EnsureUser — лёгкий upsert в subscription_users без полного sync.
+// Используется для онбординга юзеров, которых мы видим в content-чатах
+// (через chat_member updates или backfill-sweep), но которые сами /start
+// в боте ещё не нажимали — иначе их нет в таблице и PeriodicCheck про них
+// не знает.
+func (s *SubscriptionService) EnsureUser(userID int64, username *string, fullName string) error {
+	return s.repo.EnsureUser(userID, username, fullName)
+}
+
+// SyncContentJoin — пользователь зашёл в content-чат. Заводим запись
+// в subscription_users (если ещё нет) и проставляем access. Тир не
+// пересчитываем: его обновит ближайший PeriodicCheck — здесь нам нужно
+// только зафиксировать факт членства, чтобы DryRun/PeriodicCheck потом
+// корректно посчитал «лишних».
+func (s *SubscriptionService) SyncContentJoin(userID int64, chatID int64, username *string, fullName string) error {
+	if err := s.repo.EnsureUser(userID, username, fullName); err != nil {
+		return err
+	}
+	return s.repo.GrantAccess(userID, chatID)
+}
+
+// SyncContentLeave — пользователь вышел/кикнут из content-чата. Снимаем
+// access; saving в audit здесь не пишем, чтобы не засорять — это «реакция
+// на естественный уход», не действие системы.
+func (s *SubscriptionService) SyncContentLeave(userID int64, chatID int64) error {
+	return s.repo.RevokeAccess(userID, chatID)
+}
+
+// SweepStats — счётчики однопроходного backfill-обхода реального членства.
+type SweepStats struct {
+	UsersScanned    int
+	UsersCreated    int
+	AccessGranted   int
+	AccessRevoked   int
+	ChecksPerformed int
+}
+
+// SweepRealMembership — однопроходный обход «кто реально сидит в наших
+// чатах». Для каждого user_id из subscription_users ∪ chat_messages
+// делает getChatMember по каждому subscription_chat и приводит
+// subscription_user_chat_access в соответствие.
+//
+// botCheckFunc: true для member/administrator/creator/restricted, false
+// для left/kicked/PARTICIPANT_ID_INVALID/любой ошибки. Кэш membership
+// обходить не нужно — sweep редкий, кэш живёт 5 минут, всё равно
+// обновится за время прохода.
+//
+// rateDelay: пауза между getChatMember-вызовами, чтобы не упереться в
+// rate-limit Telegram (в Bot API глобально ~30 rps на разные чаты).
+func (s *SubscriptionService) SweepRealMembership(
+	botCheckFunc func(chatID, userID int64) bool,
+	rateDelay time.Duration,
+) (*SweepStats, error) {
+	chats, err := s.repo.GetAllChats()
+	if err != nil {
+		return nil, fmt.Errorf("get chats: %w", err)
+	}
+
+	userIDs, err := s.repo.GetSweepUserIDs()
+	if err != nil {
+		return nil, fmt.Errorf("get sweep user ids: %w", err)
+	}
+
+	stats := &SweepStats{UsersScanned: len(userIDs)}
+
+	for _, uid := range userIDs {
+		// Если юзера нет в subscription_users — заводим легковесно.
+		// FullName пустой: chat_messages хранит только first_name,
+		// но это не критично — UI/PeriodicCheck оперируют id и username.
+		if _, err := s.repo.GetUser(uid); err != nil {
+			if err := s.repo.EnsureUser(uid, nil, ""); err == nil {
+				stats.UsersCreated++
+			}
+		}
+
+		// Текущие active-access — чтобы корректно считать diff.
+		current, _ := s.repo.GetActiveAccess(uid)
+		currentSet := make(map[int64]bool, len(current))
+		for _, a := range current {
+			currentSet[a.ChatID] = true
+		}
+
+		for _, chat := range chats {
+			isMember := botCheckFunc(chat.ID, uid)
+			stats.ChecksPerformed++
+
+			if isMember && !currentSet[chat.ID] {
+				if err := s.repo.GrantAccess(uid, chat.ID); err == nil {
+					stats.AccessGranted++
+				}
+			} else if !isMember && currentSet[chat.ID] {
+				if err := s.repo.RevokeAccess(uid, chat.ID); err == nil {
+					stats.AccessRevoked++
+				}
+			}
+
+			time.Sleep(rateDelay)
+		}
+	}
+
+	return stats, nil
+}
+
+// DryRunUserResult — что сделал бы PeriodicCheck для одного пользователя,
+// если бы был запущен сейчас. Действий в БД и Telegram не выполняется.
+type DryRunUserResult struct {
+	UserID        int64
+	Username      *string
+	OldTierID     *uint
+	NewTierID     *uint
+	EffectiveTier *uint
+	WouldGrant    []int64
+	WouldRevoke   []int64
+}
+
+// DryRunCheckUser — повторяет логику CheckAndSyncUser, но без записи в БД
+// и без вызовов createInviteLink/kickUser. Используется командой
+// /subkickdry, чтобы сначала посмотреть, кого бот удалил бы из чатов.
+func (s *SubscriptionService) DryRunCheckUser(
+	userID int64,
+	botCheckFunc func(chatID, userID int64) bool,
+) (*DryRunUserResult, error) {
+	user, err := s.repo.GetUser(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	newTierID := s.ResolveTierID(userID, botCheckFunc)
+
+	// EffectiveTierID учитывает manual override; если ручной — он же и итог.
+	var effective *uint
+	if user.ManualTierID != nil {
+		effective = user.ManualTierID
+	} else {
+		effective = newTierID
+	}
+
+	entitled := make(map[int64]bool)
+	if effective != nil {
+		tier, err := s.repo.GetTier(*effective)
+		if err == nil {
+			chats, _ := s.repo.GetChatsForTierLevel(tier.Level)
+			for _, c := range chats {
+				entitled[c.ID] = true
+			}
+		}
+	}
+
+	currentAccess, _ := s.repo.GetActiveAccess(userID)
+	current := make(map[int64]bool, len(currentAccess))
+	for _, a := range currentAccess {
+		current[a.ChatID] = true
+	}
+
+	res := &DryRunUserResult{
+		UserID:        userID,
+		Username:      user.Username,
+		OldTierID:     user.ResolvedTierID,
+		NewTierID:     newTierID,
+		EffectiveTier: effective,
+	}
+	for cid := range entitled {
+		if !current[cid] {
+			res.WouldGrant = append(res.WouldGrant, cid)
+		}
+	}
+	for cid := range current {
+		if !entitled[cid] {
+			res.WouldRevoke = append(res.WouldRevoke, cid)
+		}
+	}
+	return res, nil
+}
+
+// DryRunPeriodicCheck — обходит всех active subscription_users и собирает
+// список действий, которые сделал бы PeriodicCheck. Действий не выполняет.
+// Используется /subkickdry для предварительного отчёта перед включением
+// SUBSCRIPTION_AUTO_KICK_ENABLED.
+func (s *SubscriptionService) DryRunPeriodicCheck(
+	botCheckFunc func(chatID, userID int64) bool,
+	rateDelay time.Duration,
+) ([]DryRunUserResult, error) {
+	users, err := s.repo.GetAllActiveUsers()
+	if err != nil {
+		return nil, fmt.Errorf("get users: %w", err)
+	}
+
+	results := make([]DryRunUserResult, 0, len(users))
+	for _, u := range users {
+		r, err := s.DryRunCheckUser(u.ID, botCheckFunc)
+		if err != nil {
+			log.Printf("dry-run: user %d: %v", u.ID, err)
+			continue
+		}
+		results = append(results, *r)
+		time.Sleep(rateDelay)
+	}
+	return results, nil
+}
+
 // PeriodicCheck checks all active users and syncs their access.
 func (s *SubscriptionService) PeriodicCheck(
 	botCheckFunc func(chatID, userID int64) bool,
