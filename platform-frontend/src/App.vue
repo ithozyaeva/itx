@@ -30,11 +30,15 @@ onBeforeMount(() => {
   }
 
   const urlParams = new URLSearchParams(window.location.search)
-  const token = urlParams.get('token') || tg_token.value
-  if (token) {
+  const urlToken = urlParams.get('token')
+  // Если токен и user уже в localStorage (юзер пришёл с лендинга), повторно
+  // /api/auth/telegram не дёргаем — иначе при флакающем бэке мы рискуем
+  // обнулить только что положенный auth-state из-за одной 5xx-ошибки.
+  // /me ниже всё равно подтянет свежий профиль.
+  if (urlToken) {
     isLoading.value = true
     authService
-      .authenticate(token)
+      .authenticate(urlToken)
       .then(({ user, token: authToken }) => {
         tg_user.value = { ...tg_user.value, ...user }
         tg_token.value = authToken
@@ -54,12 +58,16 @@ onBeforeMount(() => {
         tg_user.value = null
         tg_token.value = null
         handleError(error)
+        // Битый одноразовый токен в URL — нет смысла оставлять юзера на /platform
+        // с пустой страницей, отправляем на лендинг повторить вход.
+        if (!import.meta.env.DEV)
+          window.location.pathname = '/'
       })
       .finally(() => {
         isLoading.value = false
       })
   }
-  else if (tg_user.value) {
+  else if (tg_token.value && tg_user.value) {
     startSSE()
     startProactiveRefresh()
     // Освежаем tg_user при каждом открытии: бэкенд со временем добавляет
@@ -67,7 +75,7 @@ onBeforeMount(() => {
     // сам по себе не инвалидируется.
     profileService.getMe().catch(() => {})
   }
-  else if (!tg_user.value && !import.meta.env.DEV) {
+  else if (!import.meta.env.DEV) {
     window.location.pathname = '/'
   }
 })

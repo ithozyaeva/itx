@@ -56,7 +56,7 @@ function trackJointimerClick() {
 
         <div class="mt-8 md:mt-12 flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
           <TelegramAuth
-            v-if="!tgUser"
+            v-if="!tgUser || !tgToken"
             variant="dark-filled"
             @auth="setUser"
           />

@@ -224,7 +224,7 @@ const companies = ['Яндекс', 'Tinkoff', 'VK', 'Ozon', 'Wildberries', 'Ав
         >
           <div class="cta-glow rounded-[50px]">
             <TelegramAuth
-              v-if="!tgUser"
+              v-if="!tgUser || !tgToken"
               @auth="setUser"
             />
             <Button

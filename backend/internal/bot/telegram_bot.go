@@ -717,6 +717,11 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 
 	_, isSubscriber := b.resolveUserTier(message.From.ID)
 	b.sendWelcomeWizard(message.Chat.ID, isSubscriber)
+	// Сразу следом — отдельное сообщение с auth-кнопкой, чтобы попасть на
+	// платформу можно было одним кликом, а не через wiz:auth поверх welcome.
+	// Токен в БД переиспользуемый (auth_token.go: GetByToken его не консьюмит),
+	// поэтому генерация «заранее» ничего не сжигает.
+	b.sendAuthButton(message.From, message.Chat.ID)
 }
 
 // sendWelcomeWizard — первое сообщение в ЛС бота. Адаптируется под статус юзера:
