@@ -30,11 +30,15 @@ onBeforeMount(() => {
   }
 
   const urlParams = new URLSearchParams(window.location.search)
-  const token = urlParams.get('token') || tg_token.value
-  if (token) {
+  const urlToken = urlParams.get('token')
+  // Если токен и user уже в localStorage (юзер пришёл с лендинга), повторно
+  // /api/auth/telegram не дёргаем — иначе при флакающем бэке мы рискуем
+  // обнулить только что положенный auth-state из-за одной 5xx-ошибки.
+  // /me ниже всё равно подтянет свежий профиль.
+  if (urlToken) {
     isLoading.value = true
     authService
-      .authenticate(token)
+      .authenticate(urlToken)
       .then(({ user, token: authToken }) => {
         tg_user.value = { ...tg_user.value, ...user }
         tg_token.value = authToken
@@ -54,20 +58,32 @@ onBeforeMount(() => {
         tg_user.value = null
         tg_token.value = null
         handleError(error)
+        // Битый одноразовый токен в URL — нет смысла оставлять юзера на /platform
+        // с пустой страницей, отправляем на лендинг повторить вход.
+        if (!import.meta.env.DEV)
+          window.location.pathname = '/'
       })
       .finally(() => {
         isLoading.value = false
       })
   }
-  else if (tg_user.value) {
+  else if (tg_token.value) {
     startSSE()
     startProactiveRefresh()
-    // Освежаем tg_user при каждом открытии: бэкенд со временем добавляет
-    // поля (subscriptionTier, роли после /subcheckall и т.п.), локалсторейдж
-    // сам по себе не инвалидируется.
-    profileService.getMe().catch(() => {})
+    // tg_user мог протухнуть (TTL 1 час) — getMe сам поднимет его в localStorage
+    // через apiClient (подставит tg_token в header). Пока ждём — isLoading,
+    // чтобы не мигать голым Layout без router-view. Если после getMe юзер
+    // всё ещё пуст (токен невалиден, getMe внутри ловит ошибку через
+    // handleError и не пишет в localStorage) — кидаем на лендинг переавторизоваться.
+    if (!tg_user.value)
+      isLoading.value = true
+    profileService.getMe().finally(() => {
+      isLoading.value = false
+      if (!tg_user.value && !import.meta.env.DEV)
+        window.location.pathname = '/'
+    })
   }
-  else if (!tg_user.value && !import.meta.env.DEV) {
+  else if (!import.meta.env.DEV) {
     window.location.pathname = '/'
   }
 })

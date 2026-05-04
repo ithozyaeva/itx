@@ -81,7 +81,7 @@ onUnmounted(() => {
         class="flex justify-end shrink-0"
       >
         <TelegramAuth
-          v-if="!tgUser"
+          v-if="!tgUser || !tgToken"
           @auth="setUser"
         />
         <Button
@@ -120,7 +120,7 @@ onUnmounted(() => {
       />
       <div class="absolute bottom-11 sm:bottom-16 sm:h-16 px-6 md:px-10">
         <TelegramAuth
-          v-if="!tgUser"
+          v-if="!tgUser || !tgToken"
           class="h-full"
           @auth="setUser"
         />
