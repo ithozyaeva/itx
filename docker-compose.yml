@@ -63,6 +63,7 @@ services:
     env_file: ./backend/.env
     networks:
       - itx-network
+    restart: unless-stopped
 
   landing-frontend:
     container_name: landing-frontend
