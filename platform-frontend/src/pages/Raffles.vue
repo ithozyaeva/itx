@@ -3,6 +3,8 @@ import type { RaffleItem } from '@/models/raffle'
 import { CheckCircle2, Flame, Gift, Loader2, Ticket, Trophy, Users } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import EmptyState from '@/components/common/EmptyState.vue'
+import { TintedIcon } from '@/components/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
@@ -157,9 +159,7 @@ onMounted(() => {
     >
       <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="flex items-center justify-center w-12 h-12 rounded-sm bg-orange-500/15 shrink-0">
-            <Flame class="h-6 w-6 text-orange-500" />
-          </div>
+          <TintedIcon :icon="Flame" tone="orange" size="lg" />
           <div class="min-w-0">
             <p class="font-mono text-[10px] uppercase tracking-widest text-orange-500/80 mb-0.5">
               // ежедневный авто-розыгрыш
@@ -199,8 +199,8 @@ onMounted(() => {
         </div>
         <RouterLink
           v-else
-          to="/dailies"
-          class="px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+          to="/progress?tab=today"
+          class="px-3 py-2 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors min-h-[36px] inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Сделай check-in →
         </RouterLink>
@@ -215,13 +215,13 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <div
+      <EmptyState
         v-if="filteredItems.length === 0"
-        class="text-center py-12 text-muted-foreground"
-      >
-        <Gift class="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>{{ filterMode === 'my' ? 'Вы ещё не участвовали в розыгрышах' : 'Розыгрышей пока нет' }}</p>
-      </div>
+        :icon="Gift"
+        variant="dashed"
+        :title="filterMode === 'my' ? 'Вы ещё не участвовали в розыгрышах' : 'Розыгрышей пока нет'"
+        :description="filterMode === 'my' ? 'Купите билет в активный розыгрыш или дождитесь нового.' : undefined"
+      />
 
       <!-- Active -->
       <div

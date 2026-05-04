@@ -2,12 +2,17 @@
 import type { Component } from 'vue'
 import { Button } from '@/components/ui/button'
 
-defineProps<{
-  icon: Component
-  title: string
+withDefaults(defineProps<{
+  icon?: Component
+  title?: string
   description?: string
   actionLabel?: string
-}>()
+  variant?: 'plain' | 'dashed'
+  size?: 'md' | 'sm'
+}>(), {
+  variant: 'plain',
+  size: 'md',
+})
 
 const emit = defineEmits<{
   action: []
@@ -15,14 +20,30 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-    <div class="flex items-center justify-center w-16 h-16 rounded-sm bg-muted mb-4">
+  <div
+    class="flex flex-col items-center justify-center text-center"
+    :class="[
+      variant === 'dashed' ? 'rounded-sm border border-dashed bg-muted/20' : '',
+      size === 'sm' ? 'py-8 px-4' : 'py-12 px-4',
+    ]"
+  >
+    <div
+      v-if="icon"
+      class="flex items-center justify-center rounded-sm bg-muted mb-4"
+      :class="size === 'sm' ? 'w-12 h-12' : 'w-16 h-16'"
+    >
       <component
         :is="icon"
-        class="h-8 w-8 text-muted-foreground"
+        class="text-muted-foreground"
+        :class="size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'"
+        aria-hidden="true"
       />
     </div>
-    <h3 class="text-base font-semibold mb-1">
+    <h3
+      v-if="title"
+      class="font-semibold mb-1"
+      :class="size === 'sm' ? 'text-sm' : 'text-base'"
+    >
       {{ title }}
     </h3>
     <p
@@ -31,6 +52,7 @@ const emit = defineEmits<{
     >
       {{ description }}
     </p>
+    <slot />
     <Button
       v-if="actionLabel"
       size="sm"

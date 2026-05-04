@@ -43,7 +43,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useDailies } from '@/composables/useDailies'
+import { DailyCheckInWidget, TaskCard } from '@/components/progress'
 import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useSSE } from '@/composables/useSSE'
 import { isUserSubscribed, useUser, useUserLevel } from '@/composables/useUser'
@@ -144,45 +144,6 @@ const timeGreeting = computed(() => {
 const activeQuests = computed(() => chatQuests.value.filter(q => !q.completed))
 const completedQuests = computed(() => chatQuests.value.filter(q => q.completed))
 
-// Daily check-in widget — отдельный composable, чтобы не дублировать
-// SSE-подписки и не пинговать /dailies/today из Dashboard напрямую.
-const { today: dailyToday, streak: dailyStreak, checkingIn: dailyCheckingIn, refresh: refreshDailies, checkIn: doCheckIn } = useDailies()
-const dailyCheckInDone = computed(() => dailyToday.value?.checkIn.done ?? false)
-const dailyAwardedCount = computed(() => dailyToday.value?.tasks.filter(t => t.awarded).length ?? 0)
-const dailyTotal = computed(() => dailyToday.value?.tasks.length ?? 5)
-const dailyStreakValue = computed(() => dailyStreak.value?.current ?? 0)
-async function handleDashboardCheckIn() {
-  await doCheckIn()
-  await refreshPoints()
-}
-
-function questProgress(quest: ChatQuestWithProgress) {
-  if (!quest.targetCount)
-    return 0
-  return Math.min(100, Math.round((quest.currentCount / quest.targetCount) * 100))
-}
-
-function questDeadlineDays(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = date.getTime() - now.getTime()
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-}
-
-function formatQuestDeadline(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = date.getTime() - now.getTime()
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays <= 0)
-    return 'Истекает'
-  if (diffDays === 1)
-    return '1 день'
-  if (diffDays <= 7)
-    return `${diffDays} дн.`
-  return formatShortDate(date)
-}
-
 function isEventLive(event: CommunityEvent) {
   const now = new Date()
   const eventDate = getNextOccurrenceDate(event, now)
@@ -239,9 +200,6 @@ onMounted(async () => {
     }
     if (results[5].status === 'fulfilled')
       highlights.value = results[5].value ?? []
-
-    // Дейлики — отдельным запросом, без блокировки основного skeleton'а
-    refreshDailies()
   }
   catch (error) {
     handleError(error)
@@ -401,7 +359,7 @@ onMounted(async () => {
           <!-- Quick stats -->
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
             <RouterLink
-              to="/points"
+              to="/progress?tab=history"
               class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
               <div class="flex items-center justify-center w-9 h-9 rounded-sm bg-yellow-500/10">
@@ -455,58 +413,12 @@ onMounted(async () => {
       </div>
 
       <!-- Daily check-in CTA -->
-      <RouterLink
+      <DailyCheckInWidget
         v-if="isSubscribed"
-        to="/dailies"
-        class="mt-5 block rounded-sm border bg-card p-4 transition-colors terminal-card hover:border-accent/40"
-        :class="dailyCheckInDone ? 'border-green-500/30 bg-green-500/5' : ''"
-      >
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <div class="flex items-center gap-3 min-w-0">
-            <div
-              class="flex items-center justify-center w-10 h-10 rounded-sm shrink-0"
-              :class="dailyCheckInDone ? 'bg-green-500/15' : 'bg-orange-500/10'"
-            >
-              <Flame
-                v-if="!dailyCheckInDone"
-                class="h-5 w-5 text-orange-500"
-              />
-              <CheckCircle
-                v-else
-                class="h-5 w-5 text-green-500"
-              />
-            </div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <p class="text-sm font-semibold">
-                  Стрик: {{ dailyStreakValue }} дн.
-                </p>
-                <p class="text-xs text-muted-foreground">
-                  · {{ dailyAwardedCount }} / {{ dailyTotal }} дейликов
-                </p>
-              </div>
-              <p class="text-xs text-muted-foreground mt-0.5">
-                {{ dailyCheckInDone ? 'Сегодня отмечен — приходи завтра' : 'Сделай check-in и фарми баллы' }}
-              </p>
-            </div>
-          </div>
-
-          <button
-            v-if="!dailyCheckInDone"
-            class="px-3 py-1.5 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            :disabled="dailyCheckingIn"
-            @click.stop.prevent="handleDashboardCheckIn"
-          >
-            {{ dailyCheckingIn ? '...' : 'Check-in (+5)' }}
-          </button>
-          <span
-            v-else
-            class="text-xs text-muted-foreground flex items-center gap-1"
-          >
-            Все детали → <ArrowRight class="h-3 w-3" />
-          </span>
-        </div>
-      </RouterLink>
+        variant="compact"
+        link-to="/progress?tab=today"
+        class="mt-5"
+      />
 
       <!-- Nearest Events -->
       <div
@@ -620,11 +532,11 @@ onMounted(async () => {
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
               <span class="font-mono text-[10px] text-muted-foreground/60 mr-1">[02]</span>
-              <Flame class="h-4 w-4 text-orange-500" />
+              <Flame class="h-4 w-4 text-orange-500" aria-hidden="true" />
               <span class="text-sm font-semibold">Задания в чатах</span>
             </div>
             <RouterLink
-              to="/quests"
+              to="/progress?tab=period&kind=chats"
               class="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Все →
@@ -635,61 +547,28 @@ onMounted(async () => {
             v-if="activeQuests.length > 0"
             class="space-y-3"
           >
-            <div
+            <TaskCard
               v-for="quest in activeQuests.slice(0, 3)"
               :key="quest.id"
-              class="rounded-sm bg-muted/30 border border-border/50 p-3.5"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10 shrink-0">
-                    <component
-                      :is="quest.questType === 'daily_streak' ? Flame : MessageCircle"
-                      class="h-4 w-4 text-orange-500"
-                    />
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium truncate">
-                      {{ quest.title }}
-                    </p>
-                    <p
-                      v-if="quest.description"
-                      class="text-xs text-muted-foreground line-clamp-1"
-                    >
-                      {{ quest.description }}
-                    </p>
-                    <p
-                      class="text-xs flex items-center gap-1"
-                      :class="questDeadlineDays(quest.endsAt) <= 1 ? 'text-red-500' : questDeadlineDays(quest.endsAt) <= 3 ? 'text-orange-500' : 'text-muted-foreground'"
-                    >
-                      <Calendar class="h-3 w-3" />
-                      {{ formatQuestDeadline(quest.endsAt) }}
-                    </p>
-                  </div>
-                </div>
-                <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full shrink-0">
-                  +{{ quest.pointsReward }}
-                </span>
-              </div>
-              <div class="mt-2.5">
-                <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>{{ quest.currentCount }} / {{ quest.targetCount }} {{ quest.questType === 'daily_streak' ? 'дней подряд' : 'сообщений' }}</span>
-                  <span>{{ questProgress(quest) }}%</span>
-                </div>
-                <div class="w-full bg-muted rounded-full h-1.5">
-                  <div
-                    class="bg-accent rounded-full h-1.5 transition-all"
-                    :style="{ width: `${questProgress(quest)}%` }"
-                  />
-                </div>
-              </div>
-            </div>
+              :title="quest.title"
+              :description="quest.description"
+              :points="quest.pointsReward"
+              :progress="quest.currentCount"
+              :target="quest.targetCount"
+              :ends-at="quest.endsAt"
+              :icon="quest.questType === 'daily_streak' ? Flame : MessageCircle"
+              icon-tone="orange"
+              :progress-label="quest.questType === 'daily_streak'
+                ? `${quest.currentCount} / ${quest.targetCount} дней подряд`
+                : `${quest.currentCount} / ${quest.targetCount} сообщений`"
+              size="compact"
+            />
 
             <div
               v-if="completedQuests.length > 0"
               class="text-xs text-muted-foreground text-center pt-1"
             >
-              <CheckCircle class="h-3 w-3 inline mr-1" />
+              <CheckCircle class="h-3 w-3 inline mr-1" aria-hidden="true" />
               {{ completedQuests.length }} выполнено
             </div>
           </div>
