@@ -11,16 +11,15 @@ let isRefreshing = false
 let refreshPromise: Promise<{ token: string, user: TelegramUser }> | null = null
 
 function doRefresh(): Promise<{ token: string, user: TelegramUser }> {
-  if (!localStorageUser.value) {
-    return Promise.reject(new Error('No user'))
-  }
-  const userId = localStorageUser.value.telegramID
-  if (!userId) {
-    return Promise.reject(new Error('No user id'))
+  // Refresh опирается ТОЛЬКО на текущий X-Telegram-User-Token: знание
+  // Telegram-ID не должно давать продлить чужую сессию.
+  const token = localStorageToken.value
+  if (!token) {
+    return Promise.reject(new Error('No token'))
   }
   return ky.post('/api/auth/telegram/refresh', {
-    json: {
-      token: btoa(userId.toString()),
+    headers: {
+      'X-Telegram-User-Token': token,
     },
   }).json<{ token: string, user: TelegramUser }>()
 }

@@ -51,6 +51,30 @@ func (h *MentorHandler) GetById(c *fiber.Ctx) error {
 	return c.JSON(entity)
 }
 
+// GetByIdPublic — версия GetById для платформенного эндпоинта
+// /platform/mentors/:id. Скрывает telegramID, чтобы обычный участник не мог
+// получить чужой ID и выписать на него токен через старую дырку в refresh.
+func (h *MentorHandler) GetByIdPublic(c *fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный ID"})
+	}
+
+	entity, err := h.svc.GetByIdFull(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Ментор не найден"})
+	}
+
+	if member, mErr := getMember(c); mErr == nil && member != nil {
+		service.TrackDailyTrigger(member.Id, "view_mentor", 1)
+		service.TrackChallengeMetric(member.Id, "mentor_profiles_viewed", 1)
+	}
+
+	sanitizePublicMentor(entity)
+
+	return c.JSON(entity)
+}
+
 // AddReviewToService добавляет отзыв к услуге ментора
 func (h *MentorHandler) AddReviewToService(c *fiber.Ctx) error {
 	review := new(models.ReviewOnService)
@@ -198,6 +222,29 @@ func (h *MentorHandler) GetAllWithRelations(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("get all mentors error: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки менторов"})
+	}
+
+	return c.JSON(result)
+}
+
+// GetAllWithRelationsPublic — публичный аналог GetAllWithRelations
+// для /api/mentors без авторизации. Зануляет telegramID у каждого ментора.
+func (h *MentorHandler) GetAllWithRelationsPublic(c *fiber.Ctx) error {
+	req := new(models.SearchRequest)
+	if err := c.QueryParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	result, err := h.svc.GetAllWithRelations(req.Limit, req.Offset)
+	if err != nil {
+		log.Printf("get all mentors public error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки менторов"})
+	}
+
+	if result != nil {
+		for i := range result.Items {
+			sanitizePublicMentor(&result.Items[i])
+		}
 	}
 
 	return c.JSON(result)

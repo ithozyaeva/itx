@@ -59,11 +59,19 @@ func (h *SSEHub) Publish(memberId int64, event SSEEvent) {
 	}
 	msg := string(data)
 
+	// Копируем каналы в slice под RLock: итерация по h.clients[memberId]
+	// после RUnlock — это итерация по той же inner map, в которую
+	// параллельный Subscribe/unsubscribe пишет, и в Go это runtime fatal
+	// «concurrent map iteration and map write».
 	h.mu.RLock()
 	channels := h.clients[memberId]
+	chs := make([]chan string, 0, len(channels))
+	for ch := range channels {
+		chs = append(chs, ch)
+	}
 	h.mu.RUnlock()
 
-	for ch := range channels {
+	for _, ch := range chs {
 		select {
 		case ch <- msg:
 		default:
