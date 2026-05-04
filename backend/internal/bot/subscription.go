@@ -700,13 +700,13 @@ func (b *TelegramBot) startSubscriptionChecker() {
 	for {
 		select {
 		case <-tierTicker.C:
-			b.subscriptionService.PeriodicCheck(
+			results := b.subscriptionService.PeriodicCheck(
 				b.botCheckFunc(),
 				b.createInviteLinkFunc(),
 				b.kickUserFunc(),
-				b.notifyUserOfSyncResult,
 				50*time.Millisecond,
 			)
+			b.sendPeriodicCheckReport(subscriptionAdminID(), "Периодическая проверка подписок", results)
 		case <-sweepTicker.C:
 			stats, err := b.subscriptionService.SweepRealMembership(b.uncachedCheckFunc(), 50*time.Millisecond)
 			if err != nil {
@@ -1130,15 +1130,101 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 	b.sendMessage(message.Chat.ID, "Запуск полной проверки подписок...")
 
 	go func() {
-		b.subscriptionService.PeriodicCheck(
+		results := b.subscriptionService.PeriodicCheck(
 			b.botCheckFunc(),
 			b.createInviteLinkFunc(),
 			b.kickUserFunc(),
-			b.notifyUserOfSyncResult,
 			50*time.Millisecond,
 		)
-		b.SendDirectMessage(message.Chat.ID, "Проверка подписок завершена.")
+		b.sendPeriodicCheckReport(message.Chat.ID, "Полная проверка подписок", results)
 	}()
+}
+
+// sendPeriodicCheckReport форматирует и шлёт админу сводку по результату
+// PeriodicCheck. PeriodicCheck — массовый автоматический проход; юзерам
+// нотификации не уходят (это спам), вместо этого админ видит, что бот
+// сделал и руками решает, что с этим делать. Сообщения дробятся по 3500
+// символов — Telegram режет на 4096.
+func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, results []service.SyncResult) {
+	if len(results) == 0 {
+		b.SendDirectMessage(adminID, fmt.Sprintf("<b>%s</b>\n\nИзменений нет.", html.EscapeString(title)))
+		return
+	}
+
+	chats, _ := b.subscriptionService.GetAllChats()
+	chatTitle := make(map[int64]string, len(chats))
+	for _, c := range chats {
+		chatTitle[c.ID] = c.Title
+	}
+
+	var totalGrant, totalRevoke int
+	for _, r := range results {
+		totalGrant += len(r.Granted)
+		totalRevoke += len(r.Revoked)
+	}
+
+	header := fmt.Sprintf(
+		"<b>%s</b>\n\n"+
+			"Юзеров с изменениями: %d\n"+
+			"Всего grant: %d\n"+
+			"Всего revoke: %d\n\n",
+		html.EscapeString(title), len(results), totalGrant, totalRevoke,
+	)
+
+	lines := make([]string, 0, len(results))
+	for _, r := range results {
+		uname := ""
+		if u, err := b.subscriptionService.GetUser(r.UserID); err == nil && u.Username != nil && *u.Username != "" {
+			uname = "@" + *u.Username
+		}
+		line := fmt.Sprintf("<code>%d</code> %s — grant=%d revoke=%d",
+			r.UserID, html.EscapeString(uname), len(r.Granted), len(r.Revoked))
+		if len(r.Revoked) > 0 {
+			names := make([]string, 0, len(r.Revoked))
+			for _, cid := range r.Revoked {
+				t := chatTitle[cid]
+				if t == "" {
+					t = fmt.Sprintf("%d", cid)
+				}
+				names = append(names, html.EscapeString(t))
+			}
+			line += "\n  ↳ revoke: " + strings.Join(names, ", ")
+		}
+		if len(r.Granted) > 0 {
+			names := make([]string, 0, len(r.Granted))
+			for _, g := range r.Granted {
+				t := chatTitle[g.ChatID]
+				if t == "" {
+					t = fmt.Sprintf("%d", g.ChatID)
+				}
+				names = append(names, html.EscapeString(t))
+			}
+			line += "\n  ↳ grant: " + strings.Join(names, ", ")
+		}
+		lines = append(lines, line)
+	}
+
+	body := strings.Join(lines, "\n\n")
+	const maxLen = 3500
+	if len(header)+len(body) <= maxLen {
+		b.SendDirectMessage(adminID, header+body)
+		return
+	}
+	b.SendDirectMessage(adminID, header+"(детали ниже частями)")
+	var buf strings.Builder
+	for _, l := range lines {
+		if buf.Len()+len(l)+2 > maxLen {
+			b.SendDirectMessage(adminID, buf.String())
+			buf.Reset()
+		}
+		if buf.Len() > 0 {
+			buf.WriteString("\n\n")
+		}
+		buf.WriteString(l)
+	}
+	if buf.Len() > 0 {
+		b.SendDirectMessage(adminID, buf.String())
+	}
 }
 
 // handleSubMemberSweepCommand — backfill реального членства. Идёт по

@@ -493,33 +493,42 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 }
 
 // PeriodicCheck checks all active users and syncs their access.
+//
+// В отличие от интерактивных сценариев (/sub onboarding, anchor-join,
+// /suboverride) periodic-проход НЕ шлёт юзерам нотификаций — это массовый
+// фоновой синк, и любой шум там воспринимается как спам. Возвращаем
+// сводку: вызывающий код (bot) шлёт её админу для ручной проверки.
+//
+// Юзеры с пустыми Granted и Revoked в результат не включаются, чтобы
+// сводка содержала только то, по чему действительно были действия.
 func (s *SubscriptionService) PeriodicCheck(
 	botCheckFunc func(chatID, userID int64) bool,
 	createInviteLink func(chatID int64) (string, error),
 	kickUser func(chatID, userID int64) bool,
-	notifyUser func(userID int64, result *SyncResult),
 	rateDelay time.Duration,
-) {
+) []SyncResult {
 	log.Println("Starting periodic subscription check")
 
 	users, err := s.repo.GetAllActiveUsers()
 	if err != nil {
 		log.Printf("Error getting active users: %v", err)
-		return
+		return nil
 	}
 
+	var changed []SyncResult
 	for _, user := range users {
 		result, err := s.CheckAndSyncUser(user.ID, botCheckFunc, createInviteLink, kickUser)
 		if err != nil {
 			log.Printf("Error checking user %d: %v", user.ID, err)
 		} else if len(result.Granted) > 0 || len(result.Revoked) > 0 {
 			log.Printf("User %d: granted=%d revoked=%d", user.ID, len(result.Granted), len(result.Revoked))
-			notifyUser(user.ID, result)
+			changed = append(changed, *result)
 		}
 		time.Sleep(rateDelay)
 	}
 
 	log.Println("Periodic subscription check complete")
+	return changed
 }
 
 // --- Repo delegation methods ---
