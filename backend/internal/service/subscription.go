@@ -125,11 +125,22 @@ type GrantedChat struct {
 }
 
 // CheckAndSyncUser performs a full subscription check and sync for a user.
+//
+// kickUser возвращает bool — реально ли произошёл kick (false при
+// SUBSCRIPTION_AUTO_KICK_ENABLED=false). Запись revoke в БД, audit и
+// добавление чата в result.Revoked происходят ТОЛЬКО когда kickUser
+// вернул true. Это превращает выключенный auto-kick в полноценный
+// dry-run всей цепочки: ни БД-state, ни нотификации не меняются.
+//
+// Anchor-чаты явно пропускаются при revoke: они определяют тир, а не
+// являются объектом доступа. В entitled они не попадают (по дизайну
+// GetChatsForTierLevel), и без явного skip каждый periodic-check
+// пытался бы их revoke'нуть.
 func (s *SubscriptionService) CheckAndSyncUser(
 	userID int64,
 	botCheckFunc func(chatID, userID int64) bool,
 	createInviteLink func(chatID int64) (string, error),
-	kickUser func(chatID, userID int64),
+	kickUser func(chatID, userID int64) bool,
 ) (*SyncResult, error) {
 	user, err := s.repo.GetUser(userID)
 	if err != nil {
@@ -164,6 +175,11 @@ func (s *SubscriptionService) CheckAndSyncUser(
 		entitledIDs[c.ID] = true
 	}
 
+	anchorIDs, err := s.anchorChatIDs()
+	if err != nil {
+		return nil, fmt.Errorf("get anchor ids: %w", err)
+	}
+
 	// Current active access
 	currentAccess, _ := s.repo.GetActiveAccess(userID)
 	currentIDs := make(map[int64]bool)
@@ -194,19 +210,44 @@ func (s *SubscriptionService) CheckAndSyncUser(
 		}
 	}
 
-	// Revoke extra
+	// Revoke extra. Skip anchor-чаты (см. doc-комментарий выше). Запись
+	// revoke в БД делаем только если kickUser реально кикнул — иначе
+	// при auto_kick=false мы бы тихо снимали access и слали юзерам
+	// «уровень изменился», хотя в Telegram они остаются на месте.
 	for chatID := range currentIDs {
-		if !entitledIDs[chatID] {
-			kickUser(chatID, userID)
-			s.repo.RevokeAccess(userID, chatID)
-			s.repo.AddAudit(userID, "revoke", map[string]interface{}{
-				"chat_id": chatID,
-			})
-			result.Revoked = append(result.Revoked, chatID)
+		if entitledIDs[chatID] {
+			continue
 		}
+		if anchorIDs[chatID] {
+			continue
+		}
+		if !kickUser(chatID, userID) {
+			continue
+		}
+		s.repo.RevokeAccess(userID, chatID)
+		s.repo.AddAudit(userID, "revoke", map[string]interface{}{
+			"chat_id": chatID,
+		})
+		result.Revoked = append(result.Revoked, chatID)
 	}
 
 	return result, nil
+}
+
+// anchorChatIDs возвращает set chat_id всех anchor-чатов. Используется
+// CheckAndSyncUser/DryRun/Sweep, чтобы не записывать и не revoke'ать
+// access на anchor — у них семантика «определитель тира», а не «объект
+// доступа».
+func (s *SubscriptionService) anchorChatIDs() (map[int64]bool, error) {
+	anchors, err := s.repo.GetAnchorChats()
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[int64]bool, len(anchors))
+	for _, c := range anchors {
+		ids[c.ID] = true
+	}
+	return ids, nil
 }
 
 // OnboardUser creates/updates user and syncs access.
@@ -216,7 +257,7 @@ func (s *SubscriptionService) OnboardUser(
 	fullName string,
 	botCheckFunc func(chatID, userID int64) bool,
 	createInviteLink func(chatID int64) (string, error),
-	kickUser func(chatID, userID int64),
+	kickUser func(chatID, userID int64) bool,
 ) (*SyncResult, error) {
 	_, err := s.repo.GetOrCreateUser(userID, username, fullName)
 	if err != nil {
@@ -274,6 +315,13 @@ type SweepStats struct {
 //
 // rateDelay: пауза между getChatMember-вызовами, чтобы не упереться в
 // rate-limit Telegram (в Bot API глобально ~30 rps на разные чаты).
+//
+// Anchor-чаты пропускаются: их роль — определять тир, а не выдавать
+// доступ. Если запоминать членство в anchor как access, PeriodicCheck
+// потом увидит anchor-access как «лишний» (он не входит в entitled by
+// design) и попытается revoke — будет шлать юзеру «уровень изменился»
+// при каждом проходе. Membership в anchor читается через ResolveTierID
+// напрямую из Telegram, БД для этого не нужна.
 func (s *SubscriptionService) SweepRealMembership(
 	botCheckFunc func(chatID, userID int64) bool,
 	rateDelay time.Duration,
@@ -286,6 +334,16 @@ func (s *SubscriptionService) SweepRealMembership(
 	userIDs, err := s.repo.GetSweepUserIDs()
 	if err != nil {
 		return nil, fmt.Errorf("get sweep user ids: %w", err)
+	}
+
+	// Отфильтровываем anchor-чаты сразу — иначе их membership попал бы в
+	// access-таблицу и portal-effect: каждый periodic-check после sweep
+	// сносил бы их обратно с уведомлением юзеру.
+	contentChats := make([]models.SubscriptionChat, 0, len(chats))
+	for _, c := range chats {
+		if c.AnchorForTierID == nil {
+			contentChats = append(contentChats, c)
+		}
 	}
 
 	stats := &SweepStats{UsersScanned: len(userIDs)}
@@ -307,7 +365,7 @@ func (s *SubscriptionService) SweepRealMembership(
 			currentSet[a.ChatID] = true
 		}
 
-		for _, chat := range chats {
+		for _, chat := range contentChats {
 			isMember := botCheckFunc(chat.ID, uid)
 			stats.ChecksPerformed++
 
@@ -373,6 +431,11 @@ func (s *SubscriptionService) DryRunCheckUser(
 		}
 	}
 
+	anchorIDs, err := s.anchorChatIDs()
+	if err != nil {
+		return nil, fmt.Errorf("get anchor ids: %w", err)
+	}
+
 	currentAccess, _ := s.repo.GetActiveAccess(userID)
 	current := make(map[int64]bool, len(currentAccess))
 	for _, a := range currentAccess {
@@ -392,9 +455,13 @@ func (s *SubscriptionService) DryRunCheckUser(
 		}
 	}
 	for cid := range current {
-		if !entitled[cid] {
-			res.WouldRevoke = append(res.WouldRevoke, cid)
+		if entitled[cid] {
+			continue
 		}
+		if anchorIDs[cid] {
+			continue
+		}
+		res.WouldRevoke = append(res.WouldRevoke, cid)
 	}
 	return res, nil
 }
@@ -429,7 +496,7 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 func (s *SubscriptionService) PeriodicCheck(
 	botCheckFunc func(chatID, userID int64) bool,
 	createInviteLink func(chatID int64) (string, error),
-	kickUser func(chatID, userID int64),
+	kickUser func(chatID, userID int64) bool,
 	notifyUser func(userID int64, result *SyncResult),
 	rateDelay time.Duration,
 ) {

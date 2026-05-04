@@ -177,13 +177,14 @@ func (b *TelegramBot) createInviteLinkWithLimit(chatID int64, memberLimit int) (
 
 // kickFromChat kicks a user by ban+unban.
 // Управляется фича-флагом SUBSCRIPTION_AUTO_KICK_ENABLED: если он выключен,
-// бот ничего не делает и только пишет «dry-run» в лог. Это позволяет
-// безопасно отключить автоматическое удаление участников из анкорных чатов,
-// оставив логику вычисления «кого надо было бы убрать» без изменений.
-func (b *TelegramBot) kickFromChat(chatID, userID int64) {
+// бот возвращает false, и вызывающий код (CheckAndSyncUser) пропускает
+// запись revoke в БД и нотификацию — это полноценный dry-run всей цепочки,
+// а не только Telegram-вызова. Возвращаем true только если кик реально
+// прошёл (или хотя бы был отправлен запрос).
+func (b *TelegramBot) kickFromChat(chatID, userID int64) bool {
 	if config.CFG == nil || !config.CFG.SubscriptionAutoKickEnabled {
 		log.Printf("[auto-kick disabled] dry-run: would kick user %d from chat %d", userID, chatID)
-		return
+		return false
 	}
 
 	_, err := b.bot.Request(tgbotapi.BanChatMemberConfig{
@@ -194,7 +195,7 @@ func (b *TelegramBot) kickFromChat(chatID, userID int64) {
 	})
 	if err != nil {
 		log.Printf("Failed to ban user %d from chat %d: %v", userID, chatID, err)
-		return
+		return false
 	}
 
 	time.Sleep(1 * time.Second)
@@ -209,6 +210,7 @@ func (b *TelegramBot) kickFromChat(chatID, userID int64) {
 	if err != nil {
 		log.Printf("Failed to unban user %d from chat %d: %v", userID, chatID, err)
 	}
+	return true
 }
 
 // botCheckFunc returns a closure for the subscription service.
@@ -231,7 +233,10 @@ func (b *TelegramBot) createInviteLinkFunc() func(int64) (string, error) {
 }
 
 // kickUserFunc returns a closure for kicking users.
-func (b *TelegramBot) kickUserFunc() func(int64, int64) {
+// Bool-возвращаемое значение — флаг «реально ли произошёл kick». false при
+// SUBSCRIPTION_AUTO_KICK_ENABLED=false: вызывающий код по этому флагу
+// решает, делать ли запись revoke в БД (см. CheckAndSyncUser).
+func (b *TelegramBot) kickUserFunc() func(int64, int64) bool {
 	return b.kickFromChat
 }
 
