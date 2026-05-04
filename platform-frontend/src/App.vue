@@ -67,13 +67,21 @@ onBeforeMount(() => {
         isLoading.value = false
       })
   }
-  else if (tg_token.value && tg_user.value) {
+  else if (tg_token.value) {
     startSSE()
     startProactiveRefresh()
-    // Освежаем tg_user при каждом открытии: бэкенд со временем добавляет
-    // поля (subscriptionTier, роли после /subcheckall и т.п.), локалсторейдж
-    // сам по себе не инвалидируется.
-    profileService.getMe().catch(() => {})
+    // tg_user мог протухнуть (TTL 1 час) — getMe сам поднимет его в localStorage
+    // через apiClient (подставит tg_token в header). Пока ждём — isLoading,
+    // чтобы не мигать голым Layout без router-view. Если после getMe юзер
+    // всё ещё пуст (токен невалиден, getMe внутри ловит ошибку через
+    // handleError и не пишет в localStorage) — кидаем на лендинг переавторизоваться.
+    if (!tg_user.value)
+      isLoading.value = true
+    profileService.getMe().finally(() => {
+      isLoading.value = false
+      if (!tg_user.value && !import.meta.env.DEV)
+        window.location.pathname = '/'
+    })
   }
   else if (!import.meta.env.DEV) {
     window.location.pathname = '/'
