@@ -8,7 +8,6 @@ import AIMaterials from '@/pages/AIMaterials.vue'
 import AutoApplyBot from '@/pages/AutoApplyBot.vue'
 import Casino from '@/pages/Casino.vue'
 
-import Dailies from '@/pages/Dailies.vue'
 import Dashboard from '@/pages/Dashboard.vue'
 import Events from '@/pages/Events.vue'
 import Kudos from '@/pages/Kudos.vue'
@@ -17,11 +16,10 @@ import Marketplace from '@/pages/Marketplace.vue'
 import MemberProfile from '@/pages/MemberProfile.vue'
 import MentorProfile from '@/pages/MentorProfile.vue'
 import Mentors from '@/pages/Mentors.vue'
-import MyPoints from '@/pages/MyPoints.vue'
 import MyReviews from '@/pages/MyReviews.vue'
 import MyStats from '@/pages/MyStats.vue'
 
-import Quests from '@/pages/Quests.vue'
+import Progress from '@/pages/Progress.vue'
 import Raffles from '@/pages/Raffles.vue'
 import ReferalLinks from '@/pages/ReferalLinks.vue'
 import Resumes from '@/pages/Resumes.vue'
@@ -55,16 +53,19 @@ const routes: RouteRecordRaw[] = [
   { path: '/referals', component: ReferalLinks, name: 'referals', meta: { breadcrumb: [{ label: 'Рефералы' }], requiresSubscription: true } },
   { path: '/resumes', component: Resumes, name: 'resumes', meta: { breadcrumb: [{ label: 'Резюме' }], requiresSubscription: true } },
   { path: '/my-reviews', component: MyReviews, name: 'myReviews', meta: { breadcrumb: [{ label: 'Мои отзывы' }] } },
-  { path: '/points', component: MyPoints, name: 'myPoints', meta: { breadcrumb: [{ label: 'Мои баллы' }], requiresSubscription: true } },
+  { path: '/progress', component: Progress, name: 'progress', meta: { breadcrumb: [{ label: 'Прогресс' }], requiresSubscription: true } },
+  // Старые URL дейликов/квестов/челленджей/баллов сохраняем как редиректы,
+  // чтобы не ломать ссылки из бота, e-mail-а и закладок пользователей.
+  { path: '/points', redirect: '/progress?tab=history' },
+  { path: '/dailies', redirect: '/progress?tab=today' },
+  { path: '/quests', redirect: '/progress?tab=period&kind=chats' },
+  { path: '/challenges', redirect: '/progress?tab=period' },
   { path: '/leaderboard', component: Leaderboard, name: 'leaderboard', meta: { breadcrumb: [{ label: 'Рейтинг' }], requiresSubscription: true } },
   { path: '/achievements', component: Achievements, name: 'achievements', meta: { breadcrumb: [{ label: 'Достижения' }], requiresSubscription: true } },
   { path: '/marketplace', component: Marketplace, name: 'marketplace', meta: { breadcrumb: [{ label: 'Барахолка' }], requiresSubscription: true } },
   { path: '/ai-materials', component: AIMaterials, name: 'aiMaterials', meta: { breadcrumb: [{ label: 'AI-материалы' }], requiresSubscription: true } },
   { path: '/ai-materials/:id', component: AIMaterialDetail, name: 'aiMaterialDetail', meta: { breadcrumb: [{ label: 'AI-материалы', to: '/ai-materials' }, { label: 'Материал' }], requiresSubscription: true } },
   { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }], requiresSubscription: true } },
-  { path: '/quests', component: Quests, name: 'quests', meta: { breadcrumb: [{ label: 'Квесты' }], requiresSubscription: true } },
-  { path: '/dailies', component: Dailies, name: 'dailies', meta: { breadcrumb: [{ label: 'Дейлики' }], requiresSubscription: true } },
-  { path: '/challenges', component: () => import('@/pages/Challenges.vue'), name: 'challenges', meta: { breadcrumb: [{ label: 'Челленджи' }], requiresSubscription: true } },
   { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }], requiresSubscription: true } },
   { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }], requiresSubscription: true } },
   { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }], requiresSubscription: true } },

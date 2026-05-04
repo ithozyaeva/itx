@@ -21,9 +21,5 @@ import { Skeleton } from '@/components/ui/skeleton'
       </div>
       <Skeleton class="w-full h-1.5 rounded-full" />
     </div>
-    <div class="flex items-center gap-3 mt-3">
-      <Skeleton class="h-3 w-16" />
-      <Skeleton class="h-3 w-20" />
-    </div>
   </div>
 </template>

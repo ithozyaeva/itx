@@ -13,10 +13,9 @@ vi.mock('@/pages/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MemberProfile.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MentorProfile.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Mentors.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/MyPoints.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MyReviews.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MyStats.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/Quests.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/pages/Progress.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Raffles.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/ReferalLinks.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Resumes.vue', () => ({ default: { template: '<div />' } }))
@@ -50,12 +49,11 @@ describe('router', () => {
       ['/referals', 'referals'],
       ['/resumes', 'resumes'],
       ['/my-reviews', 'myReviews'],
-      ['/points', 'myPoints'],
+      ['/progress', 'progress'],
       ['/leaderboard', 'leaderboard'],
       ['/achievements', 'achievements'],
       ['/marketplace', 'marketplace'],
       ['/tasks', 'taskExchange'],
-      ['/quests', 'quests'],
       ['/auto-apply', 'autoApplyBot'],
       ['/kudos', 'kudos'],
       ['/raffles', 'raffles'],
@@ -64,6 +62,33 @@ describe('router', () => {
       const route = router.getRoutes().find((r: any) => r.name === name)
       expect(route).toBeDefined()
       expect(route.path).toBe(path)
+    })
+
+    it.each([
+      ['/points', '/progress?tab=history'],
+      ['/dailies', '/progress?tab=today'],
+      ['/quests', '/progress?tab=period&kind=chats'],
+      ['/challenges', '/progress?tab=period'],
+    ])('legacy %s redirects to %s for subscriber', async (from, to) => {
+      // Эти редиректы ведут на /progress, который сам гейтнут по подписке.
+      // Без подписки beforeEach уведёт пользователя на дашборд — поэтому
+      // проверяем именно подписчика.
+      localStorage.setItem('tg_user:v2', JSON.stringify({
+        data: {
+          id: 1,
+          telegramID: 1,
+          roles: ['SUBSCRIBER'],
+          subscriptionTier: { id: 2, slug: 'foreman', name: 'Бригадир', level: 2 },
+        },
+        savedAt: Date.now(),
+      }))
+      vi.resetModules()
+      const mod = await import('@/router/index')
+      const r = mod.default
+      await r.push(from)
+      await r.isReady()
+      expect(r.currentRoute.value.fullPath).toBe(to)
+      localStorage.removeItem('tg_user:v2')
     })
   })
 

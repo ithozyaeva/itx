@@ -35,6 +35,7 @@ import {
   Zap,
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { ProgressBar, TintedIcon } from '@/components/progress'
 import {
   Dialog,
   DialogContent,
@@ -154,11 +155,14 @@ onMounted(() => {
     </div>
 
     <template v-else-if="data">
-      <div class="flex gap-2 mb-6 flex-wrap">
+      <div class="flex gap-2 mb-6 flex-wrap" role="tablist" aria-label="Категория достижений">
         <button
           v-for="cat in categories"
           :key="cat.key"
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+          type="button"
+          role="tab"
+          :aria-selected="activeCategory === cat.key"
+          class="px-3 py-2 rounded-full text-sm font-medium transition-colors min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           :class="activeCategory === cat.key
             ? 'bg-primary text-primary-foreground'
             : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
@@ -169,26 +173,22 @@ onMounted(() => {
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
+        <button
           v-for="achievement in filteredItems"
           :key="achievement.id"
-          class="rounded-sm p-4 transition-colors border cursor-pointer hover:shadow-md"
+          type="button"
+          class="text-left rounded-sm p-4 transition-colors border hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           :class="achievement.unlocked
             ? 'bg-green-500/5 border-green-500/30'
             : 'bg-card border-border opacity-60'"
           @click="openDetail(achievement)"
         >
           <div class="flex items-start gap-3">
-            <div
-              class="flex items-center justify-center w-10 h-10 rounded-full shrink-0"
-              :class="achievement.unlocked ? 'bg-green-500/20' : 'bg-primary/10'"
-            >
-              <component
-                :is="iconMap[achievement.icon] || Award"
-                class="h-5 w-5"
-                :class="achievement.unlocked ? 'text-green-500' : 'text-primary'"
-              />
-            </div>
+            <TintedIcon
+              :icon="iconMap[achievement.icon] || Award"
+              tone="accent"
+              :done="achievement.unlocked"
+            />
             <div class="flex-1 min-w-0">
               <div class="font-medium text-sm">
                 {{ achievement.title }}
@@ -204,15 +204,13 @@ onMounted(() => {
               <span>{{ Math.min(achievement.progress, achievement.threshold) }} / {{ achievement.threshold }}</span>
               <span v-if="achievement.unlocked" class="text-green-500 font-medium">Получено</span>
             </div>
-            <div class="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                class="h-full rounded-full transition-all"
-                :class="achievement.unlocked ? 'bg-green-500' : 'bg-accent'"
-                :style="{ width: `${achievement.threshold > 0 ? Math.min(100, (achievement.progress / achievement.threshold) * 100) : 0}%` }"
-              />
-            </div>
+            <ProgressBar
+              :progress="Math.min(achievement.progress, achievement.threshold)"
+              :target="achievement.threshold"
+              :state="achievement.unlocked ? 'done' : 'active'"
+            />
           </div>
-        </div>
+        </button>
       </div>
     </template>
 
@@ -269,13 +267,11 @@ onMounted(() => {
               <span>Прогресс</span>
               <span class="font-medium">{{ Math.min(selectedAchievement.progress, selectedAchievement.threshold) }} / {{ selectedAchievement.threshold }}</span>
             </div>
-            <div class="w-full h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                class="h-full rounded-full transition-all"
-                :class="selectedAchievement.unlocked ? 'bg-green-500' : 'bg-accent'"
-                :style="{ width: `${selectedAchievement.threshold > 0 ? Math.min(100, (selectedAchievement.progress / selectedAchievement.threshold) * 100) : 0}%` }"
-              />
-            </div>
+            <ProgressBar
+              :progress="Math.min(selectedAchievement.progress, selectedAchievement.threshold)"
+              :target="selectedAchievement.threshold"
+              :state="selectedAchievement.unlocked ? 'done' : 'active'"
+            />
             <p class="text-xs text-muted-foreground text-right mt-1">
               {{ selectedAchievement.threshold > 0 ? Math.min(100, Math.round((selectedAchievement.progress / selectedAchievement.threshold) * 100)) : 0 }}%
             </p>
