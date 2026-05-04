@@ -64,4 +64,27 @@ describe('EmptyState', () => {
     })
     expect(wrapper.find('.mock-icon').exists()).toBe(true)
   })
+
+  it('renders without icon and title (slot-only mode)', () => {
+    const wrapper = mount(EmptyState, {
+      slots: { default: '<button>Action</button>' },
+    })
+    expect(wrapper.find('h3').exists()).toBe(false)
+    expect(wrapper.find('button').exists()).toBe(true)
+  })
+
+  it('applies dashed wrapper when variant=dashed', () => {
+    const wrapper = mount(EmptyState, {
+      props: { icon: MockIcon, title: 'Нет', variant: 'dashed' },
+    })
+    expect(wrapper.classes().some(c => c === 'border-dashed')).toBe(true)
+  })
+
+  it('uses smaller paddings/icon when size=sm', () => {
+    const wrapper = mount(EmptyState, {
+      props: { icon: MockIcon, title: 'Нет', size: 'sm' },
+    })
+    // py-8 (sm) vs py-12 (md)
+    expect(wrapper.classes().some(c => c === 'py-8')).toBe(true)
+  })
 })

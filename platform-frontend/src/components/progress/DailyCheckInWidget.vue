@@ -168,7 +168,7 @@ onMounted(() => {
       <button
         v-if="!checkInDone"
         type="button"
-        class="px-3 py-2 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="px-4 py-2 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         :disabled="checkingIn"
         @click.stop.prevent="handleCheckIn"
       >

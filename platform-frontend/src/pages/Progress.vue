@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
+import type { IconTone } from '@/components/progress/TintedIcon.vue'
+import type { PointSource } from '@/lib/reasonLabels'
 import type { ChallengeKind } from '@/models/challenges'
 import type { PointsSummary, PointTransaction } from '@/models/points'
 import type { ChatQuestWithProgress } from '@/services/chatQuestService'
@@ -32,7 +35,8 @@ import { Typography } from '@/components/ui/typography'
 import { useChallenges } from '@/composables/useChallenges'
 import { useDailies } from '@/composables/useDailies'
 import { useSSE } from '@/composables/useSSE'
-import { reasonLabels } from '@/lib/reasonLabels'
+import { tierBadge } from '@/lib/dailyTier'
+import { pointSources, reasonLabels } from '@/lib/reasonLabels'
 import { formatShortDate } from '@/lib/utils'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
@@ -46,16 +50,28 @@ const router = useRouter()
 const { toast } = useToast()
 
 const VALID_TABS: TabKey[] = ['today', 'period', 'history', 'sources']
+const VALID_PERIODS: PeriodFilter[] = ['weekly', 'monthly', 'chats']
 
 const initialTab: TabKey = (() => {
   const t = route.query.tab as string | undefined
   return (VALID_TABS as string[]).includes(t ?? '') ? (t as TabKey) : 'today'
 })()
+const initialPeriod: PeriodFilter = (() => {
+  const k = route.query.kind as string | undefined
+  return (VALID_PERIODS as string[]).includes(k ?? '') ? (k as PeriodFilter) : 'weekly'
+})()
+
 const activeTab = ref<TabKey>(initialTab)
+const periodFilter = ref<PeriodFilter>(initialPeriod)
 
 watch(activeTab, (val) => {
   if (route.query.tab !== val)
     router.replace({ query: { ...route.query, tab: val } })
+})
+
+watch(periodFilter, (val) => {
+  if (route.query.kind !== val)
+    router.replace({ query: { ...route.query, kind: val } })
 })
 
 watch(() => route.query.tab, (val) => {
@@ -63,29 +79,26 @@ watch(() => route.query.tab, (val) => {
     activeTab.value = val as TabKey
 })
 
+watch(() => route.query.kind, (val) => {
+  if (val && (VALID_PERIODS as string[]).includes(val as string) && val !== periodFilter.value)
+    periodFilter.value = val as PeriodFilter
+})
+
 // ─── Today (dailies) ─────────────────────────────────────────────────
-const { today, loading: dailiesLoading, refresh: refreshDailies } = useDailies()
+// Дейлики: API возвращает только task.awarded (зачислена ли награда).
+// Промежуточного состояния «выполнено, но баллы не упали» у дейликов
+// нет — поэтому в TaskCard прокидываем и done, и awarded из awarded.
+// Карточка получает «жёлтый» (awarded) стейт; если в будущем появится
+// разделение, передадим разные значения.
+const { today, loading: dailiesLoading } = useDailies()
 const dailyTasks = computed(() => today.value?.tasks ?? [])
 const allBonus = computed(() => today.value?.allBonus ?? { points: 50, awarded: false })
 const completedTaskCount = computed(() => dailyTasks.value.filter(t => t.awarded).length)
 const totalTaskCount = computed(() => dailyTasks.value.length)
 const allCompleted = computed(() => totalTaskCount.value > 0 && completedTaskCount.value === totalTaskCount.value)
 
-const tierBadge: Record<string, { label: string, classes: string }> = {
-  engagement: { label: 'Просмотр', classes: 'bg-blue-500/10 text-blue-500' },
-  light: { label: 'Действие', classes: 'bg-green-500/10 text-green-500' },
-  meaningful: { label: 'Контент', classes: 'bg-orange-500/10 text-orange-500' },
-  big: { label: 'Серьёзное', classes: 'bg-purple-500/10 text-purple-500' },
-}
-
 // ─── Period (challenges + chat quests) ────────────────────────────────
 const { data: challengesData, loading: challengesLoading, fetchAll: fetchChallenges } = useChallenges()
-const periodFilter = ref<PeriodFilter>('weekly')
-const periodFilters: { key: PeriodFilter, label: string, icon: any }[] = [
-  { key: 'weekly', label: 'Неделя', icon: Sword },
-  { key: 'monthly', label: 'Месяц', icon: Trophy },
-  { key: 'chats', label: 'Чаты', icon: Flame },
-]
 
 const challengeList = computed(() => {
   if (periodFilter.value === 'weekly')
@@ -141,60 +154,55 @@ async function fetchPoints() {
   }
 }
 
-useSSE('points', () => {
-  fetchPoints()
-  refreshDailies()
-})
+// SSE 'points' и без нас обновляет дейлики через подписку внутри useDailies()
+// — здесь просто перетягиваем сводку транзакций.
+useSSE('points', fetchPoints)
 
 // ─── Sources (статичный справочник способов) ──────────────────────────
-// Источники, у которых есть отдельный экран (Биржа заданий уже отдельный
-// раздел; рефералы / события / отзывы / резюме — обычные разделы платформы).
-const sources = [
-  { label: 'Запишись на событие', to: '/events', points: 10, icon: Calendar, tone: 'blue' as const },
-  { label: 'Проведи событие', to: '/events', points: 25, icon: Mic, tone: 'orange' as const },
-  { label: 'Оставь отзыв на сообщество', to: '/my-reviews', points: 15, icon: MessageSquare, tone: 'green' as const },
-  { label: 'Загрузи резюме', to: '/resumes', points: 10, icon: FileText, tone: 'accent' as const },
-  { label: 'Заполни профиль', to: '/me', points: 20, icon: User, tone: 'purple' as const },
-  { label: 'Создай реферальную ссылку', to: '/referals', points: 5, icon: Folder, tone: 'accent' as const },
-  { label: 'Получи конверсию по рефералу', to: '/referals', points: 30, icon: Share2, tone: 'green' as const },
-  { label: 'Биржа заданий', to: '/tasks', points: 0, icon: Target, tone: 'blue' as const },
-  { label: 'Откройте AI-материалы', to: '/ai-materials', points: 0, icon: Sparkles, tone: 'purple' as const },
+// pointSources живёт в lib/reasonLabels.ts — общий словарь для табы и тостов.
+// Тут добавляем UI-метаданные (иконка/тон), которые в чисто-data-словаре
+// были бы лишним балластом.
+const sourceVisuals: Record<string, { icon: Component, tone: IconTone }> = {
+  event_attend: { icon: Calendar, tone: 'blue' },
+  event_host: { icon: Mic, tone: 'orange' },
+  review_community: { icon: MessageSquare, tone: 'green' },
+  resume_upload: { icon: FileText, tone: 'accent' },
+  profile_complete: { icon: User, tone: 'purple' },
+  referal_create: { icon: Folder, tone: 'accent' },
+  referal_conversion: { icon: Share2, tone: 'green' },
+}
+
+const extraSources: { label: string, to: string, icon: Component, tone: IconTone }[] = [
+  { label: 'Биржа заданий', to: '/tasks', icon: Target, tone: 'blue' },
+  { label: 'AI-материалы', to: '/ai-materials', icon: Sparkles, tone: 'purple' },
 ]
 
 // ─── Toast о новых выполненных «способах» ─────────────────────────────
-// Раньше жил в MyPoints.vue:80-112; оставлен на месте, чтобы юзер
-// не потерял уведомление о завершении старых статичных квестов.
+// Раньше жил в MyPoints.vue:80-112; перенесли сюда, чтобы поведение
+// не пропало. Активация: первое появление транзакции с reason из pointSources.
 const SEEN_KEY = 'progress_seen_sources'
 function showNewCompletions(transactions: PointTransaction[]) {
   let seen: Set<string>
   try {
     const raw = localStorage.getItem(SEEN_KEY)
-    seen = new Set(raw ? JSON.parse(raw) as string[] : [])
+    const parsed = raw ? JSON.parse(raw) : []
+    seen = new Set(Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === 'string') : [])
   }
   catch {
     seen = new Set()
   }
   const reasons = new Set(transactions.map(tx => tx.reason))
-  const reasonToSource = new Map<string, { label: string, points: number }>([
-    ['event_attend', { label: 'Запишись на событие', points: 10 }],
-    ['event_host', { label: 'Проведи событие', points: 25 }],
-    ['review_community', { label: 'Оставь отзыв', points: 15 }],
-    ['resume_upload', { label: 'Загрузи резюме', points: 10 }],
-    ['profile_complete', { label: 'Заполни профиль', points: 20 }],
-    ['referal_create', { label: 'Создай реферальную ссылку', points: 5 }],
-    ['referal_conversion', { label: 'Конверсия реферала', points: 30 }],
-  ])
-  const newly: { label: string, points: number, reason: string }[] = []
-  for (const [reason, src] of reasonToSource) {
-    if (reasons.has(reason) && !seen.has(reason))
-      newly.push({ ...src, reason })
+  const newly: PointSource[] = []
+  for (const src of pointSources) {
+    if (reasons.has(src.reason) && !seen.has(src.reason))
+      newly.push(src)
   }
   if (newly.length === 0)
     return
   const total = newly.reduce((s, x) => s + x.points, 0)
   toast({
     title: `Задание выполнено! +${total}`,
-    description: newly.map(n => n.label).join(', '),
+    description: newly.map(n => n.shortLabel ?? n.label).join(', '),
   })
   newly.forEach(n => seen.add(n.reason))
   localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]))
@@ -207,7 +215,6 @@ watch(pointsData, (val) => {
 
 // ─── Init ─────────────────────────────────────────────────────────────
 onMounted(() => {
-  refreshDailies()
   fetchChallenges()
   fetchChatQuests()
   fetchPoints()
@@ -285,7 +292,7 @@ function loadMoreTransactions() {
               :done="task.awarded"
               :awarded="task.awarded"
               :pill-label="tierBadge[task.tier]?.label ?? task.tier"
-              :pill-classes="tierBadge[task.tier]?.classes"
+              :pill-tone="tierBadge[task.tier]?.tone"
               size="compact"
             />
           </div>
@@ -326,104 +333,133 @@ function loadMoreTransactions() {
 
       <!-- ───────── ТАБ «Период» ───────── -->
       <TabsContent value="period" class="space-y-6">
-        <div class="flex gap-2 flex-wrap" role="tablist" aria-label="Тип периода">
-          <button
-            v-for="f in periodFilters"
-            :key="f.key"
-            type="button"
-            role="tab"
-            :aria-selected="periodFilter === f.key"
-            class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            :class="periodFilter === f.key
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
-            @click="periodFilter = f.key"
-          >
-            <component :is="f.icon" class="h-4 w-4" aria-hidden="true" />
-            {{ f.label }}
-          </button>
-        </div>
+        <Tabs v-model="periodFilter">
+          <TabsList class="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="weekly" class="gap-2">
+              <Sword class="h-4 w-4" aria-hidden="true" /> Неделя
+            </TabsTrigger>
+            <TabsTrigger value="monthly" class="gap-2">
+              <Trophy class="h-4 w-4" aria-hidden="true" /> Месяц
+            </TabsTrigger>
+            <TabsTrigger value="chats" class="gap-2">
+              <Flame class="h-4 w-4" aria-hidden="true" /> Чаты
+            </TabsTrigger>
+          </TabsList>
 
-        <!-- Weekly / Monthly -->
-        <template v-if="periodFilter !== 'chats'">
-          <div
-            v-if="challengesLoading && !challengesData"
-            class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          >
-            <TaskCardSkeleton v-for="i in 3" :key="i" />
-          </div>
-          <EmptyState
-            v-else-if="challengeList.length === 0"
-            :icon="Sword"
-            variant="dashed"
-            :title="periodFilter === 'weekly' ? 'Еженедельные челленджи появятся в понедельник' : 'Ежемесячный челлендж появится 1-го числа'"
-          />
-          <div
-            v-else
-            class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          >
-            <TaskCard
-              v-for="c in challengeList"
-              :key="c.instanceId"
-              :title="c.title"
-              :description="c.description"
-              :points="c.rewardPoints"
-              :progress="c.progress"
-              :target="c.target"
-              :done="!!c.completedAt"
-              :awarded="c.awarded"
-              :ends-at="c.endsAt"
-              :icon="periodFilter === 'weekly' ? Sword : Trophy"
-              icon-tone="purple"
-              :has-achievement="!!c.achievementCode"
+          <TabsContent value="weekly" class="mt-6">
+            <div
+              v-if="challengesLoading && !challengesData"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <TaskCardSkeleton v-for="i in 3" :key="i" />
+            </div>
+            <EmptyState
+              v-else-if="challengeList.length === 0"
+              :icon="Sword"
+              variant="dashed"
+              title="Еженедельные челленджи появятся в понедельник"
             />
-          </div>
-        </template>
+            <div
+              v-else
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <TaskCard
+                v-for="c in challengeList"
+                :key="c.instanceId"
+                :title="c.title"
+                :description="c.description"
+                :points="c.rewardPoints"
+                :progress="c.progress"
+                :target="c.target"
+                :done="!!c.completedAt"
+                :awarded="c.awarded"
+                :ends-at="c.endsAt"
+                :icon="Sword"
+                icon-tone="purple"
+                :has-achievement="!!c.achievementCode"
+              />
+            </div>
+          </TabsContent>
 
-        <!-- Chat quests -->
-        <template v-else>
-          <div
-            v-if="chatQuestsLoading"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <TaskCardSkeleton v-for="i in 3" :key="i" />
-          </div>
-          <ErrorState
-            v-else-if="chatQuestsError"
-            :message="chatQuestsError"
-            @retry="fetchChatQuests()"
-          />
-          <EmptyState
-            v-else-if="chatQuests.length === 0"
-            :icon="Flame"
-            variant="dashed"
-            title="Заданий в чатах пока нет"
-            description="Пиши в Telegram-чатах сообщества — задания появятся автоматически."
-          />
-          <div
-            v-else
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <TaskCard
-              v-for="quest in chatQuests"
-              :key="quest.id"
-              :title="quest.title"
-              :description="quest.description"
-              :points="quest.pointsReward"
-              :progress="quest.currentCount"
-              :target="quest.targetCount"
-              :done="quest.completed"
-              :awarded="quest.completed"
-              :ends-at="quest.endsAt"
-              :icon="quest.questType === 'daily_streak' ? Flame : MessageCircle"
-              icon-tone="orange"
-              :progress-label="quest.questType === 'daily_streak'
-                ? `${quest.currentCount} / ${quest.targetCount} дней подряд`
-                : `${quest.currentCount} / ${quest.targetCount} сообщений`"
-              size="compact"
+          <TabsContent value="monthly" class="mt-6">
+            <div
+              v-if="challengesLoading && !challengesData"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <TaskCardSkeleton v-for="i in 3" :key="i" />
+            </div>
+            <EmptyState
+              v-else-if="challengeList.length === 0"
+              :icon="Trophy"
+              variant="dashed"
+              title="Ежемесячный челлендж появится 1-го числа"
             />
-          </div>
-        </template>
+            <div
+              v-else
+              class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              <TaskCard
+                v-for="c in challengeList"
+                :key="c.instanceId"
+                :title="c.title"
+                :description="c.description"
+                :points="c.rewardPoints"
+                :progress="c.progress"
+                :target="c.target"
+                :done="!!c.completedAt"
+                :awarded="c.awarded"
+                :ends-at="c.endsAt"
+                :icon="Trophy"
+                icon-tone="purple"
+                :has-achievement="!!c.achievementCode"
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="chats" class="mt-6">
+            <div
+              v-if="chatQuestsLoading"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              <TaskCardSkeleton v-for="i in 3" :key="i" />
+            </div>
+            <ErrorState
+              v-else-if="chatQuestsError"
+              :message="chatQuestsError"
+              @retry="fetchChatQuests()"
+            />
+            <EmptyState
+              v-else-if="chatQuests.length === 0"
+              :icon="Flame"
+              variant="dashed"
+              title="Заданий в чатах пока нет"
+              description="Пиши в Telegram-чатах сообщества — задания появятся автоматически."
+            />
+            <div
+              v-else
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              <TaskCard
+                v-for="quest in chatQuests"
+                :key="quest.id"
+                :title="quest.title"
+                :description="quest.description"
+                :points="quest.pointsReward"
+                :progress="quest.currentCount"
+                :target="quest.targetCount"
+                :done="quest.completed"
+                :awarded="quest.completed"
+                :ends-at="quest.endsAt"
+                :icon="quest.questType === 'daily_streak' ? Flame : MessageCircle"
+                icon-tone="orange"
+                :progress-label="quest.questType === 'daily_streak'
+                  ? `${quest.currentCount} / ${quest.targetCount} дней подряд`
+                  : `${quest.currentCount} / ${quest.targetCount} сообщений`"
+                size="compact"
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </TabsContent>
 
       <!-- ───────── ТАБ «История» ───────── -->
@@ -499,20 +535,39 @@ function loadMoreTransactions() {
         </p>
         <div class="grid gap-3 sm:grid-cols-2">
           <RouterLink
-            v-for="src in sources"
-            :key="src.label"
+            v-for="src in pointSources"
+            :key="src.reason"
             :to="src.to"
-            class="flex items-center gap-3 rounded-sm p-4 bg-card border border-border hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="flex items-center gap-3 rounded-sm p-4 bg-card border border-border hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]"
           >
-            <TintedIcon :icon="src.icon" :tone="src.tone" size="md" />
+            <TintedIcon
+              :icon="sourceVisuals[src.reason]?.icon ?? Star"
+              :tone="sourceVisuals[src.reason]?.tone ?? 'accent'"
+              size="md"
+            />
             <div class="flex-1 min-w-0">
               <div class="font-medium text-sm">
                 {{ src.label }}
               </div>
             </div>
-            <PointsBadge v-if="src.points > 0" :amount="src.points" />
-            <span v-else class="text-xs text-muted-foreground">
-              <CheckCircle class="h-3 w-3 inline" aria-hidden="true" /> разное
+            <PointsBadge :amount="src.points" />
+          </RouterLink>
+
+          <RouterLink
+            v-for="extra in extraSources"
+            :key="extra.label"
+            :to="extra.to"
+            class="flex items-center gap-3 rounded-sm p-4 bg-card border border-border hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]"
+          >
+            <TintedIcon :icon="extra.icon" :tone="extra.tone" size="md" />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm">
+                {{ extra.label }}
+              </div>
+            </div>
+            <span class="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <CheckCircle class="h-3 w-3" aria-hidden="true" />
+              разное
             </span>
           </RouterLink>
         </div>

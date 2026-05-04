@@ -16,42 +16,54 @@ const props = withDefaults(defineProps<{
   // Прогресс
   progress?: number
   target?: number
-  progressLabel?: string // кастомный текст слева от прогресса (напр. «3 / 7 дней подряд»)
+  /** Кастомный текст в строке прогресса вместо «N / M» (напр. «3 / 7 дней подряд»). */
+  progressLabel?: string
   // Состояния
-  done?: boolean // выполнено (по факту)
-  awarded?: boolean // награда зачислена
-  // Иконка
+  /** Цель достигнута. */
+  done?: boolean
+  /** Награда зачислена (для челленджей: completed != awarded). Подразумевает done. */
+  awarded?: boolean
+  // Иконка-аватар
   icon?: Component
   iconTone?: IconTone
-  // Дедлайн
+  /** Дедлайн — показывается, пока задача не done. */
   endsAt?: string
-  // Доп. бейдж сверху над прогрессом (для дейликов: tier)
+  /** Бейдж типа задачи (напр. tier дейлика). Не заменяет счётчик прогресса. */
   pillLabel?: string
-  pillClasses?: string
-  // Маркер «+ ачивка» (для челленджей)
+  pillTone?: IconTone
+  /** Маркер «+ ачивка» (для челленджей с achievementCode). */
   hasAchievement?: boolean
-  // Навигация
+  /** Если задан — карточка становится <RouterLink>. */
   to?: RouteLocationRaw
-  // Стиль
-  variant?: 'card' | 'row'
   size?: 'compact' | 'normal'
-  showDoneStrike?: boolean // зачёркивать заголовок при done (для action-карточек)
+  /** Зачёркивать заголовок при done (action-карточки в духе todo-листа). */
+  showDoneStrike?: boolean
 }>(), {
   done: false,
   awarded: false,
   iconTone: 'orange',
-  variant: 'card',
+  pillTone: 'accent',
   size: 'normal',
   hasAchievement: false,
   showDoneStrike: false,
 })
 
-const showProgressBlock = computed(() => typeof props.progress === 'number' && typeof props.target === 'number' && props.target > 0)
+const showProgressBlock = computed(() =>
+  typeof props.progress === 'number' && typeof props.target === 'number' && props.target > 0,
+)
 
 const completionLabel = computed(() => {
   if (!props.done && !props.awarded)
     return null
   return props.awarded ? 'Награда зачислена' : 'Выполнено'
+})
+
+const counterLabel = computed(() => {
+  if (props.progressLabel)
+    return props.progressLabel
+  if (typeof props.progress === 'number' && typeof props.target === 'number')
+    return `${props.progress} / ${props.target}`
+  return ''
 })
 
 const tagClass = computed(() => {
@@ -68,6 +80,17 @@ const progressState = computed(() => {
   if (props.done)
     return 'done' as const
   return 'active' as const
+})
+
+const pillToneClass = computed(() => {
+  switch (props.pillTone) {
+    case 'orange': return 'bg-orange-500/10 text-orange-500'
+    case 'green': return 'bg-green-500/10 text-green-500'
+    case 'blue': return 'bg-blue-500/10 text-blue-500'
+    case 'yellow': return 'bg-yellow-500/10 text-yellow-500'
+    case 'purple': return 'bg-purple-500/10 text-purple-500'
+    default: return 'bg-accent/10 text-accent'
+  }
 })
 
 const Wrapper = computed(() => props.to ? 'router-link' : 'div')
@@ -115,27 +138,29 @@ const Wrapper = computed(() => props.to ? 'router-link' : 'div')
     </div>
 
     <div v-if="showProgressBlock" class="mt-4">
-      <div class="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-        <span
-          v-if="pillLabel"
-          class="px-1.5 py-0.5 rounded text-[10px] font-medium"
-          :class="pillClasses"
-        >
-          {{ pillLabel }}
-        </span>
-        <span v-else>
-          {{ progressLabel ?? `${progress} / ${target}` }}
-        </span>
+      <div class="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-1.5">
+        <div class="flex items-center gap-2 min-w-0">
+          <span
+            v-if="pillLabel"
+            class="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
+            :class="pillToneClass"
+          >
+            {{ pillLabel }}
+          </span>
+          <span
+            v-if="counterLabel"
+            class="truncate"
+          >
+            {{ counterLabel }}
+          </span>
+        </div>
         <span
           v-if="completionLabel"
-          class="font-medium flex items-center gap-1"
+          class="font-medium flex items-center gap-1 shrink-0"
           :class="awarded ? 'text-yellow-500' : 'text-green-500'"
         >
           <CheckCircle class="h-3 w-3" aria-hidden="true" />
           {{ completionLabel }}
-        </span>
-        <span v-else-if="!pillLabel">
-          {{ progressLabel ? `${progress} / ${target}` : `${Math.min(100, Math.round(((progress ?? 0) / Math.max(target ?? 1, 1)) * 100))}%` }}
         </span>
       </div>
       <ProgressBar
@@ -159,7 +184,5 @@ const Wrapper = computed(() => props.to ? 'router-link' : 'div')
         + ачивка
       </span>
     </div>
-
-    <slot name="footer" />
   </component>
 </template>

@@ -162,7 +162,7 @@ onMounted(() => {
           type="button"
           role="tab"
           :aria-selected="activeCategory === cat.key"
-          class="px-3 py-2 rounded-full text-sm font-medium transition-colors min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="px-4 py-2 rounded-full text-sm font-medium transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           :class="activeCategory === cat.key
             ? 'bg-primary text-primary-foreground'
             : 'bg-card border border-border text-muted-foreground hover:text-foreground'"
