@@ -97,6 +97,46 @@ func (h *MembersHandler) GetById(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+// SearchPublic — публичный аналог Search для /api/members без авторизации.
+// Зануляет TelegramID у каждого участника, чтобы PII не утекало.
+func (h *MembersHandler) SearchPublic(c *fiber.Ctx) error {
+	req := new(SearchMembersRequest)
+	if err := c.QueryParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
+	}
+
+	filter := make(repository.SearchFilter)
+
+	if req.Username != nil {
+		filter["username ILIKE ?"] = "%" + *req.Username + "%"
+	}
+
+	if len(req.Roles) > 0 {
+		filter["EXISTS (SELECT 1 FROM member_roles WHERE member_id = members.id AND role IN ?)"] = req.Roles
+	}
+
+	var finalFilter *repository.SearchFilter
+	if len(filter) > 0 {
+		finalFilter = &filter
+	} else {
+		finalFilter = nil
+	}
+
+	result, err := h.svc.Search(req.Limit, req.Offset, finalFilter, nil)
+	if err != nil {
+		log.Printf("Members public search error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска участников"})
+	}
+
+	if result != nil {
+		for i := range result.Items {
+			sanitizePublicMember(&result.Items[i])
+		}
+	}
+
+	return c.JSON(result)
+}
+
 // Реализуем все необходимые методы напрямую
 func (h *MembersHandler) Create(c *fiber.Ctx) error {
 	request := new(models.Member)
@@ -341,15 +381,22 @@ func (h *MembersHandler) GetPublicProfile(c *fiber.Ctx) error {
 
 	points, _ := h.pointsSvc.GetBalance(member.Id)
 
+	mentor, mentorErr := h.svc.GetMentor(member.Id)
+
+	// Прячем telegramID, прежде чем класть member в ответ: эндпоинт публичный
+	// для любого члена платформы. Делается уже после GetEffectiveTier и
+	// GetMentor, потому что они принимают member.TelegramID.
+	sanitizePublicMember(member)
+
 	result := fiber.Map{
 		"member":   member,
 		"points":   points,
 		"isMentor": false,
 	}
 
-	mentor, err := h.svc.GetMentor(member.Id)
-	if err == nil && mentor != nil {
+	if mentorErr == nil && mentor != nil {
 		mentor.SubscriptionTier = member.SubscriptionTier
+		sanitizePublicMentor(mentor)
 		result["isMentor"] = true
 		result["mentor"] = mentor
 	}

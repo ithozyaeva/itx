@@ -2,9 +2,7 @@ package handler
 
 import (
 	"crypto/subtle"
-	"encoding/base64"
 	"log"
-	"strconv"
 
 	"ithozyeva/config"
 	"ithozyeva/internal/bot"
@@ -82,57 +80,36 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 	})
 }
 
+// RefreshToken продлевает срок действия текущего токена. Принимает токен
+// ТОЛЬКО из заголовка X-Telegram-User-Token: знание Telegram-ID не должно
+// давать доступ к чужой сессии.
 func (h *TelegramAuthHandler) RefreshToken(c *fiber.Ctx) error {
-	var req RefreshTokenRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
+	headerToken := c.Get("X-Telegram-User-Token")
+	if headerToken == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
 		})
 	}
 
-	if req.Token == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Token is required",
-		})
-	}
-
-	decodedToken, err := base64.StdEncoding.DecodeString(req.Token)
+	authToken, user, err := h.authService.GetByToken(headerToken)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid token",
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
 		})
 	}
 
-	decodedString := string(decodedToken)
-
-	tgId, err := strconv.ParseInt(decodedString, 10, 64)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid token format",
+	// Истёкший токен нельзя продлевать — иначе массовая инвалидация (через
+	// сдвиг expired_at в прошлое) не вышибет уже скомпрометированные сессии.
+	if utils.CheckExpirationDate(authToken.ExpiredAt) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Token expired",
 		})
 	}
 
-	existedToken, err := h.authService.GetTokenByTelegramID(tgId)
-
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid token",
-		})
-	}
-
-	existedToken, err = h.authService.CreateOrUpdateToken(tgId, existedToken.Token)
-
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid token",
-		})
-	}
-
-	user, err := h.authService.GetByTelegramID(tgId)
-
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid token",
+	if _, err := h.authService.CreateOrUpdateToken(authToken.TelegramID, authToken.Token); err != nil {
+		log.Printf("refresh: failed to extend token for tg_id=%d: %v", authToken.TelegramID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to refresh token",
 		})
 	}
 
@@ -142,18 +119,18 @@ func (h *TelegramAuthHandler) RefreshToken(c *fiber.Ctx) error {
 	// следующего вызова /me.
 	user.SubscriptionTier = h.memberService.GetEffectiveTier(user.TelegramID)
 
-	c.Response().Header.Add("X-Telegram-User-Token", existedToken.Token)
+	c.Response().Header.Add("X-Telegram-User-Token", authToken.Token)
 
 	if mentor, err := h.memberService.GetMentor(user.Id); err == nil {
 		mentor.SubscriptionTier = user.SubscriptionTier
 		return c.JSON(fiber.Map{
-			"token": existedToken.Token,
+			"token": authToken.Token,
 			"user":  mentor,
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"token": existedToken.Token,
+		"token": authToken.Token,
 		"user":  user,
 	})
 }

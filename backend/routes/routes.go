@@ -49,7 +49,7 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	auth.Post("/telegram-from-bot", telegramAuthHandler.HandleBotMessage)
 
 	mentorHandler := handler.NewMentorHandler()
-	api.Get("/mentors", mentorHandler.GetAllWithRelations)
+	api.Get("/mentors", mentorHandler.GetAllWithRelationsPublic)
 
 	// Маршруты для профессиональных тегов
 	profTagHandler := handler.NewProfTagsHandler()
@@ -57,7 +57,7 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 
 	// Маршруты для участников
 	memberHandler := handler.NewMembersHandler()
-	api.Get("/members", memberHandler.Search)
+	api.Get("/members", memberHandler.SearchPublic)
 
 	// Маршруты для отзывов на услуги
 	reviewOnServiceHandler := handler.NewReviewOnServiceHandler()
@@ -333,7 +333,7 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	// Действия с менторами (написать отзыв, контакт) требуют подписки.
 	mentorsHandler := handler.NewMentorHandler()
 	mentors := protected.Group("/mentors")
-	mentors.Get("/:id", mentorsHandler.GetById)
+	mentors.Get("/:id", mentorsHandler.GetByIdPublic)
 
 	// Публичная карточка участника — открыта всем авторизованным. Юзер,
 	// перешедший по ссылке /members/:id из /whois в боте, не должен
