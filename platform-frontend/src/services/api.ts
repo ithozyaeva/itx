@@ -89,6 +89,15 @@ export const apiClient = ky.create({
           return fetch(newRequest)
         }
         catch (e) {
+          // Refresh не помог — токен в localStorage не подходит ни одному
+          // живому token в БД (например, после массовой инвалидации в #325
+          // или просто протухший после 30 дней). Чистим оба ключа: иначе
+          // App.vue при следующем заходе снова видит tg_token, снова дёргает
+          // /me → 401 → редирект → бесконечный цикл «платформа на полсекунды
+          // → лендос». Лендинг тоже сразу увидит «не залогинен» и покажет
+          // TelegramAuth вместо «Перейти в платформу».
+          localStorageToken.value = null
+          localStorageUser.value = null
           handleError(e)
         }
       }
