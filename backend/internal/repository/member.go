@@ -114,16 +114,22 @@ func (r *MemberRepository) Update(member *models.Member) (*models.Member, error)
 }
 
 func (r *MemberRepository) GetTodayBirthdays() ([]string, error) {
+	// Сравниваем по МСК-дате, а не по UTC: бизнес живёт в Москве,
+	// а DSN устанавливает session TZ='UTC'. Раньше SQL использовал
+	// CURRENT_DATE (UTC) — для пользователя с днём рождения 1 января
+	// в 00:00–03:00 MSK 1 января UTC ещё показывал 31 декабря, и поздравление
+	// проскакивало. Plain conversion: AT TIME ZONE сначала в UTC (если
+	// колонка timestamp without time zone, считается UTC), потом в Moscow.
 	query := `
-		SELECT 
+		SELECT
 			username
 		FROM members
 		WHERE
 			role = ?
 			AND
-    		DATE_PART('day', birthday) = date_part('day', CURRENT_DATE)
+			DATE_PART('day', birthday) = DATE_PART('day', (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date)
 			AND
-    		DATE_PART('month', birthday) = date_part('month', CURRENT_DATE)
+			DATE_PART('month', birthday) = DATE_PART('month', (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date)
 	`
 
 	rows, err := database.DB.Raw(query, models.MemberRoleSubscriber).Rows()

@@ -701,10 +701,17 @@ func (b *TelegramBot) SendDirectMessage(chatID int64, text string) {
 }
 
 func (b *TelegramBot) startBirthdayChecker() {
+	// Шедулим тикер по МСК-времени, не по локальному. Раньше использовали
+	// now.Location() — на NL-контейнере это UTC, и поздравления уходили
+	// в 9:00 UTC = 12:00 MSK. SQL тоже сравнивал по UTC-дате (см.
+	// repository/member.go GetTodayBirthdays), и для пользователей с
+	// днём рождения 1 января поздравление могло уйти на «не тот» календарный
+	// день. Теперь и шедулер, и SQL живут в МСК.
+	loc := utils.MSKLocation()
 	for {
-		now := time.Now()
-		next := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, now.Location())
-		if now.After(next) {
+		now := time.Now().In(loc)
+		next := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, loc)
+		if !now.Before(next) {
 			next = next.Add(24 * time.Hour)
 		}
 		time.Sleep(time.Until(next))
