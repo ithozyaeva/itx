@@ -345,11 +345,28 @@ func (r *SubscriptionRepository) CountAllUsers() (int64, error) {
 // при этом нет активной записи в subscription_user_chat_access для chatID.
 // Используется для рассылки новых чат-доступов, когда чат только что
 // привязали к тиру.
+//
+// Anchor-чаты исключаются: их роль — определять тир, а не выдавать access.
+// Симметрично с GetChatsForTierLevel; без skip'а после привязки anchor-чата
+// к тиру шёл бы массовый «новый чат» спам в ЛС всем eligible.
 func (r *SubscriptionRepository) GetEligibleUsersWithoutAccessForChat(
 	chatID int64, tierLevel int,
 ) ([]models.SubscriptionUser, error) {
-	var users []models.SubscriptionUser
+	var anchor bool
 	err := r.db.
+		Table("subscription_chats").
+		Select("anchor_for_tier_id IS NOT NULL").
+		Where("id = ?", chatID).
+		Scan(&anchor).Error
+	if err != nil {
+		return nil, err
+	}
+	if anchor {
+		return nil, nil
+	}
+
+	var users []models.SubscriptionUser
+	err = r.db.
 		Table("subscription_users AS su").
 		Select("su.*").
 		Joins(`JOIN subscription_tiers st ON st.id = COALESCE(su.manual_tier_id, su.resolved_tier_id)`).

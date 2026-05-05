@@ -42,72 +42,142 @@ func NewSubscriptionService(redisClient *redis.Client) *SubscriptionService {
 	}
 }
 
+// MemberCheckFunc — Telegram getChatMember с распространением ошибки.
+// При (false, error) ResolveTierID не понижает resolved_tier пользователя:
+// иначе при rate-limit или таймауте Telegram юзер «терял» бы тир и при
+// SUBSCRIPTION_AUTO_KICK_ENABLED=true получал бы ложный кик из content-чатов.
+type MemberCheckFunc func(chatID, userID int64) (bool, error)
+
+// SubscriptionContext — снэпшот anchor-чатов и тиров, разделяемый между
+// per-user итерациями PeriodicCheck/DryRunPeriodicCheck. Anchor-чаты и
+// тиры меняются раз в недели; читать их из БД на каждого юзера было
+// чистой воды лишний трафик NL→РФ (250+ юзеров × несколько SELECT).
+type SubscriptionContext struct {
+	AnchorChatsByTier map[uint][]int64 // tierID -> anchor chat IDs
+	AnchorChatIDs     map[int64]bool   // set всех anchor chat IDs
+	TiersDesc         []models.SubscriptionTier
+}
+
+// BuildContext — строит SubscriptionContext одним проходом по БД.
+// Используется PeriodicCheck/DryRunPeriodicCheck до loop'а, и единичными
+// точками входа (CheckAndSyncUser/ResolveTierID) — для них накладные
+// расходы те же, что были до фикса.
+func (s *SubscriptionService) BuildContext() (*SubscriptionContext, error) {
+	anchors, err := s.repo.GetAnchorChats()
+	if err != nil {
+		return nil, fmt.Errorf("get anchor chats: %w", err)
+	}
+	tiers, err := s.repo.GetAllTiersDesc()
+	if err != nil {
+		return nil, fmt.Errorf("get tiers desc: %w", err)
+	}
+
+	byTier := make(map[uint][]int64)
+	ids := make(map[int64]bool, len(anchors))
+	for _, c := range anchors {
+		if c.AnchorForTierID != nil {
+			byTier[*c.AnchorForTierID] = append(byTier[*c.AnchorForTierID], c.ID)
+		}
+		ids[c.ID] = true
+	}
+	return &SubscriptionContext{
+		AnchorChatsByTier: byTier,
+		AnchorChatIDs:     ids,
+		TiersDesc:         tiers,
+	}, nil
+}
+
 // IsMember checks if a user is a member of a chat, with Redis caching.
 // botCheckFunc should call the Telegram Bot API getChatMember.
-func (s *SubscriptionService) IsMember(chatID int64, userID int64, botCheckFunc func(chatID, userID int64) bool) bool {
+//
+// При ошибке botCheckFunc (rate-limit, таймаут, network) возвращаем
+// (false, err) и НЕ кэшируем — иначе на 5 минут зависал бы false-позитив
+// и юзер на следующих проходах получил бы ложный кик из content-чатов.
+//
+// При s.redis == nil (или временно недоступен) кэширование пропускается,
+// логика fallback'ится на прямой вызов Telegram. Удобно для unit-тестов и
+// graceful degradation в проде.
+func (s *SubscriptionService) IsMember(chatID int64, userID int64, botCheckFunc MemberCheckFunc) (bool, error) {
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("sub:member:%d:%d", chatID, userID)
 
-	cached, err := s.redis.Get(ctx, cacheKey).Result()
-	if err == nil {
-		return cached == "1"
+	if s.redis != nil {
+		cached, err := s.redis.Get(ctx, cacheKey).Result()
+		if err == nil {
+			return cached == "1", nil
+		}
 	}
 
-	result := botCheckFunc(chatID, userID)
-
-	val := "0"
-	if result {
-		val = "1"
+	result, callErr := botCheckFunc(chatID, userID)
+	if callErr != nil {
+		return false, callErr
 	}
-	s.redis.Set(ctx, cacheKey, val, membershipCacheTTL)
 
-	return result
+	if s.redis != nil {
+		val := "0"
+		if result {
+			val = "1"
+		}
+		s.redis.Set(ctx, cacheKey, val, membershipCacheTTL)
+	}
+
+	return result, nil
 }
 
 // InvalidateMemberCache removes the membership cache for a specific user/chat combo.
 func (s *SubscriptionService) InvalidateMemberCache(chatID int64, userID int64) {
+	if s.redis == nil {
+		return
+	}
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("sub:member:%d:%d", chatID, userID)
 	s.redis.Del(ctx, cacheKey)
 }
 
 // ResolveTierID checks anchor chats from highest tier downward, returns first match.
-func (s *SubscriptionService) ResolveTierID(userID int64, botCheckFunc func(chatID, userID int64) bool) *uint {
-	anchorChats, err := s.repo.GetAnchorChats()
+//
+// Внешняя точка входа: каждый раз строит свежий SubscriptionContext.
+// Используется единичными сценариями (/sub onboarding, anchor-join,
+// /suboverride). Для loop'а — resolveTierIDFromContext с переиспользованием
+// снэпшота.
+//
+// При ошибке IsMember (Telegram API упал/rate-limit) пропускает остаток
+// тиров и возвращает (nil, err). Каскадный fail-stop важен: если до
+// master-anchor мы не дозвонились, нельзя «понизить» юзера до beginner —
+// иначе получим ложный кик из master-only чатов.
+func (s *SubscriptionService) ResolveTierID(userID int64, botCheckFunc MemberCheckFunc) (*uint, error) {
+	ctx, err := s.BuildContext()
 	if err != nil {
-		log.Printf("Error getting anchor chats: %v", err)
-		return nil
+		return nil, err
 	}
+	return s.resolveTierIDFromContext(userID, botCheckFunc, ctx)
+}
 
-	tiersDesc, err := s.repo.GetAllTiersDesc()
-	if err != nil {
-		log.Printf("Error getting tiers: %v", err)
-		return nil
-	}
-
-	// tierID -> все чаты, которые для него anchor. Раньше был map[uint]int64
-	// и при дубликате anchor'ов на один тир последний перезаписывал первые,
-	// из-за чего часть юзеров из anchor-чата мимо «выживающего» теряли тир.
-	anchorMap := make(map[uint][]int64)
-	for _, c := range anchorChats {
-		if c.AnchorForTierID != nil {
-			anchorMap[*c.AnchorForTierID] = append(anchorMap[*c.AnchorForTierID], c.ID)
-		}
-	}
-
-	for _, tier := range tiersDesc {
-		chatIDs, ok := anchorMap[tier.ID]
+// resolveTierIDFromContext — без БД-обращений к anchor-чатам/тирам.
+// Использует переданный snapshot. Для PeriodicCheck/DryRunPeriodicCheck —
+// один SELECT на проход вместо одного на пользователя.
+func (s *SubscriptionService) resolveTierIDFromContext(
+	userID int64,
+	botCheckFunc MemberCheckFunc,
+	ctx *SubscriptionContext,
+) (*uint, error) {
+	for _, tier := range ctx.TiersDesc {
+		chatIDs, ok := ctx.AnchorChatsByTier[tier.ID]
 		if !ok {
 			continue
 		}
 		for _, chatID := range chatIDs {
-			if s.IsMember(chatID, userID, botCheckFunc) {
+			isMember, err := s.IsMember(chatID, userID, botCheckFunc)
+			if err != nil {
+				return nil, fmt.Errorf("check anchor chat %d: %w", chatID, err)
+			}
+			if isMember {
 				id := tier.ID
-				return &id
+				return &id, nil
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 type SyncResult struct {
@@ -136,18 +206,44 @@ type GrantedChat struct {
 // являются объектом доступа. В entitled они не попадают (по дизайну
 // GetChatsForTierLevel), и без явного skip каждый periodic-check
 // пытался бы их revoke'нуть.
+//
+// Внешняя точка входа: строит свой SubscriptionContext и грузит user
+// из БД. Используется онбордингом (/sub, anchor-join), /suboverride.
+// Для loop'а PeriodicCheck — checkAndSyncUserCtx с переиспользованием
+// снэпшота.
 func (s *SubscriptionService) CheckAndSyncUser(
 	userID int64,
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 	createInviteLink func(chatID int64) (string, error),
 	kickUser func(chatID, userID int64) bool,
 ) (*SyncResult, error) {
+	subCtx, err := s.BuildContext()
+	if err != nil {
+		return nil, err
+	}
 	user, err := s.repo.GetUser(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
+	return s.checkAndSyncUserCtx(user, botCheckFunc, createInviteLink, kickUser, subCtx)
+}
 
-	newTierID := s.ResolveTierID(userID, botCheckFunc)
+// checkAndSyncUserCtx — внутренняя версия. user уже загружен, ctx —
+// shared snapshot anchor/tiers. Принимает указатель на user, чтобы
+// in-place обновить ResolvedTierID после UpdateResolvedTier (как было
+// в публичной версии).
+func (s *SubscriptionService) checkAndSyncUserCtx(
+	user *models.SubscriptionUser,
+	botCheckFunc MemberCheckFunc,
+	createInviteLink func(chatID int64) (string, error),
+	kickUser func(chatID, userID int64) bool,
+	subCtx *SubscriptionContext,
+) (*SyncResult, error) {
+	userID := user.ID
+	newTierID, err := s.resolveTierIDFromContext(userID, botCheckFunc, subCtx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tier: %w", err)
+	}
 	oldTierID := user.ResolvedTierID
 
 	if !tierIDsEqual(newTierID, oldTierID) {
@@ -173,11 +269,6 @@ func (s *SubscriptionService) CheckAndSyncUser(
 	entitledIDs := make(map[int64]bool)
 	for _, c := range entitledChats {
 		entitledIDs[c.ID] = true
-	}
-
-	anchorIDs, err := s.anchorChatIDs()
-	if err != nil {
-		return nil, fmt.Errorf("get anchor ids: %w", err)
 	}
 
 	// Current active access
@@ -218,7 +309,7 @@ func (s *SubscriptionService) CheckAndSyncUser(
 		if entitledIDs[chatID] {
 			continue
 		}
-		if anchorIDs[chatID] {
+		if subCtx.AnchorChatIDs[chatID] {
 			continue
 		}
 		if !kickUser(chatID, userID) {
@@ -234,28 +325,12 @@ func (s *SubscriptionService) CheckAndSyncUser(
 	return result, nil
 }
 
-// anchorChatIDs возвращает set chat_id всех anchor-чатов. Используется
-// CheckAndSyncUser/DryRun/Sweep, чтобы не записывать и не revoke'ать
-// access на anchor — у них семантика «определитель тира», а не «объект
-// доступа».
-func (s *SubscriptionService) anchorChatIDs() (map[int64]bool, error) {
-	anchors, err := s.repo.GetAnchorChats()
-	if err != nil {
-		return nil, err
-	}
-	ids := make(map[int64]bool, len(anchors))
-	for _, c := range anchors {
-		ids[c.ID] = true
-	}
-	return ids, nil
-}
-
 // OnboardUser creates/updates user and syncs access.
 func (s *SubscriptionService) OnboardUser(
 	userID int64,
 	username *string,
 	fullName string,
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 	createInviteLink func(chatID int64) (string, error),
 	kickUser func(chatID, userID int64) bool,
 ) (*SyncResult, error) {
@@ -295,12 +370,19 @@ func (s *SubscriptionService) SyncContentLeave(userID int64, chatID int64) error
 }
 
 // SweepStats — счётчики однопроходного backfill-обхода реального членства.
+//
+// ChecksFailed — getChatMember-вызовы, которые упали (rate-limit, network,
+// 403 if-bot-removed). Полезно админу, чтобы оценить, насколько результат
+// sweep'а полный: при высоком ChecksFailed/ChecksPerformed следующий
+// daily-тикер скорее всего догонит, но если стабильно не нулевое — стоит
+// смотреть в логи, возможно бот лишён прав в чате.
 type SweepStats struct {
 	UsersScanned    int
 	UsersCreated    int
 	AccessGranted   int
 	AccessRevoked   int
 	ChecksPerformed int
+	ChecksFailed    int
 }
 
 // SweepRealMembership — однопроходный обход «кто реально сидит в наших
@@ -323,7 +405,7 @@ type SweepStats struct {
 // при каждом проходе. Membership в anchor читается через ResolveTierID
 // напрямую из Telegram, БД для этого не нужна.
 func (s *SubscriptionService) SweepRealMembership(
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 	rateDelay time.Duration,
 ) (*SweepStats, error) {
 	chats, err := s.repo.GetAllChats()
@@ -366,8 +448,17 @@ func (s *SubscriptionService) SweepRealMembership(
 		}
 
 		for _, chat := range contentChats {
-			isMember := botCheckFunc(chat.ID, uid)
+			isMember, err := botCheckFunc(chat.ID, uid)
 			stats.ChecksPerformed++
+			if err != nil {
+				// Telegram API упал/rate-limit — лучше пропустить пару (chat,user)
+				// на этом проходе, чем ошибочно revoke'нуть active access. Sweep
+				// — best-effort, разойдётся при следующем суточном тикере.
+				stats.ChecksFailed++
+				log.Printf("sweep: skip chat=%d user=%d: %v", chat.ID, uid, err)
+				time.Sleep(rateDelay)
+				continue
+			}
 
 			if isMember && !currentSet[chat.ID] {
 				if err := s.repo.GrantAccess(uid, chat.ID); err == nil {
@@ -401,16 +492,34 @@ type DryRunUserResult struct {
 // DryRunCheckUser — повторяет логику CheckAndSyncUser, но без записи в БД
 // и без вызовов createInviteLink/kickUser. Используется командой
 // /subkickdry, чтобы сначала посмотреть, кого бот удалил бы из чатов.
+//
+// Внешняя точка входа: строит свой SubscriptionContext и грузит user.
+// Для loop'а DryRunPeriodicCheck — dryRunCheckUserCtx.
 func (s *SubscriptionService) DryRunCheckUser(
 	userID int64,
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 ) (*DryRunUserResult, error) {
+	subCtx, err := s.BuildContext()
+	if err != nil {
+		return nil, err
+	}
 	user, err := s.repo.GetUser(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
+	return s.dryRunCheckUserCtx(user, botCheckFunc, subCtx)
+}
 
-	newTierID := s.ResolveTierID(userID, botCheckFunc)
+func (s *SubscriptionService) dryRunCheckUserCtx(
+	user *models.SubscriptionUser,
+	botCheckFunc MemberCheckFunc,
+	subCtx *SubscriptionContext,
+) (*DryRunUserResult, error) {
+	userID := user.ID
+	newTierID, err := s.resolveTierIDFromContext(userID, botCheckFunc, subCtx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tier: %w", err)
+	}
 
 	// EffectiveTierID учитывает manual override; если ручной — он же и итог.
 	var effective *uint
@@ -429,11 +538,6 @@ func (s *SubscriptionService) DryRunCheckUser(
 				entitled[c.ID] = true
 			}
 		}
-	}
-
-	anchorIDs, err := s.anchorChatIDs()
-	if err != nil {
-		return nil, fmt.Errorf("get anchor ids: %w", err)
 	}
 
 	currentAccess, _ := s.repo.GetActiveAccess(userID)
@@ -458,7 +562,7 @@ func (s *SubscriptionService) DryRunCheckUser(
 		if entitled[cid] {
 			continue
 		}
-		if anchorIDs[cid] {
+		if subCtx.AnchorChatIDs[cid] {
 			continue
 		}
 		res.WouldRevoke = append(res.WouldRevoke, cid)
@@ -471,17 +575,22 @@ func (s *SubscriptionService) DryRunCheckUser(
 // Используется /subkickdry для предварительного отчёта перед включением
 // SUBSCRIPTION_AUTO_KICK_ENABLED.
 func (s *SubscriptionService) DryRunPeriodicCheck(
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 	rateDelay time.Duration,
 ) ([]DryRunUserResult, error) {
+	subCtx, err := s.BuildContext()
+	if err != nil {
+		return nil, err
+	}
 	users, err := s.repo.GetAllActiveUsers()
 	if err != nil {
 		return nil, fmt.Errorf("get users: %w", err)
 	}
 
 	results := make([]DryRunUserResult, 0, len(users))
-	for _, u := range users {
-		r, err := s.DryRunCheckUser(u.ID, botCheckFunc)
+	for i := range users {
+		u := &users[i]
+		r, err := s.dryRunCheckUserCtx(u, botCheckFunc, subCtx)
 		if err != nil {
 			log.Printf("dry-run: user %d: %v", u.ID, err)
 			continue
@@ -492,6 +601,21 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 	return results, nil
 }
 
+// PeriodicReport — сводка по одному проходу PeriodicCheck.
+//
+// Changed — только юзеры с реальными grant/revoke (без шума «всё ок»).
+// Skipped — ID юзеров, для которых проход не удался (ошибка Telegram API
+// при resolve-tier и т.п.). Раньше эти случаи только логировались, и
+// сводка для админа выглядела как «изменений нет», хотя на самом деле
+// часть юзеров была пропущена молча. Теперь админ видит счётчик и
+// может решить, ждать следующего тикера или прогнать вручную.
+// UsersTotal — сколько активных юзеров вообще обошли (для контекста).
+type PeriodicReport struct {
+	Changed    []SyncResult
+	Skipped    []int64
+	UsersTotal int
+}
+
 // PeriodicCheck checks all active users and syncs their access.
 //
 // В отличие от интерактивных сценариев (/sub onboarding, anchor-join,
@@ -499,36 +623,52 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 // фоновой синк, и любой шум там воспринимается как спам. Возвращаем
 // сводку: вызывающий код (bot) шлёт её админу для ручной проверки.
 //
-// Юзеры с пустыми Granted и Revoked в результат не включаются, чтобы
+// Юзеры с пустыми Granted и Revoked в Changed не включаются, чтобы
 // сводка содержала только то, по чему действительно были действия.
+//
+// Anchor-чаты и тиры читаются из БД один раз до loop'а: на 250+ юзерах
+// это сокращает NL→РФ-трафик с ~3 SELECT/юзера до constant-2.
+//
+// Если Telegram API упал на anchor-проверке конкретного юзера, юзер
+// этим проходом пропускается (попадает в Skipped) — лучше отложить sync
+// на следующий тикер, чем ложно понизить тир и кикнуть из master-only
+// чатов на rate-limit'е.
 func (s *SubscriptionService) PeriodicCheck(
-	botCheckFunc func(chatID, userID int64) bool,
+	botCheckFunc MemberCheckFunc,
 	createInviteLink func(chatID int64) (string, error),
 	kickUser func(chatID, userID int64) bool,
 	rateDelay time.Duration,
-) []SyncResult {
+) PeriodicReport {
 	log.Println("Starting periodic subscription check")
+
+	subCtx, err := s.BuildContext()
+	if err != nil {
+		log.Printf("periodic: build context failed: %v", err)
+		return PeriodicReport{}
+	}
 
 	users, err := s.repo.GetAllActiveUsers()
 	if err != nil {
 		log.Printf("Error getting active users: %v", err)
-		return nil
+		return PeriodicReport{}
 	}
 
-	var changed []SyncResult
-	for _, user := range users {
-		result, err := s.CheckAndSyncUser(user.ID, botCheckFunc, createInviteLink, kickUser)
+	report := PeriodicReport{UsersTotal: len(users)}
+	for i := range users {
+		user := &users[i]
+		result, err := s.checkAndSyncUserCtx(user, botCheckFunc, createInviteLink, kickUser, subCtx)
 		if err != nil {
-			log.Printf("Error checking user %d: %v", user.ID, err)
+			log.Printf("periodic: skip user %d: %v", user.ID, err)
+			report.Skipped = append(report.Skipped, user.ID)
 		} else if len(result.Granted) > 0 || len(result.Revoked) > 0 {
 			log.Printf("User %d: granted=%d revoked=%d", user.ID, len(result.Granted), len(result.Revoked))
-			changed = append(changed, *result)
+			report.Changed = append(report.Changed, *result)
 		}
 		time.Sleep(rateDelay)
 	}
 
 	log.Println("Periodic subscription check complete")
-	return changed
+	return report
 }
 
 // --- Repo delegation methods ---

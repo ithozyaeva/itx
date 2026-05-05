@@ -527,8 +527,10 @@ func (b *TelegramBot) handleVotebanCommand(message *tgbotapi.Message) {
 		b.replyAndAutoDelete(message, "Нельзя начать голосование на администратора.")
 		return
 	}
-	if !b.isChatMember(message.Chat.ID, message.From.ID) {
+	if ok, _ := b.isChatMember(message.Chat.ID, message.From.ID); !ok {
 		// На случай, когда юзер вышел/был удалён, но успел отправить команду.
+		// Ошибку API трактуем как «не member» — fail-closed: лучше отказать в
+		// действии, чем впустить из-за rate-limit'а.
 		return
 	}
 
@@ -783,7 +785,7 @@ func (b *TelegramBot) handleVotebanCallback(callback *tgbotapi.CallbackQuery) {
 		b.answerCallbackQuery(callback.ID, "Голосование уже закрыто.")
 		return
 	}
-	if !b.isChatMember(vb.ChatID, callback.From.ID) {
+	if ok, _ := b.isChatMember(vb.ChatID, callback.From.ID); !ok {
 		b.answerCallbackQuery(callback.ID, "Голосовать могут только участники чата.")
 		return
 	}
