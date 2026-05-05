@@ -133,7 +133,13 @@ func (b *TelegramBot) isSubscriptionAdmin(userID int64) bool {
 // --- Telegram API helpers for subscription system ---
 
 // isChatMember checks if a user is in a specific chat via Telegram API.
-func (b *TelegramBot) isChatMember(chatID, userID int64) bool {
+//
+// Возвращает (bool, error). Ошибку API (rate-limit/таймаут/network)
+// пропускаем наверх отдельно от «честного not-member», чтобы вызывающий
+// код мог отличить «юзер вышел» от «не дозвонились» — это решает проблему
+// ложного понижения тира при rate-limit'е (кончалось reverse-кик'ом из
+// master-only чатов на следующем периодике).
+func (b *TelegramBot) isChatMember(chatID, userID int64) (bool, error) {
 	member, err := b.bot.GetChatMember(tgbotapi.GetChatMemberConfig{
 		ChatConfigWithUser: tgbotapi.ChatConfigWithUser{
 			ChatID: chatID,
@@ -142,9 +148,9 @@ func (b *TelegramBot) isChatMember(chatID, userID int64) bool {
 	})
 	if err != nil {
 		log.Printf("Failed to check membership: chat=%d user=%d: %v", chatID, userID, err)
-		return false
+		return false, err
 	}
-	return isActiveMemberStatus(member.Status)
+	return isActiveMemberStatus(member.Status), nil
 }
 
 // createOneTimeInviteLink creates a single-use invite link for a chat.
@@ -214,8 +220,8 @@ func (b *TelegramBot) kickFromChat(chatID, userID int64) bool {
 }
 
 // botCheckFunc returns a closure for the subscription service.
-func (b *TelegramBot) botCheckFunc() func(int64, int64) bool {
-	return func(chatID, userID int64) bool {
+func (b *TelegramBot) botCheckFunc() service.MemberCheckFunc {
+	return func(chatID, userID int64) (bool, error) {
 		return b.subscriptionService.IsMember(chatID, userID, b.isChatMember)
 	}
 }
@@ -223,7 +229,7 @@ func (b *TelegramBot) botCheckFunc() func(int64, int64) bool {
 // uncachedCheckFunc — прямой getChatMember без Redis-кэша. Нужен sweep-у
 // и dry-run, иначе после первого прохода они будут читать стейл-данные
 // до 5 минут (TTL membership-кэша).
-func (b *TelegramBot) uncachedCheckFunc() func(int64, int64) bool {
+func (b *TelegramBot) uncachedCheckFunc() service.MemberCheckFunc {
 	return b.isChatMember
 }
 
@@ -395,10 +401,14 @@ func (b *TelegramBot) handleMyGroupsCommand(message *tgbotapi.Message) {
 		if linkErr != nil {
 			log.Printf("mygroups: invite-link failed for chat %d: %v", chat.ID, linkErr)
 		}
+		// Здесь ✅-маркер декоративный (показываем «уже состоит»). При ошибке
+		// API трактуем как «не member»: пользователь увидит чат без галочки —
+		// безопаснее, чем показать неверное «вы уже там».
+		isMember, _ := b.subscriptionService.IsMember(chat.ID, userID, b.isChatMember)
 		items = append(items, chatListItem{
 			chat:     chat,
 			link:     link,
-			isMember: b.subscriptionService.IsMember(chat.ID, userID, b.isChatMember),
+			isMember: isMember,
 		})
 	}
 
