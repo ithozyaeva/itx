@@ -1,5 +1,17 @@
 /* UI Kit design tokens — extracted from itx-ui-kit */
 
+/* Fallback @font-face с подгонкой метрик под Inter Variable —
+   уменьшает FOUT-сдвиг (CLS) пока подгружается основной шрифт.
+   Метрики измерены утилитой fontpie для Arial → Inter. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.4%;
+  ascent-override: 90.20%;
+  descent-override: 22.48%;
+  line-gap-override: 0%;
+}
+
 :root {
   /* Colors */
   --color-total-black: #000;
@@ -28,7 +40,7 @@
 
   /* Fonts */
   --font-unbounded: 'Unbounded', 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
-  --font-inter: 'Inter Variable', 'Inter', sans-serif;
+  --font-inter: 'Inter Variable', 'Inter Fallback', 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
 
   /* Terminal accent */

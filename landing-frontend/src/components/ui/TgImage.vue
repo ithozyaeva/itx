@@ -27,6 +27,11 @@ function handleLoad(event: Event) {
     v-if="!isError"
     :src="imgSrc"
     :alt="`Аватар ${username}`"
+    width="160"
+    height="160"
+    decoding="async"
+    loading="lazy"
+    style="aspect-ratio: 1 / 1;"
     @load="handleLoad"
     @error="isError = true"
   >

@@ -68,6 +68,10 @@ onMounted(async () => {
             :src="avatar"
             alt="Mentor avatar"
             fetchpriority="high"
+            width="160"
+            height="160"
+            decoding="async"
+            style="aspect-ratio: 1 / 1;"
             @error="handleError"
             @load="handleLoad"
           >

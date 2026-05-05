@@ -5,6 +5,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import permissionDirective from './directives/permission'
 import { queryClient } from './plugins/vueQuery'
+import { initWebVitals } from './plugins/webVitals'
 import router from './router'
 import './assets/main.css'
 
@@ -17,3 +18,5 @@ app.use(VueQueryPlugin, { queryClient })
 app.directive('permission', permissionDirective)
 
 app.mount('#app')
+
+initWebVitals()

@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import App from './App.vue'
 import { queryClient } from './plugins/vueQuery'
+import { initWebVitals } from './plugins/webVitals'
 import router from './router'
 import './index.css'
 
@@ -11,3 +12,5 @@ app.use(createPinia())
 app.use(router)
 app.use(VueQueryPlugin, { queryClient })
 app.mount('#app')
+
+initWebVitals()

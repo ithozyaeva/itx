@@ -2,28 +2,9 @@ import type { RouteRecordRaw } from 'vue-router'
 import type { SubscriptionTierSlug } from '@/models/profile'
 import { createRouter, createWebHistory } from 'vue-router'
 import { hasMinTier, isUserSubscribed, useUserLevel } from '@/composables/useUser'
-import Achievements from '@/pages/Achievements.vue'
-import AIMaterialDetail from '@/pages/AIMaterialDetail.vue'
-import AIMaterials from '@/pages/AIMaterials.vue'
-import AutoApplyBot from '@/pages/AutoApplyBot.vue'
-import Casino from '@/pages/Casino.vue'
-
+// Главные точки входа — Dashboard и /me — оставлены статически,
+// чтобы первый paint не ждал лишний chunk. Остальные страницы lazy.
 import Dashboard from '@/pages/Dashboard.vue'
-import Events from '@/pages/Events.vue'
-import Kudos from '@/pages/Kudos.vue'
-import Leaderboard from '@/pages/Leaderboard.vue'
-import Marketplace from '@/pages/Marketplace.vue'
-import MemberProfile from '@/pages/MemberProfile.vue'
-import MentorProfile from '@/pages/MentorProfile.vue'
-import Mentors from '@/pages/Mentors.vue'
-import MyReviews from '@/pages/MyReviews.vue'
-import MyStats from '@/pages/MyStats.vue'
-
-import Progress from '@/pages/Progress.vue'
-import Raffles from '@/pages/Raffles.vue'
-import ReferalLinks from '@/pages/ReferalLinks.vue'
-import Resumes from '@/pages/Resumes.vue'
-import TaskExchange from '@/pages/TaskExchange.vue'
 import Home from '@/pages/User.vue'
 
 declare module 'vue-router' {
@@ -45,32 +26,32 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Dashboard, name: 'dashboard' },
   { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
   { path: '/tariffs', name: 'tariffs', component: () => import('@/pages/Tariffs.vue'), meta: { breadcrumb: [{ label: 'Тарифы' }] } },
-  { path: '/events', component: Events, name: 'events', meta: { breadcrumb: [{ label: 'События' }], requiresSubscription: true } },
+  { path: '/events', component: () => import('@/pages/Events.vue'), name: 'events', meta: { breadcrumb: [{ label: 'События' }], requiresSubscription: true } },
   { path: '/content', redirect: '/events?tab=content' },
-  { path: '/members/:id', component: MemberProfile, name: 'memberProfile', meta: { breadcrumb: [{ label: 'Рейтинг', to: '/leaderboard' }, { label: 'Профиль участника' }] } },
-  { path: '/mentors', component: Mentors, name: 'mentors', meta: { breadcrumb: [{ label: 'Менторы' }] } },
-  { path: '/mentors/:id', component: MentorProfile, name: 'mentorProfile', meta: { breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
-  { path: '/referals', component: ReferalLinks, name: 'referals', meta: { breadcrumb: [{ label: 'Рефералы' }], requiresSubscription: true } },
-  { path: '/resumes', component: Resumes, name: 'resumes', meta: { breadcrumb: [{ label: 'Резюме' }], requiresSubscription: true } },
-  { path: '/my-reviews', component: MyReviews, name: 'myReviews', meta: { breadcrumb: [{ label: 'Мои отзывы' }] } },
-  { path: '/progress', component: Progress, name: 'progress', meta: { breadcrumb: [{ label: 'Прогресс' }], requiresSubscription: true } },
+  { path: '/members/:id', component: () => import('@/pages/MemberProfile.vue'), name: 'memberProfile', meta: { breadcrumb: [{ label: 'Рейтинг', to: '/leaderboard' }, { label: 'Профиль участника' }] } },
+  { path: '/mentors', component: () => import('@/pages/Mentors.vue'), name: 'mentors', meta: { breadcrumb: [{ label: 'Менторы' }] } },
+  { path: '/mentors/:id', component: () => import('@/pages/MentorProfile.vue'), name: 'mentorProfile', meta: { breadcrumb: [{ label: 'Менторы', to: '/mentors' }, { label: 'Профиль ментора' }] } },
+  { path: '/referals', component: () => import('@/pages/ReferalLinks.vue'), name: 'referals', meta: { breadcrumb: [{ label: 'Рефералы' }], requiresSubscription: true } },
+  { path: '/resumes', component: () => import('@/pages/Resumes.vue'), name: 'resumes', meta: { breadcrumb: [{ label: 'Резюме' }], requiresSubscription: true } },
+  { path: '/my-reviews', component: () => import('@/pages/MyReviews.vue'), name: 'myReviews', meta: { breadcrumb: [{ label: 'Мои отзывы' }] } },
+  { path: '/progress', component: () => import('@/pages/Progress.vue'), name: 'progress', meta: { breadcrumb: [{ label: 'Прогресс' }], requiresSubscription: true } },
   // Старые URL дейликов/квестов/челленджей/баллов сохраняем как редиректы,
   // чтобы не ломать ссылки из бота, e-mail-а и закладок пользователей.
   { path: '/points', redirect: '/progress?tab=history' },
   { path: '/dailies', redirect: '/progress?tab=today' },
   { path: '/quests', redirect: '/progress?tab=period&kind=chats' },
   { path: '/challenges', redirect: '/progress?tab=period' },
-  { path: '/leaderboard', component: Leaderboard, name: 'leaderboard', meta: { breadcrumb: [{ label: 'Рейтинг' }], requiresSubscription: true } },
-  { path: '/achievements', component: Achievements, name: 'achievements', meta: { breadcrumb: [{ label: 'Достижения' }], requiresSubscription: true } },
-  { path: '/marketplace', component: Marketplace, name: 'marketplace', meta: { breadcrumb: [{ label: 'Барахолка' }], requiresSubscription: true } },
-  { path: '/ai-materials', component: AIMaterials, name: 'aiMaterials', meta: { breadcrumb: [{ label: 'AI-материалы' }], requiresSubscription: true } },
-  { path: '/ai-materials/:id', component: AIMaterialDetail, name: 'aiMaterialDetail', meta: { breadcrumb: [{ label: 'AI-материалы', to: '/ai-materials' }, { label: 'Материал' }], requiresSubscription: true } },
-  { path: '/tasks', component: TaskExchange, name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }], requiresSubscription: true } },
-  { path: '/auto-apply', component: AutoApplyBot, name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }], requiresSubscription: true } },
-  { path: '/kudos', component: Kudos, name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }], requiresSubscription: true } },
-  { path: '/raffles', component: Raffles, name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }], requiresSubscription: true } },
-  { path: '/minigames', component: Casino, name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }], requiresSubscription: true } },
-  { path: '/my-stats', component: MyStats, name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }], requiresSubscription: true } },
+  { path: '/leaderboard', component: () => import('@/pages/Leaderboard.vue'), name: 'leaderboard', meta: { breadcrumb: [{ label: 'Рейтинг' }], requiresSubscription: true } },
+  { path: '/achievements', component: () => import('@/pages/Achievements.vue'), name: 'achievements', meta: { breadcrumb: [{ label: 'Достижения' }], requiresSubscription: true } },
+  { path: '/marketplace', component: () => import('@/pages/Marketplace.vue'), name: 'marketplace', meta: { breadcrumb: [{ label: 'Барахолка' }], requiresSubscription: true } },
+  { path: '/ai-materials', component: () => import('@/pages/AIMaterials.vue'), name: 'aiMaterials', meta: { breadcrumb: [{ label: 'AI-материалы' }], requiresSubscription: true } },
+  { path: '/ai-materials/:id', component: () => import('@/pages/AIMaterialDetail.vue'), name: 'aiMaterialDetail', meta: { breadcrumb: [{ label: 'AI-материалы', to: '/ai-materials' }, { label: 'Материал' }], requiresSubscription: true } },
+  { path: '/tasks', component: () => import('@/pages/TaskExchange.vue'), name: 'taskExchange', meta: { breadcrumb: [{ label: 'Биржа заданий' }], requiresSubscription: true } },
+  { path: '/auto-apply', component: () => import('@/pages/AutoApplyBot.vue'), name: 'autoApplyBot', meta: { breadcrumb: [{ label: 'Автоотклики' }], requiresSubscription: true } },
+  { path: '/kudos', component: () => import('@/pages/Kudos.vue'), name: 'kudos', meta: { breadcrumb: [{ label: 'Благодарности' }], requiresSubscription: true } },
+  { path: '/raffles', component: () => import('@/pages/Raffles.vue'), name: 'raffles', meta: { breadcrumb: [{ label: 'Розыгрыши' }], requiresSubscription: true } },
+  { path: '/minigames', component: () => import('@/pages/Casino.vue'), name: 'minigames', meta: { breadcrumb: [{ label: 'Мини-игры' }], requiresSubscription: true } },
+  { path: '/my-stats', component: () => import('@/pages/MyStats.vue'), name: 'myStats', meta: { breadcrumb: [{ label: 'Моя статистика' }], requiresSubscription: true } },
   { path: '/notifications', redirect: '/me' },
   { path: '/faq', name: 'faq', component: () => import('@/pages/FAQ.vue'), meta: { breadcrumb: [{ label: 'FAQ' }] } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
