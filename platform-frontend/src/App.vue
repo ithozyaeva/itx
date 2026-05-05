@@ -5,6 +5,7 @@ import NpsWidget from '@/components/NpsWidget.vue'
 import { Toaster } from '@/components/ui/toast'
 import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE, stopSSE } from '@/composables/useSSE'
+import { getTelegramWebApp, initTelegramWebApp, isMiniApp } from '@/composables/useTelegramWebApp'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { startProactiveRefresh, stopProactiveRefresh } from '@/services/api'
@@ -18,6 +19,7 @@ const { start: startOnboarding } = useOnboarding()
 const tg_user = useUser()
 const tg_token = useToken()
 const isLoading = ref(false)
+const insideMiniApp = isMiniApp()
 // sessionExpired — взводим, когда у юзера в localStorage был tg_token, но
 // /me + refresh вернули 401 (токен инвалидирован — например, массовой
 // миграцией в #325, либо протух). Раньше в этом случае молча редиректили на
@@ -27,7 +29,35 @@ const isLoading = ref(false)
 // с кнопкой в бот.
 const sessionExpired = ref(false)
 const botUrl = `https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_NAME}?start=from_site`
-onBeforeMount(() => {
+// loginViaMiniApp — забираем initData у Telegram-клиента и обмениваем его
+// на tg_token. Бэк валидирует HMAC, поэтому подделать ничего нельзя.
+// Используется и при первом заходе из чата с ботом, и как fallback при
+// протухшем токене (вместо экрана «Сессия истекла»).
+async function loginViaMiniApp(): Promise<boolean> {
+  const tg = getTelegramWebApp()
+  if (!tg || !tg.initData)
+    return false
+  try {
+    const { user, token: authToken } = await authService.authenticateWebApp(tg.initData)
+    tg_user.value = { ...tg_user.value, ...user }
+    tg_token.value = authToken
+    startSSE()
+    startProactiveRefresh()
+    profileService.getMe().catch(() => {})
+    setTimeout(startOnboarding, 1500)
+    return true
+  }
+  catch (error) {
+    stopSSE()
+    stopProactiveRefresh()
+    tg_user.value = null
+    tg_token.value = null
+    handleError(error)
+    return false
+  }
+}
+
+onBeforeMount(async () => {
   // Инициализация темы при запуске приложения
   const savedTheme = localStorage.getItem('theme')
 
@@ -37,6 +67,11 @@ onBeforeMount(() => {
   else {
     document.documentElement.classList.remove('dark')
   }
+
+  // Внутри Telegram сразу даём знать клиенту, что мы готовы (иначе чёрный
+  // экран до первой отрисовки) и разворачиваемся на полный viewport.
+  if (insideMiniApp)
+    initTelegramWebApp()
 
   const urlParams = new URLSearchParams(window.location.search)
   const urlToken = urlParams.get('token')
@@ -83,14 +118,29 @@ onBeforeMount(() => {
     // чтобы не мигать голым Layout без router-view.
     if (!tg_user.value)
       isLoading.value = true
-    profileService.getMe().finally(() => {
-      isLoading.value = false
+    profileService.getMe().finally(async () => {
       // Если /me + refresh не помогли — apiClient уже почистил tg_token.
-      // Показываем экран «сессия истекла» с кнопкой в бот, а не редирект:
-      // юзер видит причину и может перелогиниться одним кликом.
-      if (!tg_user.value)
+      // Внутри miniapp молча перелогиниваемся через initData; снаружи
+      // (десктоп-браузер) — показываем экран «сессия истекла» с кнопкой
+      // в бот, чтобы юзер видел причину и мог перелогиниться одним кликом.
+      if (!tg_user.value) {
+        if (insideMiniApp && await loginViaMiniApp()) {
+          isLoading.value = false
+          return
+        }
         sessionExpired.value = true
+      }
+      isLoading.value = false
     })
+  }
+  else if (insideMiniApp) {
+    // Свежий заход через menu button бота: токена ещё нет, но Telegram уже
+    // подсунул нам подписанный initData — обмениваем его на сессию.
+    isLoading.value = true
+    const ok = await loginViaMiniApp()
+    isLoading.value = false
+    if (!ok)
+      sessionExpired.value = true
   }
   else if (!import.meta.env.DEV) {
     window.location.pathname = '/'
