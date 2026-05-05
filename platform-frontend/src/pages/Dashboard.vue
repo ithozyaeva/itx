@@ -376,7 +376,7 @@ onMounted(async () => {
             </RouterLink>
 
             <RouterLink
-              to="/achievements"
+              to="/progress?tab=achievements"
               class="flex items-center gap-2.5 rounded-sm border border-border bg-muted/30 hover:border-accent/40 transition-colors p-3"
             >
               <div class="flex items-center justify-center w-9 h-9 rounded-sm bg-purple-500/10">
@@ -691,7 +691,7 @@ onMounted(async () => {
             <span class="text-sm font-semibold">Достижения</span>
           </div>
           <RouterLink
-            to="/achievements"
+            to="/progress?tab=achievements"
             class="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Все →
@@ -727,7 +727,7 @@ onMounted(async () => {
             {{ achievements.unlocked }} из {{ achievements.total }} открыто
           </p>
           <RouterLink
-            to="/achievements"
+            to="/progress?tab=achievements"
             class="text-sm text-accent hover:underline mt-1 inline-block"
           >
             Посмотреть все достижения →
@@ -740,7 +740,7 @@ onMounted(async () => {
         class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         <RouterLink
-          to="/leaderboard"
+          to="/progress?tab=leaderboard"
           class="rounded-sm border bg-card hover:bg-muted/50 transition-colors p-4 text-center terminal-card"
         >
           <Trophy class="h-5 w-5 mx-auto text-yellow-500 mb-1.5" />

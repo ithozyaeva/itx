@@ -5,8 +5,7 @@ const links = [
   { label: 'Барахолка', path: '/marketplace' },
   { label: 'Менторы', path: '/mentors' },
   { label: 'Рефералки', path: '/referals' },
-  { label: 'Рейтинг', path: '/leaderboard' },
-  { label: 'Достижения', path: '/achievements' },
+  { label: 'Прогресс', path: '/progress' },
   { label: 'Резюме', path: '/resumes' },
 ]
 </script>

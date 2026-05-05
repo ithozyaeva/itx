@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import type { SubscriptionTierSlug } from '@/models/profile'
-import { Award, Calendar, ClipboardList, Crown, Dices, Gift, Heart, HelpCircle, Home, Sparkles, Sprout, Trophy, User, Users } from 'lucide-vue-next'
+import { Calendar, ClipboardList, Crown, Dices, Gift, HelpCircle, Home, Sparkles, Sprout, User, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -43,7 +43,6 @@ const state = {
       items: [
         { title: 'События', path: '/events', icon: Calendar, indicator: true, dataOnboarding: 'events', requiresSubscription: true },
         { title: 'Менторы', path: '/mentors', icon: Users },
-        { title: 'Благодарности', path: '/kudos', icon: Heart, requiresSubscription: true },
       ],
     },
     {
@@ -56,8 +55,6 @@ const state = {
       label: 'Активность',
       items: [
         { title: 'Прогресс', path: '/progress', icon: Sprout, dataOnboarding: 'points', requiresSubscription: true },
-        { title: 'Достижения', path: '/achievements', icon: Award, requiresSubscription: true },
-        { title: 'Рейтинг', path: '/leaderboard', icon: Trophy, requiresSubscription: true },
         { title: 'Биржа заданий', path: '/tasks', icon: ClipboardList, requiresSubscription: true },
       ],
     },

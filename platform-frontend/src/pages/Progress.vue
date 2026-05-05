@@ -27,7 +27,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { DailyCheckInWidget, PointsBadge, TaskCard, TaskCardSkeleton, TintedIcon } from '@/components/progress'
+import { AchievementsPanel, DailyCheckInWidget, KudosPanel, LeaderboardPanel, MyStatsPanel, PointsBadge, TaskCard, TaskCardSkeleton, TintedIcon } from '@/components/progress'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
@@ -42,14 +42,14 @@ import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 
-type TabKey = 'today' | 'period' | 'history' | 'sources'
+type TabKey = 'today' | 'period' | 'history' | 'sources' | 'leaderboard' | 'achievements' | 'stats' | 'kudos'
 type PeriodFilter = ChallengeKind | 'chats'
 
 const route = useRoute()
 const router = useRouter()
 const { toast } = useToast()
 
-const VALID_TABS: TabKey[] = ['today', 'period', 'history', 'sources']
+const VALID_TABS: TabKey[] = ['today', 'period', 'history', 'sources', 'leaderboard', 'achievements', 'stats', 'kudos']
 const VALID_PERIODS: PeriodFilter[] = ['weekly', 'monthly', 'chats']
 
 const initialTab: TabKey = (() => {
@@ -263,6 +263,18 @@ function loadMoreTransactions() {
         </TabsTrigger>
         <TabsTrigger value="sources">
           Способы
+        </TabsTrigger>
+        <TabsTrigger value="leaderboard">
+          Рейтинг
+        </TabsTrigger>
+        <TabsTrigger value="achievements">
+          Достижения
+        </TabsTrigger>
+        <TabsTrigger value="stats">
+          Моя статистика
+        </TabsTrigger>
+        <TabsTrigger value="kudos">
+          Благодарности
         </TabsTrigger>
       </TabsList>
 
@@ -571,6 +583,26 @@ function loadMoreTransactions() {
             </span>
           </RouterLink>
         </div>
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Рейтинг» ───────── -->
+      <TabsContent value="leaderboard">
+        <LeaderboardPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Достижения» ───────── -->
+      <TabsContent value="achievements">
+        <AchievementsPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Моя статистика» ───────── -->
+      <TabsContent value="stats">
+        <MyStatsPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Благодарности» ───────── -->
+      <TabsContent value="kudos">
+        <KudosPanel />
       </TabsContent>
     </Tabs>
   </div>
