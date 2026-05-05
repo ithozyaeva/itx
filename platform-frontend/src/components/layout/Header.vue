@@ -3,14 +3,21 @@ import { LogOut, Menu } from 'lucide-vue-next'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { stopSSE } from '@/composables/useSSE'
 import { useUser } from '@/composables/useUser'
+import { stopProactiveRefresh } from '@/services/api'
 import { authService } from '@/services/auth'
 
 const user = useUser()
 const { toggleSidebar } = useSidebar()
 
-function logout() {
-  authService.clearAuthHeader()
+// authService.logout инвалидирует токен серверно; stopSSE/stopProactiveRefresh
+// гасят фоновые соединения, чтобы не дёргали мёртвый токен в окно между
+// инвалидацией и навигацией на лендинг.
+async function logout() {
+  stopProactiveRefresh()
+  stopSSE()
+  await authService.logout()
   user.value = null
   window.location.pathname = '/'
 }

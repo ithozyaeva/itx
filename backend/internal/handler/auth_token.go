@@ -194,6 +194,30 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 	})
 }
 
+// Logout инвалидирует текущий tg_token серверно: записывает в auth_tokens
+// expired_at в прошлое, чтобы middleware.RequireTGAuth на следующий запрос
+// этим токеном вернул 401. До появления этого хендлера клик «Выйти» только
+// удалял токен из localStorage, но в БД он жил до natural expiry (~30 дней),
+// и кто бы ни получил доступ к токену (украденный localStorage, sniff,
+// расшаренный комп) мог использовать API дальше. Берём токен ТОЛЬКО из
+// заголовка X-Telegram-User-Token — telegram-id юзера тут не нужен.
+//
+// Идемпотентно: если токен уже отсутствует в БД, отвечаем 204 — клиент
+// в любом случае получит «logged out».
+func (h *TelegramAuthHandler) Logout(c *fiber.Ctx) error {
+	headerToken := c.Get("X-Telegram-User-Token")
+	if headerToken == "" {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+	if err := h.authService.InvalidateToken(headerToken); err != nil {
+		log.Printf("logout: failed to invalidate token: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to logout",
+		})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // RefreshToken продлевает срок действия текущего токена. Принимает токен
 // ТОЛЬКО из заголовка X-Telegram-User-Token: знание Telegram-ID не должно
 // давать доступ к чужой сессии.

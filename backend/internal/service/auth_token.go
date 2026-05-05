@@ -72,3 +72,21 @@ func (s *AuthTokenService) CreateOrUpdateToken(telegramID int64, token string) (
 func (s *AuthTokenService) GetTokenByTelegramID(telegramID int64) (*models.AuthToken, error) {
 	return s.authRepo.GetByTelegramID(telegramID)
 }
+
+// InvalidateToken помечает токен как истёкший. Идемпотентно: если токена
+// нет в БД, возвращает nil — клиент в любом случае получает «logged out»,
+// и не нужен 404 в ответе на logout.
+//
+// Используется хендлером /api/auth/telegram/logout, чтобы клик «Выйти»
+// действительно инвалидировал сессию серверно. До этого токен жил в БД
+// до своего natural expiry (~30 дней), и тот, у кого он есть (украденный
+// localStorage, sniff, расшаренный комп), мог пользоваться API дальше.
+func (s *AuthTokenService) InvalidateToken(token string) error {
+	authToken, err := s.authRepo.GetByToken(token)
+	if err != nil {
+		return nil
+	}
+	authToken.ExpiredAt = time.Now().Add(-time.Hour)
+	_, err = s.authRepo.Update(authToken)
+	return err
+}
