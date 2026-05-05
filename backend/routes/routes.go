@@ -46,6 +46,7 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	auth := api.Group("/auth")
 	auth.Post("/telegram/refresh", telegramAuthHandler.RefreshToken)
 	auth.Post("/telegram", telegramAuthHandler.Authenticate)
+	auth.Post("/telegram-webapp", telegramAuthHandler.AuthenticateWebApp)
 	auth.Post("/telegram-from-bot", telegramAuthHandler.HandleBotMessage)
 
 	mentorHandler := handler.NewMentorHandler()
