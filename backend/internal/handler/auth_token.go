@@ -37,6 +37,81 @@ type AuthRequest struct {
 	Token string `json:"token"`
 }
 
+type WebAppAuthRequest struct {
+	InitData string `json:"init_data"`
+}
+
+// AuthenticateWebApp — авторизация из Telegram Mini App. На вход приходит
+// сырая строка window.Telegram.WebApp.initData; HMAC-подпись валидируется
+// бот-токеном. После успеха выпускается тот же tg_token, что и в обычном
+// потоке через /telegram, поэтому фронт может пользоваться единым
+// authService и не различать каналы. CheckUserInChat намеренно НЕ зовётся:
+// основной API-сервер живёт в РФ, api.telegram.org заблокирован — роль
+// доопределит периодический subscriptionChecker на боте (NL).
+func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
+	var req WebAppAuthRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	tgUser, err := service.ValidateInitData(req.InitData, config.CFG.TelegramToken, service.WebAppInitDataMaxAge)
+	if err != nil {
+		log.Printf("webapp auth: invalid init data: %v", err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid init data",
+		})
+	}
+
+	token, err := h.telegramService.GenerateAuthToken(tgUser.ID)
+	if err != nil {
+		log.Printf("webapp auth: failed to generate token for tg_id=%d: %v", tgUser.ID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to issue token",
+		})
+	}
+
+	user, err := h.authService.GetByTelegramID(tgUser.ID)
+	if err != nil {
+		newUser := &models.Member{
+			TelegramID: tgUser.ID,
+			Username:   tgUser.Username,
+			FirstName:  tgUser.FirstName,
+			LastName:   tgUser.LastName,
+			Roles:      []models.Role{models.MemberRoleUnsubscriber},
+		}
+		created, createErr := h.authService.CreateNewMember(newUser, token)
+		if createErr != nil {
+			log.Printf("webapp auth: failed to create member tg_id=%d: %v", tgUser.ID, createErr)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to create user",
+			})
+		}
+		user = created
+	} else {
+		user.Username = tgUser.Username
+		user.FirstName = tgUser.FirstName
+		user.LastName = tgUser.LastName
+		h.memberService.Update(user)
+
+		if _, err := h.authService.CreateOrUpdateToken(tgUser.ID, token); err != nil {
+			log.Printf("webapp auth: failed to upsert token for tg_id=%d: %v", tgUser.ID, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to issue token",
+			})
+		}
+	}
+
+	user.SubscriptionTier = h.memberService.GetEffectiveTier(user.TelegramID)
+
+	c.Response().Header.Add("X-Telegram-User-Token", token)
+	return c.JSON(fiber.Map{
+		"user":  user,
+		"token": token,
+	})
+}
+
 func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 	var req AuthRequest
 	if err := c.BodyParser(&req); err != nil {

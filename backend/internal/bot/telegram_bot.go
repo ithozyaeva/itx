@@ -180,6 +180,12 @@ func (b *TelegramBot) Start() {
 	// Register bot commands menu
 	b.registerCommands()
 
+	// Закрепляем кнопку «Открыть платформу» рядом с полем ввода во всех
+	// личных чатах с ботом. setChatMenuButton без chat_id ставит дефолт
+	// для всех приватных чатов; idempotent — Telegram нормально переваривает
+	// повторные вызовы при рестарте.
+	b.setupMenuButton()
+
 	// Start birthday checker
 	go b.startBirthdayChecker()
 
@@ -387,6 +393,41 @@ func (b *TelegramBot) Start() {
 			}
 		}
 	}
+}
+
+// setupMenuButton ставит default chat menu button с типом web_app, чтобы в
+// чатах с ботом рядом с полем ввода появилась кнопка «Открыть платформу»,
+// открывающая miniapp. tgbotapi/v5.5.1 не знает про SetChatMenuButton, поэтому
+// зовём API напрямую через MakeRequest с raw JSON в menu_button.
+func (b *TelegramBot) setupMenuButton() {
+	miniAppURL := config.CFG.MiniAppURL
+	if miniAppURL == "" {
+		log.Println("setupMenuButton: MINIAPP_URL is not set, skipping")
+		return
+	}
+
+	menuButton := struct {
+		Type   string `json:"type"`
+		Text   string `json:"text"`
+		WebApp struct {
+			URL string `json:"url"`
+		} `json:"web_app"`
+	}{Type: "web_app", Text: "Открыть платформу"}
+	menuButton.WebApp.URL = miniAppURL
+
+	payload, err := json.Marshal(menuButton)
+	if err != nil {
+		log.Printf("setupMenuButton: marshal: %v", err)
+		return
+	}
+
+	if _, err := b.bot.MakeRequest("setChatMenuButton", tgbotapi.Params{
+		"menu_button": string(payload),
+	}); err != nil {
+		log.Printf("setupMenuButton: telegram API error: %v", err)
+		return
+	}
+	log.Printf("setupMenuButton: default menu button set to %s", miniAppURL)
 }
 
 func (b *TelegramBot) registerCommands() {

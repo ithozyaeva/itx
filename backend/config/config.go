@@ -36,6 +36,7 @@ type Config struct {
 	SuperAdminTelegramID int64
 	PublicDomain         string
 	BackendDomain      string
+	MiniAppURL         string
 	AllowedOrigins     string
 	BotSharedSecret    string
 	InternalAPISecret  string
@@ -189,6 +190,7 @@ func LoadConfig() {
 		SuperAdminTelegramID: superAdminID,
 		PublicDomain:         viper.GetString("PUBLIC_DOMAIN"),
 		BackendDomain:      viper.GetString("BACKEND_DOMAIN"),
+		MiniAppURL:         viper.GetString("MINIAPP_URL"),
 		AllowedOrigins:     allowedOrigins,
 		BotSharedSecret:    botSharedSecret,
 		InternalAPISecret:  internalAPISecret,
