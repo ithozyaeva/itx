@@ -62,6 +62,10 @@ type SubscriptionUserChatAccess struct {
 	ChatID    int64      `json:"chat_id" gorm:"primaryKey"`
 	GrantedAt time.Time  `json:"granted_at" gorm:"default:now()"`
 	RevokedAt *time.Time `json:"revoked_at"`
+	// IsManual — доступ выдан вручную админом (не через invite-link бота).
+	// CheckAndSyncUser/DryRunCheckUser пропускают такие записи в revoke-loop,
+	// чтобы periodic не вышибал юзеров, добавленных админом за заслуги.
+	IsManual bool `json:"is_manual" gorm:"default:false"`
 }
 
 func (SubscriptionUserChatAccess) TableName() string { return "subscription_user_chat_access" }

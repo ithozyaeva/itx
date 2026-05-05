@@ -92,6 +92,18 @@ func seedActiveAccess(t *testing.T, db *gorm.DB, userID, chatID int64) {
 	}
 }
 
+func seedManualAccess(t *testing.T, db *gorm.DB, userID, chatID int64) {
+	t.Helper()
+	if err := db.Create(&models.SubscriptionUserChatAccess{
+		UserID:    userID,
+		ChatID:    chatID,
+		GrantedAt: time.Now(),
+		IsManual:  true,
+	}).Error; err != nil {
+		t.Fatalf("seed manual access user=%d chat=%d: %v", userID, chatID, err)
+	}
+}
+
 // staticChecker — мок MemberCheckFunc.
 type staticChecker struct {
 	members map[string]bool
@@ -683,5 +695,161 @@ func TestDryRunCheckUserSkipsAnchorFromRevoke(t *testing.T) {
 		if cid == -300 {
 			t.Errorf("anchor -300 must not appear in WouldRevoke (got %v)", res.WouldRevoke)
 		}
+	}
+}
+
+// --- Manual grants ---
+
+func TestCheckAndSyncUserManualAccessNotRevoked(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	beginner := mustTier(t, db, "beginner")
+	master := mustTier(t, db, "master")
+
+	// Юзер-foreman, в content-master он попасть не должен по тиру.
+	// Но админ его туда добавил вручную — не должен быть кикнут.
+	seedSubChat(t, db, -100, "anchor-beginner", &beginner.ID)
+	seedSubChat(t, db, -500, "content-master", nil)
+	linkChatToTier(t, db, -500, master.ID)
+
+	const userID int64 = 42
+	seedSubUser(t, db, userID, &beginner.ID, nil)
+	seedManualAccess(t, db, userID, -500)
+
+	mock := &staticChecker{
+		members: map[string]bool{
+			keyOf(-100, userID): true, // beginner anchor — определяет тир
+		},
+	}
+
+	var kicked []int64
+	stubKick := func(chatID, _ int64) bool {
+		kicked = append(kicked, chatID)
+		return true
+	}
+
+	svc := newTestSubService()
+	result, err := svc.CheckAndSyncUser(userID, mock.check,
+		func(int64) (string, error) { return "", nil }, stubKick)
+	if err != nil {
+		t.Fatalf("CheckAndSyncUser: %v", err)
+	}
+
+	if len(result.Revoked) != 0 {
+		t.Errorf("manual-access -500 не должен попасть в Revoked, got %v", result.Revoked)
+	}
+	if len(kicked) != 0 {
+		t.Errorf("kickUser не должен вызываться для manual-чата, got %v", kicked)
+	}
+
+	// Запись остаётся active.
+	var active int64
+	db.Model(&models.SubscriptionUserChatAccess{}).
+		Where("user_id = ? AND chat_id = ? AND revoked_at IS NULL",
+			userID, int64(-500)).
+		Count(&active)
+	if active != 1 {
+		t.Errorf("manual-access должен остаться active, got count=%d", active)
+	}
+}
+
+func TestDryRunCheckUserSkipsManualFromRevoke(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	beginner := mustTier(t, db, "beginner")
+	master := mustTier(t, db, "master")
+
+	seedSubChat(t, db, -100, "anchor-beginner", &beginner.ID)
+	seedSubChat(t, db, -500, "content-master", nil)
+	linkChatToTier(t, db, -500, master.ID)
+
+	const userID int64 = 42
+	seedSubUser(t, db, userID, &beginner.ID, nil)
+	seedManualAccess(t, db, userID, -500)
+
+	mock := &staticChecker{
+		members: map[string]bool{
+			keyOf(-100, userID): true,
+		},
+	}
+
+	svc := newTestSubService()
+	res, err := svc.DryRunCheckUser(userID, mock.check)
+	if err != nil {
+		t.Fatalf("DryRunCheckUser: %v", err)
+	}
+
+	for _, cid := range res.WouldRevoke {
+		if cid == -500 {
+			t.Errorf("manual -500 не должен попасть в WouldRevoke (got %v)", res.WouldRevoke)
+		}
+	}
+}
+
+func TestSyncContentJoinPropagatesIsManual(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	seedSubChat(t, db, -500, "content-1", nil)
+
+	const userID int64 = 42
+	svc := newTestSubService()
+
+	if err := svc.SyncContentJoin(userID, -500, nil, "test", true); err != nil {
+		t.Fatalf("SyncContentJoin manual=true: %v", err)
+	}
+
+	var rec models.SubscriptionUserChatAccess
+	if err := db.Where("user_id = ? AND chat_id = ?", userID, int64(-500)).
+		First(&rec).Error; err != nil {
+		t.Fatalf("reload access: %v", err)
+	}
+	if !rec.IsManual {
+		t.Errorf("IsManual должен быть true после manual SyncContentJoin")
+	}
+
+	// Повторный auto-grant не должен понизить флаг (sweep-ситуация).
+	if err := svc.GrantAccess(userID, -500, false); err != nil {
+		t.Fatalf("GrantAccess auto=false поверх manual: %v", err)
+	}
+	if err := db.Where("user_id = ? AND chat_id = ?", userID, int64(-500)).
+		First(&rec).Error; err != nil {
+		t.Fatalf("reload access after auto: %v", err)
+	}
+	if !rec.IsManual {
+		t.Errorf("auto-grant поверх manual=true не должен понижать флаг")
+	}
+}
+
+func TestGrantAccessManualUpgradeOnly(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	seedSubChat(t, db, -500, "content-1", nil)
+	const userID int64 = 42
+	seedSubUser(t, db, userID, nil, nil)
+
+	svc := newTestSubService()
+
+	// Auto-grant первым.
+	if err := svc.GrantAccess(userID, -500, false); err != nil {
+		t.Fatalf("first auto-grant: %v", err)
+	}
+
+	// Затем юзера добавил админ вручную (chat_member event from!=user) —
+	// upsert переходит в manual=true.
+	if err := svc.GrantAccess(userID, -500, true); err != nil {
+		t.Fatalf("manual-grant on existing auto: %v", err)
+	}
+
+	var rec models.SubscriptionUserChatAccess
+	if err := db.Where("user_id = ? AND chat_id = ?", userID, int64(-500)).
+		First(&rec).Error; err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if !rec.IsManual {
+		t.Errorf("manual-grant поверх auto должен поднять флаг")
 	}
 }

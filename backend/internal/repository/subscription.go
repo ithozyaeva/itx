@@ -302,19 +302,32 @@ func (r *SubscriptionRepository) GetActiveAccess(userID int64) ([]models.Subscri
 	return access, nil
 }
 
-func (r *SubscriptionRepository) GrantAccess(userID int64, chatID int64) error {
+// GrantAccess upsert'ит активный access. isManual=true ставится при ручном
+// добавлении админом (chat_member event from!=user); чистый auto-grant
+// (бот выдал invite-link) идёт с isManual=false.
+//
+// Семантика is_manual: повышается, но не понижается. Если запись уже
+// помечена как manual, повторный auto-grant (например, sweep увидел юзера
+// в чате) сохраняет защиту. Иначе sweep бы сносил manual-флаг при каждом
+// проходе и periodic в итоге кикал бы юзера.
+func (r *SubscriptionRepository) GrantAccess(userID, chatID int64, isManual bool) error {
 	var existing models.SubscriptionUserChatAccess
 	err := r.db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&existing).Error
 	if err == nil {
-		return r.db.Model(&existing).Updates(map[string]interface{}{
+		updates := map[string]interface{}{
 			"granted_at": time.Now(),
 			"revoked_at": nil,
-		}).Error
+		}
+		if isManual && !existing.IsManual {
+			updates["is_manual"] = true
+		}
+		return r.db.Model(&existing).Updates(updates).Error
 	}
 	return r.db.Create(&models.SubscriptionUserChatAccess{
 		UserID:    userID,
 		ChatID:    chatID,
 		GrantedAt: time.Now(),
+		IsManual:  isManual,
 	}).Error
 }
 

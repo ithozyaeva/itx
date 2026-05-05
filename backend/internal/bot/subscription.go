@@ -613,10 +613,21 @@ func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated
 	// Content-чат: только фиксируем факт членства. Тир пересчитает
 	// ближайший PeriodicCheck (раз в N часов) — здесь дёргать его
 	// преждевременно дорого (придётся снова обходить все anchor-чаты).
-	log.Printf("Content chat member change: chat=%d user=%d %s->%s",
-		update.Chat.ID, userID, update.OldChatMember.Status, update.NewChatMember.Status)
+	//
+	// isManual: добавил админ-человек, не сам юзер по invite-link и не сам бот.
+	// Эта пометка защищает запись в subscription_user_chat_access от revoke
+	// в periodic — чтобы юзер, добавленный админом за заслуги, не выпал на
+	// следующем тикере, потому что чат не входит в его подписочный тир.
+	//
+	// update.From — value-тип (tgbotapi.User), при отсутствии в payload'е
+	// будет zero-value с ID=0; такие случаи не считаем manual (fail-safe).
+	isManual := update.From.ID != 0 &&
+		update.From.ID != userID &&
+		update.From.ID != b.bot.Self.ID
+	log.Printf("Content chat member change: chat=%d user=%d %s->%s manual=%v",
+		update.Chat.ID, userID, update.OldChatMember.Status, update.NewChatMember.Status, isManual)
 	if newActive {
-		if err := b.subscriptionService.SyncContentJoin(userID, update.Chat.ID, usernamePtr, fullName); err != nil {
+		if err := b.subscriptionService.SyncContentJoin(userID, update.Chat.ID, usernamePtr, fullName, isManual); err != nil {
 			log.Printf("SyncContentJoin failed user=%d chat=%d: %v", userID, update.Chat.ID, err)
 		}
 	} else {
@@ -900,7 +911,7 @@ func (b *TelegramBot) notifyNewChatAccess(chatID int64, chatTitle string, tierLe
 			}
 			continue
 		}
-		if err := b.subscriptionService.GrantAccess(user.ID, chatID); err != nil {
+		if err := b.subscriptionService.GrantAccess(user.ID, chatID, false); err != nil {
 			log.Printf("notifyNewChatAccess: grant failed for user %d chat %d: %v", user.ID, chatID, err)
 			failed++
 			continue
