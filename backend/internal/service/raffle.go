@@ -2,10 +2,18 @@ package service
 
 import (
 	"fmt"
+	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"log"
+
+	"gorm.io/gorm"
 )
+
+// MaxBuyTicketsPerRequest — верхний лимит на одну покупку. Защита от
+// случайного/злонамеренного запроса с count=1_000_000, который раньше вешал
+// БД сотней тысяч раундтрипов и оставлял зомби-транзакции.
+const MaxBuyTicketsPerRequest = 10_000
 
 type RaffleService struct {
 	repo      *repository.RaffleRepository
@@ -43,6 +51,9 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 	if count <= 0 {
 		count = 1
 	}
+	if count > MaxBuyTicketsPerRequest {
+		return fmt.Errorf("за один запрос нельзя купить больше %d билетов", MaxBuyTicketsPerRequest)
+	}
 
 	raffle, err := s.repo.GetById(raffleId)
 	if err != nil {
@@ -53,7 +64,12 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 		return fmt.Errorf("розыгрыш завершён")
 	}
 
-	// Check max tickets
+	// Daily-раффлы (entry_rule=auto_check_in) выдают билеты автоматически
+	// за активности; ручная покупка через этот эндпоинт запрещена.
+	if raffle.EntryRule != models.RaffleEntryRulePurchase {
+		return fmt.Errorf("этот розыгрыш не поддерживает покупку билетов")
+	}
+
 	if raffle.MaxTickets > 0 {
 		total, _ := s.repo.GetTicketCount(raffleId)
 		if int(total)+count > raffle.MaxTickets {
@@ -61,7 +77,6 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 		}
 	}
 
-	// Check balance
 	totalCost := raffle.TicketCost * count
 	balance, err := s.pointRepo.GetBalance(memberId)
 	if err != nil {
@@ -71,25 +86,27 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 		return fmt.Errorf("недостаточно баллов (нужно %d, доступно %d)", totalCost, balance)
 	}
 
-	// Deduct points
-	tx := &models.PointTransaction{
-		MemberId:    memberId,
-		Amount:      -totalCost,
-		Reason:      models.PointReasonRaffleSpend,
-		SourceType:  "raffle",
-		SourceId:    raffleId,
-		Description: fmt.Sprintf("Покупка %d билетов: %s", count, raffle.Title),
-	}
-	if err := s.pointRepo.GivePoints(tx); err != nil {
-		return err
-	}
-
-	if err := s.repo.BuyTickets(raffleId, memberId, count); err != nil {
+	// Списание баллов и создание билетов — в одной транзакции, чтобы при
+	// падении INSERT-а не оставлять списанный баланс без билетов (и наоборот).
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		pt := &models.PointTransaction{
+			MemberId:    memberId,
+			Amount:      -totalCost,
+			Reason:      models.PointReasonRaffleSpend,
+			SourceType:  "raffle",
+			SourceId:    raffleId,
+			Description: fmt.Sprintf("Покупка %d билетов: %s", count, raffle.Title),
+		}
+		if err := tx.Create(pt).Error; err != nil {
+			return err
+		}
+		return s.repo.BuyTicketsTx(tx, raffleId, memberId, count)
+	})
+	if err != nil {
 		return err
 	}
 
 	// Дейлик «купить билет в обычный розыгрыш» — только за manual.
-	// Для kind=daily билеты приходят из check-in бесплатно и не считаются.
 	if raffle.Kind != models.RaffleKindDaily {
 		TrackDailyTrigger(memberId, "buy_raffle_ticket", 1)
 	}

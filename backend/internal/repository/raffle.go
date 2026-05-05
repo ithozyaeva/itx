@@ -3,7 +3,11 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+
+	"gorm.io/gorm"
 )
+
+const buyTicketsBatchSize = 1000
 
 type RaffleRepository struct{}
 
@@ -64,18 +68,21 @@ func (r *RaffleRepository) GetExpired() ([]models.Raffle, error) {
 }
 
 func (r *RaffleRepository) BuyTickets(raffleId, memberId int64, count int) error {
-	tx := database.DB.Begin()
-	for i := 0; i < count; i++ {
-		ticket := &models.RaffleTicket{
-			RaffleId: raffleId,
-			MemberId: memberId,
-		}
-		if err := tx.Create(ticket).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
+	return r.BuyTicketsTx(database.DB, raffleId, memberId, count)
+}
+
+// BuyTicketsTx вставляет count билетов одним батчем в указанной транзакции.
+// CreateInBatches шлёт INSERT ... VALUES (...),(...),... вместо count отдельных
+// раундтрипов — критично для больших count (раньше count=1M вешало транзакцию).
+func (r *RaffleRepository) BuyTicketsTx(db *gorm.DB, raffleId, memberId int64, count int) error {
+	if count <= 0 {
+		return nil
 	}
-	return tx.Commit().Error
+	tickets := make([]models.RaffleTicket, count)
+	for i := range tickets {
+		tickets[i] = models.RaffleTicket{RaffleId: raffleId, MemberId: memberId}
+	}
+	return db.CreateInBatches(tickets, buyTicketsBatchSize).Error
 }
 
 func (r *RaffleRepository) GetTicketCount(raffleId int64) (int64, error) {
