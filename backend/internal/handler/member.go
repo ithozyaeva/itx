@@ -279,12 +279,15 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	go h.pointsSvc.CheckProfileComplete(result)
 	service.TrackDailyTrigger(member.Id, "update_profile", 1)
 
+	result.SubscriptionTier = h.svc.GetEffectiveTier(result.TelegramID)
+
 	mentor, err := h.svc.GetMentor(member.Id)
 
 	if err != nil {
 		return c.JSON(result)
 	}
 
+	mentor.SubscriptionTier = result.SubscriptionTier
 	return c.JSON(mentor)
 }
 
@@ -359,10 +362,13 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 
 	go h.pointsSvc.CheckProfileComplete(result)
 
+	result.SubscriptionTier = h.svc.GetEffectiveTier(result.TelegramID)
+
 	mentor, err := h.svc.GetMentor(member.Id)
 	if err != nil {
 		return c.JSON(result)
 	}
+	mentor.SubscriptionTier = result.SubscriptionTier
 	return c.JSON(mentor)
 }
 
