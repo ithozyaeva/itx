@@ -74,9 +74,9 @@ func (s *DailyRaffleService) EnsureTodayRaffle() (*models.Raffle, error) {
 	return s.GetByDayKey(day)
 }
 
-// EnterRaffle вставляет билет от memberId в сегодняшний daily-раффл.
-// Идемпотентно: повторный вызов в тот же день не плодит билеты
-// (UNIQUE-проверка через выбор существующих билетов конкретного юзера).
+// EnterRaffle выдаёт билет за check-in в сегодняшнем daily-раффле.
+// Идемпотентно через UNIQUE-индекс uniq_raffle_ticket_source: source_type='check_in',
+// source_id=raffle.Id — один билет на юзера на сегодняшний раффл.
 func (s *DailyRaffleService) EnterRaffle(memberId int64) error {
 	raffle, err := s.EnsureTodayRaffle()
 	if err != nil {
@@ -85,17 +85,9 @@ func (s *DailyRaffleService) EnterRaffle(memberId int64) error {
 	if raffle == nil {
 		return errors.New("daily-раффл недоступен")
 	}
-
-	// Проверяем существующий билет, чтобы не дублировать.
-	count, err := s.repo.GetMemberTicketCount(raffle.Id, memberId)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-
-	return s.repo.BuyTickets(raffle.Id, memberId, 1)
+	_, err = s.repo.AwardTicketTx(database.DB, raffle.Id, memberId,
+		models.RaffleTicketSourceCheckIn, raffle.Id)
+	return err
 }
 
 // GetByDayKey — выбор daily-раффла по конкретной МСК-дате.

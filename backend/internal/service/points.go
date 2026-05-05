@@ -105,6 +105,7 @@ func (s *PointsService) AwardEventPoints(event *models.Event) error {
 			}
 			TrackDailyTrigger(member.Id, "attend_event", 1)
 			TrackChallengeMetric(member.Id, "events_attended", 1)
+			AwardRaffleTicket(member.Id, models.RaffleTicketSourceAttendEvent, event.Id)
 		}
 
 		return nil

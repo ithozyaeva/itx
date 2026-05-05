@@ -3,6 +3,10 @@ package service
 import (
 	"log"
 	"sync"
+
+	"ithozyeva/database"
+	"ithozyeva/internal/models"
+	"ithozyeva/internal/repository"
 )
 
 // gamificationHooks — синглтон-точка интеграции дейликов и челленджей в
@@ -12,12 +16,16 @@ var (
 	gamificationOnce sync.Once
 	dailyTaskSvc     *DailyTaskService
 	challengeSvc     *ChallengeService
+	dailyRaffleSvc   *DailyRaffleService
+	raffleRepo       *repository.RaffleRepository
 )
 
 func ensureGamificationHooks() {
 	gamificationOnce.Do(func() {
 		dailyTaskSvc = NewDailyTaskService()
 		challengeSvc = NewChallengeService()
+		dailyRaffleSvc = NewDailyRaffleService()
+		raffleRepo = repository.NewRaffleRepository()
 	})
 }
 
@@ -46,6 +54,44 @@ func TrackDailyTrigger(memberId int64, triggerKey string, n int) {
 			}
 		}()
 		dailyTaskSvc.IncrementProgress(memberId, triggerKey, n)
+	}()
+}
+
+// AwardRaffleTicket идемпотентно выдаёт один билет в сегодняшний daily-раффл
+// за конкретную активность. Повторный вызов с тем же sourceType/sourceId не
+// плодит билеты (UNIQUE-индекс uniq_raffle_ticket_source).
+//
+// Безопасен для вызова из любого хендлера: не блокирует, не паникует.
+// Если daily-раффла нет (cron ещё не создал) или он не активен — no-op.
+func AwardRaffleTicket(memberId int64, sourceType string, sourceId int64) {
+	ensureGamificationHooks()
+	if memberId == 0 || sourceType == "" {
+		return
+	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("award-raffle-ticket panic (member=%d, source=%s/%d): %v",
+					memberId, sourceType, sourceId, r)
+			}
+		}()
+		raffle, err := dailyRaffleSvc.EnsureTodayRaffle()
+		if err != nil {
+			log.Printf("award-raffle-ticket ensure today (member=%d): %v", memberId, err)
+			return
+		}
+		if raffle == nil || raffle.Status != models.RaffleStatusActive {
+			return
+		}
+		awarded, err := raffleRepo.AwardTicketTx(database.DB, raffle.Id, memberId, sourceType, sourceId)
+		if err != nil {
+			log.Printf("award-raffle-ticket insert (member=%d, source=%s/%d): %v",
+				memberId, sourceType, sourceId, err)
+			return
+		}
+		if awarded {
+			GetSSEHub().Publish(memberId, SSEEvent{Type: "raffles"})
+		}
 	}()
 }
 
