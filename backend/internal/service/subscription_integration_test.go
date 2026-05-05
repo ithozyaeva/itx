@@ -543,6 +543,119 @@ func TestDryRunCheckUserNoWrites(t *testing.T) {
 	}
 }
 
+// --- PeriodicCheck skip-path ---
+
+func TestPeriodicCheckSkipsUserOnTelegramError(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	master := mustTier(t, db, "master")
+	seedSubChat(t, db, -300, "anchor-master", &master.ID)
+
+	// Два юзера: первому Telegram отвечает ОК, второму — error.
+	// Цель — убедиться, что error на одном не останавливает loop, и
+	// проблемный юзер попадает в Skipped, а не молча теряется.
+	const okUser int64 = 100
+	const failUser int64 = 200
+	seedSubUser(t, db, okUser, &master.ID, nil)
+	seedSubUser(t, db, failUser, &master.ID, nil)
+
+	apiErr := errors.New("Too Many Requests: retry after 30")
+	mock := &staticChecker{
+		members: map[string]bool{
+			keyOf(-300, okUser): true,
+		},
+		errs: map[string]error{
+			keyOf(-300, failUser): apiErr,
+		},
+	}
+
+	svc := newTestSubService()
+	report := svc.PeriodicCheck(mock.check,
+		func(int64) (string, error) { return "", nil },
+		func(int64, int64) bool { return true },
+		0,
+	)
+
+	if report.UsersTotal != 2 {
+		t.Errorf("UsersTotal = %d, want 2", report.UsersTotal)
+	}
+	if len(report.Skipped) != 1 || report.Skipped[0] != failUser {
+		t.Errorf("Skipped = %v, want [%d]", report.Skipped, failUser)
+	}
+
+	// Убедимся, что resolved_tier у failUser НЕ был обнулён —
+	// скип означает «следующий тикер попробует снова», а не «понизить тир».
+	var u models.SubscriptionUser
+	if err := db.First(&u, failUser).Error; err != nil {
+		t.Fatalf("reload failUser: %v", err)
+	}
+	if u.ResolvedTierID == nil || *u.ResolvedTierID != master.ID {
+		t.Errorf("failUser resolved_tier должен остаться master=%d, got %v",
+			master.ID, u.ResolvedTierID)
+	}
+}
+
+// --- Sweep ChecksFailed counter ---
+
+func TestSweepRealMembershipCountsFailures(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	master := mustTier(t, db, "master")
+
+	seedSubChat(t, db, -300, "anchor-master", &master.ID) // anchor — sweep пропустит
+	seedSubChat(t, db, -500, "content-1", nil)
+	seedSubChat(t, db, -501, "content-2", nil)
+	linkChatToTier(t, db, -500, master.ID)
+	linkChatToTier(t, db, -501, master.ID)
+
+	const userID int64 = 42
+	seedSubUser(t, db, userID, &master.ID, nil)
+
+	apiErr := errors.New("rate limit")
+	mock := &staticChecker{
+		members: map[string]bool{
+			keyOf(-500, userID): true, // в content-1 — member, выдадим access
+		},
+		errs: map[string]error{
+			keyOf(-501, userID): apiErr, // content-2 упал → ChecksFailed++
+		},
+	}
+
+	svc := newTestSubService()
+	stats, err := svc.SweepRealMembership(mock.check, 0)
+	if err != nil {
+		t.Fatalf("SweepRealMembership: %v", err)
+	}
+
+	// 2 content-чата × 1 юзер = 2 попытки; одна upalа.
+	if stats.ChecksPerformed != 2 {
+		t.Errorf("ChecksPerformed = %d, want 2", stats.ChecksPerformed)
+	}
+	if stats.ChecksFailed != 1 {
+		t.Errorf("ChecksFailed = %d, want 1", stats.ChecksFailed)
+	}
+	if stats.AccessGranted != 1 {
+		t.Errorf("AccessGranted = %d, want 1 (только content-1)", stats.AccessGranted)
+	}
+
+	// Убедимся, что чат с упавшим check'ом НЕ был revoked (хотя и не member).
+	// Раньше err трактовался как «не member» и сносил access честных юзеров
+	// при rate-limit'е.
+	var revokedCount int64
+	db.Model(&models.SubscriptionUserChatAccess{}).
+		Where("user_id = ? AND chat_id = ? AND revoked_at IS NOT NULL",
+			userID, int64(-501)).
+		Count(&revokedCount)
+	if revokedCount != 0 {
+		t.Errorf("content-2 access не должен быть revoked при error, got revoked count=%d",
+			revokedCount)
+	}
+}
+
+// --- DryRunCheckUser anchor skip (existing) ---
+
 func TestDryRunCheckUserSkipsAnchorFromRevoke(t *testing.T) {
 	db := testutil.EnsureTestDB(t)
 	subTablesTruncate(t, db)

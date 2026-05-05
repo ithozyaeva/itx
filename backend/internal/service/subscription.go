@@ -370,12 +370,19 @@ func (s *SubscriptionService) SyncContentLeave(userID int64, chatID int64) error
 }
 
 // SweepStats — счётчики однопроходного backfill-обхода реального членства.
+//
+// ChecksFailed — getChatMember-вызовы, которые упали (rate-limit, network,
+// 403 if-bot-removed). Полезно админу, чтобы оценить, насколько результат
+// sweep'а полный: при высоком ChecksFailed/ChecksPerformed следующий
+// daily-тикер скорее всего догонит, но если стабильно не нулевое — стоит
+// смотреть в логи, возможно бот лишён прав в чате.
 type SweepStats struct {
 	UsersScanned    int
 	UsersCreated    int
 	AccessGranted   int
 	AccessRevoked   int
 	ChecksPerformed int
+	ChecksFailed    int
 }
 
 // SweepRealMembership — однопроходный обход «кто реально сидит в наших
@@ -447,6 +454,7 @@ func (s *SubscriptionService) SweepRealMembership(
 				// Telegram API упал/rate-limit — лучше пропустить пару (chat,user)
 				// на этом проходе, чем ошибочно revoke'нуть active access. Sweep
 				// — best-effort, разойдётся при следующем суточном тикере.
+				stats.ChecksFailed++
 				log.Printf("sweep: skip chat=%d user=%d: %v", chat.ID, uid, err)
 				time.Sleep(rateDelay)
 				continue
@@ -593,6 +601,21 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 	return results, nil
 }
 
+// PeriodicReport — сводка по одному проходу PeriodicCheck.
+//
+// Changed — только юзеры с реальными grant/revoke (без шума «всё ок»).
+// Skipped — ID юзеров, для которых проход не удался (ошибка Telegram API
+// при resolve-tier и т.п.). Раньше эти случаи только логировались, и
+// сводка для админа выглядела как «изменений нет», хотя на самом деле
+// часть юзеров была пропущена молча. Теперь админ видит счётчик и
+// может решить, ждать следующего тикера или прогнать вручную.
+// UsersTotal — сколько активных юзеров вообще обошли (для контекста).
+type PeriodicReport struct {
+	Changed    []SyncResult
+	Skipped    []int64
+	UsersTotal int
+}
+
 // PeriodicCheck checks all active users and syncs their access.
 //
 // В отличие от интерактивных сценариев (/sub onboarding, anchor-join,
@@ -600,50 +623,52 @@ func (s *SubscriptionService) DryRunPeriodicCheck(
 // фоновой синк, и любой шум там воспринимается как спам. Возвращаем
 // сводку: вызывающий код (bot) шлёт её админу для ручной проверки.
 //
-// Юзеры с пустыми Granted и Revoked в результат не включаются, чтобы
+// Юзеры с пустыми Granted и Revoked в Changed не включаются, чтобы
 // сводка содержала только то, по чему действительно были действия.
 //
 // Anchor-чаты и тиры читаются из БД один раз до loop'а: на 250+ юзерах
 // это сокращает NL→РФ-трафик с ~3 SELECT/юзера до constant-2.
 //
 // Если Telegram API упал на anchor-проверке конкретного юзера, юзер
-// этим проходом пропускается — лучше отложить sync на следующий тикер,
-// чем ложно понизить тир и кикнуть из master-only чатов на rate-limit'е.
+// этим проходом пропускается (попадает в Skipped) — лучше отложить sync
+// на следующий тикер, чем ложно понизить тир и кикнуть из master-only
+// чатов на rate-limit'е.
 func (s *SubscriptionService) PeriodicCheck(
 	botCheckFunc MemberCheckFunc,
 	createInviteLink func(chatID int64) (string, error),
 	kickUser func(chatID, userID int64) bool,
 	rateDelay time.Duration,
-) []SyncResult {
+) PeriodicReport {
 	log.Println("Starting periodic subscription check")
 
 	subCtx, err := s.BuildContext()
 	if err != nil {
 		log.Printf("periodic: build context failed: %v", err)
-		return nil
+		return PeriodicReport{}
 	}
 
 	users, err := s.repo.GetAllActiveUsers()
 	if err != nil {
 		log.Printf("Error getting active users: %v", err)
-		return nil
+		return PeriodicReport{}
 	}
 
-	var changed []SyncResult
+	report := PeriodicReport{UsersTotal: len(users)}
 	for i := range users {
 		user := &users[i]
 		result, err := s.checkAndSyncUserCtx(user, botCheckFunc, createInviteLink, kickUser, subCtx)
 		if err != nil {
 			log.Printf("periodic: skip user %d: %v", user.ID, err)
+			report.Skipped = append(report.Skipped, user.ID)
 		} else if len(result.Granted) > 0 || len(result.Revoked) > 0 {
 			log.Printf("User %d: granted=%d revoked=%d", user.ID, len(result.Granted), len(result.Revoked))
-			changed = append(changed, *result)
+			report.Changed = append(report.Changed, *result)
 		}
 		time.Sleep(rateDelay)
 	}
 
 	log.Println("Periodic subscription check complete")
-	return changed
+	return report
 }
 
 // --- Repo delegation methods ---

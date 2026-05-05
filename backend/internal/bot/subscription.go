@@ -722,9 +722,9 @@ func (b *TelegramBot) startSubscriptionChecker() {
 			if err != nil {
 				log.Printf("Daily membership sweep failed: %v", err)
 			} else {
-				log.Printf("Daily membership sweep done: scanned=%d created=%d checks=%d granted=%d revoked=%d",
+				log.Printf("Daily membership sweep done: scanned=%d created=%d checks=%d failed=%d granted=%d revoked=%d",
 					stats.UsersScanned, stats.UsersCreated, stats.ChecksPerformed,
-					stats.AccessGranted, stats.AccessRevoked)
+					stats.ChecksFailed, stats.AccessGranted, stats.AccessRevoked)
 			}
 		}
 	}
@@ -1155,9 +1155,35 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 // нотификации не уходят (это спам), вместо этого админ видит, что бот
 // сделал и руками решает, что с этим делать. Сообщения дробятся по 3500
 // символов — Telegram режет на 4096.
-func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, results []service.SyncResult) {
-	if len(results) == 0 {
-		b.SendDirectMessage(adminID, fmt.Sprintf("<b>%s</b>\n\nИзменений нет.", html.EscapeString(title)))
+//
+// Skipped — юзеры, которых периодик пропустил из-за ошибок Telegram API
+// (rate-limit, таймаут, network). Раньше это терялось в логах и сводка
+// «Изменений нет» выглядела как success, хотя сервис мог быть деградирован.
+func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, report service.PeriodicReport) {
+	skipNote := ""
+	if len(report.Skipped) > 0 {
+		// Показываем до 10 ID, чтобы не раздувать сообщение; полный список
+		// в логах пода.
+		shown := report.Skipped
+		extra := ""
+		if len(shown) > 10 {
+			shown = shown[:10]
+			extra = fmt.Sprintf(" (показаны первые 10 из %d)", len(report.Skipped))
+		}
+		ids := make([]string, len(shown))
+		for i, id := range shown {
+			ids[i] = fmt.Sprintf("<code>%d</code>", id)
+		}
+		skipNote = fmt.Sprintf("\n\n⚠️ Пропущено юзеров из-за ошибок Telegram: %d%s\n%s",
+			len(report.Skipped), extra, strings.Join(ids, ", "))
+	}
+
+	if len(report.Changed) == 0 {
+		summary := fmt.Sprintf("<b>%s</b>\n\nИзменений нет.", html.EscapeString(title))
+		if report.UsersTotal > 0 {
+			summary += fmt.Sprintf(" Просмотрено юзеров: %d.", report.UsersTotal)
+		}
+		b.SendDirectMessage(adminID, summary+skipNote)
 		return
 	}
 
@@ -1168,21 +1194,22 @@ func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, resul
 	}
 
 	var totalGrant, totalRevoke int
-	for _, r := range results {
+	for _, r := range report.Changed {
 		totalGrant += len(r.Granted)
 		totalRevoke += len(r.Revoked)
 	}
 
 	header := fmt.Sprintf(
 		"<b>%s</b>\n\n"+
-			"Юзеров с изменениями: %d\n"+
+			"Юзеров с изменениями: %d (всего просмотрено: %d)\n"+
 			"Всего grant: %d\n"+
-			"Всего revoke: %d\n\n",
-		html.EscapeString(title), len(results), totalGrant, totalRevoke,
+			"Всего revoke: %d%s\n\n",
+		html.EscapeString(title), len(report.Changed), report.UsersTotal,
+		totalGrant, totalRevoke, skipNote,
 	)
 
-	lines := make([]string, 0, len(results))
-	for _, r := range results {
+	lines := make([]string, 0, len(report.Changed))
+	for _, r := range report.Changed {
 		uname := ""
 		if u, err := b.subscriptionService.GetUser(r.UserID); err == nil && u.Username != nil && *u.Username != "" {
 			uname = "@" + *u.Username
@@ -1255,15 +1282,20 @@ func (b *TelegramBot) handleSubMemberSweepCommand(message *tgbotapi.Message) {
 			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Sweep упал: %v", err))
 			return
 		}
+		failedNote := ""
+		if stats.ChecksFailed > 0 {
+			failedNote = fmt.Sprintf("\n⚠️ Упало getChatMember: %d (см. логи — обычно rate-limit или бот без прав)",
+				stats.ChecksFailed)
+		}
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 			"<b>Sweep завершён</b>\n\n"+
 				"Просканировано юзеров: %d\n"+
 				"Заведено новых в subscription_users: %d\n"+
 				"Запросов getChatMember: %d\n"+
 				"Выдано access (новых): %d\n"+
-				"Снято access (revoke): %d",
+				"Снято access (revoke): %d%s",
 			stats.UsersScanned, stats.UsersCreated, stats.ChecksPerformed,
-			stats.AccessGranted, stats.AccessRevoked,
+			stats.AccessGranted, stats.AccessRevoked, failedNote,
 		))
 	}()
 }
