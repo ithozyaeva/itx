@@ -23,11 +23,11 @@ import {
   Trophy,
   User,
 } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { AchievementsPanel, DailyCheckInWidget, KudosPanel, LeaderboardPanel, MyStatsPanel, PointsBadge, TaskCard, TaskCardSkeleton, TintedIcon } from '@/components/progress'
+import { DailyCheckInWidget, PointsBadge, TaskCard, TaskCardSkeleton, TintedIcon } from '@/components/progress'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
@@ -41,6 +41,14 @@ import { formatShortDate } from '@/lib/utils'
 import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
+
+// Панели тяжёлых табов грузим лениво — иначе при открытии /progress?tab=today
+// (дефолт) пользователь скачивает JS всех 4 «соседних» табов впустую.
+// MyStatsPanel особенно ощутим: SVG-charts + contribution graph.
+const LeaderboardPanel = defineAsyncComponent(() => import('@/components/progress/LeaderboardPanel.vue'))
+const AchievementsPanel = defineAsyncComponent(() => import('@/components/progress/AchievementsPanel.vue'))
+const MyStatsPanel = defineAsyncComponent(() => import('@/components/progress/MyStatsPanel.vue'))
+const KudosPanel = defineAsyncComponent(() => import('@/components/progress/KudosPanel.vue'))
 
 type TabKey = 'today' | 'period' | 'history' | 'sources' | 'leaderboard' | 'achievements' | 'stats' | 'kudos'
 type PeriodFilter = ChallengeKind | 'chats'
