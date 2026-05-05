@@ -2,10 +2,11 @@
 
 /* Fallback @font-face с подгонкой метрик под Inter Variable —
    уменьшает FOUT-сдвиг (CLS) пока подгружается основной шрифт.
-   Метрики измерены утилитой fontpie для Arial → Inter. */
+   Метрики измерены утилитой fontpie для Arial → Inter. Цепочка
+   local() покрывает Linux/Android (где Arial может отсутствовать). */
 @font-face {
   font-family: 'Inter Fallback';
-  src: local('Arial');
+  src: local('Arial'), local('Helvetica'), local('Roboto'), local('sans-serif');
   size-adjust: 107.4%;
   ascent-override: 90.20%;
   descent-override: 22.48%;

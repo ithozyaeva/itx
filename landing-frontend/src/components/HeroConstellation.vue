@@ -347,7 +347,7 @@ onMounted(() => {
     idleHandle = window.requestIdleCallback(startAnimation, { timeout: 2000 })
   }
   else {
-    idleHandle = setTimeout(startAnimation, 300) as unknown as number
+    idleHandle = window.setTimeout(startAnimation, 300)
   }
 
   onUnmounted(() => {

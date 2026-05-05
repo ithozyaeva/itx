@@ -20,21 +20,16 @@ const app = createApp(App)
 const head = createHead()
 app.use(head)
 
-app.component('MasonryWall', MasonryWall)
-app.use(router)
-app.use(VueQueryPlugin, { queryClient })
-app.mount('#app')
-
-initWebVitals()
-
-// Метрика инициализируется после первого idle, чтобы не конкурировать с LCP
-// и не утяжелять INP первой интеракции. Скрипт mc.yandex.ru/metrika/tag.js
-// и подписка на route changes ставится только после mount-а.
+// Метрика регистрируется синхронно: app.use() занимает микросекунды (только
+// provide + router-watcher), а сам mc.yandex.ru/metrika/tag.js плагин
+// подгружает уже асинхронно через <script src>. Defer через
+// requestIdleCallback ломает useYandexMetrika() в дочерних компонентах,
+// которые читают inject() на setup-фазе — выгода иллюзорна.
 const metrikaId = import.meta.env.VITE_YANDEX_METRIKA_ID
 const metrikaEnabled = import.meta.env.VITE_YANDEX_METRIKA_ENABLED !== 'false'
 
 if (metrikaId && metrikaEnabled) {
-  const initMetrika = () => app.use(initYandexMetrika, {
+  app.use(initYandexMetrika, {
     id: metrikaId,
     router,
     env: import.meta.env.MODE === 'development' ? 'production' : import.meta.env.MODE,
@@ -46,11 +41,11 @@ if (metrikaId && metrikaEnabled) {
       webvisor: false,
     },
   })
-
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(initMetrika, { timeout: 4000 })
-  }
-  else {
-    setTimeout(initMetrika, 2000)
-  }
 }
+
+app.component('MasonryWall', MasonryWall)
+app.use(router)
+app.use(VueQueryPlugin, { queryClient })
+app.mount('#app')
+
+initWebVitals()
