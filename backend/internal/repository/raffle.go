@@ -3,7 +3,11 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+
+	"gorm.io/gorm"
 )
+
+const buyTicketsBatchSize = 1000
 
 type RaffleRepository struct{}
 
@@ -64,18 +68,40 @@ func (r *RaffleRepository) GetExpired() ([]models.Raffle, error) {
 }
 
 func (r *RaffleRepository) BuyTickets(raffleId, memberId int64, count int) error {
-	tx := database.DB.Begin()
-	for i := 0; i < count; i++ {
-		ticket := &models.RaffleTicket{
-			RaffleId: raffleId,
-			MemberId: memberId,
-		}
-		if err := tx.Create(ticket).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
+	return r.BuyTicketsTx(database.DB, raffleId, memberId, count)
+}
+
+// BuyTicketsTx вставляет count purchase-билетов одним SQL-запросом.
+// Каждому билету достаётся уникальный source_id из raffle_ticket_purchase_seq —
+// иначе UNIQUE (raffle_id, member_id, source_type, source_id) схлопнулся бы
+// уже на втором билете в одной покупке.
+func (r *RaffleRepository) BuyTicketsTx(db *gorm.DB, raffleId, memberId int64, count int) error {
+	if count <= 0 {
+		return nil
 	}
-	return tx.Commit().Error
+	return db.Exec(
+		`INSERT INTO raffle_tickets (raffle_id, member_id, source_type, source_id, bought_at)
+		 SELECT ?, ?, ?, nextval('raffle_ticket_purchase_seq'), NOW()
+		 FROM generate_series(1, ?)`,
+		raffleId, memberId, models.RaffleTicketSourcePurchase, count,
+	).Error
+}
+
+// AwardTicketTx идемпотентно выдаёт один билет за конкретную активность.
+// Повторный вызов с тем же (raffleId, memberId, sourceType, sourceId) ничего
+// не делает благодаря UNIQUE-индексу uniq_raffle_ticket_source.
+// Возвращает (true, nil), если билет реально был создан.
+func (r *RaffleRepository) AwardTicketTx(db *gorm.DB, raffleId, memberId int64, sourceType string, sourceId int64) (bool, error) {
+	res := db.Exec(
+		`INSERT INTO raffle_tickets (raffle_id, member_id, source_type, source_id, bought_at)
+		 VALUES (?, ?, ?, ?, NOW())
+		 ON CONFLICT (raffle_id, member_id, source_type, source_id) DO NOTHING`,
+		raffleId, memberId, sourceType, sourceId,
+	)
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
 }
 
 func (r *RaffleRepository) GetTicketCount(raffleId int64) (int64, error) {
@@ -90,6 +116,19 @@ func (r *RaffleRepository) GetMemberTicketCount(raffleId, memberId int64) (int64
 		Where("raffle_id = ? AND member_id = ?", raffleId, memberId).
 		Count(&count).Error
 	return count, err
+}
+
+// GetMemberTicketSources возвращает уникальные source_type'ы билетов юзера
+// в указанной раффле — фронт по этому списку показывает «✓ check-in»,
+// «✓ дейлик» и какие способы ещё можно использовать сегодня.
+func (r *RaffleRepository) GetMemberTicketSources(raffleId, memberId int64) ([]string, error) {
+	sources := make([]string, 0)
+	err := database.DB.Raw(
+		`SELECT DISTINCT source_type FROM raffle_tickets
+		 WHERE raffle_id = ? AND member_id = ?`,
+		raffleId, memberId,
+	).Scan(&sources).Error
+	return sources, err
 }
 
 func (r *RaffleRepository) PickRandomWinner(raffleId int64) (int64, error) {

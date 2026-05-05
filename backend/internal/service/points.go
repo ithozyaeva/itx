@@ -90,25 +90,32 @@ func (s *PointsService) awardIdempotentTx(db *gorm.DB, memberId int64, reason mo
 }
 
 func (s *PointsService) AwardEventPoints(event *models.Event) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
+	if err := database.DB.Transaction(func(tx *gorm.DB) error {
 		for _, host := range event.Hosts {
 			if err := s.awardIdempotentTx(tx, host.Id, models.PointReasonEventHost, "event", event.Id,
 				fmt.Sprintf("Проведение события: %s", event.Title)); err != nil {
 				return err
 			}
 		}
-
 		for _, member := range event.Members {
 			if err := s.awardIdempotentTx(tx, member.Id, models.PointReasonEventAttend, "event", event.Id,
 				fmt.Sprintf("Участие в событии: %s", event.Title)); err != nil {
 				return err
 			}
-			TrackDailyTrigger(member.Id, "attend_event", 1)
-			TrackChallengeMetric(member.Id, "events_attended", 1)
 		}
-
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// Геймификационные хуки — после комита, чтобы их горутины не конкурировали
+	// за локи с открытой транзакцией начисления баллов.
+	for _, member := range event.Members {
+		TrackDailyTrigger(member.Id, "attend_event", 1)
+		TrackChallengeMetric(member.Id, "events_attended", 1)
+		AwardRaffleTicket(member.Id, models.RaffleTicketSourceAttendEvent, event.Id)
+	}
+	return nil
 }
 
 // CheckProfileComplete проверяет заполненность профиля и начисляет одноразовый бонус.

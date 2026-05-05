@@ -78,7 +78,7 @@ func (h *RaffleHandler) BuyTickets(c *fiber.Ctx) error {
 
 	if err := h.svc.BuyTickets(id, member.Id, req.Count); err != nil {
 		log.Printf("buy raffle tickets error (raffle=%d, member=%d): %v", id, member.Id, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось купить билеты"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	BroadcastEvent("raffles")

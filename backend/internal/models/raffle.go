@@ -45,11 +45,24 @@ type Raffle struct {
 }
 
 type RaffleTicket struct {
-	Id       int64     `json:"id" gorm:"primaryKey"`
-	RaffleId int64     `json:"raffleId" gorm:"column:raffle_id;not null"`
-	MemberId int64     `json:"memberId" gorm:"column:member_id;not null"`
-	BoughtAt time.Time `json:"boughtAt" gorm:"column:bought_at;autoCreateTime"`
+	Id         int64     `json:"id" gorm:"primaryKey"`
+	RaffleId   int64     `json:"raffleId" gorm:"column:raffle_id;not null"`
+	MemberId   int64     `json:"memberId" gorm:"column:member_id;not null"`
+	SourceType string    `json:"sourceType" gorm:"column:source_type;not null"`
+	SourceId   int64     `json:"sourceId" gorm:"column:source_id;not null"`
+	BoughtAt   time.Time `json:"boughtAt" gorm:"column:bought_at;autoCreateTime"`
 }
+
+// Источники билетов в daily-раффле и manual-раффлах.
+const (
+	RaffleTicketSourceCheckIn         = "check_in"
+	RaffleTicketSourceDailyTask       = "daily_task"
+	RaffleTicketSourceAllDailiesBonus = "all_dailies_bonus"
+	RaffleTicketSourceChallenge       = "challenge"
+	RaffleTicketSourceAttendEvent     = "attend_event"
+	RaffleTicketSourcePurchase        = "purchase"
+	RaffleTicketSourceLegacy          = "legacy"
+)
 
 type RafflePublic struct {
 	Id              int64           `json:"id"`
@@ -70,6 +83,10 @@ type RafflePublic struct {
 	WinnerLastName  string          `json:"winnerLastName,omitempty"`
 	WinnerUsername  string          `json:"winnerUsername,omitempty"`
 	WinnerAvatarURL string          `json:"winnerAvatarUrl,omitempty"`
+	// MySources — какие источники уже принесли юзеру билет в этом раффле.
+	// Пример: ["check_in","daily_task"]. Используется во фронте для подсветки
+	// «как ещё получить билет». Сейчас заполняется только для daily-раффла.
+	MySources []string `json:"mySources,omitempty"`
 }
 
 func (r *RafflePublic) AfterFind(tx *gorm.DB) (err error) {

@@ -264,6 +264,9 @@ func (s *ChallengeService) bumpAndAward(memberId int64, inst models.ChallengeIns
 		if t.RewardPoints > 0 {
 			TrackChallengeMetric(memberId, "points_earned", t.RewardPoints)
 		}
+		// За завершение челленджа — билет в сегодняшний daily-раффл.
+		// source_id=inst.Id уникально per member per challenge instance.
+		AwardRaffleTicket(memberId, models.RaffleTicketSourceChallenge, inst.Id)
 		// Если у шаблона прописан achievement_code — выдаём явную ачивку.
 		// Идемпотентно (PRIMARY KEY на (member_id, code)).
 		if t.AchievementCode != nil && *t.AchievementCode != "" {

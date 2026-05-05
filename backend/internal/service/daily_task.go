@@ -251,6 +251,7 @@ func (s *DailyTaskService) IncrementProgress(memberId int64, triggerKey string, 
 		}
 		if didAward {
 			awardedAny = true
+			AwardRaffleTicket(memberId, models.RaffleTicketSourceDailyTask, t.Id)
 		}
 	}
 
@@ -373,6 +374,7 @@ func (s *DailyTaskService) maybeAwardAllBonus(memberId int64, day time.Time, set
 	if bonus := models.PointValues[models.PointReasonDailyAllTasksBonus]; bonus > 0 {
 		TrackChallengeMetric(memberId, "points_earned", bonus)
 	}
+	AwardRaffleTicket(memberId, models.RaffleTicketSourceAllDailiesBonus, day.Unix())
 }
 
 // EnsureTodaySet — публичный хук для cron/watchdog: гарантирует, что
