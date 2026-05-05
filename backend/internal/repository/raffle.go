@@ -118,6 +118,19 @@ func (r *RaffleRepository) GetMemberTicketCount(raffleId, memberId int64) (int64
 	return count, err
 }
 
+// GetMemberTicketSources возвращает уникальные source_type'ы билетов юзера
+// в указанной раффле — фронт по этому списку показывает «✓ check-in»,
+// «✓ дейлик» и какие способы ещё можно использовать сегодня.
+func (r *RaffleRepository) GetMemberTicketSources(raffleId, memberId int64) ([]string, error) {
+	sources := make([]string, 0)
+	err := database.DB.Raw(
+		`SELECT DISTINCT source_type FROM raffle_tickets
+		 WHERE raffle_id = ? AND member_id = ?`,
+		raffleId, memberId,
+	).Scan(&sources).Error
+	return sources, err
+}
+
 func (r *RaffleRepository) PickRandomWinner(raffleId int64) (int64, error) {
 	var memberId int64
 	err := database.DB.Raw(`

@@ -118,6 +118,7 @@ func (s *DailyRaffleService) GetTodayPublic(memberId int64) (*models.RafflePubli
 
 	total, _ := s.repo.GetTicketCount(raffle.Id)
 	myTickets, _ := s.repo.GetMemberTicketCount(raffle.Id, memberId)
+	mySources, _ := s.repo.GetMemberTicketSources(raffle.Id, memberId)
 
 	pub := &models.RafflePublic{
 		Id:           raffle.Id,
@@ -134,6 +135,7 @@ func (s *DailyRaffleService) GetTodayPublic(memberId int64) (*models.RafflePubli
 		TotalTickets: int(total),
 		MyTickets:    int(myTickets),
 		WinnerId:     raffle.WinnerId,
+		MySources:    mySources,
 	}
 	return pub, nil
 }

@@ -1,6 +1,15 @@
 export type RaffleKind = 'manual' | 'daily'
 export type RaffleEntryRule = 'purchase' | 'auto_check_in'
 
+export type RaffleTicketSource
+  = | 'check_in'
+    | 'daily_task'
+    | 'all_dailies_bonus'
+    | 'challenge'
+    | 'attend_event'
+    | 'purchase'
+    | 'legacy'
+
 export interface RaffleItem {
   id: number
   title: string
@@ -20,4 +29,5 @@ export interface RaffleItem {
   winnerLastName: string
   winnerUsername: string
   winnerAvatarUrl: string
+  mySources?: RaffleTicketSource[]
 }

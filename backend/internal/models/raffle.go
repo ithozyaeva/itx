@@ -83,6 +83,10 @@ type RafflePublic struct {
 	WinnerLastName  string          `json:"winnerLastName,omitempty"`
 	WinnerUsername  string          `json:"winnerUsername,omitempty"`
 	WinnerAvatarURL string          `json:"winnerAvatarUrl,omitempty"`
+	// MySources — какие источники уже принесли юзеру билет в этом раффле.
+	// Пример: ["check_in","daily_task"]. Используется во фронте для подсветки
+	// «как ещё получить билет». Сейчас заполняется только для daily-раффла.
+	MySources []string `json:"mySources,omitempty"`
 }
 
 func (r *RafflePublic) AfterFind(tx *gorm.DB) (err error) {
