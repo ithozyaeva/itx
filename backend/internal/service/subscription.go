@@ -93,13 +93,19 @@ func (s *SubscriptionService) BuildContext() (*SubscriptionContext, error) {
 // При ошибке botCheckFunc (rate-limit, таймаут, network) возвращаем
 // (false, err) и НЕ кэшируем — иначе на 5 минут зависал бы false-позитив
 // и юзер на следующих проходах получил бы ложный кик из content-чатов.
+//
+// При s.redis == nil (или временно недоступен) кэширование пропускается,
+// логика fallback'ится на прямой вызов Telegram. Удобно для unit-тестов и
+// graceful degradation в проде.
 func (s *SubscriptionService) IsMember(chatID int64, userID int64, botCheckFunc MemberCheckFunc) (bool, error) {
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("sub:member:%d:%d", chatID, userID)
 
-	cached, err := s.redis.Get(ctx, cacheKey).Result()
-	if err == nil {
-		return cached == "1", nil
+	if s.redis != nil {
+		cached, err := s.redis.Get(ctx, cacheKey).Result()
+		if err == nil {
+			return cached == "1", nil
+		}
 	}
 
 	result, callErr := botCheckFunc(chatID, userID)
@@ -107,17 +113,22 @@ func (s *SubscriptionService) IsMember(chatID int64, userID int64, botCheckFunc 
 		return false, callErr
 	}
 
-	val := "0"
-	if result {
-		val = "1"
+	if s.redis != nil {
+		val := "0"
+		if result {
+			val = "1"
+		}
+		s.redis.Set(ctx, cacheKey, val, membershipCacheTTL)
 	}
-	s.redis.Set(ctx, cacheKey, val, membershipCacheTTL)
 
 	return result, nil
 }
 
 // InvalidateMemberCache removes the membership cache for a specific user/chat combo.
 func (s *SubscriptionService) InvalidateMemberCache(chatID int64, userID int64) {
+	if s.redis == nil {
+		return
+	}
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("sub:member:%d:%d", chatID, userID)
 	s.redis.Del(ctx, cacheKey)
