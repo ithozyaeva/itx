@@ -6,10 +6,6 @@ const { mockGetMyStats, mockGetLeaderboard } = vi.hoisted(() => ({
   mockGetLeaderboard: vi.fn(),
 }))
 
-vi.mock('@/components/ui/typography', () => ({
-  Typography: { template: '<div><slot /></div>', props: ['variant', 'as'] },
-}))
-
 vi.mock('lucide-vue-next', () => ({
   ArrowDown: { template: '<span class="arrow-down" />' },
   ArrowUp: { template: '<span class="arrow-up" />' },
@@ -55,7 +51,7 @@ vi.mock('@/services/points', () => ({
   },
 }))
 
-import MyStats from '@/pages/MyStats.vue'
+import MyStats from '@/components/progress/MyStatsPanel.vue'
 
 const sampleStats = {
   eventsAttended: 5,

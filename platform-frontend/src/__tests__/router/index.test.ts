@@ -2,19 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 // Mock all page component imports to avoid loading real Vue SFCs
-vi.mock('@/pages/Achievements.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/AutoApplyBot.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Content.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Dashboard.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Events.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/Kudos.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/Leaderboard.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MemberProfile.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MentorProfile.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Mentors.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/MyReviews.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('@/pages/MyStats.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Progress.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/Raffles.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/pages/ReferalLinks.vue', () => ({ default: { template: '<div />' } }))
@@ -50,14 +46,10 @@ describe('router', () => {
       ['/resumes', 'resumes'],
       ['/my-reviews', 'myReviews'],
       ['/progress', 'progress'],
-      ['/leaderboard', 'leaderboard'],
-      ['/achievements', 'achievements'],
       ['/marketplace', 'marketplace'],
       ['/tasks', 'taskExchange'],
       ['/auto-apply', 'autoApplyBot'],
-      ['/kudos', 'kudos'],
       ['/raffles', 'raffles'],
-      ['/my-stats', 'myStats'],
     ])('route %s has name %s', (path, name) => {
       const route = router.getRoutes().find((r: any) => r.name === name)
       expect(route).toBeDefined()
@@ -69,6 +61,10 @@ describe('router', () => {
       ['/dailies', '/progress?tab=today'],
       ['/quests', '/progress?tab=period&kind=chats'],
       ['/challenges', '/progress?tab=period'],
+      ['/leaderboard', '/progress?tab=leaderboard'],
+      ['/achievements', '/progress?tab=achievements'],
+      ['/kudos', '/progress?tab=kudos'],
+      ['/my-stats', '/progress?tab=stats'],
     ])('legacy %s redirects to %s for subscriber', async (from, to) => {
       // Эти редиректы ведут на /progress, который сам гейтнут по подписке.
       // Без подписки beforeEach уведёт пользователя на дашборд — поэтому

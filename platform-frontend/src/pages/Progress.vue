@@ -23,7 +23,7 @@ import {
   Trophy,
   User,
 } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
@@ -42,14 +42,22 @@ import { chatQuestService } from '@/services/chatQuestService'
 import { handleError } from '@/services/errorService'
 import { pointsService } from '@/services/points'
 
-type TabKey = 'today' | 'period' | 'history' | 'sources'
+// Панели тяжёлых табов грузим лениво — иначе при открытии /progress?tab=today
+// (дефолт) пользователь скачивает JS всех 4 «соседних» табов впустую.
+// MyStatsPanel особенно ощутим: SVG-charts + contribution graph.
+const LeaderboardPanel = defineAsyncComponent(() => import('@/components/progress/LeaderboardPanel.vue'))
+const AchievementsPanel = defineAsyncComponent(() => import('@/components/progress/AchievementsPanel.vue'))
+const MyStatsPanel = defineAsyncComponent(() => import('@/components/progress/MyStatsPanel.vue'))
+const KudosPanel = defineAsyncComponent(() => import('@/components/progress/KudosPanel.vue'))
+
+type TabKey = 'today' | 'period' | 'history' | 'sources' | 'leaderboard' | 'achievements' | 'stats' | 'kudos'
 type PeriodFilter = ChallengeKind | 'chats'
 
 const route = useRoute()
 const router = useRouter()
 const { toast } = useToast()
 
-const VALID_TABS: TabKey[] = ['today', 'period', 'history', 'sources']
+const VALID_TABS: TabKey[] = ['today', 'period', 'history', 'sources', 'leaderboard', 'achievements', 'stats', 'kudos']
 const VALID_PERIODS: PeriodFilter[] = ['weekly', 'monthly', 'chats']
 
 const initialTab: TabKey = (() => {
@@ -263,6 +271,18 @@ function loadMoreTransactions() {
         </TabsTrigger>
         <TabsTrigger value="sources">
           Способы
+        </TabsTrigger>
+        <TabsTrigger value="leaderboard">
+          Рейтинг
+        </TabsTrigger>
+        <TabsTrigger value="achievements">
+          Достижения
+        </TabsTrigger>
+        <TabsTrigger value="stats">
+          Моя статистика
+        </TabsTrigger>
+        <TabsTrigger value="kudos">
+          Благодарности
         </TabsTrigger>
       </TabsList>
 
@@ -571,6 +591,26 @@ function loadMoreTransactions() {
             </span>
           </RouterLink>
         </div>
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Рейтинг» ───────── -->
+      <TabsContent value="leaderboard">
+        <LeaderboardPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Достижения» ───────── -->
+      <TabsContent value="achievements">
+        <AchievementsPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Моя статистика» ───────── -->
+      <TabsContent value="stats">
+        <MyStatsPanel />
+      </TabsContent>
+
+      <!-- ───────── ТАБ «Благодарности» ───────── -->
+      <TabsContent value="kudos">
+        <KudosPanel />
       </TabsContent>
     </Tabs>
   </div>
