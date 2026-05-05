@@ -119,11 +119,28 @@ func GetEventMemberIds(eventId int64) []int64 {
 	return memberIds
 }
 
-// CreateNotificationsForMembers creates notifications for a list of member IDs
+// CreateNotificationsForMembers батчем создаёт уведомления для списка
+// memberIds (один INSERT на CreateInBatches вместо N×INSERT) и затем
+// шлёт SSE-publish каждому. Для большого ивента (200+ участников) это
+// сокращает время с N round-trip'ов до Postgres до одного-двух батчей.
 func CreateNotificationsForMembers(memberIds []int64, notifType string, title string, body string) {
-	for _, memberId := range memberIds {
-		if err := CreateNotification(memberId, notifType, title, body); err != nil {
-			log.Printf("Error creating notification for member %d: %v", memberId, err)
+	if len(memberIds) == 0 {
+		return
+	}
+	rows := make([]models.Notification, len(memberIds))
+	for i, id := range memberIds {
+		rows[i] = models.Notification{
+			MemberId: id,
+			Type:     notifType,
+			Title:    title,
+			Body:     body,
 		}
+	}
+	if err := database.DB.CreateInBatches(rows, 500).Error; err != nil {
+		log.Printf("CreateNotificationsForMembers batch insert (%d rows): %v", len(rows), err)
+		return
+	}
+	for _, id := range memberIds {
+		PublishToMember(id, "notifications")
 	}
 }
