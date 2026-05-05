@@ -18,6 +18,15 @@ const { start: startOnboarding } = useOnboarding()
 const tg_user = useUser()
 const tg_token = useToken()
 const isLoading = ref(false)
+// sessionExpired — взводим, когда у юзера в localStorage был tg_token, но
+// /me + refresh вернули 401 (токен инвалидирован — например, массовой
+// миграцией в #325, либо протух). Раньше в этом случае молча редиректили на
+// лендинг, и из-за того что tg_token не чистился, юзер попадал в петлю
+// «платформа на полсекунды → лендинг → клик → платформа на полсекунды».
+// Теперь apiClient чистит токены сам, а мы показываем человеческий экран
+// с кнопкой в бот.
+const sessionExpired = ref(false)
+const botUrl = `https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_NAME}?start=from_site`
 onBeforeMount(() => {
   // Инициализация темы при запуске приложения
   const savedTheme = localStorage.getItem('theme')
@@ -58,10 +67,9 @@ onBeforeMount(() => {
         tg_user.value = null
         tg_token.value = null
         handleError(error)
-        // Битый одноразовый токен в URL — нет смысла оставлять юзера на /platform
-        // с пустой страницей, отправляем на лендинг повторить вход.
-        if (!import.meta.env.DEV)
-          window.location.pathname = '/'
+        // Битый одноразовый токен в URL — показываем экран «сессия истекла»
+        // вместо редиректа на лендинг (откуда юзер тут же снова приедет).
+        sessionExpired.value = true
       })
       .finally(() => {
         isLoading.value = false
@@ -72,15 +80,16 @@ onBeforeMount(() => {
     startProactiveRefresh()
     // tg_user мог протухнуть (TTL 1 час) — getMe сам поднимет его в localStorage
     // через apiClient (подставит tg_token в header). Пока ждём — isLoading,
-    // чтобы не мигать голым Layout без router-view. Если после getMe юзер
-    // всё ещё пуст (токен невалиден, getMe внутри ловит ошибку через
-    // handleError и не пишет в localStorage) — кидаем на лендинг переавторизоваться.
+    // чтобы не мигать голым Layout без router-view.
     if (!tg_user.value)
       isLoading.value = true
     profileService.getMe().finally(() => {
       isLoading.value = false
-      if (!tg_user.value && !import.meta.env.DEV)
-        window.location.pathname = '/'
+      // Если /me + refresh не помогли — apiClient уже почистил tg_token.
+      // Показываем экран «сессия истекла» с кнопкой в бот, а не редирект:
+      // юзер видит причину и может перелогиниться одним кликом.
+      if (!tg_user.value)
+        sessionExpired.value = true
     })
   }
   else if (!import.meta.env.DEV) {
@@ -92,7 +101,28 @@ onBeforeMount(() => {
 <template>
   <Toaster />
   <OnboardingOverlay />
-  <div v-if="!isLoading" class="min-h-screen flex flex-col">
+  <div v-if="sessionExpired" class="min-h-screen flex items-center justify-center px-6">
+    <div class="max-w-md w-full text-center space-y-6">
+      <h1 class="text-2xl font-semibold">
+        Сессия истекла
+      </h1>
+      <p class="text-foreground/70">
+        Войди снова через Telegram-бота — он откроет платформу одним кликом.
+      </p>
+      <a
+        :href="botUrl"
+        class="inline-block px-6 py-3 rounded-md bg-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity"
+      >
+        Войти через Telegram
+      </a>
+      <div>
+        <a href="/" class="text-sm text-foreground/50 hover:text-foreground/70 underline">
+          Вернуться на главную
+        </a>
+      </div>
+    </div>
+  </div>
+  <div v-else-if="!isLoading" class="min-h-screen flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">
         <Transition name="page-fade" mode="out-in">
