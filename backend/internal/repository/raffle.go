@@ -71,18 +71,37 @@ func (r *RaffleRepository) BuyTickets(raffleId, memberId int64, count int) error
 	return r.BuyTicketsTx(database.DB, raffleId, memberId, count)
 }
 
-// BuyTicketsTx вставляет count билетов одним батчем в указанной транзакции.
-// CreateInBatches шлёт INSERT ... VALUES (...),(...),... вместо count отдельных
-// раундтрипов — критично для больших count (раньше count=1M вешало транзакцию).
+// BuyTicketsTx вставляет count purchase-билетов одним SQL-запросом.
+// Каждому билету достаётся уникальный source_id из raffle_ticket_purchase_seq —
+// иначе UNIQUE (raffle_id, member_id, source_type, source_id) схлопнулся бы
+// уже на втором билете в одной покупке.
 func (r *RaffleRepository) BuyTicketsTx(db *gorm.DB, raffleId, memberId int64, count int) error {
 	if count <= 0 {
 		return nil
 	}
-	tickets := make([]models.RaffleTicket, count)
-	for i := range tickets {
-		tickets[i] = models.RaffleTicket{RaffleId: raffleId, MemberId: memberId}
+	return db.Exec(
+		`INSERT INTO raffle_tickets (raffle_id, member_id, source_type, source_id, bought_at)
+		 SELECT ?, ?, ?, nextval('raffle_ticket_purchase_seq'), NOW()
+		 FROM generate_series(1, ?)`,
+		raffleId, memberId, models.RaffleTicketSourcePurchase, count,
+	).Error
+}
+
+// AwardTicketTx идемпотентно выдаёт один билет за конкретную активность.
+// Повторный вызов с тем же (raffleId, memberId, sourceType, sourceId) ничего
+// не делает благодаря UNIQUE-индексу uniq_raffle_ticket_source.
+// Возвращает (true, nil), если билет реально был создан.
+func (r *RaffleRepository) AwardTicketTx(db *gorm.DB, raffleId, memberId int64, sourceType string, sourceId int64) (bool, error) {
+	res := db.Exec(
+		`INSERT INTO raffle_tickets (raffle_id, member_id, source_type, source_id, bought_at)
+		 VALUES (?, ?, ?, ?, NOW())
+		 ON CONFLICT (raffle_id, member_id, source_type, source_id) DO NOTHING`,
+		raffleId, memberId, sourceType, sourceId,
+	)
+	if res.Error != nil {
+		return false, res.Error
 	}
-	return db.CreateInBatches(tickets, buyTicketsBatchSize).Error
+	return res.RowsAffected > 0, nil
 }
 
 func (r *RaffleRepository) GetTicketCount(raffleId int64) (int64, error) {
