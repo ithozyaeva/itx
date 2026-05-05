@@ -18,6 +18,27 @@ export default defineConfig(({ command }) => ({
       '@itx/ui': fileURLToPath(new URL('../packages/ui/src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/vue/')
+            || id.includes('node_modules/@vue/')
+            || id.includes('node_modules/vue-router/')
+            || id.includes('node_modules/pinia/')
+          ) {
+            return 'vue-vendor'
+          }
+          if (id.includes('node_modules/@tanstack/'))
+            return 'query'
+          if (id.includes('node_modules/@headlessui/'))
+            return 'headless'
+          return undefined
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {

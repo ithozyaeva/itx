@@ -329,15 +329,34 @@ onMounted(() => {
       raf = requestAnimationFrame(frame)
   }
 
-  if (reduceMotion) {
-    // Single static frame
-    frame()
+  // Отложенный старт: декоративная анимация не должна конкурировать с
+  // LCP/первой интеракцией. requestIdleCallback дожидается простоя
+  // основного потока.
+  let idleHandle: number | undefined
+  const startAnimation = () => {
+    if (reduceMotion) {
+      frame()
+    }
+    else {
+      raf = requestAnimationFrame(frame)
+    }
+  }
+
+  const hasIdle = 'requestIdleCallback' in window
+  if (hasIdle) {
+    idleHandle = window.requestIdleCallback(startAnimation, { timeout: 2000 })
   }
   else {
-    raf = requestAnimationFrame(frame)
+    idleHandle = window.setTimeout(startAnimation, 300)
   }
 
   onUnmounted(() => {
+    if (idleHandle !== undefined) {
+      if (hasIdle)
+        window.cancelIdleCallback(idleHandle)
+      else
+        clearTimeout(idleHandle)
+    }
     cancelAnimationFrame(raf)
     window.removeEventListener('mousemove', onMove)
   })

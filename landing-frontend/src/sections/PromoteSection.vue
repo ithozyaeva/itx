@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import type { TelegramUser } from '@/services/auth.ts'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useYandexMetrika } from 'yandex-metrika-vue3'
-import HeroConstellation from '@/components/HeroConstellation.vue'
 import TelegramAuth from '@/components/TelegramAuth.vue'
 import Button from '@/components/ui/UiButton.vue'
 import { useCountUp } from '@/composables/useCountUp'
 import { useMagneticHover } from '@/composables/useMagneticHover'
 import { useToken } from '@/composables/useToken.ts'
 import { useUser } from '@/composables/useUser.ts'
+
+// HeroConstellation — декоративный canvas, скрыт до lg-брейкпойнта.
+// Грузим лениво, чтобы не утяжелять main chunk и не конкурировать с LCP.
+const HeroConstellation = defineAsyncComponent(() =>
+  import('@/components/HeroConstellation.vue'),
+)
 
 const tgUser = useUser()
 const tgToken = useToken()

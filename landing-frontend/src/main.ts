@@ -7,6 +7,7 @@ import { initYandexMetrika } from 'yandex-metrika-vue3'
 import App from './App.vue'
 
 import { queryClient } from './plugins/vueQuery'
+import { initWebVitals } from './plugins/webVitals'
 import router from './router'
 import '@fontsource-variable/inter/wght.css'
 import '@fontsource-variable/jetbrains-mono/wght.css'
@@ -19,6 +20,11 @@ const app = createApp(App)
 const head = createHead()
 app.use(head)
 
+// Метрика регистрируется синхронно: app.use() занимает микросекунды (только
+// provide + router-watcher), а сам mc.yandex.ru/metrika/tag.js плагин
+// подгружает уже асинхронно через <script src>. Defer через
+// requestIdleCallback ломает useYandexMetrika() в дочерних компонентах,
+// которые читают inject() на setup-фазе — выгода иллюзорна.
 const metrikaId = import.meta.env.VITE_YANDEX_METRIKA_ID
 const metrikaEnabled = import.meta.env.VITE_YANDEX_METRIKA_ENABLED !== 'false'
 
@@ -41,3 +47,5 @@ app.component('MasonryWall', MasonryWall)
 app.use(router)
 app.use(VueQueryPlugin, { queryClient })
 app.mount('#app')
+
+initWebVitals()
