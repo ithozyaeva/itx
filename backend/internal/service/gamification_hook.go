@@ -7,6 +7,7 @@ import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"ithozyeva/internal/utils"
 )
 
 // gamificationHooks — синглтон-точка интеграции дейликов и челленджей в
@@ -62,7 +63,8 @@ func TrackDailyTrigger(memberId int64, triggerKey string, n int) {
 // плодит билеты (UNIQUE-индекс uniq_raffle_ticket_source).
 //
 // Безопасен для вызова из любого хендлера: не блокирует, не паникует.
-// Если daily-раффла нет (cron ещё не создал) или он не активен — no-op.
+// Если daily-раффла на сегодня ещё не создан (cron не отработал) или не
+// активен — no-op. Создание раффлы — задача cron'а, не hot path.
 func AwardRaffleTicket(memberId int64, sourceType string, sourceId int64) {
 	ensureGamificationHooks()
 	if memberId == 0 || sourceType == "" {
@@ -75,9 +77,9 @@ func AwardRaffleTicket(memberId int64, sourceType string, sourceId int64) {
 					memberId, sourceType, sourceId, r)
 			}
 		}()
-		raffle, err := dailyRaffleSvc.EnsureTodayRaffle()
+		raffle, err := dailyRaffleSvc.GetByDayKey(utils.MSKToday())
 		if err != nil {
-			log.Printf("award-raffle-ticket ensure today (member=%d): %v", memberId, err)
+			log.Printf("award-raffle-ticket lookup today (member=%d): %v", memberId, err)
 			return
 		}
 		if raffle == nil || raffle.Status != models.RaffleStatusActive {
