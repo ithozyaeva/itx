@@ -853,3 +853,56 @@ func TestGrantAccessManualUpgradeOnly(t *testing.T) {
 		t.Errorf("manual-grant поверх auto должен поднять флаг")
 	}
 }
+
+func TestRevokeClearsManualFlag(t *testing.T) {
+	db := testutil.EnsureTestDB(t)
+	subTablesTruncate(t, db)
+
+	seedSubChat(t, db, -500, "content-1", nil)
+	const userID int64 = 42
+	seedSubUser(t, db, userID, nil, nil)
+
+	svc := newTestSubService()
+
+	// 1. Админ добавил вручную → manual=true.
+	if err := svc.SyncContentJoin(userID, -500, nil, "test", true); err != nil {
+		t.Fatalf("manual SyncContentJoin: %v", err)
+	}
+
+	// 2. Юзер вышел из чата (chat_member leave) → revoke.
+	if err := svc.RevokeAccess(userID, -500); err != nil {
+		t.Fatalf("RevokeAccess: %v", err)
+	}
+
+	var rec models.SubscriptionUserChatAccess
+	if err := db.Where("user_id = ? AND chat_id = ?", userID, int64(-500)).
+		First(&rec).Error; err != nil {
+		t.Fatalf("reload after revoke: %v", err)
+	}
+	if rec.IsManual {
+		t.Errorf("RevokeAccess должен сбросить is_manual=false (защита покрывает только текущее членство)")
+	}
+	if rec.RevokedAt == nil {
+		t.Errorf("revoked_at должен быть выставлен")
+	}
+
+	// 3. Юзер вернулся сам по invite-link → auto-grant. Запись НЕ должна
+	//    унаследовать manual-флаг от прошлой жизни.
+	if err := svc.GrantAccess(userID, -500, false); err != nil {
+		t.Fatalf("self-rejoin auto-grant: %v", err)
+	}
+	// Свежий struct: GORM First() не обнуляет non-zero поля переиспользуемой
+	// модели — после step 2 rec.RevokedAt уже set, и при NULL из БД GORM
+	// оставит старое значение. Берём новую переменную.
+	var afterGrant models.SubscriptionUserChatAccess
+	if err := db.Where("user_id = ? AND chat_id = ?", userID, int64(-500)).
+		First(&afterGrant).Error; err != nil {
+		t.Fatalf("reload after self-rejoin: %v", err)
+	}
+	if afterGrant.IsManual {
+		t.Errorf("после revoke + self-rejoin (auto) флаг должен остаться false; иначе manual липнет к паре (user, chat) навсегда")
+	}
+	if afterGrant.RevokedAt != nil {
+		t.Errorf("revoked_at должен сброситься после нового grant (got %v)", afterGrant.RevokedAt)
+	}
+}
