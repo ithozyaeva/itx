@@ -42,6 +42,28 @@ describe('useSidebar', () => {
     expect(labels).toEqual([undefined, 'Сообщество', 'Знания', 'Активность', 'Бонусы'])
   })
 
+  it.each([
+    ['/achievements'],
+    ['/leaderboard'],
+    ['/kudos'],
+    ['/my-stats'],
+  ])('does not contain legacy gamification path %s (свернуты в /progress)', (path) => {
+    // Регрессионный гард: эти разделы свёрнуты в табы /progress (см. #324, #331).
+    // Если кто-то случайно вернёт пункт сюда, sidebar и хаб разойдутся
+    // и активные классы перестанут совпадать с реальным URL.
+    const { sidebarGroups } = useSidebar()
+    const allPaths = sidebarGroups.value.flatMap(g => g.items.map(i => i.path))
+    expect(allPaths).not.toContain(path)
+  })
+
+  it('contains /progress as the single gamification entry point', () => {
+    const { sidebarGroups } = useSidebar()
+    const progressItems = sidebarGroups.value.flatMap(g =>
+      g.items.filter(i => i.path === '/progress'),
+    )
+    expect(progressItems).toHaveLength(1)
+  })
+
   it('multiple calls return the same singleton state', () => {
     const first = useSidebar()
     const second = useSidebar()
