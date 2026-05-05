@@ -84,6 +84,7 @@ func TestUpdateProfile_ResponseIncludesSubscriptionTier(t *testing.T) {
 		"tg":        "patch_user",
 	})
 	req, _ := http.NewRequest(http.MethodPatch, "/members/me", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := patchMeApp(m).Test(req, -1)
@@ -141,6 +142,7 @@ func TestUpdateProfile_NoSubscription(t *testing.T) {
 		"tg":        "patch_no_sub",
 	})
 	req, _ := http.NewRequest(http.MethodPatch, "/members/me", bytes.NewReader(body))
+	req.Host = "localhost"
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := patchMeApp(m).Test(req, -1)
