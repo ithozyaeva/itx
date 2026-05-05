@@ -7,6 +7,14 @@ export const authService = {
     return await response.json()
   },
 
+  // authenticateWebApp обменивает window.Telegram.WebApp.initData на тот же
+  // tg_token, что выпускает /telegram. Бэкенд валидирует HMAC-подпись по
+  // бот-токену, поэтому подделать тело со стороны браузера нельзя.
+  async authenticateWebApp(initData: string): Promise<{ user: TelegramUser, token: string }> {
+    const response = await ky.post(`/api/auth/telegram-webapp`, { json: { init_data: initData } })
+    return await response.json()
+  },
+
   clearAuthHeader() {
     localStorage.removeItem('tg_token')
   },
