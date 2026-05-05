@@ -302,27 +302,59 @@ func (r *SubscriptionRepository) GetActiveAccess(userID int64) ([]models.Subscri
 	return access, nil
 }
 
-func (r *SubscriptionRepository) GrantAccess(userID int64, chatID int64) error {
+// GrantAccess upsert'ит активный access. isManual=true ставится при ручном
+// добавлении админом (chat_member event from!=user); чистый auto-grant
+// (бот выдал invite-link) идёт с isManual=false.
+//
+// Семантика is_manual: повышается, но не понижается в рамках одной
+// «жизни» записи (между Create и RevokeAccess). Если запись уже помечена
+// как manual, повторный auto-grant (например, sweep увидел юзера в чате)
+// сохраняет защиту. После RevokeAccess флаг сбрасывается — следующий
+// grant начинает «новую жизнь» с чистого листа.
+func (r *SubscriptionRepository) GrantAccess(userID, chatID int64, isManual bool) error {
 	var existing models.SubscriptionUserChatAccess
 	err := r.db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&existing).Error
 	if err == nil {
-		return r.db.Model(&existing).Updates(map[string]interface{}{
+		updates := map[string]interface{}{
 			"granted_at": time.Now(),
-			"revoked_at": nil,
-		}).Error
+		}
+		if isManual && !existing.IsManual {
+			updates["is_manual"] = true
+		}
+		if err := r.db.Model(&models.SubscriptionUserChatAccess{}).
+			Where("user_id = ? AND chat_id = ?", userID, chatID).
+			Updates(updates).Error; err != nil {
+			return err
+		}
+		// revoked_at сбрасываем отдельным Update через gorm.Expr —
+		// в GORM v2 Updates(map) с nil-value не всегда генерирует
+		// UPDATE ... SET col = NULL.
+		return r.db.Model(&models.SubscriptionUserChatAccess{}).
+			Where("user_id = ? AND chat_id = ?", userID, chatID).
+			Update("revoked_at", gorm.Expr("NULL")).Error
 	}
 	return r.db.Create(&models.SubscriptionUserChatAccess{
 		UserID:    userID,
 		ChatID:    chatID,
 		GrantedAt: time.Now(),
+		IsManual:  isManual,
 	}).Error
 }
 
+// RevokeAccess помечает запись как отозванную и сбрасывает is_manual=false.
+// Сброс важен для семантики: manual-защита покрывает текущее членство
+// в чате; если юзер ушёл (chat_member leave) или его кикнул periodic, при
+// следующем вступлении по invite-link запись «всплывёт» как обычный
+// auto-grant. Если потом админ снова добавит вручную — chat_member event
+// от админа поднимет is_manual=true заново через GrantAccess.
 func (r *SubscriptionRepository) RevokeAccess(userID int64, chatID int64) error {
 	now := time.Now()
 	return r.db.Model(&models.SubscriptionUserChatAccess{}).
 		Where("user_id = ? AND chat_id = ? AND revoked_at IS NULL", userID, chatID).
-		Update("revoked_at", now).Error
+		Updates(map[string]interface{}{
+			"revoked_at": now,
+			"is_manual":  false,
+		}).Error
 }
 
 func (r *SubscriptionRepository) GetUsersWithAccessToChat(chatID int64) ([]models.SubscriptionUser, error) {

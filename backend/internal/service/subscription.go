@@ -271,11 +271,17 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 		entitledIDs[c.ID] = true
 	}
 
-	// Current active access
+	// Current active access. Сохраняем не только set chat_id, но и флаг
+	// is_manual — чтобы revoke-loop пропускал чаты, в которые админ-человек
+	// добавил юзера за заслуги (см. handleChatMemberUpdated в боте).
 	currentAccess, _ := s.repo.GetActiveAccess(userID)
-	currentIDs := make(map[int64]bool)
+	currentIDs := make(map[int64]bool, len(currentAccess))
+	manualIDs := make(map[int64]bool, len(currentAccess))
 	for _, a := range currentAccess {
 		currentIDs[a.ChatID] = true
+		if a.IsManual {
+			manualIDs[a.ChatID] = true
+		}
 	}
 
 	result := &SyncResult{
@@ -285,7 +291,7 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 		EffectiveTierID: effectiveTierID,
 	}
 
-	// Grant missing
+	// Grant missing — auto-grant (бот сам выдаёт invite-link), is_manual=false.
 	for chatID := range entitledIDs {
 		if !currentIDs[chatID] {
 			link, err := createInviteLink(chatID)
@@ -293,7 +299,7 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 				log.Printf("Failed to create invite link for chat %d: %v", chatID, err)
 				continue
 			}
-			s.repo.GrantAccess(userID, chatID)
+			s.repo.GrantAccess(userID, chatID, false)
 			s.repo.AddAudit(userID, "grant", map[string]interface{}{
 				"chat_id": chatID,
 			})
@@ -305,11 +311,16 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 	// revoke в БД делаем только если kickUser реально кикнул — иначе
 	// при auto_kick=false мы бы тихо снимали access и слали юзерам
 	// «уровень изменился», хотя в Telegram они остаются на месте.
+	// Manual-access (админ-человек добавил юзера вручную) тоже пропускаем —
+	// это явный override, periodic не должен его сносить.
 	for chatID := range currentIDs {
 		if entitledIDs[chatID] {
 			continue
 		}
 		if subCtx.AnchorChatIDs[chatID] {
+			continue
+		}
+		if manualIDs[chatID] {
 			continue
 		}
 		if !kickUser(chatID, userID) {
@@ -355,11 +366,16 @@ func (s *SubscriptionService) EnsureUser(userID int64, username *string, fullNam
 // пересчитываем: его обновит ближайший PeriodicCheck — здесь нам нужно
 // только зафиксировать факт членства, чтобы DryRun/PeriodicCheck потом
 // корректно посчитал «лишних».
-func (s *SubscriptionService) SyncContentJoin(userID int64, chatID int64, username *string, fullName string) error {
+//
+// isManual=true когда админ-человек добавил юзера вручную (chat_member
+// event from!=user). Эта пометка защищает запись от revoke в periodic —
+// так бот не вышибает людей, которым админ выдал доступ за заслуги вне
+// их подписочного тира.
+func (s *SubscriptionService) SyncContentJoin(userID, chatID int64, username *string, fullName string, isManual bool) error {
 	if err := s.repo.EnsureUser(userID, username, fullName); err != nil {
 		return err
 	}
-	return s.repo.GrantAccess(userID, chatID)
+	return s.repo.GrantAccess(userID, chatID, isManual)
 }
 
 // SyncContentLeave — пользователь вышел/кикнут из content-чата. Снимаем
@@ -461,10 +477,14 @@ func (s *SubscriptionService) SweepRealMembership(
 			}
 
 			if isMember && !currentSet[chat.ID] {
-				if err := s.repo.GrantAccess(uid, chat.ID); err == nil {
+				// Sweep — это «наблюдение», isManual=false. Если запись была
+				// manual ранее (видели chat_member from!=user), repo сохраняет
+				// флаг — повышается не понижается.
+				if err := s.repo.GrantAccess(uid, chat.ID, false); err == nil {
 					stats.AccessGranted++
 				}
 			} else if !isMember && currentSet[chat.ID] {
+				// Юзер реально вышел — manual-защита уже бессмысленна, snimaem.
 				if err := s.repo.RevokeAccess(uid, chat.ID); err == nil {
 					stats.AccessRevoked++
 				}
@@ -542,8 +562,12 @@ func (s *SubscriptionService) dryRunCheckUserCtx(
 
 	currentAccess, _ := s.repo.GetActiveAccess(userID)
 	current := make(map[int64]bool, len(currentAccess))
+	manual := make(map[int64]bool, len(currentAccess))
 	for _, a := range currentAccess {
 		current[a.ChatID] = true
+		if a.IsManual {
+			manual[a.ChatID] = true
+		}
 	}
 
 	res := &DryRunUserResult{
@@ -563,6 +587,11 @@ func (s *SubscriptionService) dryRunCheckUserCtx(
 			continue
 		}
 		if subCtx.AnchorChatIDs[cid] {
+			continue
+		}
+		if manual[cid] {
+			// Manual-access (админ-человек добавил) — periodic его не сносит,
+			// чтобы dry-run не вводил в заблуждение «выкинет такого-то».
 			continue
 		}
 		res.WouldRevoke = append(res.WouldRevoke, cid)
@@ -858,8 +887,8 @@ func (s *SubscriptionService) GetUsersWithAccessToChat(chatID int64) ([]models.S
 	return s.repo.GetUsersWithAccessToChat(chatID)
 }
 
-func (s *SubscriptionService) GrantAccess(userID int64, chatID int64) error {
-	return s.repo.GrantAccess(userID, chatID)
+func (s *SubscriptionService) GrantAccess(userID, chatID int64, isManual bool) error {
+	return s.repo.GrantAccess(userID, chatID, isManual)
 }
 
 func (s *SubscriptionService) RevokeAccess(userID int64, chatID int64) error {
