@@ -131,9 +131,11 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 		}
 		user = created
 	} else {
-		user.Username = tgUser.Username
 		user.FirstName = tgUser.FirstName
 		user.LastName = tgUser.LastName
+		if user.Username == "" && tgUser.Username != "" {
+			user.Username = tgUser.Username
+		}
 		h.memberService.Update(user)
 
 		if _, err := h.authService.CreateOrUpdateToken(tgUser.ID, token); err != nil {
@@ -326,10 +328,16 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 		}
 		existingUser = createdUser
 	} else {
-		existingUser.Username = req.Username
 		existingUser.FirstName = req.FirstName
 		existingUser.LastName = req.LastName
-		if req.AvatarURL != "" {
+		// Username и AvatarURL не перезатираем при повторном логине:
+		// username — отдельная сущность с UNIQUE-проверкой, аватар может быть кастомным.
+		// Заполняем только если в БД пусто (миграция со старых записей или первый логин,
+		// где почему-то поле осталось пустым).
+		if existingUser.Username == "" && req.Username != "" {
+			existingUser.Username = req.Username
+		}
+		if existingUser.AvatarURL == "" && req.AvatarURL != "" {
 			existingUser.AvatarURL = req.AvatarURL
 		}
 		h.memberService.Update(existingUser)
