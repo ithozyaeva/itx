@@ -53,6 +53,9 @@ func (s *ReferralCreditService) AwardForConversion(memberId int64, linkId int64)
 // source_type='referral_first_paid', source_id=refereeMemberID). Повторный
 // вызов из любого потока — no-op.
 func (s *ReferralCreditService) AwardForFirstPurchase(referrerId int64, refereeId int64, priceCents int) {
+	if referrerId == refereeId || referrerId <= 0 {
+		return // defense-in-depth: TrackConversion handler уже не даёт self-conversion, но если когда-нибудь просочится — не платим
+	}
 	share := s.settings.GetFloat("referral_first_purchase_share", 0.5)
 	amount := int(float64(priceCents) / 100.0 * share)
 	if amount <= 0 {
@@ -79,6 +82,9 @@ func (s *ReferralCreditService) AwardForFirstPurchase(referrerId int64, refereeI
 // Дёргается из PeriodicCheck для каждого активного юзера; благодаря
 // идемпотентности безопасно вызывать на каждом тикере.
 func (s *ReferralCreditService) AwardForRecurringPurchase(referrerId int64, refereeId int64, priceCents int, periodKey string) {
+	if referrerId == refereeId || referrerId <= 0 {
+		return
+	}
 	share := s.settings.GetFloat("referral_purchase_share", 0.2)
 	amount := int(float64(priceCents) / 100.0 * share)
 	if amount <= 0 {

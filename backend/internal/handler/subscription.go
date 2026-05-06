@@ -649,6 +649,12 @@ func (h *SubscriptionHandler) PurchaseWithCredits(c *fiber.Ctx) error {
 		if errors.Is(err, service.ErrTierNotPurchasable) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Этот тариф нельзя купить за кредиты"})
 		}
+		if errors.Is(err, service.ErrBessrochnyGrantExists) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "У вас уже бессрочная подписка от администратора"})
+		}
+		if errors.Is(err, service.ErrTierDowngrade) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Нельзя купить тариф ниже текущего"})
+		}
 		log.Printf("PurchaseWithCredits error (member=%d, slug=%s): %v", member.Id, req.TierSlug, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось купить подписку"})
 	}

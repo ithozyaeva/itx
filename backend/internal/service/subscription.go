@@ -183,12 +183,24 @@ func (s *SubscriptionService) memberIDByTelegramID(telegramID int64) int64 {
 // Дёргается из PeriodicCheck/CheckAndSyncUser (для Boosty-anchor flow)
 // и PurchaseTierWithCredits (для покупок за credits) — оба пути ведут
 // к одной и той же индексу-защите.
-func (s *SubscriptionService) awardReferralRewardsFor(telegramID int64, tierID uint) {
+//
+// Сигнал «реальной оплаты» — обязателен, иначе админский bessrochny grant
+// (`/suboverride`) друга бесплатно платил бы инвайтеру 50% + 20%/мес из
+// ниоткуда. Засчитываем как платный только два пути:
+//   - юзер реально в anchor-чате (ResolvedTierID не nil) — Boosty.
+//   - manual с истечением (ManualTierExpiresAt != nil) — покупка за credits.
+// Bessrochny manual без expires — административный грант, не платная подписка.
+func (s *SubscriptionService) awardReferralRewardsFor(user *models.SubscriptionUser, tierID uint) {
+	paid := user.ResolvedTierID != nil ||
+		(user.ManualTierID != nil && user.ManualTierExpiresAt != nil)
+	if !paid {
+		return
+	}
 	tier, err := s.repo.GetTier(tierID)
 	if err != nil || tier.PriceCents == nil || *tier.PriceCents <= 0 {
 		return
 	}
-	refereeMemberID := s.memberIDByTelegramID(telegramID)
+	refereeMemberID := s.memberIDByTelegramID(user.ID)
 	if refereeMemberID == 0 {
 		return
 	}
@@ -328,9 +340,10 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 	// текущий месяц) при каждом проходе. Идемпотентность гарантирована
 	// уникальным индексом на referral_credit_transactions: first уйдёт
 	// раз за пару (referrer, referee), recurring — раз в месяц.
-	// Безопасно вызывать на каждом тикере PeriodicCheck.
+	// Внутри awardReferralRewardsFor проверяется, что у юзера есть
+	// сигнал реальной оплаты (anchor-членство или manual с expires).
 	if effectiveTierID != nil {
-		s.awardReferralRewardsFor(userID, *effectiveTierID)
+		s.awardReferralRewardsFor(user, *effectiveTierID)
 	}
 
 	// Determine entitled chats
@@ -1024,6 +1037,16 @@ func tierIDsEqual(a, b *uint) bool {
 // купить его за credits нельзя. Хендлер маппит в HTTP 400.
 var ErrTierNotPurchasable = errors.New("tier is not purchasable with credits")
 
+// ErrBessrochnyGrantExists — у юзера уже стоит admin-выданный manual без
+// expires (бессрочный grant). Покупка за credits перетёрла бы его и
+// заменила 30-дневным таймером — отказываем явно.
+var ErrBessrochnyGrantExists = errors.New("user has bessrochny manual grant; cannot purchase")
+
+// ErrTierDowngrade — юзер пытается купить тариф ниже текущего эффективного.
+// Покупка стала бы downgrade с продлением — поведение, скорее всего,
+// неожиданное; отказываем явно. Если нужен upgrade — пусть покупает выше.
+var ErrTierDowngrade = errors.New("cannot purchase a tier lower than current effective tier")
+
 // PurchaseResult — результат успешной покупки тарифа за credits.
 // Возвращается клиенту, чтобы UI сразу показал новый срок и баланс
 // без повторного запроса.
@@ -1094,6 +1117,23 @@ func (s *SubscriptionService) PurchaseTierWithCredits(
 		user, err := s.repo.GetUserTx(tx, telegramID)
 		if err != nil {
 			return fmt.Errorf("get user: %w", err)
+		}
+
+		// Защита от перетирания админского bessrochny grant: если у
+		// юзера manual_tier_id != nil, а expires_at == nil — значит
+		// админ выдал ему бессрочную подписку. Покупка за credits
+		// заменила бы её на тариф с 30-дневным таймером.
+		if user.ManualTierID != nil && user.ManualTierExpiresAt == nil {
+			return ErrBessrochnyGrantExists
+		}
+
+		// Защита от downgrade: если эффективный тир (с учётом expires)
+		// >= покупаемого, отказываем. Иначе юзер «купил бы» тариф ниже
+		// текущего и получил бы и downgrade, и +30 дней — surprising.
+		if curEff := user.EffectiveTierID(); curEff != nil {
+			if curTier, err := s.repo.GetTier(*curEff); err == nil && curTier.Level > tier.Level {
+				return ErrTierDowngrade
+			}
 		}
 
 		now := time.Now()

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
@@ -11,12 +12,14 @@ import (
 )
 
 type ReferralCreditHandler struct {
-	svc *service.ReferralCreditService
+	svc      *service.ReferralCreditService
+	auditSvc *service.AuditService
 }
 
 func NewReferralCreditHandler() *ReferralCreditHandler {
 	return &ReferralCreditHandler{
-		svc: service.NewReferralCreditService(),
+		svc:      service.NewReferralCreditService(),
+		auditSvc: service.NewAuditService(),
 	}
 }
 
@@ -71,5 +74,22 @@ func (h *ReferralCreditHandler) AdminAward(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось начислить кредиты"})
 	}
+
+	// Audit + notification: credits — реальная стоимость (через них покупается
+	// подписка), поэтому ручное движение баланса должно быть отслеживаемо
+	// и явно сообщено владельцу.
+	auditDesc := fmt.Sprintf("amount=%d %s", req.Amount, req.Description)
+	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "referral_credits", req.MemberId, auditDesc)
+	notifTitle := "Начисление кредитов"
+	notifBody := fmt.Sprintf("Администратор начислил вам %d кредитов", req.Amount)
+	if req.Amount < 0 {
+		notifTitle = "Списание кредитов"
+		notifBody = fmt.Sprintf("Администратор списал у вас %d кредитов", -req.Amount)
+	}
+	if req.Description != "" {
+		notifBody += ": " + req.Description
+	}
+	go CreateNotification(req.MemberId, "credits_admin", notifTitle, notifBody)
+
 	return c.JSON(fiber.Map{"success": true})
 }

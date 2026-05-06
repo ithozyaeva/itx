@@ -292,12 +292,13 @@ func (r *SubscriptionRepository) UpdateResolvedTier(userID int64, tierID *uint) 
 		}).Error
 }
 
+// SetManualTier — админский override (бессрочный grant из /suboverride).
+// Атомарно устанавливает manual_tier_id и зануляет manual_tier_expires_at,
+// чтобы новый grant не унаследовал stale expires от прошлой credits-покупки.
+// Без этого зануления админский «бессрочный» grant получал бы случайный
+// 30-дневный таймер от предыдущей записи юзера.
 func (r *SubscriptionRepository) SetManualTier(userID int64, tierID *uint) error {
-	return r.db.Model(&models.SubscriptionUser{}).Where("id = ?", userID).
-		Updates(map[string]interface{}{
-			"manual_tier_id": tierID,
-			"updated_at":     time.Now(),
-		}).Error
+	return r.SetManualTierWithExpiry(userID, tierID, nil)
 }
 
 // SetManualTierWithExpiry атомарно записывает manual_tier_id и

@@ -24,11 +24,24 @@ type AppSettingsService struct {
 	mu    sync.RWMutex
 }
 
+// Process-wide singleton: до этого каждый handler/service создавал свой
+// экземпляр с собственным кэшем, и одно и то же значение читалось из БД
+// 6+ раз (по числу инстансов сервиса) с offset'нутыми TTL'ами.
+// Будущая инвалидация при правке settings из админки тоже потребовала бы
+// дёргать все инстансы — singleton эту проблему снимает.
+var (
+	appSettingsOnce     sync.Once
+	appSettingsInstance *AppSettingsService
+)
+
 func NewAppSettingsService() *AppSettingsService {
-	return &AppSettingsService{
-		repo:  repository.NewAppSettingsRepository(),
-		cache: make(map[string]appSettingsCacheEntry),
-	}
+	appSettingsOnce.Do(func() {
+		appSettingsInstance = &AppSettingsService{
+			repo:  repository.NewAppSettingsRepository(),
+			cache: make(map[string]appSettingsCacheEntry),
+		}
+	})
+	return appSettingsInstance
 }
 
 func (s *AppSettingsService) getRaw(key string) []byte {
