@@ -84,6 +84,12 @@ func (s *MemberService) GetByUsername(username string) (*models.Member, error) {
 	return s.repo.GetMemberByTelegram(username)
 }
 
+// ClaimUsername освобождает username у других участников, чтобы переданный
+// keepID мог им владеть без коллизии с UNIQUE-индексом. См. ReleaseUsername.
+func (s *MemberService) ClaimUsername(username string, keepID int64) error {
+	return s.repo.ReleaseUsername(username, keepID)
+}
+
 func (s *MemberService) GetSubscribedMembersWithTelegram() ([]models.Member, error) {
 	return s.repo.GetSubscribedMembersWithTelegram()
 }
