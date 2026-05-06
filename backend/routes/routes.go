@@ -175,6 +175,14 @@ func SetupAdminRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
 	points.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), pointsHandler.AdminAward)
 	points.Delete("/:id", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), pointsHandler.AdminDelete)
 
+	// Маршруты для реферальных кредитов (админ). Переиспользуем permission
+	// от points: семантика близкая, плодить отдельный CanView/EditCredits
+	// без отдельной админской роли смысла нет.
+	creditsHandler := handler.NewReferralCreditHandler()
+	credits := protected.Group("/credits", authMiddleware.RequirePermission(models.PermissionCanViewAdminPoints))
+	credits.Get("/", creditsHandler.AdminSearch)
+	credits.Post("/", authMiddleware.RequirePermission(models.PermissionCanEditAdminPoints), creditsHandler.AdminAward)
+
 	// Маршруты для журнала действий
 	auditLogHandler := handler.NewAuditLogHandler()
 	protected.Get("/audit-logs", authMiddleware.RequirePermission(models.PermissionCanViewAdminAuditLogs), auditLogHandler.Search)
@@ -357,10 +365,18 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
 
 	// Публичные тарифы для /tariffs и прогрева в боте.
+	// Покупка тарифа за реферальные кредиты — тоже на protected, потому что
+	// именно UNSUBSCRIBER — целевая аудитория покупки.
 	if redisClient != nil {
 		subscriptionHandler := handler.NewSubscriptionHandler(redisClient)
 		protected.Get("/subscriptions/tiers", subscriptionHandler.PublicTiers)
+		protected.Post("/subscriptions/purchase", subscriptionHandler.PurchaseWithCredits)
 	}
+
+	// Реферальные кредиты — баланс и история. Доступно UNSUBSCRIBER'у:
+	// юзер должен видеть, хватает ли ему кредитов до покупки подписки.
+	platformCreditsHandler := handler.NewReferralCreditHandler()
+	protected.Get("/credits/me", platformCreditsHandler.GetMine)
 
 	// Обратная связь о платформе — должен мочь оставить кто угодно.
 	feedbackHandler := handler.NewFeedbackHandler()

@@ -45,14 +45,17 @@ const (
 )
 
 var PointValues = map[PointReason]int{
-	PointReasonEventAttend:      10,
-	PointReasonEventHost:        25,
-	PointReasonReviewCommunity:  15,
-	PointReasonReviewService:    10,
-	PointReasonResumeUpload:     10,
-	PointReasonReferalCreate:    5,
-	PointReasonReferalConversion: 30,
-	PointReasonProfileComplete:  20,
+	PointReasonEventAttend:     10,
+	PointReasonEventHost:       25,
+	PointReasonReviewCommunity: 15,
+	PointReasonReviewService:   10,
+	PointReasonResumeUpload:    10,
+	PointReasonReferalCreate:   5,
+	// PointReasonReferalConversion больше не начисляется в points —
+	// награда переехала в referral_credit_transactions (отдельная валюта,
+	// тратится на покупку подписки). Константа оставлена для совместимости
+	// с историей в point_transactions.
+	PointReasonProfileComplete: 20,
 	PointReasonWeeklyActivity:   5,
 	PointReasonMonthlyActive:    30,
 	PointReasonStreak4Weeks:     50,

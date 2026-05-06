@@ -3,14 +3,17 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 const membershipCacheTTL = 5 * time.Minute
@@ -31,14 +34,22 @@ type NewChatAccessEvent struct {
 }
 
 type SubscriptionService struct {
-	repo  *repository.SubscriptionRepository
-	redis *redis.Client
+	repo        *repository.SubscriptionRepository
+	creditsRepo *repository.ReferralCreditRepository
+	referalRepo *repository.ReferalLinkRepository
+	creditsSvc  *ReferralCreditService
+	settings    *AppSettingsService
+	redis       *redis.Client
 }
 
 func NewSubscriptionService(redisClient *redis.Client) *SubscriptionService {
 	return &SubscriptionService{
-		repo:  repository.NewSubscriptionRepository(),
-		redis: redisClient,
+		repo:        repository.NewSubscriptionRepository(),
+		creditsRepo: repository.NewReferralCreditRepository(),
+		referalRepo: repository.NewReferalLinkRepository(),
+		creditsSvc:  NewReferralCreditService(),
+		settings:    NewAppSettingsService(),
+		redis:       redisClient,
 	}
 }
 
@@ -153,6 +164,55 @@ func (s *SubscriptionService) ResolveTierID(userID int64, botCheckFunc MemberChe
 	return s.resolveTierIDFromContext(userID, botCheckFunc, ctx)
 }
 
+// memberIDByTelegramID — lookup members.id по telegram_id.
+// Возвращает 0, если в members такого юзера нет (например, вступил
+// в anchor-чат до регистрации на платформе). Используется для хука
+// реф-выплат: без member.id нельзя ни найти инвайтера, ни записать
+// credit-транзакцию.
+func (s *SubscriptionService) memberIDByTelegramID(telegramID int64) int64 {
+	var memberID int64
+	database.DB.Raw(`SELECT id FROM members WHERE telegram_id = ?`, telegramID).Scan(&memberID)
+	return memberID
+}
+
+// awardReferralRewardsFor — пытается начислить инвайтеру credits за
+// активную подписку реферала. Идемпотентно: уникальный индекс на
+// referral_credit_transactions гарантирует, что first уйдёт ровно
+// раз за пару (referrer, referee), а recurring — раз в месяц.
+//
+// Дёргается из PeriodicCheck/CheckAndSyncUser (для Boosty-anchor flow)
+// и PurchaseTierWithCredits (для покупок за credits) — оба пути ведут
+// к одной и той же индексу-защите.
+//
+// Сигнал «реальной оплаты» — обязателен, иначе админский bessrochny grant
+// (`/suboverride`) друга бесплатно платил бы инвайтеру 50% + 20%/мес из
+// ниоткуда. Засчитываем как платный только два пути:
+//   - юзер реально в anchor-чате (ResolvedTierID не nil) — Boosty.
+//   - manual с истечением (ManualTierExpiresAt != nil) — покупка за credits.
+// Bessrochny manual без expires — административный грант, не платная подписка.
+func (s *SubscriptionService) awardReferralRewardsFor(user *models.SubscriptionUser, tierID uint) {
+	paid := user.ResolvedTierID != nil ||
+		(user.ManualTierID != nil && user.ManualTierExpiresAt != nil)
+	if !paid {
+		return
+	}
+	tier, err := s.repo.GetTier(tierID)
+	if err != nil || tier.PriceCents == nil || *tier.PriceCents <= 0 {
+		return
+	}
+	refereeMemberID := s.memberIDByTelegramID(user.ID)
+	if refereeMemberID == 0 {
+		return
+	}
+	referrerID, err := s.referalRepo.GetReferrerForMember(refereeMemberID)
+	if err != nil || referrerID == 0 {
+		return
+	}
+	s.creditsSvc.AwardForFirstPurchase(referrerID, refereeMemberID, *tier.PriceCents)
+	period := time.Now().Format("2006-01")
+	s.creditsSvc.AwardForRecurringPurchase(referrerID, refereeMemberID, *tier.PriceCents, period)
+}
+
 // resolveTierIDFromContext — без БД-обращений к anchor-чатам/тирам.
 // Использует переданный snapshot. Для PeriodicCheck/DryRunPeriodicCheck —
 // один SELECT на проход вместо одного на пользователя.
@@ -240,6 +300,25 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 	subCtx *SubscriptionContext,
 ) (*SyncResult, error) {
 	userID := user.ID
+
+	// Истечение manual_tier: если срок прошёл, сбрасываем оба поля и
+	// пишем audit. Дальше revoke-loop сам подчистит content-чаты, в
+	// которые юзер попал по этому manual'у.
+	if user.ManualTierID != nil && user.ManualTierExpiresAt != nil && time.Now().After(*user.ManualTierExpiresAt) {
+		expiredTierID := *user.ManualTierID
+		expiredAt := *user.ManualTierExpiresAt
+		if err := s.repo.SetManualTierWithExpiry(userID, nil, nil); err != nil {
+			log.Printf("manual_expired: failed to clear for user %d: %v", userID, err)
+		} else {
+			s.repo.AddAudit(userID, "manual_expired", map[string]interface{}{
+				"expired_tier_id": expiredTierID,
+				"expired_at":      expiredAt,
+			})
+			user.ManualTierID = nil
+			user.ManualTierExpiresAt = nil
+		}
+	}
+
 	newTierID, err := s.resolveTierIDFromContext(userID, botCheckFunc, subCtx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve tier: %w", err)
@@ -256,6 +335,16 @@ func (s *SubscriptionService) checkAndSyncUserCtx(
 	}
 
 	effectiveTierID := user.EffectiveTierID()
+
+	// Реф-награды инвайтеру: пытаемся выплатить first и recurring (за
+	// текущий месяц) при каждом проходе. Идемпотентность гарантирована
+	// уникальным индексом на referral_credit_transactions: first уйдёт
+	// раз за пару (referrer, referee), recurring — раз в месяц.
+	// Внутри awardReferralRewardsFor проверяется, что у юзера есть
+	// сигнал реальной оплаты (anchor-членство или manual с expires).
+	if effectiveTierID != nil {
+		s.awardReferralRewardsFor(user, *effectiveTierID)
+	}
 
 	// Determine entitled chats
 	var entitledChats []models.SubscriptionChat
@@ -541,9 +630,12 @@ func (s *SubscriptionService) dryRunCheckUserCtx(
 		return nil, fmt.Errorf("resolve tier: %w", err)
 	}
 
-	// EffectiveTierID учитывает manual override; если ручной — он же и итог.
+	// EffectiveTierID учитывает manual override + истечение срока.
+	// Без проверки expires dry-run отчёт врёт админу: показывает юзеров
+	// с просроченным manual как «всё ок», хотя CheckAndSyncUser их
+	// сбросит на ResolvedTierID и снимет content-чаты.
 	var effective *uint
-	if user.ManualTierID != nil {
+	if user.ManualTierID != nil && (user.ManualTierExpiresAt == nil || time.Now().Before(*user.ManualTierExpiresAt)) {
 		effective = user.ManualTierID
 	} else {
 		effective = newTierID
@@ -708,15 +800,18 @@ func (s *SubscriptionService) GetAllTiers() ([]models.SubscriptionTier, error) {
 
 // TierPublic — публичная карточка тарифа для UI лендинга/платформы и сообщений
 // бота. Цена отдаётся в рублях (price_cents переведён). Features — массив строк.
+// PriceCredits — стоимость в реферальных кредитах; null = тариф нельзя
+// купить за credits (фронт скрывает соответствующую кнопку).
 type TierPublic struct {
-	ID          uint     `json:"id"`
-	Slug        string   `json:"slug"`
-	Name        string   `json:"name"`
-	Level       int      `json:"level"`
-	Price       int      `json:"price"`
-	BoostyURL   string   `json:"boosty_url"`
-	Description string   `json:"description"`
-	Features    []string `json:"features"`
+	ID           uint     `json:"id"`
+	Slug         string   `json:"slug"`
+	Name         string   `json:"name"`
+	Level        int      `json:"level"`
+	Price        int      `json:"price"`
+	PriceCredits *int     `json:"price_credits"`
+	BoostyURL    string   `json:"boosty_url"`
+	Description  string   `json:"description"`
+	Features     []string `json:"features"`
 }
 
 // GetPublicTiers возвращает только тарифы с is_public=true, отсортированные
@@ -734,11 +829,12 @@ func (s *SubscriptionService) GetPublicTiers() ([]TierPublic, error) {
 			_ = json.Unmarshal([]byte(t.Features), &features)
 		}
 		public := TierPublic{
-			ID:       t.ID,
-			Slug:     t.Slug,
-			Name:     t.Name,
-			Level:    t.Level,
-			Features: features,
+			ID:           t.ID,
+			Slug:         t.Slug,
+			Name:         t.Name,
+			Level:        t.Level,
+			Features:     features,
+			PriceCredits: t.PriceCredits,
 		}
 		if t.PriceCents != nil {
 			public.Price = *t.PriceCents / 100
@@ -935,4 +1031,156 @@ func tierIDsEqual(a, b *uint) bool {
 		return false
 	}
 	return *a == *b
+}
+
+// ErrTierNotPurchasable — тариф не имеет цены в credits (price_credits IS NULL),
+// купить его за credits нельзя. Хендлер маппит в HTTP 400.
+var ErrTierNotPurchasable = errors.New("tier is not purchasable with credits")
+
+// ErrBessrochnyGrantExists — у юзера уже стоит admin-выданный manual без
+// expires (бессрочный grant). Покупка за credits перетёрла бы его и
+// заменила 30-дневным таймером — отказываем явно.
+var ErrBessrochnyGrantExists = errors.New("user has bessrochny manual grant; cannot purchase")
+
+// ErrTierDowngrade — юзер пытается купить тариф ниже текущего эффективного.
+// Покупка стала бы downgrade с продлением — поведение, скорее всего,
+// неожиданное; отказываем явно. Если нужен upgrade — пусть покупает выше.
+var ErrTierDowngrade = errors.New("cannot purchase a tier lower than current effective tier")
+
+// PurchaseResult — результат успешной покупки тарифа за credits.
+// Возвращается клиенту, чтобы UI сразу показал новый срок и баланс
+// без повторного запроса.
+type PurchaseResult struct {
+	TierID       uint      `json:"tier_id"`
+	TierSlug     string    `json:"tier_slug"`
+	TierName     string    `json:"tier_name"`
+	TierLevel    int       `json:"tier_level"`
+	PriceCredits int       `json:"price_credits"`
+	BalanceLeft  int       `json:"balance_left"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
+// PurchaseTierWithCredits — покупка тарифа за реферальные кредиты.
+//
+// Атомарность: списание credits, ensure-of-subscription-user,
+// SetManualTierWithExpiry и audit — всё в одной БД-транзакции.
+// Награды инвайтеру (first/recurring) — после commit, потому что их
+// идемпотентность сама обеспечена уникальным индексом, а внутри
+// транзакции они только увеличили бы окно блокировок без выгоды.
+//
+// expires_at = max(now, current_expires_at) + days. Накопительная
+// логика: повторная покупка продлевает текущий срок, а не сбрасывает
+// его. Если manual истёк или его вовсе нет — стартуем от now.
+//
+// Параметры:
+//   memberID    — members.id (для credits и поиска инвайтера)
+//   telegramID  — subscription_users.id (для постановки manual_tier)
+//   username    — для EnsureUser, если юзер ещё не онбординген
+//   fullName    — то же
+//   tierSlug    — какой тариф покупаем
+//
+// Sync с content-чатами в этой версии не делается — ближайший
+// PeriodicCheck подберёт изменение manual_tier_id и распределит
+// invite-link'и через NL-бота. UI должен сообщить юзеру, что доступ
+// в чаты появится в течение следующего тикера (~30 минут).
+func (s *SubscriptionService) PurchaseTierWithCredits(
+	memberID int64,
+	telegramID int64,
+	username *string,
+	fullName string,
+	tierSlug string,
+) (*PurchaseResult, error) {
+	tier, err := s.repo.GetTierBySlug(tierSlug)
+	if err != nil {
+		return nil, fmt.Errorf("tier not found: %w", err)
+	}
+	if tier.PriceCredits == nil || *tier.PriceCredits <= 0 {
+		return nil, ErrTierNotPurchasable
+	}
+
+	days := s.settings.GetInt("subscription_purchase_days", 30)
+
+	var result *PurchaseResult
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		if _, err := s.repo.EnsureUserTx(tx, telegramID, username, fullName); err != nil {
+			return fmt.Errorf("ensure user: %w", err)
+		}
+		if _, err := s.creditsRepo.Spend(tx, memberID, *tier.PriceCredits,
+			models.CreditReasonSubscriptionPurchase,
+			"subscription_purchase",
+			int64(tier.ID),
+			fmt.Sprintf("Покупка тарифа «%s»", tier.Name),
+		); err != nil {
+			return err
+		}
+
+		user, err := s.repo.GetUserTx(tx, telegramID)
+		if err != nil {
+			return fmt.Errorf("get user: %w", err)
+		}
+
+		// Защита от перетирания админского bessrochny grant: если у
+		// юзера manual_tier_id != nil, а expires_at == nil — значит
+		// админ выдал ему бессрочную подписку. Покупка за credits
+		// заменила бы её на тариф с 30-дневным таймером.
+		if user.ManualTierID != nil && user.ManualTierExpiresAt == nil {
+			return ErrBessrochnyGrantExists
+		}
+
+		// Защита от downgrade: если эффективный тир (с учётом expires)
+		// >= покупаемого, отказываем. Иначе юзер «купил бы» тариф ниже
+		// текущего и получил бы и downgrade, и +30 дней — surprising.
+		if curEff := user.EffectiveTierID(); curEff != nil {
+			if curTier, err := s.repo.GetTier(*curEff); err == nil && curTier.Level > tier.Level {
+				return ErrTierDowngrade
+			}
+		}
+
+		now := time.Now()
+		base := now
+		if user.ManualTierID != nil && user.ManualTierExpiresAt != nil && user.ManualTierExpiresAt.After(now) {
+			base = *user.ManualTierExpiresAt
+		}
+		newExpiresAt := base.AddDate(0, 0, days)
+
+		if err := s.repo.SetManualTierWithExpiryTx(tx, telegramID, &tier.ID, &newExpiresAt); err != nil {
+			return fmt.Errorf("set manual tier: %w", err)
+		}
+		if err := s.repo.AddAuditTx(tx, telegramID, "purchased", map[string]interface{}{
+			"tier_id":       tier.ID,
+			"tier_slug":     tier.Slug,
+			"credits_spent": *tier.PriceCredits,
+			"expires_at":    newExpiresAt,
+		}); err != nil {
+			return fmt.Errorf("add audit: %w", err)
+		}
+
+		result = &PurchaseResult{
+			TierID:       tier.ID,
+			TierSlug:     tier.Slug,
+			TierName:     tier.Name,
+			TierLevel:    tier.Level,
+			PriceCredits: *tier.PriceCredits,
+			ExpiresAt:    newExpiresAt,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Reward инвайтеру — после commit. Совмещён с anchor-flow через
+	// общий awardReferralRewardsFor, индекс гарантирует «не дважды».
+	if tier.PriceCents != nil && *tier.PriceCents > 0 {
+		if referrerID, _ := s.referalRepo.GetReferrerForMember(memberID); referrerID > 0 {
+			s.creditsSvc.AwardForFirstPurchase(referrerID, memberID, *tier.PriceCents)
+			period := time.Now().Format("2006-01")
+			s.creditsSvc.AwardForRecurringPurchase(referrerID, memberID, *tier.PriceCents, period)
+		}
+	}
+
+	if balance, err := s.creditsRepo.GetBalance(memberID); err == nil {
+		result.BalanceLeft = balance
+	}
+	return result, nil
 }

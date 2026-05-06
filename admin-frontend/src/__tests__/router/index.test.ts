@@ -46,9 +46,10 @@ describe('router', () => {
   })
 
   describe('route definitions', () => {
-    it('has 21 routes defined', () => {
+    it('has 22 routes defined', () => {
       // 19 базовых + /daily-tasks + /challenges (геймификация, PR-322)
-      expect(router.getRoutes()).toHaveLength(21)
+      // + /credits (реферальные кредиты, PR-347)
+      expect(router.getRoutes()).toHaveLength(22)
     })
 
     it('has a login route', () => {
@@ -73,6 +74,7 @@ describe('router', () => {
       ['resumes', '/resumes'],
       ['audit-logs', '/audit-logs'],
       ['points', '/points'],
+      ['credits', '/credits'],
       ['referrals', '/referrals'],
       ['chat-activity', '/chat-activity'],
       ['chat-quests', '/chat-quests'],

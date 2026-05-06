@@ -11,6 +11,7 @@ const MentorsReviewsView = () => import('@/views/MentorsReviewsView.vue')
 const ResumesView = () => import('@/views/ResumesView.vue')
 const AuditLogsView = () => import('@/views/AuditLogsView.vue')
 const PointsView = () => import('@/views/PointsView.vue')
+const CreditsView = () => import('@/views/CreditsView.vue')
 const ReferralsView = () => import('@/views/ReferralsView.vue')
 const ChatActivityView = () => import('@/views/ChatActivityView.vue')
 const ChatQuestsView = () => import('@/views/ChatQuestsView.vue')
@@ -89,6 +90,12 @@ const router = createRouter({
       path: '/points',
       name: 'points',
       component: PointsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/credits',
+      name: 'credits',
+      component: CreditsView,
       meta: { requiresAuth: true },
     },
     {

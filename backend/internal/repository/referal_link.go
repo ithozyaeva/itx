@@ -166,6 +166,24 @@ func (r *ReferalLinkRepository) LoadHasConverted(links []models.ReferalLink, mem
 	}
 }
 
+// GetReferrerForMember возвращает members.id того, чья реферальная ссылка
+// привела пользователя memberID. Если конверсий нет — (0, nil).
+// Берётся последняя по converted_at, чтобы при нескольких конверсиях
+// (юзер мог пройти повторно) награда уходила «последнему» инвайтеру —
+// он по сути актуальнее всех связан с этим юзером.
+func (r *ReferalLinkRepository) GetReferrerForMember(memberID int64) (int64, error) {
+	var authorID int64
+	err := database.DB.Raw(
+		`SELECT rl.author_id FROM referral_conversions rc
+		 JOIN referal_links rl ON rl.id = rc.referral_link_id
+		 WHERE rc.member_id = ?
+		 ORDER BY rc.converted_at DESC
+		 LIMIT 1`,
+		memberID,
+	).Scan(&authorID).Error
+	return authorID, err
+}
+
 // ExpireLinks замораживает ссылки с истёкшим сроком действия
 func (r *ReferalLinkRepository) ExpireLinks() (int64, error) {
 	result := database.DB.Model(&models.ReferalLink{}).

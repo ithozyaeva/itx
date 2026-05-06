@@ -2,13 +2,16 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"ithozyeva/config"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -605,6 +608,57 @@ func (h *SubscriptionHandler) GetInternalUserSubscription(c *fiber.Ctx) error {
 		"level": tier.Level,
 	}
 	return c.JSON(resp)
+}
+
+// PurchaseWithCredits — покупка тарифа за реферальные кредиты.
+// Доступен любому авторизованному (UNSUBSCRIBER тоже): это и есть точка
+// входа в подписку для тех, кто накопил кредиты, но не платил через Boosty.
+//
+// Ошибки:
+//   400 — пустой tier_slug или tier.price_credits IS NULL (не покупаем за credits)
+//   402 — недостаточно кредитов на балансе
+//   500 — прочее
+func (h *SubscriptionHandler) PurchaseWithCredits(c *fiber.Ctx) error {
+	var req struct {
+		TierSlug string `json:"tier_slug"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
+	}
+	if req.TierSlug == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "tier_slug обязателен"})
+	}
+
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+
+	fullName := strings.TrimSpace(member.FirstName + " " + member.LastName)
+	var username *string
+	if member.Username != "" {
+		u := member.Username
+		username = &u
+	}
+
+	result, err := h.svc.PurchaseTierWithCredits(member.Id, member.TelegramID, username, fullName, req.TierSlug)
+	if err != nil {
+		if errors.Is(err, repository.ErrInsufficientCredits) {
+			return c.Status(fiber.StatusPaymentRequired).JSON(fiber.Map{"error": "Недостаточно кредитов"})
+		}
+		if errors.Is(err, service.ErrTierNotPurchasable) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Этот тариф нельзя купить за кредиты"})
+		}
+		if errors.Is(err, service.ErrBessrochnyGrantExists) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "У вас уже бессрочная подписка от администратора"})
+		}
+		if errors.Is(err, service.ErrTierDowngrade) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Нельзя купить тариф ниже текущего"})
+		}
+		log.Printf("PurchaseWithCredits error (member=%d, slug=%s): %v", member.Id, req.TierSlug, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось купить подписку"})
+	}
+	return c.JSON(result)
 }
 
 func (h *SubscriptionHandler) RevokeAccess(c *fiber.Ctx) error {

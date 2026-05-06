@@ -26,6 +26,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Dashboard, name: 'dashboard' },
   { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
   { path: '/tariffs', name: 'tariffs', component: () => import('@/pages/Tariffs.vue'), meta: { breadcrumb: [{ label: 'Тарифы' }] } },
+  // /credits — баланс реферальных кредитов и история. Открыто и для UNSUBSCRIBER:
+  // именно они — целевая аудитория покупки подписки за credits.
+  { path: '/credits', name: 'credits', component: () => import('@/pages/Credits.vue'), meta: { breadcrumb: [{ label: 'Реферальные кредиты' }] } },
   { path: '/events', component: () => import('@/pages/Events.vue'), name: 'events', meta: { breadcrumb: [{ label: 'События' }], requiresSubscription: true } },
   { path: '/content', redirect: '/events?tab=content' },
   { path: '/members/:id', component: () => import('@/pages/MemberProfile.vue'), name: 'memberProfile', meta: { breadcrumb: [{ label: 'Рейтинг', to: '/progress?tab=leaderboard' }, { label: 'Профиль участника' }] } },

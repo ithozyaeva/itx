@@ -30,6 +30,25 @@ func (r *AchievementRepository) GetReasonCounts(memberId int64) (map[models.Poin
 	for _, rc := range results {
 		counts[rc.Reason] = rc.Count
 	}
+
+	// referal_conversion больше не пишется в point_transactions (награда
+	// переехала в referral_credit_transactions). Чтобы ачивка
+	// «referral_convert» продолжила разблокироваться, считаем конверсии
+	// напрямую из referral_conversions по ссылкам этого автора.
+	// Историческое значение из point_transactions сохраняем как нижнюю
+	// границу, новые конверсии добавляем поверх.
+	var conversionCount int
+	if err := database.DB.Raw(
+		`SELECT COUNT(*) FROM referral_conversions rc
+		 JOIN referal_links rl ON rl.id = rc.referral_link_id
+		 WHERE rl.author_id = ?`,
+		memberId,
+	).Scan(&conversionCount).Error; err != nil {
+		return nil, err
+	}
+	if conversionCount > counts[models.PointReasonReferalConversion] {
+		counts[models.PointReasonReferalConversion] = conversionCount
+	}
 	return counts, nil
 }
 

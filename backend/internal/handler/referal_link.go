@@ -14,9 +14,10 @@ import (
 
 type ReferalLinkHandler struct {
 	BaseHandler[models.ReferalLink]
-	svc       *service.ReferalLinkService
-	auditSvc  *service.AuditService
-	pointsSvc *service.PointsService
+	svc        *service.ReferalLinkService
+	auditSvc   *service.AuditService
+	pointsSvc  *service.PointsService
+	creditsSvc *service.ReferralCreditService
 }
 
 func NewReferalLinkHandler() *ReferalLinkHandler {
@@ -26,6 +27,7 @@ func NewReferalLinkHandler() *ReferalLinkHandler {
 		svc:         svc,
 		auditSvc:    service.NewAuditService(),
 		pointsSvc:   service.NewPointsService(),
+		creditsSvc:  service.NewReferralCreditService(),
 	}
 }
 
@@ -162,13 +164,14 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка отслеживания конверсии"})
 	}
 
-	// Начисляем баллы автору реферальной ссылки за конверсию и отправляем уведомление
+	// Начисляем реферальные кредиты автору ссылки за конверсию и отправляем
+	// уведомление. Игровые points за конверсию больше не начисляем — вместо
+	// них юзер получает credits, которые тратятся на покупку подписки.
 	go func(authorID, linkID int64) {
 		if authorID == 0 {
 			return
 		}
-		h.pointsSvc.AwardIdempotent(authorID, models.PointReasonReferalConversion, "referal_conversion", linkID,
-			"Конверсия по реферальной ссылке")
+		h.creditsSvc.AwardForConversion(authorID, linkID)
 		CreateNotification(authorID, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
 		service.TrackChallengeMetric(authorID, "referal_conversions", 1)
 	}(link.AuthorId, req.ReferralLinkId)
