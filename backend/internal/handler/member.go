@@ -342,7 +342,7 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
 	}
 
-	key := fmt.Sprintf("avatars/%d/%s%s", member.TelegramID, uuid.NewString(), ext)
+	key := fmt.Sprintf("avatars/%s%s", uuid.NewString(), ext)
 	log.Printf("Uploading avatar: key=%s, contentType=%s, size=%d", key, contentType, len(data))
 	
 	if err := s3Client.UploadPublic(context.Background(), key, data, contentType); err != nil {
