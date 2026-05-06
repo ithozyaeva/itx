@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,12 +12,14 @@ import (
 )
 
 // seedMember создаёт минимально валидного member для тестов и возвращает указатель.
-// Имя/telegram_id уникальны через индекс t.Name(), чтобы тесты не цеплялись.
+// Username включает telegramID — без этого тест с двумя seedMember-вызовами
+// внутри одного t.Name() ловил бы дубли по UNIQUE-индексу members_username_unique
+// (см. миграцию 20260506000000_dedupe_and_unique_username.sql).
 func seedMember(t *testing.T, db *gorm.DB, telegramID int64) *models.Member {
 	t.Helper()
 	m := &models.Member{
 		TelegramID: telegramID,
-		Username:   "tester_" + strings.ReplaceAll(t.Name(), "/", "_"),
+		Username:   fmt.Sprintf("tester_%d_%s", telegramID, strings.ReplaceAll(t.Name(), "/", "_")),
 		FirstName:  "Test",
 		LastName:   "Member",
 	}
