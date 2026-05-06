@@ -6,6 +6,8 @@ export interface PublicTier {
   name: string
   level: number
   price: number
+  // null = тариф нельзя купить за реферальные кредиты (только Boosty)
+  price_credits: number | null
   boosty_url: string
   description: string
   features: string[]

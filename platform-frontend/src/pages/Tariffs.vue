@@ -1,20 +1,35 @@
 <script setup lang="ts">
 import type { PublicTier } from '@/services/subscriptions'
-import { Check, Crown } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { Check, Coins, Crown } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
+import { creditsService } from '@/services/credits'
 import { handleError } from '@/services/errorService'
 import { subscriptionsService } from '@/services/subscriptions'
 
 const tiers = ref<PublicTier[]>([])
+const balance = ref<number | null>(null)
 const loading = ref(true)
+const purchasing = ref(false)
+const confirmTier = ref<PublicTier | null>(null)
+
+const { toast } = useToast()
 
 const botUsername = import.meta.env.VITE_TELEGRAM_BOT_NAME
 const botSubLink = botUsername ? `https://t.me/${botUsername}?start=sub` : ''
 
 onMounted(async () => {
   try {
-    tiers.value = await subscriptionsService.getPublicTiers()
+    const [tiersResp, creditsResp] = await Promise.all([
+      subscriptionsService.getPublicTiers(),
+      creditsService.getMine().catch(() => null),
+    ])
+    tiers.value = tiersResp
+    if (creditsResp)
+      balance.value = creditsResp.balance
   }
   catch (e) {
     handleError(e)
@@ -27,6 +42,36 @@ onMounted(async () => {
 function formatPrice(price: number) {
   return price.toLocaleString('ru-RU')
 }
+
+const sortedTiers = computed(() => [...tiers.value].sort((a, b) => a.level - b.level))
+
+function canBuy(tier: PublicTier) {
+  return tier.price_credits != null && balance.value != null && balance.value >= tier.price_credits
+}
+
+async function confirmPurchase() {
+  if (!confirmTier.value)
+    return
+  const slug = confirmTier.value.slug
+  const tierName = confirmTier.value.name
+  purchasing.value = true
+  try {
+    const result = await creditsService.purchaseTier(slug)
+    balance.value = result.balance_left
+    const expires = new Date(result.expires_at).toLocaleDateString('ru-RU')
+    toast({
+      title: 'Подписка активирована',
+      description: `«${tierName}» активна до ${expires}. Бот пришлёт инвайты в чаты в течение получаса.`,
+    })
+    confirmTier.value = null
+  }
+  catch (e) {
+    handleError(e)
+  }
+  finally {
+    purchasing.value = false
+  }
+}
 </script>
 
 <template>
@@ -34,16 +79,32 @@ function formatPrice(price: number) {
     <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
       ~/community/tariffs
     </div>
-    <Typography
-      variant="h2"
-      as="h1"
-      class="mb-2"
-    >
-      Тарифы подписки
-    </Typography>
+    <div class="flex items-end justify-between mb-2 gap-4 flex-wrap">
+      <Typography
+        variant="h2"
+        as="h1"
+      >
+        Тарифы подписки
+      </Typography>
+      <RouterLink
+        v-if="balance != null"
+        to="/credits"
+        class="flex items-center gap-2.5 rounded-sm border border-border bg-card px-3 py-2 hover:border-accent/40 transition-colors"
+      >
+        <Coins class="h-5 w-5 text-accent" />
+        <div>
+          <p class="text-lg font-bold leading-none">
+            {{ formatPrice(balance) }}
+          </p>
+          <p class="text-[11px] text-muted-foreground mt-0.5">
+            кредитов
+          </p>
+        </div>
+      </RouterLink>
+    </div>
     <p class="text-muted-foreground mb-8 max-w-2xl">
       Подписка открывает доступ к закрытым чатам, событиям, бирже заданий и менторам.
-      Оплата через Boosty — отмена в любой момент.
+      Можно оплатить через Boosty или реферальными кредитами.
     </p>
 
     <div
@@ -65,7 +126,7 @@ function formatPrice(price: number) {
       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
     >
       <div
-        v-for="tier in tiers"
+        v-for="tier in sortedTiers"
         :key="tier.id"
         class="relative flex flex-col rounded-sm border bg-card p-6 transition-colors hover:border-accent/40"
       >
@@ -81,9 +142,16 @@ function formatPrice(price: number) {
         <h3 class="font-display uppercase text-2xl mb-2">
           {{ tier.name }}
         </h3>
-        <div class="flex items-baseline gap-1 mb-4">
+        <div class="flex items-baseline gap-1 mb-1">
           <span class="text-3xl font-bold">{{ formatPrice(tier.price) }}</span>
           <span class="text-muted-foreground">₽/мес</span>
+        </div>
+        <div
+          v-if="tier.price_credits != null"
+          class="flex items-center gap-1.5 mb-4 text-sm text-muted-foreground"
+        >
+          <Coins class="w-3.5 h-3.5 text-accent/70" />
+          <span>или {{ formatPrice(tier.price_credits) }} кредитов / 30 дней</span>
         </div>
         <p
           v-if="tier.description"
@@ -104,14 +172,32 @@ function formatPrice(price: number) {
             <span>{{ feature }}</span>
           </li>
         </ul>
-        <a
-          :href="tier.boosty_url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="block text-center px-4 py-3 rounded-sm bg-accent text-accent-foreground font-medium hover:bg-accent/90 transition-colors"
-        >
-          Оформить на Boosty →
-        </a>
+        <div class="space-y-2">
+          <a
+            v-if="tier.boosty_url"
+            :href="tier.boosty_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block text-center px-4 py-3 rounded-sm bg-accent text-accent-foreground font-medium hover:bg-accent/90 transition-colors"
+          >
+            Оформить на Boosty →
+          </a>
+          <Button
+            v-if="tier.price_credits != null"
+            :disabled="!canBuy(tier)"
+            variant="outline"
+            class="w-full py-3 h-auto"
+            @click="confirmTier = tier"
+          >
+            <Coins class="w-4 h-4 mr-2" />
+            <span v-if="balance == null || canBuy(tier)">
+              Купить за {{ formatPrice(tier.price_credits) }} кр.
+            </span>
+            <span v-else>
+              Не хватает {{ formatPrice(tier.price_credits - (balance ?? 0)) }} кр.
+            </span>
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -134,5 +220,40 @@ function formatPrice(price: number) {
         Открыть бота → /sub
       </a>
     </div>
+
+    <Dialog
+      :open="confirmTier !== null"
+      @update:open="(v: boolean) => { if (!v) confirmTier = null }"
+    >
+      <DialogContent class="sm:max-w-[450px]">
+        <DialogHeader>
+          <DialogTitle>Купить «{{ confirmTier?.name }}»?</DialogTitle>
+          <DialogDescription>
+            Спишем {{ formatPrice(confirmTier?.price_credits ?? 0) }} кредитов и активируем тариф на 30 дней.
+            <br>
+            Если уже была активна подписка — срок продлится на 30 дней от текущей даты истечения.
+            <br>
+            <br>
+            Доступ в чаты появится в течение получаса (как только пройдёт ближайший автопроверка бота).
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            :disabled="purchasing"
+            @click="confirmTier = null"
+          >
+            Отмена
+          </Button>
+          <Button
+            :disabled="purchasing"
+            @click="confirmPurchase"
+          >
+            <span v-if="purchasing">Покупка…</span>
+            <span v-else>Подтвердить</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
