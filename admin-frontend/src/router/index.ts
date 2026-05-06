@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { checkAuth, isAuthenticated } from '@/services/authService'
+import { checkAuth, ensureAdminAccess, isAuthenticated, logout } from '@/services/authService'
 
 const LoginView = () => import('@/views/LoginView.vue')
 const DashboardView = () => import('@/views/DashboardView.vue')
@@ -160,6 +160,19 @@ router.beforeEach(async (to, _, next) => {
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
+  }
+
+  // Любой Telegram-юзер мог получить tg_token и зайти на /dashboard, даже
+  // не имея ни одного админ-пермишена. UI оставался пустым (API отвечал
+  // 403 на каждый запрос), но дверь была открыта. Здесь явно проверяем,
+  // что пермишены есть; иначе — выкидываем на login с тостом.
+  if (to.meta.requiresAuth && isAuthenticated.value) {
+    const allowed = await ensureAdminAccess()
+    if (!allowed) {
+      logout()
+      next({ name: 'login' })
+      return
+    }
   }
 
   if (to.name === 'login' && isAuthenticated.value) {

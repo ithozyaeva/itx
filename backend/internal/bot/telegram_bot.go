@@ -24,6 +24,7 @@ import (
 	"ithozyeva/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -2024,13 +2025,13 @@ func downloadTelegramAvatar(botAPI *tgbotapi.BotAPI, userID int64) ([]byte, erro
 	return data, nil
 }
 
-func uploadAvatarToS3(userID int64, photoData []byte) (string, error) {
+func uploadAvatarToS3(photoData []byte) (string, error) {
 	s3Client, err := utils.NewS3Client()
 	if err != nil {
 		return "", fmt.Errorf("s3 client: %v", err)
 	}
 
-	key := fmt.Sprintf("avatars/%d/telegram.jpg", userID)
+	key := fmt.Sprintf("avatars/%s.jpg", uuid.NewString())
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -2058,7 +2059,7 @@ func sendAuthToBackend(botAPI *tgbotapi.BotAPI, token string, user *tgbotapi.Use
 	if err != nil {
 		log.Printf("Avatar download skipped for user %d: %v", user.ID, err)
 	} else {
-		key, err := uploadAvatarToS3(user.ID, photoData)
+		key, err := uploadAvatarToS3(photoData)
 		if err != nil {
 			log.Printf("Avatar S3 upload failed for user %d: %v", user.ID, err)
 		} else {

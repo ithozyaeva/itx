@@ -7,6 +7,7 @@ vi.mock('@/components/ui/toast', () => ({
 
 // Mock authService - need to control isAuthenticated and checkAuth
 let mockIsAuthenticated = false
+let mockHasAdminAccess = true
 const mockCheckAuth = vi.fn(() => {
   return mockIsAuthenticated
 })
@@ -21,7 +22,10 @@ vi.mock('@/services/authService', () => ({
     },
   },
   checkAuth: () => mockCheckAuth(),
-  logout: vi.fn(),
+  logout: vi.fn(() => {
+    mockIsAuthenticated = false
+  }),
+  ensureAdminAccess: vi.fn(async () => mockHasAdminAccess),
 }))
 
 // Mock errorService
@@ -36,6 +40,7 @@ describe('router', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockIsAuthenticated = false
+    mockHasAdminAccess = true
     // Reset router to a known state
     await router.push('/login')
   })
@@ -163,6 +168,16 @@ describe('router', () => {
 
       expect(router.currentRoute.value.name).toBe('login')
       expect(router.currentRoute.value.query.redirect).toBe('/events')
+    })
+
+    it('kicks authenticated users without admin permissions to login', async () => {
+      mockIsAuthenticated = true
+      mockHasAdminAccess = false
+
+      await router.push('/dashboard')
+      await router.isReady()
+
+      expect(router.currentRoute.value.name).toBe('login')
     })
   })
 })

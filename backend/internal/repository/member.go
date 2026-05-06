@@ -1,10 +1,35 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
+
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// ErrUsernameTaken — попытка записать username, который уже занят другим
+// участником. Хендлер должен превратить это в 409 Conflict.
+var ErrUsernameTaken = errors.New("username already taken")
+
+// usernameUniqueIndex — имя partial UNIQUE индекса из миграции
+// 20260506000000_dedupe_and_unique_username.sql. Сверяемся именно по
+// constraint_name, чтобы 23505 от другой колонки случайно не превратился
+// в «никнейм занят».
+const usernameUniqueIndex = "members_username_unique"
+
+func isUsernameUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505" && pgErr.ConstraintName == usernameUniqueIndex
+}
 
 // Изменяем с type alias на новый тип
 type MemberRepositoryInterface interface {
@@ -27,12 +52,30 @@ func NewMemberRepository() *MemberRepository {
 }
 
 func (r *MemberRepository) GetMemberByTelegram(telegram string) (*models.Member, error) {
+	if telegram == "" {
+		return nil, fmt.Errorf("empty username")
+	}
 	var member models.Member
-	result := database.DB.Preload("MemberRoles").Where("username = ?", telegram).First(&member)
+	result := database.DB.Preload("MemberRoles").
+		Where("LOWER(username) = LOWER(?) AND username <> ''", telegram).
+		Order("id DESC").
+		First(&member)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &member, nil
+}
+
+// ReleaseUsername освобождает поле username у всех записей с таким значением,
+// кроме указанной (keepID). Используется когда новый владелец логинится через
+// Telegram с username, который в БД ещё «висит» за чужим аккаунтом.
+func (r *MemberRepository) ReleaseUsername(username string, keepID int64) error {
+	if username == "" {
+		return nil
+	}
+	return database.DB.Model(&models.Member{}).
+		Where("LOWER(username) = LOWER(?) AND id <> ?", username, keepID).
+		Update("username", "").Error
 }
 
 func (r *MemberRepository) GetByTelegramID(telegramID int64) (*models.Member, error) {
@@ -69,12 +112,15 @@ func (r *MemberRepository) Create(member *models.Member) (*models.Member, error)
 	result := database.DB.Model(&models.Member{}).
 		Create(&member)
 
-	member.SetRoleStrings(member.Roles, member.Id)
-	database.DB.Model(member).Association("MemberRoles").Replace(member.MemberRoles)
-
 	if result.Error != nil {
+		if isUsernameUniqueViolation(result.Error) {
+			return nil, ErrUsernameTaken
+		}
 		return nil, result.Error
 	}
+
+	member.SetRoleStrings(member.Roles, member.Id)
+	database.DB.Model(member).Association("MemberRoles").Replace(member.MemberRoles)
 
 	if result.RowsAffected == 0 {
 		return nil, fmt.Errorf("member not found")
@@ -97,14 +143,17 @@ func (r *MemberRepository) Update(member *models.Member) (*models.Member, error)
 			"username":   member.Username,
 		})
 
+	if result.Error != nil {
+		if isUsernameUniqueViolation(result.Error) {
+			return nil, ErrUsernameTaken
+		}
+		return nil, result.Error
+	}
+
 	member.SetRoleStrings(member.Roles, member.Id)
 	database.DB.Where("member_id = ? AND role NOT IN ?", member.Id, member.Roles).Delete(&models.MemberRole{})
 
 	database.DB.Model(member).Association("MemberRoles").Replace(member.MemberRoles)
-
-	if result.Error != nil {
-		return nil, result.Error
-	}
 
 	if result.RowsAffected == 0 {
 		return nil, fmt.Errorf("member not found")

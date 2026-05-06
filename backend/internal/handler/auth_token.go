@@ -104,6 +104,7 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 			"error": "Invalid init data",
 		})
 	}
+	tgUser.Username = utils.SanitizeTelegramUsername(tgUser.Username)
 
 	token, err := h.telegramService.GenerateAuthToken(tgUser.ID)
 	if err != nil {
@@ -115,6 +116,11 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 
 	user, err := h.authService.GetByTelegramID(tgUser.ID)
 	if err != nil {
+		if tgUser.Username != "" {
+			if claimErr := h.memberService.ClaimUsername(tgUser.Username, 0); claimErr != nil {
+				log.Printf("webapp auth: claim username on create failed (tg_id=%d, username=%s): %v", tgUser.ID, tgUser.Username, claimErr)
+			}
+		}
 		newUser := &models.Member{
 			TelegramID: tgUser.ID,
 			Username:   tgUser.Username,
@@ -131,9 +137,14 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 		}
 		user = created
 	} else {
-		user.Username = tgUser.Username
 		user.FirstName = tgUser.FirstName
 		user.LastName = tgUser.LastName
+		if user.Username == "" && tgUser.Username != "" {
+			if claimErr := h.memberService.ClaimUsername(tgUser.Username, user.Id); claimErr != nil {
+				log.Printf("webapp auth: claim username on re-login failed (tg_id=%d, username=%s): %v", tgUser.ID, tgUser.Username, claimErr)
+			}
+			user.Username = tgUser.Username
+		}
 		h.memberService.Update(user)
 
 		if _, err := h.authService.CreateOrUpdateToken(tgUser.ID, token); err != nil {
@@ -298,6 +309,9 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
+	// Telegram гарантирует валидный username, но защитимся от неожиданно длинных
+	// или содержащих посторонние символы значений (прокси, фейковый бот, баг).
+	req.Username = utils.SanitizeTelegramUsername(req.Username)
 
 	// Проверяем, существует ли пользователь
 	existingUser, err := h.authService.GetByTelegramID(req.UserID)
@@ -308,7 +322,17 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			role = models.MemberRoleSubscriber
 		}
 
-		// Если пользователь не существует, создаем нового
+		// Если пользователь не существует, создаем нового.
+		// Перед записью освобождаем username у чужих записей: тот же ник
+		// мог «висеть» у заброшенного аккаунта, и UNIQUE-индекс заблокирует
+		// создание. Источник истины — Telegram, поэтому приоритет за тем,
+		// кто логинится сейчас.
+		if req.Username != "" {
+			if err := h.memberService.ClaimUsername(req.Username, 0); err != nil {
+				log.Printf("claim username on create failed (tg_id=%d, username=%s): %v", req.UserID, req.Username, err)
+			}
+		}
+
 		newUser := &models.Member{
 			TelegramID: req.UserID,
 			Username:   req.Username,
@@ -326,10 +350,19 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 		}
 		existingUser = createdUser
 	} else {
-		existingUser.Username = req.Username
 		existingUser.FirstName = req.FirstName
 		existingUser.LastName = req.LastName
-		if req.AvatarURL != "" {
+		// Username не перезатираем при повторном логине, но если в БД пусто
+		// (старая запись или username сбросили dedupe-миграцией) — забираем
+		// его себе и попутно освобождаем у чужих записей.
+		if existingUser.Username == "" && req.Username != "" {
+			if err := h.memberService.ClaimUsername(req.Username, existingUser.Id); err != nil {
+				log.Printf("claim username on re-login failed (tg_id=%d, username=%s): %v", req.UserID, req.Username, err)
+			}
+			existingUser.Username = req.Username
+		}
+		// AvatarURL — кастомный аватар (см. C2 в этом PR) не должен сноситься.
+		if existingUser.AvatarURL == "" && req.AvatarURL != "" {
 			existingUser.AvatarURL = req.AvatarURL
 		}
 		h.memberService.Update(existingUser)

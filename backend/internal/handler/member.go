@@ -2,12 +2,15 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -17,7 +20,6 @@ import (
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/service"
 	"ithozyeva/internal/utils"
-	"strconv"
 )
 
 // superAdminPermission — псевдо-пермишен, который добавляется в ответ
@@ -181,21 +183,43 @@ func (h *MembersHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
 	}
 
+	if err := utils.ValidateProfileLengths(request.FirstName, request.LastName, request.Bio, request.Grade, request.Company); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := utils.ValidateUsername(request.Username); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
 	member.Roles = request.Roles
-	member.Username = request.Username
+	// Админ может менять username — например, освободить «зависший» ник у
+	// удалённого аккаунта. Если новое значение коллизит с другим участником,
+	// выдаём 409, чтобы админ разрулил вручную.
+	if request.Username != member.Username {
+		h.svc.ClaimUsername(request.Username, member.Id)
+		member.Username = request.Username
+	}
 
 	parsedDate, err := utils.ParseDate(request.Birthday)
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
 	}
+	if parsedDate != nil {
+		bdayTime := time.Time(*parsedDate)
+		if err := utils.ValidateBirthdayRange(&bdayTime); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
 	member.Birthday = parsedDate
 
 	result, err := h.svc.Update(member)
 
 	if err != nil {
+		if errors.Is(err, repository.ErrUsernameTaken) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Никнейм уже занят"})
+		}
 		log.Printf("Member update error: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка обновления участника"})
 	}
@@ -251,6 +275,10 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
+	if err := utils.ValidateProfileLengths(request.FirstName, request.LastName, request.Bio, request.Grade, request.Company); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	member, err := getMember(c)
 	if err != nil {
 		return err
@@ -260,12 +288,20 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	member.Bio = request.Bio
 	member.Grade = request.Grade
 	member.Company = request.Company
-	member.Username = request.Username
+	// Username намеренно не апдейтим: источник истины — Telegram, синхронизация
+	// идёт через OAuth-логин (см. handler/auth_token.go). Ручная смена через
+	// этот эндпоинт позволяла подменять @username другому пользователю.
 
 	parsedDate, err := utils.ParseDate(request.Birthday)
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+	if parsedDate != nil {
+		bdayTime := time.Time(*parsedDate)
+		if err := utils.ValidateBirthdayRange(&bdayTime); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 	member.Birthday = parsedDate
 
@@ -342,7 +378,7 @@ func (h *MembersHandler) UploadAvatar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка загрузки файла"})
 	}
 
-	key := fmt.Sprintf("avatars/%d/%s%s", member.TelegramID, uuid.NewString(), ext)
+	key := fmt.Sprintf("avatars/%s%s", uuid.NewString(), ext)
 	log.Printf("Uploading avatar: key=%s, contentType=%s, size=%d", key, contentType, len(data))
 	
 	if err := s3Client.UploadPublic(context.Background(), key, data, contentType); err != nil {

@@ -140,6 +140,17 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Анти-фарм: автор реферальной ссылки не может конвертировать сам себя.
+	// Без этой проверки достаточно postman-запроса, чтобы непрерывно
+	// начислять себе очки за «конверсию» собственных линок.
+	link, err := h.service.GetById(req.ReferralLinkId)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Реферальная ссылка не найдена"})
+	}
+	if link.AuthorId == member.Id {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Нельзя конвертировать собственную ссылку"})
+	}
+
 	err = h.svc.TrackConversion(req.ReferralLinkId, member.Id)
 	if err != nil {
 		// Handle unique constraint violation (duplicate conversion) as idempotent success
@@ -152,15 +163,15 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 	}
 
 	// Начисляем баллы автору реферальной ссылки за конверсию и отправляем уведомление
-	go func() {
-		link, err := h.service.GetById(req.ReferralLinkId)
-		if err == nil && link.AuthorId != 0 {
-			h.pointsSvc.AwardIdempotent(link.AuthorId, models.PointReasonReferalConversion, "referal_conversion", req.ReferralLinkId,
-				"Конверсия по реферальной ссылке")
-			CreateNotification(link.AuthorId, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
-			service.TrackChallengeMetric(link.AuthorId, "referal_conversions", 1)
+	go func(authorID, linkID int64) {
+		if authorID == 0 {
+			return
 		}
-	}()
+		h.pointsSvc.AwardIdempotent(authorID, models.PointReasonReferalConversion, "referal_conversion", linkID,
+			"Конверсия по реферальной ссылке")
+		CreateNotification(authorID, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
+		service.TrackChallengeMetric(authorID, "referal_conversions", 1)
+	}(link.AuthorId, req.ReferralLinkId)
 
 	return c.SendStatus(fiber.StatusOK)
 }
