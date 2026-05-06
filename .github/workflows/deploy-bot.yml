@@ -21,7 +21,7 @@ jobs:
           key:      ${{ secrets.SSH_BOT_KEY }}
           port:     ${{ secrets.SSH_BOT_PORT }}
           script: |
-            set -eo pipefail
+            set -e
             cd /opt/itx-bot/repo
             git fetch --all
             git reset --hard origin/master
@@ -38,7 +38,7 @@ jobs:
           # 60m даёт запас и не плодит зависшие docker build-процессы.
           command_timeout: 60m
           script: |
-            set -eo pipefail
+            set -e
             cd /opt/itx-bot
             docker compose build --no-cache platform-bot
             docker compose up -d --no-deps --force-recreate platform-bot

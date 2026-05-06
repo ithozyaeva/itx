@@ -29,7 +29,7 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
-            set -eo pipefail
+            set -e
             cd ${{ secrets.PROJECT_PROD_PATH }}
             git fetch --all
             git reset --hard origin/master
@@ -51,7 +51,7 @@ jobs:
             # шёл дальше и `up -d --force-recreate` поднимал контейнеры на
             # стейл-image'ах. Workflow при этом отчитывался зелёным —
             # тихая регрессия (см. инцидент с #341 + Object.groupBy на node:20).
-            set -eo pipefail
+            set -e
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Copy shared UI package into frontend directories for Docker context.
             # Без этого admin-frontend/platform-frontend build падает при загрузке
