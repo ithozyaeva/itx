@@ -630,11 +630,36 @@ func (b *TelegramBot) handleChatMemberUpdated(update *tgbotapi.ChatMemberUpdated
 		if err := b.subscriptionService.SyncContentJoin(userID, update.Chat.ID, usernamePtr, fullName, isManual); err != nil {
 			log.Printf("SyncContentJoin failed user=%d chat=%d: %v", userID, update.Chat.ID, err)
 		}
+		if isManual {
+			b.notifyManualAdd(update.NewChatMember.User, &update.From, update.Chat.ID, chat.Title)
+		}
 	} else {
 		if err := b.subscriptionService.SyncContentLeave(userID, update.Chat.ID); err != nil {
 			log.Printf("SyncContentLeave failed user=%d chat=%d: %v", userID, update.Chat.ID, err)
 		}
 	}
+}
+
+// notifyManualAdd шлёт админу подтверждение, что юзер был добавлен в чат
+// вручную и его access помечен как manual (periodic не вышибет). Без этого
+// admin не имел бы immediate feedback, что auto-detect сработал — пришлось
+// бы лезть в БД проверять is_manual.
+func (b *TelegramBot) notifyManualAdd(addedUser *tgbotapi.User, addedBy *tgbotapi.User, chatID int64, chatTitle string) {
+	if addedUser == nil {
+		return
+	}
+	if chatTitle == "" {
+		chatTitle = fmt.Sprintf("chat %d", chatID)
+	}
+	by := "?"
+	if addedBy != nil {
+		by = targetDisplay(addedBy)
+	}
+	text := fmt.Sprintf(
+		"🛡 %s (<code>%d</code>) добавлен вручную в <b>%s</b>.\nДобавил: %s\nДоступ помечен как manual — periodic не тронет.",
+		targetDisplay(addedUser), addedUser.ID, html.EscapeString(chatTitle), by,
+	)
+	b.SendDirectMessage(subscriptionAdminID(), text)
 }
 
 // handleMyChatMemberUpdated handles bot being added/removed from chats.
