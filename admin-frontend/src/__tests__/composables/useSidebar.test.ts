@@ -26,7 +26,8 @@ describe('useSidebar', () => {
       const { sidebarItems } = useSidebar()
 
       // 17 базовых + Дейлики + Челленджи (геймификация, PR-322)
-      expect(sidebarItems.value).toHaveLength(19)
+      // + Кредиты (реферальные кредиты, PR-347)
+      expect(sidebarItems.value).toHaveLength(20)
     })
 
     it('shows only items without requiredPermission when user has no permissions', () => {
@@ -78,7 +79,7 @@ describe('useSidebar', () => {
 
       const expectedPaths = [
         '/dashboard', '/mentors', '/members', '/events', '/resumes',
-        '/reviews', '/mentor-reviews', '/feedback', '/points', '/chat-activity',
+        '/reviews', '/mentor-reviews', '/feedback', '/points', '/credits', '/chat-activity',
         '/chat-quests', '/raffles', '/daily-tasks', '/challenges', '/minigames',
         '/subscriptions', '/moderation', '/referrals', '/audit-logs',
       ]
