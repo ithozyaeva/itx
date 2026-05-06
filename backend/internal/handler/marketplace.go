@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
@@ -13,6 +14,14 @@ import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/service"
 )
+
+const maxMarketplaceImageSize = 10 * 1024 * 1024 // 10 MB
+
+var allowedMarketplaceImageTypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/webp": true,
+}
 
 type MarketplaceHandler struct {
 	svc      *service.MarketplaceService
@@ -94,6 +103,10 @@ func (h *MarketplaceHandler) Create(c *fiber.Ctx) error {
 
 	fileHeader, err := c.FormFile("image")
 	if err == nil && fileHeader != nil {
+		if fileHeader.Size > maxMarketplaceImageSize {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Файл превышает 10MB"})
+		}
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось открыть файл"})
@@ -105,7 +118,14 @@ func (h *MarketplaceHandler) Create(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось прочитать файл"})
 		}
 
-		ct := fileHeader.Header.Get("Content-Type")
+		// Тип определяем по содержимому, а не по заголовку клиента — иначе
+		// можно подсунуть произвольный бинарник под application/jpeg.
+		detected := http.DetectContentType(data)
+		if !allowedMarketplaceImageTypes[detected] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Допустимые форматы: jpg, png, webp"})
+		}
+
+		ct := detected
 		if ct == "" {
 			if guessed := mime.TypeByExtension(filepath.Ext(fileHeader.Filename)); guessed != "" {
 				ct = guessed
