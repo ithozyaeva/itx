@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -182,6 +183,13 @@ func (h *MembersHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Участник не найден"})
 	}
 
+	if err := utils.ValidateProfileLengths(request.FirstName, request.LastName, request.Bio, request.Grade, request.Company); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := utils.ValidateUsername(request.Username); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	member.FirstName = request.FirstName
 	member.LastName = request.LastName
 	member.Roles = request.Roles
@@ -197,6 +205,12 @@ func (h *MembersHandler) Update(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+	if parsedDate != nil {
+		bdayTime := time.Time(*parsedDate)
+		if err := utils.ValidateBirthdayRange(&bdayTime); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 	member.Birthday = parsedDate
 
@@ -261,6 +275,10 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный запрос"})
 	}
 
+	if err := utils.ValidateProfileLengths(request.FirstName, request.LastName, request.Bio, request.Grade, request.Company); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	member, err := getMember(c)
 	if err != nil {
 		return err
@@ -278,6 +296,12 @@ func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+	if parsedDate != nil {
+		bdayTime := time.Time(*parsedDate)
+		if err := utils.ValidateBirthdayRange(&bdayTime); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 	member.Birthday = parsedDate
 

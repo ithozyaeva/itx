@@ -104,6 +104,7 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 			"error": "Invalid init data",
 		})
 	}
+	tgUser.Username = utils.SanitizeTelegramUsername(tgUser.Username)
 
 	token, err := h.telegramService.GenerateAuthToken(tgUser.ID)
 	if err != nil {
@@ -308,6 +309,9 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
+	// Telegram гарантирует валидный username, но защитимся от неожиданно длинных
+	// или содержащих посторонние символы значений (прокси, фейковый бот, баг).
+	req.Username = utils.SanitizeTelegramUsername(req.Username)
 
 	// Проверяем, существует ли пользователь
 	existingUser, err := h.authService.GetByTelegramID(req.UserID)
