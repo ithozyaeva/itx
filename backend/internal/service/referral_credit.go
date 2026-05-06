@@ -1,0 +1,103 @@
+package service
+
+import (
+	"fmt"
+	"ithozyeva/internal/models"
+	"ithozyeva/internal/repository"
+	"log"
+)
+
+type ReferralCreditService struct {
+	repo     *repository.ReferralCreditRepository
+	settings *AppSettingsService
+}
+
+func NewReferralCreditService() *ReferralCreditService {
+	return &ReferralCreditService{
+		repo:     repository.NewReferralCreditRepository(),
+		settings: NewAppSettingsService(),
+	}
+}
+
+// AwardForConversion идемпотентно начисляет credits автору ссылки за
+// конверсию. Сумма из app_settings.referral_conversion_credits (default 30).
+// Идемпотентность: повторная конверсия по той же ссылке — no-op (защищена
+// уникальным индексом в БД).
+func (s *ReferralCreditService) AwardForConversion(memberId int64, linkId int64) {
+	amount := s.settings.GetInt("referral_conversion_credits", 30)
+	if amount <= 0 {
+		return
+	}
+	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
+		MemberId:    memberId,
+		Amount:      amount,
+		Reason:      models.CreditReasonReferalConversion,
+		SourceType:  "referal_conversion",
+		SourceId:    linkId,
+		Description: "Конверсия по реферальной ссылке",
+	})
+	if err != nil {
+		log.Printf("AwardForConversion error (member=%d, link=%d): %v", memberId, linkId, err)
+	}
+}
+
+// AwardForReferralPurchase начисляет инвайтеру долю от рублёвой цены, когда
+// приглашённый купил подписку за credits. share — из app_settings
+// (default 0.1 = 10%). Идемпотентно по purchaseTxId, чтобы повторная
+// доставка эвента (например, если миграция фиксов прогнала тот же flow
+// дважды) не удвоила награду.
+func (s *ReferralCreditService) AwardForReferralPurchase(referrerId int64, refereeId int64, priceCents int, purchaseTxId int64) {
+	share := s.settings.GetFloat("referral_purchase_share", 0.1)
+	amount := int(float64(priceCents) / 100.0 * share)
+	if amount <= 0 {
+		return
+	}
+	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
+		MemberId:    referrerId,
+		Amount:      amount,
+		Reason:      models.CreditReasonReferralPurchase,
+		SourceType:  "subscription_purchase",
+		SourceId:    purchaseTxId,
+		Description: fmt.Sprintf("Реферал #%d купил подписку", refereeId),
+	})
+	if err != nil {
+		log.Printf("AwardForReferralPurchase error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
+	}
+}
+
+// AdminAward — ручная выдача credits из админ-панели. Может быть как
+// положительной (начисление за акцию/компенсацию), так и отрицательной
+// (списание/штраф) — кладём как есть.
+func (s *ReferralCreditService) AdminAward(memberId int64, amount int, description string) error {
+	return s.repo.Award(&models.ReferralCreditTransaction{
+		MemberId:    memberId,
+		Amount:      amount,
+		Reason:      models.CreditReasonAdminManual,
+		SourceType:  "admin",
+		SourceId:    0,
+		Description: description,
+	})
+}
+
+func (s *ReferralCreditService) GetBalance(memberId int64) (int, error) {
+	return s.repo.GetBalance(memberId)
+}
+
+func (s *ReferralCreditService) GetSummary(memberId int64) (*models.ReferralCreditSummary, error) {
+	balance, err := s.repo.GetBalance(memberId)
+	if err != nil {
+		return nil, err
+	}
+	transactions, err := s.repo.GetTransactions(memberId, 50)
+	if err != nil {
+		return nil, err
+	}
+	return &models.ReferralCreditSummary{
+		Balance:      balance,
+		Transactions: transactions,
+	}, nil
+}
+
+func (s *ReferralCreditService) SearchTransactions(username *string, limit, offset int) ([]models.AdminCreditTransaction, int64, error) {
+	return s.repo.SearchTransactions(username, limit, offset)
+}

@@ -8,6 +8,7 @@ type SubscriptionTier struct {
 	Name              string  `json:"name" gorm:"size:100"`
 	Level             int     `json:"level" gorm:"uniqueIndex"`
 	PriceCents        *int    `json:"price_cents" gorm:"column:price_cents"`
+	PriceCredits      *int    `json:"price_credits" gorm:"column:price_credits"`
 	BoostyURL         *string `json:"boosty_url" gorm:"size:255"`
 	PublicDescription *string `json:"public_description"`
 	Features          string  `json:"features" gorm:"type:jsonb;default:'[]'"`
@@ -36,22 +37,31 @@ type SubscriptionTierChat struct {
 func (SubscriptionTierChat) TableName() string { return "subscription_tier_chats" }
 
 type SubscriptionUser struct {
-	ID             int64      `json:"id" gorm:"primaryKey;autoIncrement:false"`
-	Username       *string    `json:"username" gorm:"size:255"`
-	FullName       string     `json:"full_name" gorm:"size:255"`
-	ResolvedTierID *uint      `json:"resolved_tier_id"`
-	ManualTierID   *uint      `json:"manual_tier_id"`
-	IsActive       bool       `json:"is_active" gorm:"default:true"`
-	LastCheckAt    *time.Time `json:"last_check_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID                  int64      `json:"id" gorm:"primaryKey;autoIncrement:false"`
+	Username            *string    `json:"username" gorm:"size:255"`
+	FullName            string     `json:"full_name" gorm:"size:255"`
+	ResolvedTierID      *uint      `json:"resolved_tier_id"`
+	ManualTierID        *uint      `json:"manual_tier_id"`
+	ManualTierExpiresAt *time.Time `json:"manual_tier_expires_at"`
+	IsActive            bool       `json:"is_active" gorm:"default:true"`
+	LastCheckAt         *time.Time `json:"last_check_at"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 func (SubscriptionUser) TableName() string { return "subscription_users" }
 
-// EffectiveTierID returns ManualTierID if set, otherwise ResolvedTierID.
+// EffectiveTierID returns ManualTierID if set and not expired, otherwise ResolvedTierID.
+//
+// Истечение manual проверяется здесь как защитный слой на случай вызова
+// в обход PeriodicCheck (например, RequireSubscription middleware между
+// тикерами). Авторитетную чистку (audit + sync content-чатов) делает
+// PeriodicCheck/CheckAndSyncUser — здесь только мягкий fallback.
 func (u *SubscriptionUser) EffectiveTierID() *uint {
 	if u.ManualTierID != nil {
+		if u.ManualTierExpiresAt != nil && time.Now().After(*u.ManualTierExpiresAt) {
+			return u.ResolvedTierID
+		}
 		return u.ManualTierID
 	}
 	return u.ResolvedTierID
