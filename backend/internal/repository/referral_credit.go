@@ -62,7 +62,9 @@ func (r *ReferralCreditRepository) AwardIdempotent(tx *models.ReferralCreditTran
 	).Error
 }
 
-// Spend атомарно списывает credits внутри переданной транзакции.
+// Spend атомарно списывает credits внутри переданной транзакции и
+// возвращает ID созданной transaction-записи (для idempotency-key
+// последующих наград, например AwardForReferralPurchase).
 //
 // Использует SELECT … FOR UPDATE по строкам member_id, чтобы между
 // проверкой баланса и INSERT'ом отрицательного списания не вклинилась
@@ -78,9 +80,9 @@ func (r *ReferralCreditRepository) Spend(
 	sourceType string,
 	sourceId int64,
 	description string,
-) error {
+) (int64, error) {
 	if amount <= 0 {
-		return errors.New("spend amount must be positive")
+		return 0, errors.New("spend amount must be positive")
 	}
 
 	var balance int
@@ -89,20 +91,24 @@ func (r *ReferralCreditRepository) Spend(
 		 WHERE member_id = ? FOR UPDATE`,
 		memberId,
 	).Scan(&balance).Error; err != nil {
-		return err
+		return 0, err
 	}
 	if balance < amount {
-		return ErrInsufficientCredits
+		return 0, ErrInsufficientCredits
 	}
 
-	return db.Create(&models.ReferralCreditTransaction{
+	tx := &models.ReferralCreditTransaction{
 		MemberId:    memberId,
 		Amount:      -amount,
 		Reason:      reason,
 		SourceType:  sourceType,
 		SourceId:    sourceId,
 		Description: description,
-	}).Error
+	}
+	if err := db.Create(tx).Error; err != nil {
+		return 0, err
+	}
+	return tx.Id, nil
 }
 
 // AwardTx — INSERT внутри переданной транзакции (без идемпотентности).

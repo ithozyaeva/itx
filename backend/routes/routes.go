@@ -365,9 +365,12 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	notifSettings.Patch("/", notifSettingsHandler.UpdateMy)
 
 	// Публичные тарифы для /tariffs и прогрева в боте.
+	// Покупка тарифа за реферальные кредиты — тоже на protected, потому что
+	// именно UNSUBSCRIBER — целевая аудитория покупки.
 	if redisClient != nil {
 		subscriptionHandler := handler.NewSubscriptionHandler(redisClient)
 		protected.Get("/subscriptions/tiers", subscriptionHandler.PublicTiers)
+		protected.Post("/subscriptions/purchase", subscriptionHandler.PurchaseWithCredits)
 	}
 
 	// Реферальные кредиты — баланс и история. Доступно UNSUBSCRIBER'у:

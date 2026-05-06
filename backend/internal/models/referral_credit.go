@@ -5,10 +5,11 @@ import "time"
 type ReferralCreditReason string
 
 const (
-	CreditReasonReferalConversion    ReferralCreditReason = "referal_conversion"
-	CreditReasonReferralPurchase     ReferralCreditReason = "referral_purchase"
-	CreditReasonAdminManual          ReferralCreditReason = "admin_manual"
-	CreditReasonSubscriptionPurchase ReferralCreditReason = "subscription_purchase"
+	CreditReasonReferalConversion         ReferralCreditReason = "referal_conversion"
+	CreditReasonReferralPurchaseFirst     ReferralCreditReason = "referral_purchase_first"
+	CreditReasonReferralPurchaseRecurring ReferralCreditReason = "referral_purchase_recurring"
+	CreditReasonAdminManual               ReferralCreditReason = "admin_manual"
+	CreditReasonSubscriptionPurchase      ReferralCreditReason = "subscription_purchase"
 )
 
 type ReferralCreditTransaction struct {

@@ -292,6 +292,68 @@ func (r *SubscriptionRepository) SetManualTier(userID int64, tierID *uint) error
 		}).Error
 }
 
+// SetManualTierWithExpiry атомарно записывает manual_tier_id и
+// manual_tier_expires_at одной UPDATE-командой. Используется покупкой
+// тарифа за credits и сбросом истёкшего manual.
+//
+// Через raw Exec, потому что GORM v2 Updates(map) с nil-value не всегда
+// генерирует SET col = NULL — а сброс manual_tier_expires_at нужен и
+// при «бессрочной» админской выдаче, и при истечении (там нужно занулить
+// и tierID, и expiresAt одновременно).
+func (r *SubscriptionRepository) SetManualTierWithExpiry(userID int64, tierID *uint, expiresAt *time.Time) error {
+	return r.SetManualTierWithExpiryTx(r.db, userID, tierID, expiresAt)
+}
+
+func (r *SubscriptionRepository) SetManualTierWithExpiryTx(db *gorm.DB, userID int64, tierID *uint, expiresAt *time.Time) error {
+	return db.Exec(
+		`UPDATE subscription_users
+		 SET manual_tier_id = ?, manual_tier_expires_at = ?, updated_at = NOW()
+		 WHERE id = ?`,
+		tierID, expiresAt, userID,
+	).Error
+}
+
+// GetUserTx — версия GetUser в рамках переданной транзакции.
+func (r *SubscriptionRepository) GetUserTx(db *gorm.DB, userID int64) (*models.SubscriptionUser, error) {
+	var user models.SubscriptionUser
+	if err := db.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// EnsureUserTx — версия EnsureUser в рамках переданной транзакции.
+// Возвращает (created bool, err) — true, если запись была создана.
+func (r *SubscriptionRepository) EnsureUserTx(db *gorm.DB, userID int64, username *string, fullName string) (bool, error) {
+	var u models.SubscriptionUser
+	err := db.First(&u, userID).Error
+	if err == nil {
+		return false, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return false, err
+	}
+	if err := db.Create(&models.SubscriptionUser{
+		ID:       userID,
+		Username: username,
+		FullName: fullName,
+		IsActive: true,
+	}).Error; err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// AddAuditTx — версия AddAudit в рамках переданной транзакции.
+func (r *SubscriptionRepository) AddAuditTx(db *gorm.DB, userID int64, action string, details map[string]interface{}) error {
+	detailsJSON, _ := json.Marshal(details)
+	return db.Create(&models.SubscriptionAuditLog{
+		UserID:  userID,
+		Action:  action,
+		Details: string(detailsJSON),
+	}).Error
+}
+
 // --- Access ---
 
 func (r *SubscriptionRepository) GetActiveAccess(userID int64) ([]models.SubscriptionUserChatAccess, error) {

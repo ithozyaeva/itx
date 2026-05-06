@@ -41,13 +41,16 @@ func (s *ReferralCreditService) AwardForConversion(memberId int64, linkId int64)
 	}
 }
 
-// AwardForReferralPurchase начисляет инвайтеру долю от рублёвой цены, когда
-// приглашённый купил подписку за credits. share — из app_settings
-// (default 0.1 = 10%). Идемпотентно по purchaseTxId, чтобы повторная
-// доставка эвента (например, если миграция фиксов прогнала тот же flow
-// дважды) не удвоила награду.
-func (s *ReferralCreditService) AwardForReferralPurchase(referrerId int64, refereeId int64, priceCents int, purchaseTxId int64) {
-	share := s.settings.GetFloat("referral_purchase_share", 0.1)
+// AwardForFirstPurchase — крупная единоразовая выплата инвайтеру за то,
+// что реферал впервые активировал подписку (любым способом: Boosty-anchor
+// или credits). share из app_settings.referral_first_purchase_share
+// (default 0.5 = 50%).
+//
+// Идемпотентность: уникальный индекс на (referrer, reason='referral_purchase_first',
+// source_type='referral_first_paid', source_id=refereeMemberID). Повторный
+// вызов из любого потока — no-op.
+func (s *ReferralCreditService) AwardForFirstPurchase(referrerId int64, refereeId int64, priceCents int) {
+	share := s.settings.GetFloat("referral_first_purchase_share", 0.5)
 	amount := int(float64(priceCents) / 100.0 * share)
 	if amount <= 0 {
 		return
@@ -55,13 +58,40 @@ func (s *ReferralCreditService) AwardForReferralPurchase(referrerId int64, refer
 	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
 		MemberId:    referrerId,
 		Amount:      amount,
-		Reason:      models.CreditReasonReferralPurchase,
-		SourceType:  "subscription_purchase",
-		SourceId:    purchaseTxId,
-		Description: fmt.Sprintf("Реферал #%d купил подписку", refereeId),
+		Reason:      models.CreditReasonReferralPurchaseFirst,
+		SourceType:  "referral_first_paid",
+		SourceId:    refereeId,
+		Description: fmt.Sprintf("Реферал #%d впервые оформил подписку", refereeId),
 	})
 	if err != nil {
-		log.Printf("AwardForReferralPurchase error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
+		log.Printf("AwardForFirstPurchase error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
+	}
+}
+
+// AwardForRecurringPurchase — ежемесячная выплата инвайтеру за активного
+// реферала. periodKey — строка YYYY-MM, идёт в source_type, чтобы
+// уникальный индекс на (member_id, reason, source_type, source_id)
+// гарантировал «не более одной выплаты в месяц на пару (referrer, referee)».
+//
+// Дёргается из PeriodicCheck для каждого активного юзера; благодаря
+// идемпотентности безопасно вызывать на каждом тикере.
+func (s *ReferralCreditService) AwardForRecurringPurchase(referrerId int64, refereeId int64, priceCents int, periodKey string) {
+	share := s.settings.GetFloat("referral_purchase_share", 0.2)
+	amount := int(float64(priceCents) / 100.0 * share)
+	if amount <= 0 {
+		return
+	}
+	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
+		MemberId:    referrerId,
+		Amount:      amount,
+		Reason:      models.CreditReasonReferralPurchaseRecurring,
+		SourceType:  "ref_paid:" + periodKey,
+		SourceId:    refereeId,
+		Description: fmt.Sprintf("Реферал #%d активен в %s", refereeId, periodKey),
+	})
+	if err != nil {
+		log.Printf("AwardForRecurringPurchase error (referrer=%d, referee=%d, period=%s): %v",
+			referrerId, refereeId, periodKey, err)
 	}
 }
 
