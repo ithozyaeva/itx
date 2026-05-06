@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicTier } from '@/services/subscriptions'
-import { Check, Coins, Crown } from 'lucide-vue-next'
+import { Check, Coins, Crown, Share2 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -48,6 +48,21 @@ const sortedTiers = computed(() => [...tiers.value].sort((a, b) => a.level - b.l
 function canBuy(tier: PublicTier) {
   return tier.price_credits != null && balance.value != null && balance.value >= tier.price_credits
 }
+
+// Минимальная цена среди тарифов с price_credits — для блока «не хватает».
+// Если ни один тариф нельзя купить за credits, блок не показываем.
+const minCreditsPrice = computed(() => {
+  const prices = tiers.value
+    .map(t => t.price_credits)
+    .filter((p): p is number => p != null && p > 0)
+  return prices.length ? Math.min(...prices) : null
+})
+
+const showEarnCTA = computed(() => {
+  if (balance.value == null || minCreditsPrice.value == null)
+    return false
+  return balance.value < minCreditsPrice.value
+})
 
 async function confirmPurchase() {
   if (!confirmTier.value)
@@ -190,16 +205,41 @@ async function confirmPurchase() {
             @click="confirmTier = tier"
           >
             <Coins class="w-4 h-4 mr-2" />
-            <span v-if="balance == null || canBuy(tier)">
+            <span v-if="balance == null">
+              Загрузка баланса…
+            </span>
+            <span v-else-if="canBuy(tier)">
               Купить за {{ formatPrice(tier.price_credits) }} кр.
             </span>
             <span v-else>
-              Не хватает {{ formatPrice(tier.price_credits - (balance ?? 0)) }} кр.
+              Не хватает {{ formatPrice(tier.price_credits - balance) }} кр.
             </span>
           </Button>
         </div>
       </div>
     </div>
+
+    <!-- Если баланса не хватает даже на самый дешёвый тариф — мягко
+         подсказываем, как набрать кредиты. Не показываем юзерам с balance=null
+         (auth/network проблема) и тем, у кого баланс уже достаточен. -->
+    <RouterLink
+      v-if="showEarnCTA"
+      to="/referals"
+      class="mt-10 flex items-center gap-3 p-5 rounded-sm border border-accent/30 bg-accent/[0.04] hover:border-accent/50 transition-colors group"
+    >
+      <Share2 class="w-5 h-5 text-accent shrink-0" />
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium">
+          Не хватает кредитов? Получите за приглашённых
+        </p>
+        <p class="text-xs text-muted-foreground">
+          Создайте реферальную ссылку — за каждую конверсию +30 кр., +50% разово при покупке подписки рефералом, +20% каждый месяц.
+        </p>
+      </div>
+      <span class="text-xs text-accent shrink-0 group-hover:underline">
+        создать →
+      </span>
+    </RouterLink>
 
     <div
       v-if="botSubLink"

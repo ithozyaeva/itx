@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ReferalLink } from '@/models/referals'
 import type { ReferalSearchFilters } from '@/services/referals'
-import { Loader2, Share2 } from 'lucide-vue-next'
+import { Coins, Loader2, Share2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
@@ -115,6 +115,27 @@ function handleLinkDeleted(deletedLinkId: number) {
     <Typography variant="h2" as="h1" class="mb-4">
       Реферальные ссылки
     </Typography>
+
+    <!-- Кратко напоминаем, что эти ссылки — основной источник реферальных
+         кредитов. Без блока юзеры не связывают /referals и /credits, и не
+         понимают, как пополнить баланс для покупки подписки. -->
+    <RouterLink
+      to="/credits"
+      class="flex items-center gap-3 p-4 mb-6 rounded-sm border border-accent/30 bg-accent/[0.04] hover:border-accent/50 transition-colors group"
+    >
+      <Coins class="w-5 h-5 text-accent shrink-0" />
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium">
+          Каждая ссылка приносит реферальные кредиты
+        </p>
+        <p class="text-xs text-muted-foreground">
+          +30 за конверсию, +50% от цены при оформлении подписки рефералом, +20% каждый месяц активности. Тратятся на свою подписку.
+        </p>
+      </div>
+      <span class="text-xs text-accent shrink-0 group-hover:underline">
+        баланс →
+      </span>
+    </RouterLink>
 
     <ReferalFilters class="mb-6" @change="fetchReferalLinks" />
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CreditsSummary } from '@/services/credits'
-import { Coins, Inbox } from 'lucide-vue-next'
+import { Coins, Inbox, Share2, Sparkles, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { Button } from '@/components/ui/button'
@@ -87,6 +87,49 @@ function loadMore() {
         </RouterLink>
       </div>
 
+      <!-- Onboarding-блок «как заработать»: показываем тем, у кого нет
+           конверсий ИЛИ пустой баланс — иначе они не поймут, как пополнить.
+           Реф-программа физически реализована через /referals (ссылки на
+           вакансии), но связь между «креди ты» и «ссылки на вакансии»
+           неочевидна без явного объяснения. -->
+      <div
+        v-if="data.transactions.length === 0 || data.balance === 0"
+        class="rounded-sm border border-accent/30 bg-accent/[0.04] p-5 mb-6"
+      >
+        <div class="flex items-start gap-3 mb-3">
+          <Sparkles class="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <div>
+            <h3 class="font-medium mb-1">
+              Как зарабатывать кредиты
+            </h3>
+            <p class="text-sm text-muted-foreground">
+              Создавайте реферальные ссылки на вакансии в своей компании. За каждого приглашённого участника + за его покупку подписки вам начисляются кредиты, которыми можно оплатить свою подписку.
+            </p>
+          </div>
+        </div>
+        <ul class="space-y-2 mb-4 text-sm pl-8">
+          <li class="flex items-center gap-2">
+            <Users class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>30 кр.</strong> — за каждого, кто пришёл по вашей ссылке</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <Coins class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>50%</strong> — разово, когда реферал оформил подписку</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <Coins class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>20%</strong> — каждый месяц, пока реферал активен</span>
+          </li>
+        </ul>
+        <RouterLink
+          to="/referals"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/90 transition-colors"
+        >
+          <Share2 class="w-4 h-4" />
+          Создать реферальную ссылку
+        </RouterLink>
+      </div>
+
       <Typography variant="h4" as="h2" class="mb-3">
         История транзакций
       </Typography>
@@ -96,7 +139,7 @@ function loadMore() {
         :icon="Inbox"
         variant="dashed"
         title="Пока нет транзакций"
-        description="Поделись реферальной ссылкой, чтобы начать копить кредиты."
+        description="Создайте реферальную ссылку — за каждую конверсию +30 кредитов."
       />
 
       <div
