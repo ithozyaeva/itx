@@ -45,6 +45,7 @@ func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
 	// Маршруты для авторизации через Telegram
 	auth := api.Group("/auth")
 	auth.Post("/telegram/refresh", telegramAuthHandler.RefreshToken)
+	auth.Post("/telegram/logout", telegramAuthHandler.Logout)
 	auth.Post("/telegram", telegramAuthHandler.Authenticate)
 	auth.Post("/telegram-webapp", telegramAuthHandler.AuthenticateWebApp)
 	auth.Post("/telegram-from-bot", telegramAuthHandler.HandleBotMessage)

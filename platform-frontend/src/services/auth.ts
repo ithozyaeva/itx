@@ -15,6 +15,29 @@ export const authService = {
     return await response.json()
   },
 
+  // logout инвалидирует tg_token серверно (POST /api/auth/telegram/logout),
+  // затем чистит локалсторадж. До добавления серверного эндпоинта клик
+  // «Выйти» только удалял токен из localStorage, но в auth_tokens он жил
+  // до natural expiry (~30 дней) — украденный токен оставался валидным.
+  // best-effort: ошибки сети не блокируют локальный logout, иначе залогинить
+  // обратно нельзя без восстановления связи.
+  async logout(): Promise<void> {
+    const token = localStorage.getItem('tg_token')
+    if (token) {
+      try {
+        await ky.post('/api/auth/telegram/logout', {
+          headers: { 'X-Telegram-User-Token': token },
+        })
+      }
+      catch {
+        // Игнорируем — серверный logout best-effort, локальный всегда успешный.
+      }
+    }
+    localStorage.removeItem('tg_token')
+  },
+
+  // clearAuthHeader — синхронная версия для аварийных путей (apiClient после
+  // неудачного refresh: токен уже точно мёртв, серверный вызов смысла не имеет).
   clearAuthHeader() {
     localStorage.removeItem('tg_token')
   },

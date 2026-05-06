@@ -120,6 +120,15 @@ func (s *CasinoService) PlayDiceRoll(memberId int64, req *models.DiceRollRequest
 		return nil, fmt.Errorf("ошибка генерации")
 	}
 
+	// cryptoRandInt(100) возвращает 0..99 (100 равновероятных исходов).
+	// Симметрия "over"/"under" вокруг target требует одинакового счёта
+	// исходов:
+	//   under: roll < target  → исходы {0..target-1}    = target
+	//   over:  roll >= target → исходы {target..99}     = 100-target
+	// Раньше over использовал строгое roll > target — реальная вероятность
+	// была (99-target), но winChance показывала (100-target). На этой
+	// single-off ошибке игроки на «over» получали скрытый дополнительный
+	// house edge, и симметрия с «under» нарушалась.
 	var winChance float64
 	if req.Direction == "over" {
 		winChance = float64(100 - req.Target)
@@ -129,7 +138,7 @@ func (s *CasinoService) PlayDiceRoll(memberId int64, req *models.DiceRollRequest
 
 	var won bool
 	if req.Direction == "over" {
-		won = roll > req.Target
+		won = roll >= req.Target
 	} else {
 		won = roll < req.Target
 	}

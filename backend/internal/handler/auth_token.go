@@ -37,6 +37,47 @@ type AuthRequest struct {
 	Token string `json:"token"`
 }
 
+// mergeSubscriptionRole возвращает копию roles, в которой выставлен ровно один
+// из флагов SUBSCRIBER/UNSUBSCRIBER в соответствии с isSubscriber, а все
+// остальные роли (ADMIN, MENTOR, EVENT_MAKER, …) сохранены.
+//
+// changed=true означает «нужно сохранить в БД» — false когда состояние уже
+// корректное (один правильный флаг, без лишних), чтобы лишний раз не
+// дёргать MemberRepository.Update.
+//
+// Извлечено в чистую функцию специально под юнит-тест: см. auth_token_test.go.
+// Регрессия #340 чинила побочный эффект periodic; этот хелпер закрывает
+// исходный root cause — overwrite роль-слайса при флипе chat-membership
+// затирал ADMIN/MENTOR/EVENT_MAKER при каждом /authenticate.
+func mergeSubscriptionRole(roles []models.Role, isSubscriber bool) (newRoles []models.Role, changed bool) {
+	desired := models.MemberRoleUnsubscriber
+	if isSubscriber {
+		desired = models.MemberRoleSubscriber
+	}
+
+	hasDesired := false
+	newRoles = make([]models.Role, 0, len(roles)+1)
+	for _, r := range roles {
+		switch r {
+		case models.MemberRoleSubscriber, models.MemberRoleUnsubscriber:
+			if r == desired && !hasDesired {
+				hasDesired = true
+				newRoles = append(newRoles, r)
+			} else {
+				// либо противоположный флаг, либо дубликат desired — оба отбрасываем.
+				changed = true
+			}
+		default:
+			newRoles = append(newRoles, r)
+		}
+	}
+	if !hasDesired {
+		newRoles = append(newRoles, desired)
+		changed = true
+	}
+	return newRoles, changed
+}
+
 type WebAppAuthRequest struct {
 	InitData string `json:"init_data"`
 }
@@ -135,14 +176,12 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 			log.Printf("failed to check user %d in chat (skipping role update): %v", user.TelegramID, err)
 			return
 		}
-		if isSubscriber && utils.HasRole(user.Roles, models.MemberRoleUnsubscriber) {
-			user.Roles = []models.Role{models.MemberRoleSubscriber}
-			h.memberService.Update(user)
+		newRoles, changed := mergeSubscriptionRole(user.Roles, isSubscriber)
+		if !changed {
+			return
 		}
-		if !isSubscriber && utils.HasRole(user.Roles, models.MemberRoleSubscriber) {
-			user.Roles = []models.Role{models.MemberRoleUnsubscriber}
-			h.memberService.Update(user)
-		}
+		user.Roles = newRoles
+		h.memberService.Update(user)
 	}(existingUser)
 
 	// Добавляем заголовок
@@ -153,6 +192,30 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 		"user":  existingUser,
 		"token": existingToken.Token,
 	})
+}
+
+// Logout инвалидирует текущий tg_token серверно: записывает в auth_tokens
+// expired_at в прошлое, чтобы middleware.RequireTGAuth на следующий запрос
+// этим токеном вернул 401. До появления этого хендлера клик «Выйти» только
+// удалял токен из localStorage, но в БД он жил до natural expiry (~30 дней),
+// и кто бы ни получил доступ к токену (украденный localStorage, sniff,
+// расшаренный комп) мог использовать API дальше. Берём токен ТОЛЬКО из
+// заголовка X-Telegram-User-Token — telegram-id юзера тут не нужен.
+//
+// Идемпотентно: если токен уже отсутствует в БД, отвечаем 204 — клиент
+// в любом случае получит «logged out».
+func (h *TelegramAuthHandler) Logout(c *fiber.Ctx) error {
+	headerToken := c.Get("X-Telegram-User-Token")
+	if headerToken == "" {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+	if err := h.authService.InvalidateToken(headerToken); err != nil {
+		log.Printf("logout: failed to invalidate token: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to logout",
+		})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // RefreshToken продлевает срок действия текущего токена. Принимает токен

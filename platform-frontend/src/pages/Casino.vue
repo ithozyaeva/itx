@@ -613,7 +613,7 @@ onBeforeUnmount(() => {
                     {{ diceResultValue }}
                   </div>
                   <div class="dice-result-condition">
-                    {{ diceResultDirection === 'over' ? '>' : '<' }} {{ diceResultTarget }}
+                    {{ diceResultDirection === 'over' ? '≥' : '<' }} {{ diceResultTarget }}
                   </div>
                 </div>
               </Transition>

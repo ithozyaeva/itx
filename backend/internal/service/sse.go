@@ -50,7 +50,20 @@ func (h *SSEHub) Subscribe(memberId int64) (chan string, func()) {
 	return ch, unsubscribe
 }
 
-// Publish отправляет событие конкретному пользователю
+// Publish отправляет событие конкретному пользователю.
+//
+// Send выполняется под RLock — это защищает от гонки «копируем каналы →
+// unsubscribe закрывает один из них → пишем в закрытый канал → panic».
+// Раньше код брал snapshot каналов под RLock и отпускал блокировку перед
+// циклом send: между unlock и send unsubscribe (под Lock) успевал
+// `close(ch)`, и следующий `case ch <- msg:` валил процесс с
+// «send on closed channel». В реальной нагрузке это срабатывало при
+// одновременном reconnect клиента и публикации gamification-события.
+//
+// Под RLock send безопасен: unsubscribe ждёт write Lock, который не
+// получит, пока хоть одна Publish/Broadcast держит RLock. Сам send
+// — non-blocking (select default), поэтому переполненный канал не
+// блокирует следующий subscriber.
 func (h *SSEHub) Publish(memberId int64, event SSEEvent) {
 	data, err := json.Marshal(event)
 	if err != nil {
@@ -59,19 +72,9 @@ func (h *SSEHub) Publish(memberId int64, event SSEEvent) {
 	}
 	msg := string(data)
 
-	// Копируем каналы в slice под RLock: итерация по h.clients[memberId]
-	// после RUnlock — это итерация по той же inner map, в которую
-	// параллельный Subscribe/unsubscribe пишет, и в Go это runtime fatal
-	// «concurrent map iteration and map write».
 	h.mu.RLock()
-	channels := h.clients[memberId]
-	chs := make([]chan string, 0, len(channels))
-	for ch := range channels {
-		chs = append(chs, ch)
-	}
-	h.mu.RUnlock()
-
-	for _, ch := range chs {
+	defer h.mu.RUnlock()
+	for ch := range h.clients[memberId] {
 		select {
 		case ch <- msg:
 		default:
