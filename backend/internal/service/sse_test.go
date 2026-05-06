@@ -23,7 +23,6 @@ func TestSSEHub_PublishWhileUnsubscribe(t *testing.T) {
 	const memberID int64 = 42
 	const subscribers = 50
 	const publishers = 8
-	const duration = 200 * time.Millisecond
 
 	// Стартуем читатели каналов: они принимают сообщения и сразу
 	// отписываются по случайному моменту, имитируя disconnect клиента

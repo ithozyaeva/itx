@@ -1,9 +1,12 @@
 package service
 
 import (
+	"errors"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type AuthTokenService struct {
@@ -73,9 +76,11 @@ func (s *AuthTokenService) GetTokenByTelegramID(telegramID int64) (*models.AuthT
 	return s.authRepo.GetByTelegramID(telegramID)
 }
 
-// InvalidateToken помечает токен как истёкший. Идемпотентно: если токена
-// нет в БД, возвращает nil — клиент в любом случае получает «logged out»,
-// и не нужен 404 в ответе на logout.
+// InvalidateToken помечает токен как истёкший. Идемпотентно по «токена нет
+// в БД» — на ErrRecordNotFound возвращаем nil (клиент в любом случае получает
+// «logged out», 404 на logout не нужен). Все остальные ошибки (соединение,
+// SQL) пробрасываем — иначе DB-сбой превращается в тихий «полу-logout»:
+// хендлер вернёт 204, юзер думает что вышел, а токен в БД жив.
 //
 // Используется хендлером /api/auth/telegram/logout, чтобы клик «Выйти»
 // действительно инвалидировал сессию серверно. До этого токен жил в БД
@@ -84,7 +89,10 @@ func (s *AuthTokenService) GetTokenByTelegramID(telegramID int64) (*models.AuthT
 func (s *AuthTokenService) InvalidateToken(token string) error {
 	authToken, err := s.authRepo.GetByToken(token)
 	if err != nil {
-		return nil
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return err
 	}
 	authToken.ExpiredAt = time.Now().Add(-time.Hour)
 	_, err = s.authRepo.Update(authToken)
