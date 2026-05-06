@@ -81,6 +81,13 @@ func (h *EventsHandler) Search(c *fiber.Ctx) error {
 			log.Printf("events upcoming search error: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка поиска событий"})
 		}
+		// Daily-task «Заглянуть в афишу событий» (seed: view_events). До этого
+		// триггер висел только на /api/events/next (лендинг-ручка), а платформа
+		// читает афишу через subscribed/events?dateFrom=... — задание у юзеров
+		// на платформе никогда не закрывалось.
+		if member, mErr := getMember(c); mErr == nil && member != nil {
+			service.TrackDailyTrigger(member.Id, "view_events", 1)
+		}
 		return c.JSON(result)
 	}
 
