@@ -79,7 +79,9 @@ func ValidateProfileLengths(firstName, lastName, bio, grade, company string) err
 }
 
 // ValidateBirthdayRange — день рождения должен попадать в реальный диапазон.
-// nil-значение валидно (поле необязательное).
+// nil-значение валидно (поле необязательное). «Сегодня» считаем по МСК:
+// бизнес живёт в Москве, и юзер из России в полночь по своему времени не
+// должен получать «дата в будущем» из-за того что в UTC ещё вчера.
 func ValidateBirthdayRange(birthday *time.Time) error {
 	if birthday == nil {
 		return nil
@@ -87,7 +89,9 @@ func ValidateBirthdayRange(birthday *time.Time) error {
 	if birthday.Before(MinBirthday) {
 		return errors.New("Дата рождения слишком давняя")
 	}
-	if birthday.After(time.Now().UTC()) {
+	todayMSK := time.Now().In(MSKLocation())
+	endOfToday := time.Date(todayMSK.Year(), todayMSK.Month(), todayMSK.Day(), 23, 59, 59, 0, todayMSK.Location())
+	if birthday.After(endOfToday) {
 		return errors.New("Дата рождения не может быть в будущем")
 	}
 	return nil

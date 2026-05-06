@@ -3,23 +3,32 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // ErrUsernameTaken — попытка записать username, который уже занят другим
 // участником. Хендлер должен превратить это в 409 Conflict.
 var ErrUsernameTaken = errors.New("username already taken")
 
-func isUniqueViolation(err error) bool {
+// usernameUniqueIndex — имя partial UNIQUE индекса из миграции
+// 20260506000000_dedupe_and_unique_username.sql. Сверяемся именно по
+// constraint_name, чтобы 23505 от другой колонки случайно не превратился
+// в «никнейм занят».
+const usernameUniqueIndex = "members_username_unique"
+
+func isUsernameUniqueViolation(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
-	return strings.Contains(msg, "members_username_unique") ||
-		strings.Contains(msg, "duplicate key")
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505" && pgErr.ConstraintName == usernameUniqueIndex
 }
 
 // Изменяем с type alias на новый тип
@@ -104,7 +113,7 @@ func (r *MemberRepository) Create(member *models.Member) (*models.Member, error)
 		Create(&member)
 
 	if result.Error != nil {
-		if isUniqueViolation(result.Error) {
+		if isUsernameUniqueViolation(result.Error) {
 			return nil, ErrUsernameTaken
 		}
 		return nil, result.Error
@@ -135,7 +144,7 @@ func (r *MemberRepository) Update(member *models.Member) (*models.Member, error)
 		})
 
 	if result.Error != nil {
-		if isUniqueViolation(result.Error) {
+		if isUsernameUniqueViolation(result.Error) {
 			return nil, ErrUsernameTaken
 		}
 		return nil, result.Error
