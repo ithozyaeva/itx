@@ -16,6 +16,7 @@ jobs:
           key:      ${{ secrets.SSH_DEV_KEY }}
           port:     ${{ secrets.SSH_DEV_PORT }}
           script: |
+            set -eo pipefail
             # Освобождаем место только от мусора, оставшегося от наших же образов/сборок.
             # НЕ используем docker system prune -af — он трогает ресурсы других проектов на этом хосте.
             docker image prune -f || true
@@ -33,6 +34,12 @@ jobs:
           port:     ${{ secrets.SSH_DEV_PORT }}
           command_timeout: 30m
           script: |
+            # set -e обязателен: docker compose build --no-cache при падении
+            # одного фронта abort'ит сборку остальных, но без set -e скрипт
+            # шёл дальше и `up -d --force-recreate` поднимал контейнеры на
+            # стейл-image'ах. Workflow при этом отчитывался зелёным —
+            # тихая регрессия (см. инцидент с #341 + Object.groupBy на node:20).
+            set -eo pipefail
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Copy shared UI package into frontend directories for Docker context
             cp -r packages/ui platform-frontend/_packages_ui

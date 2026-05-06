@@ -29,6 +29,7 @@ jobs:
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT }}
           script: |
+            set -eo pipefail
             cd ${{ secrets.PROJECT_PROD_PATH }}
             git fetch --all
             git reset --hard origin/master
@@ -45,6 +46,12 @@ jobs:
           port:     ${{ secrets.SSH_PORT }}
           envs: VITE_YANDEX_METRIKA_ID,VITE_YANDEX_METRIKA_ENABLED
           script: |
+            # set -e обязателен: docker compose build --no-cache при падении
+            # одного фронта abort'ит сборку остальных, но без set -e скрипт
+            # шёл дальше и `up -d --force-recreate` поднимал контейнеры на
+            # стейл-image'ах. Workflow при этом отчитывался зелёным —
+            # тихая регрессия (см. инцидент с #341 + Object.groupBy на node:20).
+            set -eo pipefail
             cd ${{ secrets.PROJECT_PROD_PATH }}
             # Copy shared UI package into frontend directories for Docker context.
             # Без этого admin-frontend/platform-frontend build падает при загрузке
