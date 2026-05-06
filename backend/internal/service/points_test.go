@@ -102,7 +102,8 @@ func TestPointValuesExist(t *testing.T) {
 		models.PointReasonReviewService,
 		models.PointReasonResumeUpload,
 		models.PointReasonReferalCreate,
-		models.PointReasonReferalConversion,
+		// PointReasonReferalConversion больше не начисляет points —
+		// награда переехала в referral_credit_transactions.
 		models.PointReasonProfileComplete,
 		models.PointReasonWeeklyActivity,
 		models.PointReasonMonthlyActive,
@@ -136,7 +137,6 @@ func TestPointValuesSpecificAmounts(t *testing.T) {
 		{models.PointReasonEventHost, 25},
 		{models.PointReasonProfileComplete, 20},
 		{models.PointReasonStreak4Weeks, 50},
-		{models.PointReasonReferalConversion, 30},
 		{models.PointReasonMonthlyActive, 30},
 		{models.PointReasonChatterOfWeek, 15},
 	}

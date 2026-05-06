@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type SubscriptionRepository struct {
@@ -182,9 +183,16 @@ func (r *SubscriptionRepository) DeleteChat(chatID int64) error {
 func (r *SubscriptionRepository) GetUserEffectiveTierLevel(userID int64) (int, bool) {
 	type row struct{ Level int }
 	var res row
+	// effective_tier = manual_tier_id если manual ещё не истёк, иначе
+	// resolved_tier_id. Без проверки expires юзер с просроченной покупкой
+	// держит API-доступ к платным ручкам до ближайшего PeriodicCheck (~30 мин).
 	err := r.db.Raw(`
 		SELECT st.level FROM subscription_users su
-		JOIN subscription_tiers st ON st.id = COALESCE(su.manual_tier_id, su.resolved_tier_id)
+		JOIN subscription_tiers st ON st.id = COALESCE(
+			CASE WHEN su.manual_tier_expires_at IS NULL OR su.manual_tier_expires_at > NOW()
+			     THEN su.manual_tier_id END,
+			su.resolved_tier_id
+		)
 		WHERE su.id = ? AND su.is_active = TRUE
 	`, userID).Scan(&res).Error
 	if err != nil || res.Level == 0 {
@@ -324,24 +332,22 @@ func (r *SubscriptionRepository) GetUserTx(db *gorm.DB, userID int64) (*models.S
 
 // EnsureUserTx — версия EnsureUser в рамках переданной транзакции.
 // Возвращает (created bool, err) — true, если запись была создана.
+//
+// Использует ON CONFLICT DO NOTHING вместо First→Create — без этого
+// две одновременные PurchaseTier для одного нового юзера (например,
+// клик в двух табах) обе видели бы NotFound и обе делали Create →
+// одна получала unique_violation, и её транзакция падала.
 func (r *SubscriptionRepository) EnsureUserTx(db *gorm.DB, userID int64, username *string, fullName string) (bool, error) {
-	var u models.SubscriptionUser
-	err := db.First(&u, userID).Error
-	if err == nil {
-		return false, nil
-	}
-	if err != gorm.ErrRecordNotFound {
-		return false, err
-	}
-	if err := db.Create(&models.SubscriptionUser{
+	res := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&models.SubscriptionUser{
 		ID:       userID,
 		Username: username,
 		FullName: fullName,
 		IsActive: true,
-	}).Error; err != nil {
-		return false, err
+	})
+	if res.Error != nil {
+		return false, res.Error
 	}
-	return true, nil
+	return res.RowsAffected > 0, nil
 }
 
 // AddAuditTx — версия AddAudit в рамках переданной транзакции.
@@ -463,7 +469,11 @@ func (r *SubscriptionRepository) GetEligibleUsersWithoutAccessForChat(
 	err = r.db.
 		Table("subscription_users AS su").
 		Select("su.*").
-		Joins(`JOIN subscription_tiers st ON st.id = COALESCE(su.manual_tier_id, su.resolved_tier_id)`).
+		Joins(`JOIN subscription_tiers st ON st.id = COALESCE(
+			CASE WHEN su.manual_tier_expires_at IS NULL OR su.manual_tier_expires_at > NOW()
+			     THEN su.manual_tier_id END,
+			su.resolved_tier_id
+		)`).
 		Joins(`LEFT JOIN subscription_user_chat_access sa ON sa.user_id = su.id AND sa.chat_id = ? AND sa.revoked_at IS NULL`, chatID).
 		Where("su.is_active = ? AND st.level >= ? AND sa.user_id IS NULL", true, tierLevel).
 		Find(&users).Error
@@ -473,7 +483,11 @@ func (r *SubscriptionRepository) GetEligibleUsersWithoutAccessForChat(
 func (r *SubscriptionRepository) GetUsersByTier(tierID uint) ([]models.SubscriptionUser, error) {
 	var users []models.SubscriptionUser
 	err := r.db.Where(
-		"is_active = ? AND ((manual_tier_id = ?) OR (manual_tier_id IS NULL AND resolved_tier_id = ?))",
+		`is_active = ? AND (
+			(manual_tier_id = ? AND (manual_tier_expires_at IS NULL OR manual_tier_expires_at > NOW()))
+			OR
+			((manual_tier_id IS NULL OR manual_tier_expires_at <= NOW()) AND resolved_tier_id = ?)
+		)`,
 		true, tierID, tierID,
 	).Find(&users).Error
 	return users, err
@@ -482,7 +496,11 @@ func (r *SubscriptionRepository) GetUsersByTier(tierID uint) ([]models.Subscript
 func (r *SubscriptionRepository) CountUsersByTier(tierID uint) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.SubscriptionUser{}).Where(
-		"is_active = ? AND ((manual_tier_id = ?) OR (manual_tier_id IS NULL AND resolved_tier_id = ?))",
+		`is_active = ? AND (
+			(manual_tier_id = ? AND (manual_tier_expires_at IS NULL OR manual_tier_expires_at > NOW()))
+			OR
+			((manual_tier_id IS NULL OR manual_tier_expires_at <= NOW()) AND resolved_tier_id = ?)
+		)`,
 		true, tierID, tierID,
 	).Count(&count).Error
 	return count, err
@@ -497,9 +515,18 @@ func (r *SubscriptionRepository) CountAllUsersByTier() (map[uint]int64, error) {
 	var results []result
 	err := r.db.Raw(`
 		SELECT tier_id, COUNT(*) as count FROM (
-			SELECT COALESCE(manual_tier_id, resolved_tier_id) as tier_id
+			SELECT COALESCE(
+				CASE WHEN manual_tier_expires_at IS NULL OR manual_tier_expires_at > NOW()
+				     THEN manual_tier_id END,
+				resolved_tier_id
+			) as tier_id
 			FROM subscription_users
-			WHERE is_active = true AND COALESCE(manual_tier_id, resolved_tier_id) IS NOT NULL
+			WHERE is_active = true
+			  AND COALESCE(
+				CASE WHEN manual_tier_expires_at IS NULL OR manual_tier_expires_at > NOW()
+				     THEN manual_tier_id END,
+				resolved_tier_id
+			  ) IS NOT NULL
 		) t GROUP BY tier_id
 	`).Scan(&results).Error
 	if err != nil {

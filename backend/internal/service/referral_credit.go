@@ -2,9 +2,12 @@ package service
 
 import (
 	"fmt"
+	"ithozyeva/database"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"log"
+
+	"gorm.io/gorm"
 )
 
 type ReferralCreditService struct {
@@ -95,17 +98,25 @@ func (s *ReferralCreditService) AwardForRecurringPurchase(referrerId int64, refe
 	}
 }
 
-// AdminAward — ручная выдача credits из админ-панели. Может быть как
-// положительной (начисление за акцию/компенсацию), так и отрицательной
-// (списание/штраф) — кладём как есть.
+// AdminAward — ручная выдача credits из админ-панели.
+// Положительная сумма — обычный INSERT. Отрицательная — списание через
+// Spend (FOR UPDATE + проверка баланса), чтобы не загнать юзера в минус
+// и держать инвариант: баланс >= 0 для всех путей, кроме явных корректировок.
 func (s *ReferralCreditService) AdminAward(memberId int64, amount int, description string) error {
-	return s.repo.Award(&models.ReferralCreditTransaction{
-		MemberId:    memberId,
-		Amount:      amount,
-		Reason:      models.CreditReasonAdminManual,
-		SourceType:  "admin",
-		SourceId:    0,
-		Description: description,
+	if amount >= 0 {
+		return s.repo.Award(&models.ReferralCreditTransaction{
+			MemberId:    memberId,
+			Amount:      amount,
+			Reason:      models.CreditReasonAdminManual,
+			SourceType:  "admin",
+			SourceId:    0,
+			Description: description,
+		})
+	}
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		_, err := s.repo.Spend(tx, memberId, -amount,
+			models.CreditReasonAdminManual, "admin", 0, description)
+		return err
 	})
 }
 

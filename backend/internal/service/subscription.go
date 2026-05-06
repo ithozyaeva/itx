@@ -617,9 +617,12 @@ func (s *SubscriptionService) dryRunCheckUserCtx(
 		return nil, fmt.Errorf("resolve tier: %w", err)
 	}
 
-	// EffectiveTierID учитывает manual override; если ручной — он же и итог.
+	// EffectiveTierID учитывает manual override + истечение срока.
+	// Без проверки expires dry-run отчёт врёт админу: показывает юзеров
+	// с просроченным manual как «всё ок», хотя CheckAndSyncUser их
+	// сбросит на ResolvedTierID и снимет content-чаты.
 	var effective *uint
-	if user.ManualTierID != nil {
+	if user.ManualTierID != nil && (user.ManualTierExpiresAt == nil || time.Now().Before(*user.ManualTierExpiresAt)) {
 		effective = user.ManualTierID
 	} else {
 		effective = newTierID
