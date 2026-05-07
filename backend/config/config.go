@@ -2,7 +2,6 @@ package config
 
 import (
 	"log"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -52,13 +51,8 @@ type Config struct {
 	SubscriptionAutoKickEnabled    bool
 	SubscriptionGateEnabled        bool
 
-	AlertReminderIntervalMinutes       int64
-	AlertReminderFirstIntervalMinutes  int64
-	AlertReminderSecondIntervalMinutes int64
-	AlertReminderThirdIntervalMinutes  int64
-	AlertScheduledTime                 string
-	AlertScheduledHour                 int
-	AlertScheduledMinute               int
+	AlertReminderIntervalMinutes      int64
+	AlertReminderThirdIntervalMinutes int64
 }
 
 type S3Config struct {
@@ -76,45 +70,22 @@ func LoadConfig() {
 	_ = viper.ReadInConfig()
 	viper.AutomaticEnv()
 
+	// alertReminderInterval — окно «нет ответа на личный invite» для
+	// EventAlertSubscription (не путать с groupchat-алертами ниже).
 	alertReminderInterval := viper.GetInt64("ALERT_REMINDER_INTERVAL_MINUTES")
 	if alertReminderInterval == 0 {
 		alertReminderInterval = 1440
 	}
-	
-	alertReminderFirst := viper.GetInt64("ALERT_REMINDER_FIRST_INTERVAL_MINUTES")
-	if alertReminderFirst == 0 {
-		alertReminderFirst = 10080
-	}
-	
-	alertReminderSecond := viper.GetInt64("ALERT_REMINDER_SECOND_INTERVAL_MINUTES")
-	if alertReminderSecond == 0 {
-		alertReminderSecond = 1440
-	}
-	
+
+	// alertReminderThird — за сколько минут до старта события бот шлёт
+	// «час до» в общий чат. Раньше было 4 типа алертов (7d/1d/1h/1min);
+	// упростили до 1h + 1min, потому что общая колонка
+	// last_repeating_alert_sent_at с day-check'ом блокировала второй
+	// алерт того же дня (см. event 38, 7 мая 2026).
+	// FIRST/SECOND/SCHEDULED_TIME env-переменные больше не читаются.
 	alertReminderThird := viper.GetInt64("ALERT_REMINDER_THIRD_INTERVAL_MINUTES")
 	if alertReminderThird == 0 {
 		alertReminderThird = 60
-	}
-
-	var alertScheduledTime string
-	var alertScheduledHour, alertScheduledMinute int
-	
-	if viper.IsSet("ALERT_SCHEDULED_TIME") {
-		alertScheduledTime = viper.GetString("ALERT_SCHEDULED_TIME")
-		parsedTime, err := time.Parse("15:04", alertScheduledTime)
-		if err != nil {
-			log.Printf("Warning: ALERT_SCHEDULED_TIME=%s is invalid (expected HH:MM format), using default 12:00", alertScheduledTime)
-			alertScheduledTime = "12:00"
-			alertScheduledHour = 12
-			alertScheduledMinute = 0
-		} else {
-			alertScheduledHour = parsedTime.Hour()
-			alertScheduledMinute = parsedTime.Minute()
-		}
-	} else {
-		alertScheduledTime = "12:00"
-		alertScheduledHour = 12
-		alertScheduledMinute = 0
 	}
 
 	jwtSecret := viper.GetString("JWT_SECRET")
@@ -201,13 +172,8 @@ func LoadConfig() {
 		SubscriptionCheckIntervalHours: subCheckInterval,
 		SubscriptionAutoKickEnabled:    viper.GetBool("SUBSCRIPTION_AUTO_KICK_ENABLED"),
 		SubscriptionGateEnabled:        viper.GetBool("SUBSCRIPTION_GATE_ENABLED"),
-		AlertReminderIntervalMinutes:       alertReminderInterval,
-		AlertReminderFirstIntervalMinutes:  alertReminderFirst,
-		AlertReminderSecondIntervalMinutes: alertReminderSecond,
-		AlertReminderThirdIntervalMinutes:  alertReminderThird,
-		AlertScheduledTime:                 alertScheduledTime,
-		AlertScheduledHour:                 alertScheduledHour,
-		AlertScheduledMinute:               alertScheduledMinute,
+		AlertReminderIntervalMinutes:      alertReminderInterval,
+		AlertReminderThirdIntervalMinutes: alertReminderThird,
 		AppMode: appMode,
 		S3: S3Config{
 			Endpoint:  viper.GetString("S3_ENDPOINT"),
