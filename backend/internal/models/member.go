@@ -35,6 +35,13 @@ type Member struct {
 	Roles       []Role       `json:"roles" gorm:"-:all"`
 	Birthday    *DateOnly    `json:"birthday" gorm:"column:birthday"`
 	CreatedAt   time.Time    `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
+	// ReferredByLinkID — реф-ссылка, по которой юзер впервые попал на платформу
+	// (через /start ref_<id> в боте). Не FK: ссылка может быть удалена, но
+	// атрибуция остаётся. Заполняется один раз при создании members-записи.
+	ReferredByLinkID *int64 `json:"-" gorm:"column:referred_by_link_id"`
+	// ReferralWelcomeSeenAt — отметка что юзер видел welcome-баннер про
+	// реферрера. NULL — баннер ещё не показывали (или закрыли без ack).
+	ReferralWelcomeSeenAt *time.Time `json:"-" gorm:"column:referral_welcome_seen_at"`
 	// SubscriptionTier — эффективный тир подписки (EffectiveTier из subscription_users).
 	// Заполняется хендлерами перед отдачей профиля. В БД не хранится.
 	SubscriptionTier *SubscriptionTier `json:"subscriptionTier,omitempty" gorm:"-:all"`

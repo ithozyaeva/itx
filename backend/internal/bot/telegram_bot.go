@@ -132,6 +132,8 @@ type TelegramBot struct {
 	subscriptionService         *service.SubscriptionService
 	supportService              *service.SupportService
 	moderationService           *service.ModerationService
+	pendingReferral             *service.PendingReferralService
+	referalLinkService          *service.ReferalLinkService
 }
 
 func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
@@ -161,6 +163,8 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 	subscriptionService := service.NewSubscriptionService(redisClient)
 	supportService := service.NewSupportService(redisClient)
 	moderationService := service.NewModerationServiceWithRedis(redisClient)
+	pendingReferral := service.NewPendingReferralService(redisClient)
+	referalLinkService := service.NewReferalLinkService()
 
 	return &TelegramBot{
 		bot:                         bot,
@@ -174,6 +178,8 @@ func NewTelegramBot(redisClient *redis.Client) (*TelegramBot, error) {
 		subscriptionService:         subscriptionService,
 		supportService:              supportService,
 		moderationService:           moderationService,
+		pendingReferral:             pendingReferral,
+		referalLinkService:          referalLinkService,
 	}, nil
 }
 
@@ -763,13 +769,22 @@ func (b *TelegramBot) checkBirthdays() {
 }
 
 func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
-	log.Printf("Received /start command from user %d with args: %s", message.From.ID, message.CommandArguments())
+	args := strings.TrimSpace(message.CommandArguments())
+	log.Printf("Received /start command from user %d with args: %s", message.From.ID, args)
 
 	// Deep-link из закрепа в anchor-чате: /start sub → flow подписки без
 	// welcome-экрана, сразу зовёт /sub.
-	if strings.TrimSpace(message.CommandArguments()) == "sub" {
+	if args == "sub" {
 		b.handleSubCommand(message)
 		return
+	}
+
+	// Deep-link реф-ссылки: /start ref_<id>. Сохраняем pending-атрибуцию
+	// в Redis (TTL 30 дней). Когда auth-handler создаст members-запись
+	// для этого telegram_id, он подхватит ключ и зафиксирует
+	// referred_by_link_id в БД + дёрнет TrackConversion.
+	if linkID := parseReferralPayload(args); linkID > 0 {
+		b.handleReferralStart(message.From.ID, linkID)
 	}
 
 	_, isSubscriber := b.resolveUserTier(message.From.ID)
@@ -781,6 +796,51 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 	// нельзя блокировать ответ /start. Токен в БД переиспользуемый
 	// (auth_token.go: GetByToken не консьюмит), генерация «авансом» бесплатна.
 	go b.sendAuthButton(message.From, message.Chat.ID)
+}
+
+// parseReferralPayload извлекает linkID из /start payload вида ref_<id>.
+// Возвращает 0 если формат не подходит — calling code не показывает юзеру
+// никакой ошибки, payload просто игнорируется.
+//
+// Telegram deep-link payload — alphanumerics + `_-`, до 64 символов.
+// Формат `ref_<int>` выбран как самоописательный и не пересекающийся с
+// существующим `sub` deep-link'ом.
+func parseReferralPayload(args string) int64 {
+	const prefix = "ref_"
+	if !strings.HasPrefix(args, prefix) {
+		return 0
+	}
+	id, err := strconv.ParseInt(args[len(prefix):], 10, 64)
+	if err != nil || id <= 0 {
+		return 0
+	}
+	return id
+}
+
+// handleReferralStart — Боб открыл бот по реф-ссылке Алисы. Записываем
+// в Redis pending-атрибуцию: при ближайшем auth-flow'е (через
+// sendAuthToBackend → /telegram-from-bot) handler создаст members-запись
+// и подхватит linkID через PendingReferralService.GetAndDelete.
+//
+// Anti-self-fraud: если автор ссылки сам открывает свою ссылку — игнорим.
+// Существование ссылки проверяется через repo.GetById; freezed-ссылки
+// тоже принимаются (юзер уже здесь, отказывать поздно).
+func (b *TelegramBot) handleReferralStart(telegramUserID int64, linkID int64) {
+	link, err := b.referalLinkService.GetById(linkID)
+	if err != nil {
+		log.Printf("referral start: link %d not found: %v", linkID, err)
+		return
+	}
+	// Author.TelegramID — telegram_id владельца ссылки, telegramUserID — текущий юзер.
+	if link.Author.TelegramID != 0 && link.Author.TelegramID == telegramUserID {
+		log.Printf("referral start: ignoring self-referral, user %d → link %d", telegramUserID, linkID)
+		return
+	}
+	if err := b.pendingReferral.Set(context.Background(), telegramUserID, linkID); err != nil {
+		log.Printf("referral start: redis set failed (user=%d, link=%d): %v", telegramUserID, linkID, err)
+		return
+	}
+	log.Printf("referral start: pending attribution set user=%d → link=%d", telegramUserID, linkID)
 }
 
 // sendWelcomeWizard — первое сообщение в ЛС бота. Адаптируется под статус юзера:

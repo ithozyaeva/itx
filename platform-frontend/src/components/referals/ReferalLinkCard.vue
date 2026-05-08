@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ReferalLink } from '@/models/referals'
-import { Check, Loader2, Pencil, Trash } from 'lucide-vue-next'
+import { Check, Loader2, Pencil, Share2, Trash } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ReferalLinkForm from '@/components/referals/ReferalLinkForm.vue'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
@@ -31,6 +32,25 @@ const hasConverted = ref(props.link.hasConverted)
 
 const isOwner = computed(() => user.value?.id === props.link.author.id)
 const canConvert = computed(() => !isOwner.value && props.link.status === 'active')
+
+const { toast } = useToast()
+const botUsername = import.meta.env.VITE_TELEGRAM_BOT_NAME
+
+// Telegram-bot deeplink для шеринга. Бот по /start ref_<id> положит юзера
+// в pending-attribution, и при первой авторизации Алисе зачтётся конверсия.
+const shareDeeplink = computed(() => botUsername ? `https://t.me/${botUsername}?start=ref_${props.link.id}` : '')
+
+async function copyShareLink() {
+  if (!shareDeeplink.value)
+    return
+  try {
+    await navigator.clipboard.writeText(shareDeeplink.value)
+    toast({ title: 'Ссылка скопирована', description: 'Делитесь — за каждого приглашённого +30 кредитов.' })
+  }
+  catch {
+    toast({ title: 'Не удалось скопировать', description: shareDeeplink.value })
+  }
+}
 
 function startEditing() {
   isEditing.value = true
@@ -179,6 +199,17 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
             :size="14"
           />
           {{ hasConverted ? 'Открыть чат снова' : 'Откликнуться' }}
+        </span>
+      </button>
+      <button
+        v-if="isOwner && shareDeeplink"
+        type="button"
+        class="mt-3 w-full rounded-sm py-2 px-4 text-sm font-medium transition-colors border border-accent/40 text-accent hover:bg-accent/10 cursor-pointer"
+        @click="copyShareLink"
+      >
+        <span class="flex items-center justify-center gap-1.5">
+          <Share2 :size="14" />
+          Скопировать ссылку для бота
         </span>
       </button>
     </div>

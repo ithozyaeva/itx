@@ -11,15 +11,17 @@ import (
 	"ithozyeva/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 type TelegramAuthHandler struct {
 	telegramService *service.TelegramService
 	authService     *service.AuthTokenService
 	memberService   *service.MemberService
+	pendingReferral *service.PendingReferralService
 }
 
-func NewTelegramAuthHandler() (*TelegramAuthHandler, error) {
+func NewTelegramAuthHandler(redisClient *redis.Client) (*TelegramAuthHandler, error) {
 	tgService, err := service.NewTelegramService()
 
 	if err != nil {
@@ -30,6 +32,7 @@ func NewTelegramAuthHandler() (*TelegramAuthHandler, error) {
 		telegramService: tgService,
 		authService:     service.NewAuthTokenService(),
 		memberService:   service.NewMemberService(),
+		pendingReferral: service.NewPendingReferralService(redisClient),
 	}, nil
 }
 
@@ -154,6 +157,10 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// Если юзер пришёл по реф-ссылке (бот /start ref_<id> → Redis pending),
+	// фиксируем атрибуцию + конверсию + награду автору. Идемпотентно.
+	h.memberService.ApplyPendingReferral(c.Context(), user, h.pendingReferral)
 
 	user.SubscriptionTier = h.memberService.GetEffectiveTier(user.TelegramID)
 
@@ -374,6 +381,10 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// Реф-атрибуция: если юзер впервые попал в систему через /start ref_<id>
+	// в боте, Redis-pending уже есть — переносим в БД и дёргаем награду автору.
+	h.memberService.ApplyPendingReferral(c.Context(), existingUser, h.pendingReferral)
 
 	return c.JSON(existingUser)
 }

@@ -269,6 +269,35 @@ func (h *MembersHandler) Me(c *fiber.Ctx) error {
 	return c.JSON(mentor)
 }
 
+// GetMyReferrer — данные реферрера текущего юзера для welcome-баннера на
+// фронте. Если юзер не пришёл по реф-ссылке (либо ссылка удалена) — отдаём
+// {"referrer": null}, фронт ничего не показывает.
+func (h *MembersHandler) GetMyReferrer(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	info, err := h.svc.GetReferrer(member)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить реферрера"})
+	}
+	return c.JSON(fiber.Map{"referrer": info})
+}
+
+// MarkReferrerSeen — фронт зовёт после показа welcome-баннера, чтобы он не
+// возвращался при следующем входе. Идемпотентно (повторный вызов перетирает
+// timestamp на свежий — не страшно).
+func (h *MembersHandler) MarkReferrerSeen(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	if err := h.svc.MarkReferralWelcomeSeen(member.Id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось сохранить"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {
 	request := new(UpdateRequest)
 	if err := c.BodyParser(request); err != nil {

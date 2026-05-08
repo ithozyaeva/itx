@@ -8,6 +8,7 @@ import (
 	"ithozyeva/internal/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
 )
 
 // ErrUsernameTaken — попытка записать username, который уже занят другим
@@ -84,6 +85,28 @@ func (r *MemberRepository) GetByTelegramID(telegramID int64) (*models.Member, er
 		return nil, err
 	}
 	return entity, nil
+}
+
+// SetReferredByLinkID — фиксирует атрибуцию referee→link. Записывается ОДИН РАЗ:
+// условие `referred_by_link_id IS NULL` в WHERE гарантирует, что повторный вызов
+// (если auth-handler сработал дважды до синхронизации Redis-кэша) не перетрёт
+// первую установленную ссылку. Возвращает (true, nil) если запись изменилась.
+func (r *MemberRepository) SetReferredByLinkID(memberID int64, linkID int64) (bool, error) {
+	res := database.DB.Model(&models.Member{}).
+		Where("id = ? AND referred_by_link_id IS NULL", memberID).
+		Update("referred_by_link_id", linkID)
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
+}
+
+// SetReferralWelcomeSeenAt — отмечаем что юзер увидел welcome-баннер про
+// своего реферрера. После этого фронт перестаёт его показывать.
+func (r *MemberRepository) SetReferralWelcomeSeenAt(memberID int64) error {
+	return database.DB.Model(&models.Member{}).
+		Where("id = ?", memberID).
+		Update("referral_welcome_seen_at", gorm.Expr("NOW()")).Error
 }
 
 // GetById получает участника по ID с проверкой на статус ментора

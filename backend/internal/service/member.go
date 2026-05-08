@@ -1,6 +1,11 @@
 package service
 
 import (
+	"context"
+	"log"
+	"strings"
+	"time"
+
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/utils"
@@ -17,6 +22,9 @@ type MemberService struct {
 	repo             *repository.MemberRepository
 	mentorRepo       *repository.MentorRepository
 	subscriptionRepo *repository.SubscriptionRepository
+	referalRepo      *repository.ReferalLinkRepository
+	referalSvc       *ReferalLinkService
+	creditsSvc       *ReferralCreditService
 }
 
 // NewMemberService создает новый экземпляр сервиса участников
@@ -29,7 +37,102 @@ func NewMemberService() *MemberService {
 		repo:             repo,
 		mentorRepo:       repository.NewMentorRepository(),
 		subscriptionRepo: repository.NewSubscriptionRepository(),
+		referalRepo:      repository.NewReferalLinkRepository(),
+		referalSvc:       NewReferalLinkService(),
+		creditsSvc:       NewReferralCreditService(),
 	}
+}
+
+// ApplyPendingReferral вычитывает Redis-pending-attribution для члена
+// (positioned заранее ботом /start ref_<id>) и фиксирует её в БД +
+// дёргает конверсию + начисляет credits автору ссылки.
+//
+// Идемпотентно по нескольким уровням:
+//   - SetReferredByLinkID игнорится, если у юзера уже стоит referred_by_link_id
+//   - TrackConversion защищён уникальным индексом (link_id, member_id)
+//   - AwardForConversion идемпотентен по (member, reason, source_type, source_id)
+//
+// Anti-self-fraud: если автор ссылки совпадает с текущим членом — игнорим.
+//
+// Вызывать ОДИН РАЗ при создании или re-login существующего члена в
+// auth-handler'е. Ошибки логируются, но не пробрасываются: атрибуция —
+// best-effort, не должна блокировать auth flow.
+func (s *MemberService) ApplyPendingReferral(ctx context.Context, member *models.Member, pending *PendingReferralService) {
+	if member == nil || member.TelegramID == 0 || pending == nil {
+		return
+	}
+	if member.ReferredByLinkID != nil {
+		return // already attributed
+	}
+	linkID, err := pending.GetAndDelete(ctx, member.TelegramID)
+	if err != nil {
+		log.Printf("ApplyPendingReferral: redis read failed (member=%d, tg=%d): %v", member.Id, member.TelegramID, err)
+		return
+	}
+	if linkID == 0 {
+		return
+	}
+	link, err := s.referalRepo.GetById(linkID)
+	if err != nil {
+		log.Printf("ApplyPendingReferral: link %d not found for member %d", linkID, member.Id)
+		return
+	}
+	if link.AuthorId == member.Id {
+		log.Printf("ApplyPendingReferral: ignoring self-referral member=%d link=%d", member.Id, linkID)
+		return
+	}
+	written, err := s.repo.SetReferredByLinkID(member.Id, linkID)
+	if err != nil {
+		log.Printf("ApplyPendingReferral: SetReferredByLinkID failed (member=%d, link=%d): %v", member.Id, linkID, err)
+		return
+	}
+	if !written {
+		return // race: другой запрос успел зафиксировать первым
+	}
+	member.ReferredByLinkID = &linkID
+
+	// Конверсия + награда. TrackConversion может вернуть duplicate-key —
+	// это OK (старая конверсия от той же пары), просто логируем и идём
+	// дальше: AwardForConversion идемпотентен.
+	if err := s.referalSvc.TrackConversion(linkID, member.Id); err != nil {
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "duplicate key") && !strings.Contains(errMsg, "referral_conversions_unique") {
+			log.Printf("ApplyPendingReferral: TrackConversion failed (link=%d, member=%d): %v", linkID, member.Id, err)
+		}
+	}
+	s.creditsSvc.AwardForConversion(link.AuthorId, linkID)
+	log.Printf("ApplyPendingReferral: attributed member=%d → link=%d (author=%d)", member.Id, linkID, link.AuthorId)
+}
+
+// GetReferrer возвращает данные реферрера юзера для welcome-баннера на
+// фронте. Вернёт nil, если у юзера нет referred_by_link_id или ссылка/автор
+// удалены. Поле SeenAt — для подсказки фронту, показывать ли модалку.
+func (s *MemberService) GetReferrer(member *models.Member) (*ReferrerInfo, error) {
+	if member == nil || member.ReferredByLinkID == nil {
+		return nil, nil
+	}
+	link, err := s.referalRepo.GetById(*member.ReferredByLinkID)
+	if err != nil {
+		// Ссылка удалена — атрибуция остаётся, но баннер показать нечего.
+		return nil, nil
+	}
+	return &ReferrerInfo{
+		Author: link.Author,
+		SeenAt: member.ReferralWelcomeSeenAt,
+	}, nil
+}
+
+// MarkReferralWelcomeSeen — фронт отметил, что юзер закрыл welcome-баннер.
+// После этого GetReferrer всё ещё возвращает данные, но фронт по полю SeenAt
+// решает не показывать модалку повторно.
+func (s *MemberService) MarkReferralWelcomeSeen(memberID int64) error {
+	return s.repo.SetReferralWelcomeSeenAt(memberID)
+}
+
+// ReferrerInfo — payload для GET /platform/members/me/referrer.
+type ReferrerInfo struct {
+	Author models.Member `json:"author"`
+	SeenAt *time.Time    `json:"seenAt"`
 }
 
 // GetEffectiveTier возвращает эффективный тир подписки пользователя
