@@ -19,6 +19,12 @@ func TestParseReferralPayload(t *testing.T) {
 		{"different prefix", "referer_42", 0},
 		{"trailing junk", "ref_42abc", 0},
 		{"hyphen instead of underscore", "ref-42", 0},
+		{"leading plus", "ref_+42", 0},
+		{"leading zero", "ref_042", 0},
+		{"internal space", "ref_4 2", 0},
+		{"unicode digits", "ref_𝟜𝟚", 0},
+		{"hex prefix", "ref_0x42", 0},
+		{"boundary 1", "ref_1", 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

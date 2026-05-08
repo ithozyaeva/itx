@@ -103,9 +103,13 @@ func (r *MemberRepository) SetReferredByLinkID(memberID int64, linkID int64) (bo
 
 // SetReferralWelcomeSeenAt — отмечаем что юзер увидел welcome-баннер про
 // своего реферрера. После этого фронт перестаёт его показывать.
+//
+// First-write-wins: WHERE referral_welcome_seen_at IS NULL — повторный
+// вызов из фронта (HMR-mount, double-click, retry) не перезатирает первый
+// timestamp. Сохраняется реальный «когда юзер впервые закрыл баннер».
 func (r *MemberRepository) SetReferralWelcomeSeenAt(memberID int64) error {
 	return database.DB.Model(&models.Member{}).
-		Where("id = ?", memberID).
+		Where("id = ? AND referral_welcome_seen_at IS NULL", memberID).
 		Update("referral_welcome_seen_at", gorm.Expr("NOW()")).Error
 }
 

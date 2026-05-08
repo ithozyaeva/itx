@@ -81,19 +81,14 @@ func (s *MemberService) ApplyPendingReferral(ctx context.Context, member *models
 		log.Printf("ApplyPendingReferral: ignoring self-referral member=%d link=%d", member.Id, linkID)
 		return
 	}
-	written, err := s.repo.SetReferredByLinkID(member.Id, linkID)
-	if err != nil {
-		log.Printf("ApplyPendingReferral: SetReferredByLinkID failed (member=%d, link=%d): %v", member.Id, linkID, err)
-		return
-	}
-	if !written {
-		return // race: другой запрос успел зафиксировать первым
-	}
-	member.ReferredByLinkID = &linkID
-
-	// Конверсия + награда. TrackConversion может вернуть duplicate-key —
-	// это OK (старая конверсия от той же пары), просто логируем и идём
-	// дальше: AwardForConversion идемпотентен.
+	// Порядок «сначала эффекты, потом флаг» защищает от потери награды,
+	// если что-то упало посередине: при следующем auth-flow юзера
+	// pending уже пуст (GetAndDelete атомарно), но `referred_by_link_id`
+	// IS NULL — early-return на line 64 не сработает, и мы повторим
+	// идемпотентные TrackConversion/AwardForConversion.
+	//
+	// Concurrent-race не страшен: GetAndDelete выше отдаст linkID ровно
+	// одному вызывающему, остальные получат 0 и сделают early-return.
 	if err := s.referalSvc.TrackConversion(linkID, member.Id); err != nil {
 		errMsg := err.Error()
 		if !strings.Contains(errMsg, "duplicate key") && !strings.Contains(errMsg, "referral_conversions_unique") {
@@ -101,6 +96,18 @@ func (s *MemberService) ApplyPendingReferral(ctx context.Context, member *models
 		}
 	}
 	s.creditsSvc.AwardForConversion(link.AuthorId, linkID)
+
+	written, err := s.repo.SetReferredByLinkID(member.Id, linkID)
+	if err != nil {
+		log.Printf("ApplyPendingReferral: SetReferredByLinkID failed (member=%d, link=%d): %v", member.Id, linkID, err)
+		return
+	}
+	if !written {
+		// Параллельный auth уже зафиксировал — наши TrackConversion+Award
+		// были no-op'ами по уникальным индексам, так что состояние корректно.
+		return
+	}
+	member.ReferredByLinkID = &linkID
 	log.Printf("ApplyPendingReferral: attributed member=%d → link=%d (author=%d)", member.Id, linkID, link.AuthorId)
 }
 
@@ -111,13 +118,25 @@ func (s *MemberService) GetReferrer(member *models.Member) (*ReferrerInfo, error
 	if member == nil || member.ReferredByLinkID == nil {
 		return nil, nil
 	}
+	// Если юзер уже отметил баннер просмотренным — фронт всё равно
+	// проверяет SeenAt и пропускает рендер. Не тратим БД-запрос на загрузку
+	// автора впустую, отдаём nil.
+	if member.ReferralWelcomeSeenAt != nil {
+		return nil, nil
+	}
 	link, err := s.referalRepo.GetById(*member.ReferredByLinkID)
 	if err != nil {
 		// Ссылка удалена — атрибуция остаётся, но баннер показать нечего.
 		return nil, nil
 	}
 	return &ReferrerInfo{
-		Author: link.Author,
+		Author: ReferrerAuthor{
+			Id:        link.Author.Id,
+			FirstName: link.Author.FirstName,
+			LastName:  link.Author.LastName,
+			Tg:        link.Author.Username,
+			AvatarURL: link.Author.AvatarURL,
+		},
 		SeenAt: member.ReferralWelcomeSeenAt,
 	}, nil
 }
@@ -129,10 +148,22 @@ func (s *MemberService) MarkReferralWelcomeSeen(memberID int64) error {
 	return s.repo.SetReferralWelcomeSeenAt(memberID)
 }
 
+// ReferrerAuthor — узкий DTO с публичными полями реферрера для welcome-баннера.
+// Не отдаём models.Member напрямую: иначе через JSON-маршалер летят
+// telegramID, bio, birthday, roles и т.п. — приватные поля автора, которые
+// Бобу видеть не нужно (см. PR #342, тот же класс PII-утечек).
+type ReferrerAuthor struct {
+	Id        int64  `json:"id"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Tg        string `json:"tg"`
+	AvatarURL string `json:"avatarUrl"`
+}
+
 // ReferrerInfo — payload для GET /platform/members/me/referrer.
 type ReferrerInfo struct {
-	Author models.Member `json:"author"`
-	SeenAt *time.Time    `json:"seenAt"`
+	Author ReferrerAuthor `json:"author"`
+	SeenAt *time.Time     `json:"seenAt"`
 }
 
 // GetEffectiveTier возвращает эффективный тир подписки пользователя

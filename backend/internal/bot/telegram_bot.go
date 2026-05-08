@@ -805,12 +805,30 @@ func (b *TelegramBot) handleStartCommand(message *tgbotapi.Message) {
 // Telegram deep-link payload — alphanumerics + `_-`, до 64 символов.
 // Формат `ref_<int>` выбран как самоописательный и не пересекающийся с
 // существующим `sub` deep-link'ом.
+//
+// Принимаем ровно одну каноническую форму: ref_42. Отклоняем варианты
+// `ref_+42`, `ref_042`, `ref_-1` — они дают тот же linkID, но засоряют
+// логи и аналитику разными представлениями одной и той же реф-ссылки.
 func parseReferralPayload(args string) int64 {
 	const prefix = "ref_"
 	if !strings.HasPrefix(args, prefix) {
 		return 0
 	}
-	id, err := strconv.ParseInt(args[len(prefix):], 10, 64)
+	body := args[len(prefix):]
+	if body == "" {
+		return 0
+	}
+	// Канонический формат: только цифры, без знаков, без leading zeros
+	// (исключение: одиночный "0", который мы и так отвергаем как id <= 0).
+	if body[0] == '0' {
+		return 0
+	}
+	for _, c := range body {
+		if c < '0' || c > '9' {
+			return 0
+		}
+	}
+	id, err := strconv.ParseInt(body, 10, 64)
 	if err != nil || id <= 0 {
 		return 0
 	}
@@ -825,15 +843,24 @@ func parseReferralPayload(args string) int64 {
 // Anti-self-fraud: если автор ссылки сам открывает свою ссылку — игнорим.
 // Существование ссылки проверяется через repo.GetById; freezed-ссылки
 // тоже принимаются (юзер уже здесь, отказывать поздно).
+//
+// Двойная проверка self: сначала по link.Author.TelegramID (Preload), затем
+// fallback через GetByTelegramID — если автору когда-то обнулили telegram_id
+// в БД (теоретический edge от старых миграций), Preload может вернуть 0,
+// и первый check молча пройдёт. Подстраховываемся через members.id.
 func (b *TelegramBot) handleReferralStart(telegramUserID int64, linkID int64) {
 	link, err := b.referalLinkService.GetById(linkID)
 	if err != nil {
 		log.Printf("referral start: link %d not found: %v", linkID, err)
 		return
 	}
-	// Author.TelegramID — telegram_id владельца ссылки, telegramUserID — текущий юзер.
 	if link.Author.TelegramID != 0 && link.Author.TelegramID == telegramUserID {
-		log.Printf("referral start: ignoring self-referral, user %d → link %d", telegramUserID, linkID)
+		log.Printf("referral start: ignoring self-referral by tg-id, user %d → link %d", telegramUserID, linkID)
+		return
+	}
+	// Fallback: тянем member по telegram_id и сверяем members.id с автором ссылки.
+	if me, err := b.member.GetByTelegramID(telegramUserID); err == nil && me != nil && me.Id == link.AuthorId {
+		log.Printf("referral start: ignoring self-referral by member-id, user %d → link %d", telegramUserID, linkID)
 		return
 	}
 	if err := b.pendingReferral.Set(context.Background(), telegramUserID, linkID); err != nil {
