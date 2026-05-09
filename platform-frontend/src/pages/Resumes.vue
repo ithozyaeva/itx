@@ -129,7 +129,7 @@ onMounted(loadResumes)
 </script>
 
 <template>
-  <div class="min-h-screen pt-20 pb-10">
+  <div class="min-h-[100dvh] pt-20 pb-10">
     <div class="container mx-auto px-4 max-w-4xl">
       <div class="font-mono text-[11px] text-muted-foreground/60 tracking-wider mb-2">
         ~/community/resumes

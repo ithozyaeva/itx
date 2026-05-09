@@ -836,7 +836,7 @@ onBeforeUnmount(() => {
 /* ======= ATMOSPHERE ======= */
 .casino-page {
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
