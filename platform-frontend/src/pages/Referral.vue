@@ -25,6 +25,18 @@ const conversionRate = computed(() => {
   return Math.round((Number(data.value.withActiveSub) / Number(data.value.invitedTotal)) * 100)
 })
 
+// Короткое представление для UI: t.me/<bot>?…/ref_<code> может быть длинным
+// и в `<code>` с break-all расплывается на 3 строки. Показываем «t.me/…/ref_X»,
+// в title — full URL, в clipboard — full URL.
+const DEEPLINK_RE = /^https?:\/\/(t\.me\/)[^?]+\?start=(ref_\w+)$/
+const shortDeeplink = computed(() => {
+  const url = data.value?.deeplink
+  if (!url)
+    return ''
+  const match = url.match(DEEPLINK_RE)
+  return match ? `${match[1]}…/${match[2]}` : url
+})
+
 async function copyDeeplink() {
   if (!data.value?.deeplink)
     return
@@ -98,8 +110,11 @@ onMounted(async () => {
           <span>Ваша персональная ссылка</span>
         </div>
         <div class="flex items-center gap-2 mb-4">
-          <code class="flex-1 px-3 py-2 rounded-sm bg-muted/50 text-sm break-all font-mono">
-            {{ data.deeplink || '—' }}
+          <code
+            class="flex-1 px-3 py-2 rounded-sm bg-muted/50 text-sm font-mono truncate"
+            :title="data.deeplink || ''"
+          >
+            {{ shortDeeplink || '—' }}
           </code>
           <Button
             :disabled="!data.deeplink || copying"

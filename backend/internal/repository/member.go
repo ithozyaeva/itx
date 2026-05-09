@@ -96,14 +96,30 @@ const referralCodeLength = 8
 // generateReferralCode — криптографически случайный код. Для backfill+CreateNewMember.
 // crypto/rand чтобы не опираться на seed math/rand (детерминированность —
 // атака на предсказание следующего кода).
+//
+// Rejection sampling вместо `b % 32`: 256 % 30 = 16, поэтому при простом
+// modulo первые 16 символов алфавита получали бы вероятность 9/256, остальные
+// 14 — 8/256 (~12% bias). На 8-символах * 250 юзеров незаметно, но на больших
+// объёмах перекос становится виден. Берём только b ∈ [0, 256 - (256 % 30))
+// = [0, 240) — дальше strict-uniform по модулю.
 func generateReferralCode() (string, error) {
-	buf := make([]byte, referralCodeLength)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	out := make([]byte, referralCodeLength)
-	for i, b := range buf {
-		out[i] = referralCodeAlphabet[int(b)%len(referralCodeAlphabet)]
+	const alphabetLen = len(referralCodeAlphabet) // 30
+	const maxByte = 256 - (256 % alphabetLen)     // 240
+	out := make([]byte, 0, referralCodeLength)
+	buf := make([]byte, referralCodeLength*2) // запас на отбраковку
+	for len(out) < referralCodeLength {
+		if _, err := rand.Read(buf); err != nil {
+			return "", err
+		}
+		for _, b := range buf {
+			if int(b) >= maxByte {
+				continue // bias-prone tail, перерандомить
+			}
+			out = append(out, referralCodeAlphabet[int(b)%alphabetLen])
+			if len(out) == referralCodeLength {
+				break
+			}
+		}
 	}
 	return string(out), nil
 }
@@ -149,7 +165,10 @@ func (r *MemberRepository) AssignReferralCode(memberID int64) (string, bool, err
 			}
 			return "", false, res.Error
 		}
-		// RowsAffected == 0 → код уже выставлен другим воркером, возвращаем его.
+		// RowsAffected == 0 → код уже выставлен другим воркером между
+		// нашим SELECT и UPDATE. На следующей итерации цикла SELECT
+		// увидит существующий код и вернёт его через ранний return на
+		// проверке existing.ReferralCode выше.
 	}
 	return "", false, errors.New("failed to assign referral code after 5 attempts")
 }
@@ -163,10 +182,37 @@ func (r *MemberRepository) GetByReferralCode(code string) (*models.Member, error
 	return entity, nil
 }
 
+// GetReferredByMemberID — кто пригласил юзера в сообщество. Возвращает
+// (nil, nil) если у юзера нет referred_by_member_id или он равен 0.
+// Дешёвый SELECT по PK для use-case awardReferralRewardsFor (на каждом
+// тике PeriodicCheck для активных юзеров).
+func (r *MemberRepository) GetReferredByMemberID(memberID int64) (*int64, error) {
+	var row struct {
+		ReferredByMemberID *int64
+	}
+	err := database.DB.Raw(
+		`SELECT referred_by_member_id FROM members WHERE id = ?`,
+		memberID,
+	).Scan(&row).Error
+	if err != nil {
+		return nil, err
+	}
+	return row.ReferredByMemberID, nil
+}
+
 // SetReferredByMemberID — фиксирует attribution «Боб пришёл от Алисы».
 // WHERE referred_by_member_id IS NULL — first-write-wins, повторный вызов
 // не перетирает первого инвайтера. Возвращает (true, nil) если запись изменена.
+//
+// Defense-in-depth: отвергает referrerID <= 0 (ApplyPendingReferral это уже
+// проверяет, но если кто-то вызовет напрямую с битым ID, не запишем мусор).
 func (r *MemberRepository) SetReferredByMemberID(memberID, referrerID int64) (bool, error) {
+	if referrerID <= 0 {
+		return false, errors.New("referrerID must be > 0")
+	}
+	if memberID == referrerID {
+		return false, errors.New("self-referral not allowed")
+	}
 	res := database.DB.Model(&models.Member{}).
 		Where("id = ? AND referred_by_member_id IS NULL", memberID).
 		Update("referred_by_member_id", referrerID)

@@ -57,8 +57,8 @@ onMounted(async () => {
         </div>
         <DialogDescription>
           <span v-if="referrer">
-            <strong class="text-foreground">{{ fullName(referrer.author) }}</strong>
-            пригласил{{ referrer.author.firstName ? 'а' : '' }} вас в сообщество.
+            Приглашение от
+            <strong class="text-foreground">{{ fullName(referrer.author) }}</strong>.
             Подписка открывает доступ к закрытым чатам, событиям, бирже заданий и менторам — оформите тариф, чтобы начать.
           </span>
         </DialogDescription>

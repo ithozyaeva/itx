@@ -6,20 +6,41 @@ import (
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
 	"log"
+	"strings"
 
 	"gorm.io/gorm"
 )
 
 type ReferralCreditService struct {
-	repo     *repository.ReferralCreditRepository
-	settings *AppSettingsService
+	repo       *repository.ReferralCreditRepository
+	memberRepo *repository.MemberRepository
+	settings   *AppSettingsService
 }
 
 func NewReferralCreditService() *ReferralCreditService {
 	return &ReferralCreditService{
-		repo:     repository.NewReferralCreditRepository(),
-		settings: NewAppSettingsService(),
+		repo:       repository.NewReferralCreditRepository(),
+		memberRepo: repository.NewMemberRepository(),
+		settings:   NewAppSettingsService(),
 	}
+}
+
+// formatRefereeLabel — дружелюбная подпись реферала для description в credits.
+// Использует имя/username если есть, иначе "#<id>". Если member не найден —
+// fallback на ID. Не критично, чисто UI-косметика.
+func (s *ReferralCreditService) formatRefereeLabel(refereeId int64) string {
+	m, err := s.memberRepo.GetById(refereeId)
+	if err != nil || m == nil {
+		return fmt.Sprintf("#%d", refereeId)
+	}
+	if m.Username != "" {
+		return "@" + m.Username
+	}
+	full := strings.TrimSpace(m.FirstName + " " + m.LastName)
+	if full != "" {
+		return full
+	}
+	return fmt.Sprintf("#%d", refereeId)
 }
 
 // AwardForConversion идемпотентно начисляет credits автору ссылки за
@@ -68,7 +89,7 @@ func (s *ReferralCreditService) AwardForCommunityReferral(referrerId int64, refe
 		Reason:      models.CreditReasonCommunityReferral,
 		SourceType:  "community_referral",
 		SourceId:    refereeId,
-		Description: fmt.Sprintf("Реферал #%d пришёл по персональной ссылке", refereeId),
+		Description: fmt.Sprintf("%s пришёл по персональной ссылке", s.formatRefereeLabel(refereeId)),
 	})
 	if err != nil {
 		log.Printf("AwardForCommunityReferral error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
@@ -98,7 +119,7 @@ func (s *ReferralCreditService) AwardForFirstPurchase(referrerId int64, refereeI
 		Reason:      models.CreditReasonReferralPurchaseFirst,
 		SourceType:  "referral_first_paid",
 		SourceId:    refereeId,
-		Description: fmt.Sprintf("Реферал #%d впервые оформил подписку", refereeId),
+		Description: fmt.Sprintf("Реферал %s впервые оформил подписку", s.formatRefereeLabel(refereeId)),
 	})
 	if err != nil {
 		log.Printf("AwardForFirstPurchase error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
@@ -127,7 +148,7 @@ func (s *ReferralCreditService) AwardForRecurringPurchase(referrerId int64, refe
 		Reason:      models.CreditReasonReferralPurchaseRecurring,
 		SourceType:  "ref_paid:" + periodKey,
 		SourceId:    refereeId,
-		Description: fmt.Sprintf("Реферал #%d активен в %s", refereeId, periodKey),
+		Description: fmt.Sprintf("Реферал %s активен в %s", s.formatRefereeLabel(refereeId), periodKey),
 	})
 	if err != nil {
 		log.Printf("AwardForRecurringPurchase error (referrer=%d, referee=%d, period=%s): %v",

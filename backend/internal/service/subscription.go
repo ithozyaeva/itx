@@ -37,6 +37,7 @@ type SubscriptionService struct {
 	repo        *repository.SubscriptionRepository
 	creditsRepo *repository.ReferralCreditRepository
 	referalRepo *repository.ReferalLinkRepository
+	memberRepo  *repository.MemberRepository
 	creditsSvc  *ReferralCreditService
 	settings    *AppSettingsService
 	redis       *redis.Client
@@ -47,6 +48,7 @@ func NewSubscriptionService(redisClient *redis.Client) *SubscriptionService {
 		repo:        repository.NewSubscriptionRepository(),
 		creditsRepo: repository.NewReferralCreditRepository(),
 		referalRepo: repository.NewReferalLinkRepository(),
+		memberRepo:  repository.NewMemberRepository(),
 		creditsSvc:  NewReferralCreditService(),
 		settings:    NewAppSettingsService(),
 		redis:       redisClient,
@@ -223,15 +225,9 @@ func (s *SubscriptionService) awardReferralRewardsFor(user *models.SubscriptionU
 //
 // Возвращает 0 если ни одного источника не нашлось.
 func (s *SubscriptionService) findReferrerForMember(memberID int64) int64 {
-	// Приоритет — community attribution. Дешёвый SELECT по PK.
-	var referredBy *int64
-	if err := database.DB.Model(&models.Member{}).
-		Select("referred_by_member_id").
-		Where("id = ?", memberID).
-		Pluck("referred_by_member_id", &referredBy).Error; err == nil {
-		if referredBy != nil && *referredBy > 0 {
-			return *referredBy
-		}
+	// Приоритет — community attribution.
+	if referredBy, err := s.memberRepo.GetReferredByMemberID(memberID); err == nil && referredBy != nil && *referredBy > 0 {
+		return *referredBy
 	}
 	// Fallback на старую schema по вакансиям.
 	id, err := s.referalRepo.GetReferrerForMember(memberID)

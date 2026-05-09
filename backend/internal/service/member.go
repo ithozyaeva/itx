@@ -94,6 +94,11 @@ func (s *MemberService) BackfillReferralCodes(limit, max int) (int, error) {
 				continue
 			}
 			processed++
+			// Прогресс-лог каждые 1000 — на больших объёмах (десятки тысяч
+			// юзеров) полезно видеть что job не завис.
+			if processed%1000 == 0 {
+				log.Printf("BackfillReferralCodes: processed %d codes so far", processed)
+			}
 		}
 		// Если последний батч короче limit — больше юзеров без кода нет.
 		if len(ids) < limit {
@@ -105,18 +110,20 @@ func (s *MemberService) BackfillReferralCodes(limit, max int) (int, error) {
 
 // ApplyPendingReferral — Боб только что авторизовался; если у него
 // в Redis-pending есть referrer_member_id (от бот-deeplink ref_<code>),
-// фиксируем атрибуцию + дёргаем конверсию + начисляем credits инвайтеру.
+// фиксируем атрибуцию + начисляем credits инвайтеру.
 //
 // Многоуровневая идемпотентность:
 //   - GetAndDelete атомарно (Redis), повторный вызов получит 0
 //   - SetReferredByMemberID с WHERE IS NULL (БД), параллельный auth не перетрёт
-//   - AwardForConversion идемпотентен по уникальному индексу (member, reason, source)
+//   - AwardForCommunityReferral идемпотентен по уникальному индексу
+//     (member, reason='community_referral', source_type, source_id=referee.id) —
+//     один раз на пару (referrer, referee) на всю жизнь
 //
 // Anti-self-fraud: бот уже отрезал self-referral, но повторно проверяем по
 // member.Id == referrerMemberID (defense-in-depth, цепочка может быть отравлена
 // прямой манипуляцией Redis).
 //
-// Порядок «эффекты → флаг»: TrackConversion + Award идут ДО SetReferredByMemberID.
+// Порядок «эффекты → флаг»: AwardForCommunityReferral идёт ДО SetReferredByMemberID.
 // Если что-то падает посередине, флаг IS NULL остаётся, при следующем auth
 // повторяем (idempotent). Иначе крэш на Award оставлял бы атрибуцию без credits.
 func (s *MemberService) ApplyPendingReferral(ctx context.Context, member *models.Member, pending *PendingReferralService) {
@@ -145,10 +152,11 @@ func (s *MemberService) ApplyPendingReferral(ctx context.Context, member *models
 		return
 	}
 
-	// Конверсия в community-trекe фиксируется через credits-награду напрямую.
-	// referral_conversions у нас остаётся для вакансий, не смешиваем.
-	// Идемпотентность: уникальный индекс на (member, reason, source_type, source_id),
-	// source_id=member.Id (Боб), уйдёт ровно раз за пару (Алиса, Боб).
+	// Атрибуция community-программы фиксируется через credits-награду
+	// напрямую (без записи в referral_conversions — та таблица остаётся
+	// для legacy-вакансий, не смешиваем). Идемпотентность: уникальный
+	// индекс на (member, reason='community_referral', source_type, source_id),
+	// source_id=member.Id (Боб) → ровно раз за пару (Алиса, Боб) на всю жизнь.
 	s.creditsSvc.AwardForCommunityReferral(referrerID, member.Id)
 
 	written, err := s.repo.SetReferredByMemberID(member.Id, referrerID)
@@ -267,25 +275,6 @@ func (s *MemberService) GetReferralCabinet(member *models.Member, botUsername st
 		TotalEarned:    totalEarned,
 		RecentInvitees: invitees,
 	}, nil
-}
-
-// FindReferrerForMember — единая точка поиска инвайтера для credits-наград
-// (first/recurring purchase). Приоритет:
-//  1. members.referred_by_member_id (community-программа, PR #350)
-//  2. Latest referral_conversions JOIN referal_links (legacy, по вакансии)
-//
-// Возвращает 0 если ни одного источника не нашлось. Используется
-// awardReferralRewardsFor в subscription_service.
-func (s *MemberService) FindReferrerForMember(memberID int64) int64 {
-	m, err := s.repo.GetById(memberID)
-	if err == nil && m != nil && m.ReferredByMemberID != nil {
-		return *m.ReferredByMemberID
-	}
-	id, err := s.referalRepo.GetReferrerForMember(memberID)
-	if err == nil && id > 0 {
-		return id
-	}
-	return 0
 }
 
 // HelperFunctions — вспомогательные re-exports для других пакетов.

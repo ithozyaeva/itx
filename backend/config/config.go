@@ -32,6 +32,7 @@ type Config struct {
 	JwtSecret          []byte
 	Port               string
 	TelegramToken        string
+	TelegramBotName      string // username бота без @, для генерации deeplink'ов реф-программы
 	TelegramMainChatID   int64
 	SuperAdminTelegramID int64
 	PublicDomain         string
@@ -186,6 +187,7 @@ func LoadConfig() {
 		JwtSecret:          []byte(jwtSecret),
 		Port:               viper.GetString("PORT"),
 		TelegramToken:        viper.GetString("TELEGRAM_BOT_TOKEN"),
+		TelegramBotName:      viper.GetString("TELEGRAM_BOT_NAME"),
 		TelegramMainChatID:   viper.GetInt64("TELEGRAM_MAIN_CHAT_ID"),
 		SuperAdminTelegramID: superAdminID,
 		PublicDomain:         viper.GetString("PUBLIC_DOMAIN"),

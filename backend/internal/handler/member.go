@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -278,8 +277,7 @@ func (h *MembersHandler) GetMyReferralCabinet(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	botUsername := os.Getenv("TELEGRAM_BOT_NAME")
-	cabinet, err := h.svc.GetReferralCabinet(member, botUsername)
+	cabinet, err := h.svc.GetReferralCabinet(member, config.CFG.TelegramBotName)
 	if err != nil {
 		log.Printf("GetReferralCabinet failed (member=%d): %v", member.Id, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить реф-кабинет"})
