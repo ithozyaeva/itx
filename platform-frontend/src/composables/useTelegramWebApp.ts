@@ -91,6 +91,8 @@ export function initTelegramWebApp() {
   }
 }
 
+const TELEGRAM_LINK_RE = /^https?:\/\/(?:t\.me|telegram\.me)\//i
+
 // openLink — открыть произвольную ссылку с учётом окружения. В Mini App
 // t.me/* идут через openTelegramLink (юзер остаётся в Телеге, открывается
 // нужный чат), внешние — через openLink (in-app браузер Телеги). В обычном
@@ -100,8 +102,7 @@ export function openLink(url: string) {
   const tg = getTelegramWebApp()
   if (tg) {
     try {
-      const isTgLink = /^https?:\/\/(?:t\.me|telegram\.me)\//i.test(url)
-      if (isTgLink && tg.openTelegramLink) {
+      if (TELEGRAM_LINK_RE.test(url) && tg.openTelegramLink) {
         tg.openTelegramLink(url)
         return
       }
