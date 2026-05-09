@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import type { SubscriptionTierSlug } from '@/models/profile'
-import { Calendar, ClipboardList, Crown, Dices, Gift, HelpCircle, Home, Sparkles, Sprout, User, Users } from 'lucide-vue-next'
+import { Calendar, ClipboardList, Crown, Dices, Gift, HelpCircle, Home, Share2, Sparkles, Sprout, User, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 export interface SidebarItem {
@@ -61,6 +61,10 @@ const state = {
     {
       label: 'Бонусы',
       items: [
+        // Реф-кабинет: персональная ссылка для приглашения в IT-X +
+        // статистика +50% от подписки рефералов в кредитах. Открыт всем,
+        // включая UNSUBSCRIBER'ам — приглашать может каждый.
+        { title: 'Пригласить в IT-X', path: '/referral', icon: Share2 },
         { title: 'Розыгрыши', path: '/raffles', icon: Gift, requiresSubscription: true },
         { title: 'Мини-игры', path: '/minigames', icon: Dices, requiresSubscription: true },
       ],

@@ -72,6 +72,20 @@ func main() {
 		// Настраиваем маршруты
 		routes.SetupRoutes(app, database.DB, redisClient)
 
+		// One-shot startup-задача: backfill referral_code у всех members,
+		// у которых его ещё нет (старые юзеры до миграции #350). После
+		// прокатки миграции и backfill-а CreateNewMember сам ставит код,
+		// поэтому повторные запуски быстро no-op'ятся.
+		go func() {
+			memberSvc := service.NewMemberService()
+			n, err := memberSvc.BackfillReferralCodes(200, 100000)
+			if err != nil {
+				log.Printf("BackfillReferralCodes error: %v", err)
+			} else if n > 0 {
+				log.Printf("BackfillReferralCodes: assigned %d codes", n)
+			}
+		}()
+
 		// Запускаем фоновую задачу для автозамораживания реферальных ссылок
 		go func() {
 			referalSvc := service.NewReferalLinkService()

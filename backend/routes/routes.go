@@ -13,7 +13,7 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
-	SetupPublicRoutes(app, db)
+	SetupPublicRoutes(app, db, redisClient)
 	SetupInternalRoutes(app, db, redisClient)
 	SetupAdminRoutes(app, db, redisClient)
 	SetupPlatformRoutes(app, db, redisClient)
@@ -33,9 +33,11 @@ func SetupInternalRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 		internal.Get("/subscription/:tg_id", subscriptionHandler.GetInternalUserSubscription)
 	}
 }
-func SetupPublicRoutes(app *fiber.App, db *gorm.DB) {
-	// Инициализация сервисов и репозиториев
-	telegramAuthHandler, err := handler.NewTelegramAuthHandler()
+func SetupPublicRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client) {
+	// Инициализация сервисов и репозиториев. redisClient нужен для
+	// pending-referral attribution: бот /start ref_<code> кладёт в Redis,
+	// auth-handler при создании members забирает.
+	telegramAuthHandler, err := handler.NewTelegramAuthHandler(redisClient)
 	if err != nil {
 		log.Fatalf("Failed to create TelegramAuthHandler: %v", err)
 	}
@@ -338,6 +340,14 @@ func SetupPlatformRoutes(app *fiber.App, db *gorm.DB, redisClient *redis.Client)
 	members.Get("/me", memberHandler.Me)
 	members.Patch("/me", memberHandler.UpdateProfile)
 	members.Post("/me/avatar", memberHandler.UploadAvatar)
+	// Реф-кабинет: персональный код, deeplink, статистика приглашённых,
+	// баланс кредитов и история. Доступно UNSUBSCRIBER'у тоже —
+	// приглашать может каждый.
+	members.Get("/me/referral", memberHandler.GetMyReferralCabinet)
+	// Welcome-баннер про реферрера: фронт при mount запрашивает /me/referrer,
+	// показывает модалку (если seenAt == nil) и зовёт POST /me/referrer/seen.
+	members.Get("/me/referrer", memberHandler.GetMyReferrer)
+	members.Post("/me/referrer/seen", memberHandler.MarkReferrerSeen)
 
 	// Менторы — список и детали read-only открыты UNSUBSCRIBER'у (витрина).
 	// Действия с менторами (написать отзыв, контакт) требуют подписки.

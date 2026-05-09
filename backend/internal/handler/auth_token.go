@@ -11,15 +11,17 @@ import (
 	"ithozyeva/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 type TelegramAuthHandler struct {
 	telegramService *service.TelegramService
 	authService     *service.AuthTokenService
 	memberService   *service.MemberService
+	pendingReferral *service.PendingReferralService
 }
 
-func NewTelegramAuthHandler() (*TelegramAuthHandler, error) {
+func NewTelegramAuthHandler(redisClient *redis.Client) (*TelegramAuthHandler, error) {
 	tgService, err := service.NewTelegramService()
 
 	if err != nil {
@@ -30,6 +32,7 @@ func NewTelegramAuthHandler() (*TelegramAuthHandler, error) {
 		telegramService: tgService,
 		authService:     service.NewAuthTokenService(),
 		memberService:   service.NewMemberService(),
+		pendingReferral: service.NewPendingReferralService(redisClient),
 	}, nil
 }
 
@@ -154,6 +157,11 @@ func (h *TelegramAuthHandler) AuthenticateWebApp(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// Боб впервые открывает платформу — если у него в Redis-pending есть
+	// referrer (бот /start ref_<code>), фиксируем атрибуцию + community-award.
+	// Идемпотентно: повторный auth no-op'ится через ранний return на флаге.
+	h.memberService.ApplyPendingReferral(c.Context(), user, h.pendingReferral)
 
 	user.SubscriptionTier = h.memberService.GetEffectiveTier(user.TelegramID)
 
@@ -374,6 +382,10 @@ func (h *TelegramAuthHandler) HandleBotMessage(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// Реф-атрибуция: Боб впервые попал в систему через /start ref_<code>
+	// в боте — переносим pending в БД и дёргаем community-award инвайтеру.
+	h.memberService.ApplyPendingReferral(c.Context(), existingUser, h.pendingReferral)
 
 	return c.JSON(existingUser)
 }
