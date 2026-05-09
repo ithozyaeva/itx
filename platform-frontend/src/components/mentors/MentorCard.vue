@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Mentor } from '@/models/profile'
 import { Typography } from '@/components/ui/typography'
+import { openLink } from '@/composables/useTelegramWebApp'
 
 const props = defineProps<{
   mentor: Mentor
@@ -72,10 +73,8 @@ function getInitials(mentor: Mentor) {
       <a
         v-if="mentor.tg"
         :href="`https://t.me/${mentor.tg}`"
-        target="_blank"
-        rel="noopener noreferrer"
         class="text-sm text-primary underline mt-auto"
-        @click.stop
+        @click.prevent.stop="openLink(`https://t.me/${mentor.tg}`)"
       >
         @{{ mentor.tg }}
       </a>
