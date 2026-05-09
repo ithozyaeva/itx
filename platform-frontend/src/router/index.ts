@@ -26,6 +26,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Dashboard, name: 'dashboard' },
   { path: '/me', component: Home, name: 'profile', meta: { breadcrumb: [{ label: 'Мой профиль' }] } },
   { path: '/tariffs', name: 'tariffs', component: () => import('@/pages/Tariffs.vue'), meta: { breadcrumb: [{ label: 'Тарифы' }] } },
+  // /referral — реф-кабинет на сообщество (НЕ путать с /referals — там
+  // ссылки на вакансии). Открыт UNSUBSCRIBER'у тоже: приглашать может каждый.
+  { path: '/referral', name: 'referral', component: () => import('@/pages/Referral.vue'), meta: { breadcrumb: [{ label: 'Пригласить в IT-X' }] } },
   // /credits — баланс реферальных кредитов и история. Открыто и для UNSUBSCRIBER:
   // именно они — целевая аудитория покупки подписки за credits.
   { path: '/credits', name: 'credits', component: () => import('@/pages/Credits.vue'), meta: { breadcrumb: [{ label: 'Реферальные кредиты' }] } },

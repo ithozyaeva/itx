@@ -28,6 +28,19 @@ func (r *ReferralCreditRepository) GetBalance(memberId int64) (int, error) {
 	return balance, err
 }
 
+// GetTotalEarned — сумма всех ПОЛОЖИТЕЛЬНЫХ начислений юзера за всю историю.
+// Не учитывает списания (subscription_purchase), показывает «сколько всего
+// заработал» для рефкабинета.
+func (r *ReferralCreditRepository) GetTotalEarned(memberId int64) (int, error) {
+	var total int
+	err := database.DB.Raw(
+		`SELECT COALESCE(SUM(amount), 0) FROM referral_credit_transactions
+		 WHERE member_id = ? AND amount > 0`,
+		memberId,
+	).Scan(&total).Error
+	return total, err
+}
+
 func (r *ReferralCreditRepository) GetTransactions(memberId int64, limit int) ([]models.ReferralCreditTransaction, error) {
 	var transactions []models.ReferralCreditTransaction
 	err := database.DB.

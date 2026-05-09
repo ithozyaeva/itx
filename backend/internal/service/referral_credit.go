@@ -44,6 +44,37 @@ func (s *ReferralCreditService) AwardForConversion(memberId int64, linkId int64)
 	}
 }
 
+// AwardForCommunityReferral — награда инвайтеру за привлечение нового юзера
+// в сообщество через персональный deeplink (ref_<code> в боте). Сумма —
+// app_settings.community_referral_credits, default 30.
+//
+// Идемпотентно по (referrerId, reason='community_referral',
+// source_type='community_referral', source_id=refereeId): один раз на пару
+// (Алиса, Боб) на всю историю.
+//
+// Self-fraud: TrackConversion handler И ApplyPendingReferral отрезают
+// self-referral; на уровне award проверяем третьим слоем.
+func (s *ReferralCreditService) AwardForCommunityReferral(referrerId int64, refereeId int64) {
+	if referrerId == refereeId || referrerId <= 0 {
+		return
+	}
+	amount := s.settings.GetInt("community_referral_credits", 30)
+	if amount <= 0 {
+		return
+	}
+	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
+		MemberId:    referrerId,
+		Amount:      amount,
+		Reason:      models.CreditReasonCommunityReferral,
+		SourceType:  "community_referral",
+		SourceId:    refereeId,
+		Description: fmt.Sprintf("Реферал #%d пришёл по персональной ссылке", refereeId),
+	})
+	if err != nil {
+		log.Printf("AwardForCommunityReferral error (referrer=%d, referee=%d): %v", referrerId, refereeId, err)
+	}
+}
+
 // AwardForFirstPurchase — крупная единоразовая выплата инвайтеру за то,
 // что реферал впервые активировал подписку (любым способом: Boosty-anchor
 // или credits). share из app_settings.referral_first_purchase_share

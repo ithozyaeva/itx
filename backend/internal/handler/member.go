@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -267,6 +268,50 @@ func (h *MembersHandler) Me(c *fiber.Ctx) error {
 
 	mentor.SubscriptionTier = member.SubscriptionTier
 	return c.JSON(mentor)
+}
+
+// GetMyReferralCabinet — данные для страницы /referral: персональный код,
+// deeplink для бота, баланс кредитов, статистика приглашённых, история.
+// Lazy-create: если у юзера ещё нет referral_code, генерируем при первом запросе.
+func (h *MembersHandler) GetMyReferralCabinet(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	botUsername := os.Getenv("TELEGRAM_BOT_NAME")
+	cabinet, err := h.svc.GetReferralCabinet(member, botUsername)
+	if err != nil {
+		log.Printf("GetReferralCabinet failed (member=%d): %v", member.Id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить реф-кабинет"})
+	}
+	return c.JSON(cabinet)
+}
+
+// GetMyReferrer — данные инвайтера для welcome-баннера. null если нет
+// или баннер уже видели.
+func (h *MembersHandler) GetMyReferrer(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	info, err := h.svc.GetReferrer(member)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось получить реферрера"})
+	}
+	return c.JSON(fiber.Map{"referrer": info})
+}
+
+// MarkReferrerSeen — фронт отметил, что юзер закрыл welcome-баннер.
+// Идемпотентно (first-write-wins на уровне БД).
+func (h *MembersHandler) MarkReferrerSeen(c *fiber.Ctx) error {
+	member, err := getMember(c)
+	if err != nil {
+		return err
+	}
+	if err := h.svc.MarkReferralWelcomeSeen(member.Id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось сохранить"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *MembersHandler) UpdateProfile(c *fiber.Ctx) error {

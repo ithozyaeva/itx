@@ -2,6 +2,7 @@
 import { onBeforeMount, ref } from 'vue'
 import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import NpsWidget from '@/components/NpsWidget.vue'
+import ReferralWelcome from '@/components/ReferralWelcome.vue'
 import { Toaster } from '@/components/ui/toast'
 import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE, stopSSE } from '@/composables/useSSE'
@@ -181,6 +182,7 @@ onBeforeMount(async () => {
       </router-view>
     </Layout>
     <NpsWidget v-if="tg_user" />
+    <ReferralWelcome v-if="tg_user" />
   </div>
 </template>
 

@@ -6,6 +6,7 @@ type ReferralCreditReason string
 
 const (
 	CreditReasonReferalConversion         ReferralCreditReason = "referal_conversion"
+	CreditReasonCommunityReferral         ReferralCreditReason = "community_referral"
 	CreditReasonReferralPurchaseFirst     ReferralCreditReason = "referral_purchase_first"
 	CreditReasonReferralPurchaseRecurring ReferralCreditReason = "referral_purchase_recurring"
 	CreditReasonAdminManual               ReferralCreditReason = "admin_manual"

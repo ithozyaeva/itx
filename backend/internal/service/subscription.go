@@ -204,13 +204,41 @@ func (s *SubscriptionService) awardReferralRewardsFor(user *models.SubscriptionU
 	if refereeMemberID == 0 {
 		return
 	}
-	referrerID, err := s.referalRepo.GetReferrerForMember(refereeMemberID)
-	if err != nil || referrerID == 0 {
+	// Поиск инвайтера: приоритет community-программа (referred_by_member_id),
+	// fallback на legacy attribution через ссылки-на-вакансии.
+	// Возвращает 0 если ни один источник не найден.
+	referrerID := s.findReferrerForMember(refereeMemberID)
+	if referrerID == 0 {
 		return
 	}
 	s.creditsSvc.AwardForFirstPurchase(referrerID, refereeMemberID, *tier.PriceCents)
 	period := time.Now().Format("2006-01")
 	s.creditsSvc.AwardForRecurringPurchase(referrerID, refereeMemberID, *tier.PriceCents, period)
+}
+
+// findReferrerForMember — единая точка поиска инвайтера для credits-наград.
+// Приоритет:
+//  1. members.referred_by_member_id (community-программа, deeplink ref_<code>)
+//  2. Latest referral_conversions JOIN referal_links (legacy, по вакансии)
+//
+// Возвращает 0 если ни одного источника не нашлось.
+func (s *SubscriptionService) findReferrerForMember(memberID int64) int64 {
+	// Приоритет — community attribution. Дешёвый SELECT по PK.
+	var referredBy *int64
+	if err := database.DB.Model(&models.Member{}).
+		Select("referred_by_member_id").
+		Where("id = ?", memberID).
+		Pluck("referred_by_member_id", &referredBy).Error; err == nil {
+		if referredBy != nil && *referredBy > 0 {
+			return *referredBy
+		}
+	}
+	// Fallback на старую schema по вакансиям.
+	id, err := s.referalRepo.GetReferrerForMember(memberID)
+	if err == nil && id > 0 {
+		return id
+	}
+	return 0
 }
 
 // resolveTierIDFromContext — без БД-обращений к anchor-чатам/тирам.
@@ -1169,10 +1197,11 @@ func (s *SubscriptionService) PurchaseTierWithCredits(
 		return nil, err
 	}
 
-	// Reward инвайтеру — после commit. Совмещён с anchor-flow через
-	// общий awardReferralRewardsFor, индекс гарантирует «не дважды».
+	// Reward инвайтеру — после commit. Используем единый findReferrerForMember
+	// (приоритет community attribution → fallback на legacy по вакансиям),
+	// индекс гарантирует «не дважды».
 	if tier.PriceCents != nil && *tier.PriceCents > 0 {
-		if referrerID, _ := s.referalRepo.GetReferrerForMember(memberID); referrerID > 0 {
+		if referrerID := s.findReferrerForMember(memberID); referrerID > 0 {
 			s.creditsSvc.AwardForFirstPurchase(referrerID, memberID, *tier.PriceCents)
 			period := time.Now().Format("2006-01")
 			s.creditsSvc.AwardForRecurringPurchase(referrerID, memberID, *tier.PriceCents, period)

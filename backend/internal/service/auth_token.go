@@ -4,6 +4,7 @@ import (
 	"errors"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -46,6 +47,16 @@ func (s *AuthTokenService) CreateNewMember(user *models.Member, token string) (*
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Сразу присваиваем referral_code новому юзеру — иначе не сможет
+	// поделиться ссылкой пока не откроет /referral хотя бы раз.
+	// AssignReferralCode идемпотентен (WHERE IS NULL), так что повторные
+	// вызовы безопасны.
+	if code, _, err := s.userRepo.AssignReferralCode(createdUser.Id); err == nil {
+		createdUser.ReferralCode = &code
+	} else {
+		log.Printf("CreateNewMember: AssignReferralCode failed for %d: %v", createdUser.Id, err)
 	}
 
 	_, err = s.authRepo.Create(&models.AuthToken{

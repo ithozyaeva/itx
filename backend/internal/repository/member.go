@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 
@@ -8,6 +9,7 @@ import (
 	"ithozyeva/internal/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
 )
 
 // ErrUsernameTaken — попытка записать username, который уже занят другим
@@ -84,6 +86,179 @@ func (r *MemberRepository) GetByTelegramID(telegramID int64) (*models.Member, er
 		return nil, err
 	}
 	return entity, nil
+}
+
+// referralCodeAlphabet — Crockford-base32 без 0/O/1/I/L/U: 32 чёткие символа,
+// невозможны опечатки между похожими глифами. 8 символов = 32^8 ≈ 1.1×10^12.
+const referralCodeAlphabet = "ABCDEFGHJKMNPQRSTVWXYZ23456789"
+const referralCodeLength = 8
+
+// generateReferralCode — криптографически случайный код. Для backfill+CreateNewMember.
+// crypto/rand чтобы не опираться на seed math/rand (детерминированность —
+// атака на предсказание следующего кода).
+func generateReferralCode() (string, error) {
+	buf := make([]byte, referralCodeLength)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	out := make([]byte, referralCodeLength)
+	for i, b := range buf {
+		out[i] = referralCodeAlphabet[int(b)%len(referralCodeAlphabet)]
+	}
+	return string(out), nil
+}
+
+// AssignReferralCode атомарно генерирует и сохраняет уникальный код у юзера.
+// Retry-loop на случай UNIQUE-коллизии (теоретически 1 из 10^12, но защищаемся).
+// WHERE referral_code IS NULL — если код уже есть, не перезаписываем (идемпотентно
+// при гонке с другим воркером).
+//
+// Возвращает (final_code, true, nil) если установлен этим вызовом.
+// (existing_code, false, nil) если был уже установлен (возвращаем существующий).
+func (r *MemberRepository) AssignReferralCode(memberID int64) (string, bool, error) {
+	for attempt := 0; attempt < 5; attempt++ {
+		// Сначала проверим — может уже есть код.
+		var existing struct {
+			ReferralCode *string
+		}
+		if err := database.DB.Model(&models.Member{}).
+			Select("referral_code").
+			Where("id = ?", memberID).
+			Take(&existing).Error; err != nil {
+			return "", false, err
+		}
+		if existing.ReferralCode != nil && *existing.ReferralCode != "" {
+			return *existing.ReferralCode, false, nil
+		}
+
+		code, err := generateReferralCode()
+		if err != nil {
+			return "", false, fmt.Errorf("generate code: %w", err)
+		}
+		res := database.DB.Model(&models.Member{}).
+			Where("id = ? AND referral_code IS NULL", memberID).
+			Update("referral_code", code)
+		if res.Error == nil && res.RowsAffected > 0 {
+			return code, true, nil
+		}
+		if res.Error != nil {
+			// UNIQUE violation — повторим с новым кодом.
+			var pgErr *pgconn.PgError
+			if errors.As(res.Error, &pgErr) && pgErr.Code == "23505" {
+				continue
+			}
+			return "", false, res.Error
+		}
+		// RowsAffected == 0 → код уже выставлен другим воркером, возвращаем его.
+	}
+	return "", false, errors.New("failed to assign referral code after 5 attempts")
+}
+
+// GetByReferralCode — lookup юзера по коду для бот-deeplink-обработки.
+func (r *MemberRepository) GetByReferralCode(code string) (*models.Member, error) {
+	entity := new(models.Member)
+	if err := database.DB.Where("referral_code = ?", code).First(entity).Error; err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+// SetReferredByMemberID — фиксирует attribution «Боб пришёл от Алисы».
+// WHERE referred_by_member_id IS NULL — first-write-wins, повторный вызов
+// не перетирает первого инвайтера. Возвращает (true, nil) если запись изменена.
+func (r *MemberRepository) SetReferredByMemberID(memberID, referrerID int64) (bool, error) {
+	res := database.DB.Model(&models.Member{}).
+		Where("id = ? AND referred_by_member_id IS NULL", memberID).
+		Update("referred_by_member_id", referrerID)
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected > 0, nil
+}
+
+// SetReferralWelcomeSeenAt — отмечаем что юзер закрыл welcome-баннер.
+// WHERE seen_at IS NULL — first-write-wins, не перезатирает оригинальный
+// timestamp при HMR-mount/double-click/retry.
+func (r *MemberRepository) SetReferralWelcomeSeenAt(memberID int64) error {
+	return database.DB.Model(&models.Member{}).
+		Where("id = ? AND referral_welcome_seen_at IS NULL", memberID).
+		Update("referral_welcome_seen_at", gorm.Expr("NOW()")).Error
+}
+
+// MembersWithoutReferralCode — для startup-backfill'а. Возвращает id'ы юзеров,
+// которым нужно сгенерировать код. Limit чтобы не забирать всё разом —
+// backfill идёт батчами.
+func (r *MemberRepository) MembersWithoutReferralCode(limit int) ([]int64, error) {
+	var ids []int64
+	err := database.DB.Model(&models.Member{}).
+		Where("referral_code IS NULL").
+		Limit(limit).
+		Pluck("id", &ids).Error
+	return ids, err
+}
+
+// ReferralStats — агрегированная статистика по приглашённым юзера для
+// рефкабинета: сколько всего привёл, сколько из них с активной подпиской.
+type ReferralStats struct {
+	InvitedTotal  int64 `json:"invitedTotal"`  // всего юзеров с referred_by_member_id = referrer
+	WithActiveSub int64 `json:"withActiveSub"` // из них с активным effective_tier_id
+}
+
+// GetReferralStats — батч-подсчёт через 2 запроса. Без N+1 на отдельных
+// invitee. Subscription_users.id == members.telegram_id, joinим через это.
+// Активный tier учитывает manual_tier_expires_at (см. credits PR #347).
+func (r *MemberRepository) GetReferralStats(referrerMemberID int64) (*ReferralStats, error) {
+	var stats ReferralStats
+	if err := database.DB.Model(&models.Member{}).
+		Where("referred_by_member_id = ?", referrerMemberID).
+		Count(&stats.InvitedTotal).Error; err != nil {
+		return nil, err
+	}
+	err := database.DB.Raw(`
+		SELECT COUNT(*) FROM members m
+		JOIN subscription_users su ON su.id = m.telegram_id
+		WHERE m.referred_by_member_id = ?
+		  AND su.is_active = TRUE
+		  AND COALESCE(
+		    CASE WHEN su.manual_tier_expires_at IS NULL OR su.manual_tier_expires_at > NOW()
+		         THEN su.manual_tier_id END,
+		    su.resolved_tier_id
+		  ) IS NOT NULL
+	`, referrerMemberID).Scan(&stats.WithActiveSub).Error
+	return &stats, err
+}
+
+// InviteeRow — запись для списка приглашённых в рефкабинете.
+type InviteeRow struct {
+	Id         int64  `json:"id"`
+	FirstName  string `json:"firstName"`
+	LastName   string `json:"lastName"`
+	Username   string `json:"tg"`
+	AvatarURL  string `json:"avatarUrl"`
+	HasActive  bool   `json:"hasActiveSub"`
+	JoinedAt   string `json:"joinedAt"`
+}
+
+// GetInvitees — список юзеров, приглашённых referrerID, с флагом активной подписки.
+// Сортируем по дате регистрации убывающе (свежие сверху). Limit для UI.
+func (r *MemberRepository) GetInvitees(referrerMemberID int64, limit int) ([]InviteeRow, error) {
+	rows := make([]InviteeRow, 0)
+	err := database.DB.Raw(`
+		SELECT m.id, m.first_name, m.last_name, m.username AS username, m.avatar_url,
+		       (su.id IS NOT NULL AND su.is_active = TRUE
+		        AND COALESCE(
+		          CASE WHEN su.manual_tier_expires_at IS NULL OR su.manual_tier_expires_at > NOW()
+		               THEN su.manual_tier_id END,
+		          su.resolved_tier_id
+		        ) IS NOT NULL) AS has_active,
+		       to_char(m.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS joined_at
+		FROM members m
+		LEFT JOIN subscription_users su ON su.id = m.telegram_id
+		WHERE m.referred_by_member_id = ?
+		ORDER BY m.created_at DESC
+		LIMIT ?
+	`, referrerMemberID, limit).Scan(&rows).Error
+	return rows, err
 }
 
 // GetById получает участника по ID с проверкой на статус ментора

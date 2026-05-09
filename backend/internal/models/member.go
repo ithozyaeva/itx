@@ -35,6 +35,18 @@ type Member struct {
 	Roles       []Role       `json:"roles" gorm:"-:all"`
 	Birthday    *DateOnly    `json:"birthday" gorm:"column:birthday"`
 	CreatedAt   time.Time    `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
+	// ReferralCode — персональный код юзера для приглашения в сообщество.
+	// 8 символов Crockford-base32. Заполняется stratup-job'ом + при создании
+	// нового члена. Не отдаём наружу через json чтобы случайно не засветить
+	// в чужие профили — выдаётся только через GET /me/referral.
+	ReferralCode *string `json:"-" gorm:"column:referral_code"`
+	// ReferredByMemberID — членский id того, кто пригласил юзера через
+	// /start ref_<code>. NULL для ранее зарегистрированных и для тех,
+	// кто пришёл без реф-ссылки. Не FK json — не светим инвайтера.
+	ReferredByMemberID *int64 `json:"-" gorm:"column:referred_by_member_id"`
+	// ReferralWelcomeSeenAt — отметка что юзер видел welcome-баннер про
+	// своего реферрера. NULL = баннер ещё не показывали.
+	ReferralWelcomeSeenAt *time.Time `json:"-" gorm:"column:referral_welcome_seen_at"`
 	// SubscriptionTier — эффективный тир подписки (EffectiveTier из subscription_users).
 	// Заполняется хендлерами перед отдачей профиля. В БД не хранится.
 	SubscriptionTier *SubscriptionTier `json:"subscriptionTier,omitempty" gorm:"-:all"`
