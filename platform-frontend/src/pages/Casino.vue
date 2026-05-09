@@ -837,7 +837,7 @@ onBeforeUnmount(() => {
 .casino-page {
   position: relative;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .casino-bg {
