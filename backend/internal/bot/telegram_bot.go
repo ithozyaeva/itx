@@ -1467,14 +1467,6 @@ func (b *TelegramBot) SendRepeatingEventAlert(event *models.Event, alertType str
 		}
 		if s, ok := settingsMap[member.Id]; ok {
 			switch alertType {
-			case "first":
-				if !s.RemindWeek {
-					continue
-				}
-			case "second":
-				if !s.RemindDay {
-					continue
-				}
 			case "third":
 				if !s.RemindHour {
 					continue
@@ -1484,6 +1476,9 @@ func (b *TelegramBot) SendRepeatingEventAlert(event *models.Event, alertType str
 					continue
 				}
 			default:
+				// "first"/"second" больше не инициируются (см. checkRepeatingAlerts).
+				// Поля s.RemindWeek/s.RemindDay в notification_settings оставлены
+				// в схеме для совместимости, но не дёргаются.
 				log.Printf("Unknown alertType %q for event %d", alertType, event.Id)
 			}
 		}
@@ -1910,77 +1905,51 @@ func (b *TelegramBot) checkReminderAlert(event *models.Event, now time.Time) {
 	}
 }
 
-func (b *TelegramBot) getAlertIntervals() (alertFirst, alertSecond, alertThird time.Duration) {
-	return time.Duration(config.CFG.AlertReminderFirstIntervalMinutes) * time.Minute,
-		time.Duration(config.CFG.AlertReminderSecondIntervalMinutes) * time.Minute,
-		time.Duration(config.CFG.AlertReminderThirdIntervalMinutes) * time.Minute
-}
-
+// checkRepeatingAlerts отправляет два алерта в общий чат:
+//   - "third" — за AlertReminderThirdIntervalMinutes (по умолчанию 60 мин) до старта.
+//   - "start" — за минуту до старта.
+//
+// Раньше было 4 типа (first за 7 дней, second за 1 день, third за 1 час, start),
+// и они делили общую колонку last_repeating_alert_sent_at с day-check'ом
+// «уже отправляли сегодня — не дублируем». Это блокировало third в день,
+// когда уже улетел second (типичный сценарий, см. event 38 от 7 мая 2026 —
+// 12:00 МСК ушёл second, в 18:00 МСК third был skipped). Упростили до 2
+// типов в разные временные окна — оба гарантированно проходят.
+//
+// Защита от дублирования теперь общая: 2-минутное окно на пред. отправку,
+// чего достаточно (third и start разнесены минимум на ~58 минут).
 func (b *TelegramBot) checkRepeatingAlerts(event *models.Event, now time.Time) {
 	eventTime := event.Date
 	timeUntilEvent := eventTime.Sub(now)
 
-	alertFirst, alertSecond, alertThird := b.getAlertIntervals()
+	alertThird := time.Duration(config.CFG.AlertReminderThirdIntervalMinutes) * time.Minute
 
-	eventLocation := getEventLocation(event.Timezone)
-	nowInMoscow := now.In(eventLocation)
-
-	scheduledHour := config.CFG.AlertScheduledHour
-	scheduledMinute := config.CFG.AlertScheduledMinute
-
-	shouldSend := false
 	var alertType string
-
-	if timeUntilEvent <= 1*time.Minute && timeUntilEvent > -2*time.Minute {
+	switch {
+	case timeUntilEvent <= 1*time.Minute && timeUntilEvent > -2*time.Minute:
 		alertType = "start"
-		shouldSend = true
-	} else if timeUntilEvent <= alertThird && timeUntilEvent > 1*time.Minute {
+	case timeUntilEvent <= alertThird && timeUntilEvent > 1*time.Minute:
 		alertType = "third"
-		shouldSend = true
-	} else if timeUntilEvent <= alertSecond && timeUntilEvent > alertThird {
-		if nowInMoscow.Hour() == scheduledHour && nowInMoscow.Minute() == scheduledMinute {
-			alertType = "second"
-			shouldSend = true
-		}
-	} else if timeUntilEvent <= alertFirst && timeUntilEvent > alertSecond {
-		if nowInMoscow.Hour() == scheduledHour && nowInMoscow.Minute() == scheduledMinute {
-			alertType = "first"
-			shouldSend = true
+	default:
+		return
+	}
+
+	if event.LastRepeatingAlertSentAt != nil {
+		if now.Sub(*event.LastRepeatingAlertSentAt) < 2*time.Minute {
+			return
 		}
 	}
 
-	if shouldSend {
-		if event.LastRepeatingAlertSentAt != nil {
-			if alertType == "start" {
-				timeSinceLastAlert := now.Sub(*event.LastRepeatingAlertSentAt)
-				if timeSinceLastAlert < 2*time.Minute {
-					return
-				}
-			} else {
-				lastSentDay := event.LastRepeatingAlertSentAt.Day()
-				lastSentMonth := event.LastRepeatingAlertSentAt.Month()
-				lastSentYear := event.LastRepeatingAlertSentAt.Year()
-				currentDay := now.Day()
-				currentMonth := now.Month()
-				currentYear := now.Year()
+	log.Printf("Sending repeating alert for event %d, type: %s, timeUntilEvent: %v", event.Id, alertType, timeUntilEvent)
+	if err := b.SendRepeatingEventAlert(event, alertType); err != nil {
+		log.Printf("Error sending repeating alert: %v", err)
+		return
+	}
 
-				if lastSentDay == currentDay && lastSentMonth == currentMonth && lastSentYear == currentYear {
-					return
-				}
-			}
-		}
-
-		log.Printf("Sending repeating alert for event %d, type: %s, timeUntilEvent: %v", event.Id, alertType, timeUntilEvent)
-		if err := b.SendRepeatingEventAlert(event, alertType); err != nil {
-			log.Printf("Error sending repeating alert: %v", err)
-			return
-		}
-
-		if err := database.DB.Model(&models.Event{}).
-			Where("id = ?", event.Id).
-			Update("last_repeating_alert_sent_at", now).Error; err != nil {
-			log.Printf("Error updating event last alert sent time: %v", err)
-		}
+	if err := database.DB.Model(&models.Event{}).
+		Where("id = ?", event.Id).
+		Update("last_repeating_alert_sent_at", now).Error; err != nil {
+		log.Printf("Error updating event last alert sent time: %v", err)
 	}
 }
 
