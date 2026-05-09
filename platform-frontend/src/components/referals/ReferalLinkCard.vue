@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Typography } from '@/components/ui/typography'
 import { useDictionary } from '@/composables/useDictionary'
 import { useUser } from '@/composables/useUser'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { dateFormatter } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { referalLinkService } from '@/services/referals'
@@ -73,7 +74,7 @@ async function handleConvert() {
   // Если уже откликались — просто открываем чат снова, без повторного трекинга
   if (hasConverted.value) {
     if (props.link.author.tg)
-      window.open(`https://t.me/${props.link.author.tg}`, '_blank')
+      openLink(`https://t.me/${props.link.author.tg}`)
     return
   }
 
@@ -83,7 +84,7 @@ async function handleConvert() {
     hasConverted.value = true
     emit('converted', props.link.id)
     if (props.link.author.tg)
-      window.open(`https://t.me/${props.link.author.tg}`, '_blank')
+      openLink(`https://t.me/${props.link.author.tg}`)
   }
   catch (error) {
     handleError(error)
@@ -132,7 +133,7 @@ const { gradesObject, referalLinkStatusesObject } = useDictionary(['grades', 're
         </div>
       </div>
       <p class="text-sm text-muted-foreground">
-        Автор: <a v-if="link.author.tg" :href="`https://t.me/${link.author.tg}`" target="_blank" rel="noopener noreferrer" class="underline">{{ link.author.firstName }} {{ link.author.lastName }}</a><span v-else>{{ link.author.firstName }} {{ link.author.lastName }}</span>
+        Автор: <a v-if="link.author.tg" :href="`https://t.me/${link.author.tg}`" class="underline" @click.prevent="openLink(`https://t.me/${link.author.tg}`)">{{ link.author.firstName }} {{ link.author.lastName }}</a><span v-else>{{ link.author.firstName }} {{ link.author.lastName }}</span>
       </p>
       <div class="space-y-1 text-sm">
         <div class="space-x-2">
