@@ -157,6 +157,46 @@ export function openLink(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+// installMockTelegram — для локальной разработки без реального TG-клиента.
+// Вызывать ОДИН раз в main.ts при VITE_MOCK_TELEGRAM=true до createApp(),
+// чтобы getTelegramWebApp() в App.vue setup увидел мок. initData оставляем
+// пустым — тогда isMiniApp() возвращает false и App.vue не пытается обмен-
+// ять (заведомо невалидную) подпись на сессию через /api/auth/telegram-
+// webapp. Все методы стабают console.info + window.open для openLink, чтобы
+// в DevTools было видно, что клиентский код их вызывает.
+export function installMockTelegram() {
+  if (window.Telegram?.WebApp)
+    return
+  // eslint-disable-next-line no-console
+  const log = (msg: string, ...args: unknown[]) => console.info(`[tg-mock] ${msg}`, ...args)
+  const mock: TelegramWebApp = {
+    initData: '',
+    ready: () => log('ready'),
+    expand: () => log('expand'),
+    close: () => log('close'),
+    isExpanded: true,
+    viewportHeight: window.innerHeight,
+    viewportStableHeight: window.innerHeight,
+    disableVerticalSwipes: () => log('disableVerticalSwipes'),
+    openTelegramLink: (url) => {
+      log('openTelegramLink', url)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    openLink: (url, opts) => {
+      log('openLink', url, opts)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    enableClosingConfirmation: () => log('enableClosingConfirmation'),
+    disableClosingConfirmation: () => log('disableClosingConfirmation'),
+    setHeaderColor: color => log('setHeaderColor', color),
+    setBackgroundColor: color => log('setBackgroundColor', color),
+    onEvent: (eventType, handler) => log('onEvent', eventType, handler),
+    offEvent: (eventType, handler) => log('offEvent', eventType, handler),
+  }
+  window.Telegram = { WebApp: mock }
+  log('installed (VITE_MOCK_TELEGRAM=true)')
+}
+
 // useClosingConfirmation — на формах с unsaved-данными. Пока dirty=true,
 // Telegram при попытке закрыть miniapp покажет диалог «Точно закрыть?».
 // При dirty=false и при unmount флаг снимаем, чтобы не остался висеть на
