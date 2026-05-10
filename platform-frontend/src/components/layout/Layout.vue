@@ -6,7 +6,7 @@ import Sidebar from './Sidebar.vue'
 </script>
 
 <template>
-  <div class="flex h-screen">
+  <div class="flex h-[100dvh]">
     <Sidebar />
     <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
       <Header />

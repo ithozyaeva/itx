@@ -72,7 +72,7 @@ async function submit() {
     v-if="!isHidden"
     type="button"
     aria-label="Оставить отзыв"
-    class="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-accent text-accent-foreground shadow-lg flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+    class="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] z-40 size-12 rounded-full bg-accent text-accent-foreground shadow-lg flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
     @click="open"
   >
     <Smile class="size-6" />

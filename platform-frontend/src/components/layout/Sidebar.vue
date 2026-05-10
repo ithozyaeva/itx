@@ -69,7 +69,7 @@ async function handleSaveReview(text: string) {
   <div>
     <div
       data-onboarding="sidebar"
-      class="fixed md:static h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 w-full md:w-56 z-40"
+      class="fixed md:static h-[100dvh] border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 w-full md:w-56 z-40"
       :class="[
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"

@@ -8,6 +8,9 @@ interface TelegramWebApp {
   ready: () => void
   expand: () => void
   close: () => void
+  // Появилось в Bot API 7.7. В старых клиентах метода нет — вызывать
+  // строго через optional chaining, иначе TypeError свалит initTelegramWebApp.
+  disableVerticalSwipes?: () => void
 }
 
 interface TelegramNamespace {
@@ -38,6 +41,9 @@ export function isMiniApp(): boolean {
 // этого мобильный TG показывает чёрный экран до первого fetch). expand()
 // разворачивает miniapp на полную высоту — иначе TG открывает её половиной
 // экрана, и юзер думает, что это ошибка вёрстки.
+// disableVerticalSwipes выключает свайп-вниз-чтобы-закрыть: внутри прило-
+// жения постоянно скроллят вертикально, и без этого юзер случайно гасит
+// miniapp на каждой второй прокрутке.
 export function initTelegramWebApp() {
   const tg = getTelegramWebApp()
   if (!tg)
@@ -45,6 +51,7 @@ export function initTelegramWebApp() {
   try {
     tg.ready()
     tg.expand()
+    tg.disableVerticalSwipes?.()
   }
   catch {
     // SDK странно повёл себя в старом TG-клиенте — не критично, дальше идём.
