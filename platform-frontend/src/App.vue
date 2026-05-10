@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Loader2 } from 'lucide-vue-next'
 import { onBeforeMount, ref } from 'vue'
 import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import NpsWidget from '@/components/NpsWidget.vue'
@@ -173,7 +174,11 @@ onBeforeMount(async () => {
       </div>
     </div>
   </div>
-  <div v-else-if="!isLoading" class="min-h-screen flex flex-col">
+  <div v-else-if="isLoading" class="min-h-[100dvh] flex items-center justify-center" aria-live="polite" aria-busy="true">
+    <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    <span class="sr-only">Загрузка…</span>
+  </div>
+  <div v-else class="min-h-screen flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">
         <Transition name="page-fade" mode="out-in">
