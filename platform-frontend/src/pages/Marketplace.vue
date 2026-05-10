@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
 import { required, useFormValidation } from '@/composables/useFormValidation'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { isUserAdmin, useUser } from '@/composables/useUser'
 import { handleError } from '@/services/errorService'
 import { marketplaceService } from '@/services/marketplace'
@@ -479,9 +480,8 @@ onMounted(() => {
             >
               <a
                 :href="`https://t.me/${item.contactTelegram.replace('@', '')}`"
-                target="_blank"
-                rel="noopener noreferrer"
                 class="text-xs text-accent hover:underline"
+                @click.prevent="openLink(`https://t.me/${item.contactTelegram.replace('@', '')}`)"
               >
                 @{{ item.contactTelegram.replace('@', '') }}
               </a>

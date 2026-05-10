@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { creditsService } from '@/services/credits'
 import { handleError } from '@/services/errorService'
 import { subscriptionsService } from '@/services/subscriptions'
@@ -191,9 +192,8 @@ async function confirmPurchase() {
           <a
             v-if="tier.boosty_url"
             :href="tier.boosty_url"
-            target="_blank"
-            rel="noopener noreferrer"
             class="block text-center px-4 py-3 rounded-sm bg-accent text-accent-foreground font-medium hover:bg-accent/90 transition-colors"
+            @click.prevent="openLink(tier.boosty_url)"
           >
             Оформить на Boosty →
           </a>
@@ -253,9 +253,8 @@ async function confirmPurchase() {
       </p>
       <a
         :href="botSubLink"
-        target="_blank"
-        rel="noopener"
         class="inline-block px-4 py-2 rounded-sm border border-accent/50 text-accent hover:bg-accent/10 transition-colors text-sm"
+        @click.prevent="openLink(botSubLink)"
       >
         Открыть бота → /sub
       </a>

@@ -40,6 +40,7 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Typography } from '@/components/ui/typography'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { useUser } from '@/composables/useUser'
 import { getSubscriptionLevel, getSubscriptionLevelIndex, SUBSCRIPTION_LEVELS } from '@/models/profile'
 import { achievementsService } from '@/services/achievements'
@@ -205,9 +206,8 @@ onMounted(loadProfile)
             <a
               v-if="profile.member.tg"
               :href="`https://t.me/${profile.member.tg}`"
-              target="_blank"
-              rel="noopener noreferrer"
               class="text-sm text-primary underline"
+              @click.prevent="openLink(`https://t.me/${profile.member.tg}`)"
             >
               @{{ profile.member.tg }}
             </a>

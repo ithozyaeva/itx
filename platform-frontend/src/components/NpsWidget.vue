@@ -4,6 +4,7 @@ import { Smile, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useToast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
+import { useClosingConfirmation } from '@/composables/useTelegramWebApp'
 import { feedbackService } from '@/services/feedbackService'
 
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000 // 30 дней
@@ -21,6 +22,15 @@ const isHidden = computed(() => {
     return false
   return Date.now() - dismissedAt.value < COOLDOWN_MS
 })
+
+// В TG Mini App юзер может случайно свайпнуть вниз и закрыть приложение,
+// потеряв заполненную оценку/комментарий. Пока модалка открыта и в неё
+// что-то введено — просим Телегу показать confirm перед закрытием. После
+// dismiss/submit/закрытия флаг автоматически снимается через watch на dirty.
+const isDirty = computed(() =>
+  isOpen.value && (score.value !== null || comment.value.trim() !== ''),
+)
+useClosingConfirmation(isDirty)
 
 function open() {
   if (isHidden.value)

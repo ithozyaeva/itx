@@ -3,14 +3,32 @@
 // initData бэкенду. BackButton/MainButton/themeParams/haptics — намеренно
 // не трогаем, см. план tg-cached-newt.md.
 
+import type { Ref } from 'vue'
+import { onUnmounted, watch } from 'vue'
+
 interface TelegramWebApp {
   initData: string
   ready: () => void
   expand: () => void
   close: () => void
+  isExpanded?: boolean
+  viewportHeight?: number
+  viewportStableHeight?: number
   // Появилось в Bot API 7.7. В старых клиентах метода нет — вызывать
   // строго через optional chaining, иначе TypeError свалит initTelegramWebApp.
   disableVerticalSwipes?: () => void
+  // Открывает t.me/* ссылку прямо в Telegram-клиенте (без выпадения в
+  // системный браузер). Bot API 6.1+.
+  openTelegramLink?: (url: string) => void
+  // Открывает произвольную внешнюю ссылку во встроенном in-app браузере
+  // Telegram. Bot API 6.1+.
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void
+  // Включает confirm-диалог при попытке закрыть miniapp (свайпом или
+  // close-кнопкой). Используется для форм с unsaved-данными. Bot API 6.2+.
+  enableClosingConfirmation?: () => void
+  disableClosingConfirmation?: () => void
+  onEvent?: (eventType: string, eventHandler: () => void) => void
+  offEvent?: (eventType: string, eventHandler: () => void) => void
 }
 
 interface TelegramNamespace {
@@ -36,6 +54,17 @@ export function isMiniApp(): boolean {
   return !!tg && typeof tg.initData === 'string' && tg.initData.length > 0
 }
 
+// syncViewportCssVar — копируем viewportStableHeight (или viewportHeight как
+// fallback) в CSS-переменную --tg-viewport-stable-height. Стабильная высота
+// — это viewport БЕЗ учёта клавиатуры/выезжающего header'а; полезно для
+// модалок и фиксированных оверлеев, которым 100dvh даёт прыгающую высоту.
+function syncViewportCssVar(tg: TelegramWebApp) {
+  const h = tg.viewportStableHeight ?? tg.viewportHeight
+  if (typeof h === 'number') {
+    document.documentElement.style.setProperty('--tg-viewport-stable-height', `${h}px`)
+  }
+}
+
 // initTelegramWebApp — вызвать один раз при старте приложения, если мы
 // внутри Telegram. ready() сообщает клиенту, что UI готов отрисоваться (без
 // этого мобильный TG показывает чёрный экран до первого fetch). expand()
@@ -44,6 +73,8 @@ export function isMiniApp(): boolean {
 // disableVerticalSwipes выключает свайп-вниз-чтобы-закрыть: внутри прило-
 // жения постоянно скроллят вертикально, и без этого юзер случайно гасит
 // miniapp на каждой второй прокрутке.
+// viewportChanged — слушаем изменения видимой области (клавиатура, ресайз
+// окна на desktop TG) и держим CSS-переменную в актуальном состоянии.
 export function initTelegramWebApp() {
   const tg = getTelegramWebApp()
   if (!tg)
@@ -52,8 +83,70 @@ export function initTelegramWebApp() {
     tg.ready()
     tg.expand()
     tg.disableVerticalSwipes?.()
+    syncViewportCssVar(tg)
+    tg.onEvent?.('viewportChanged', () => syncViewportCssVar(tg))
   }
   catch {
     // SDK странно повёл себя в старом TG-клиенте — не критично, дальше идём.
   }
+}
+
+const TELEGRAM_LINK_RE = /^https?:\/\/(?:t\.me|telegram\.me)\//i
+
+// openLink — открыть произвольную ссылку с учётом окружения. В Mini App
+// t.me/* идут через openTelegramLink (юзер остаётся в Телеге, открывается
+// нужный чат), внешние — через openLink (in-app браузер Телеги). В обычном
+// браузере — window.open в новой вкладке. Использовать вместо <a target=
+// "_blank"> и window.open везде, где есть переход на внешний ресурс.
+export function openLink(url: string) {
+  const tg = getTelegramWebApp()
+  if (tg) {
+    try {
+      if (TELEGRAM_LINK_RE.test(url) && tg.openTelegramLink) {
+        tg.openTelegramLink(url)
+        return
+      }
+      if (tg.openLink) {
+        tg.openLink(url)
+        return
+      }
+    }
+    catch {
+      // SDK ругнулся (например, кривой URL) — fallback на window.open.
+    }
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+// useClosingConfirmation — на формах с unsaved-данными. Пока dirty=true,
+// Telegram при попытке закрыть miniapp покажет диалог «Точно закрыть?».
+// При dirty=false и при unmount флаг снимаем, чтобы не остался висеть на
+// других экранах.
+export function useClosingConfirmation(dirty: Ref<boolean>) {
+  const tg = getTelegramWebApp()
+  if (!tg)
+    return
+  watch(
+    dirty,
+    (isDirty) => {
+      try {
+        if (isDirty)
+          tg.enableClosingConfirmation?.()
+        else
+          tg.disableClosingConfirmation?.()
+      }
+      catch {
+        // no-op: старый клиент без поддержки.
+      }
+    },
+    { immediate: true },
+  )
+  onUnmounted(() => {
+    try {
+      tg.disableClosingConfirmation?.()
+    }
+    catch {
+      // no-op
+    }
+  })
 }

@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import ErrorState from '@/components/common/ErrorState.vue'
 import ReviewForm from '@/components/mentors/ReviewForm.vue'
 import { Typography } from '@/components/ui/typography'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { isUserSubscribed } from '@/composables/useUser'
 import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
@@ -77,9 +78,8 @@ onMounted(loadMentor)
         <a
           v-if="mentor.tg && isSubscribed"
           :href="`https://t.me/${mentor.tg}`"
-          target="_blank"
-          rel="noopener noreferrer"
           class="text-sm text-primary underline"
+          @click.prevent="openLink(`https://t.me/${mentor.tg}`)"
         >
           @{{ mentor.tg }}
         </a>
