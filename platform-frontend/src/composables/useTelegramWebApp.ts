@@ -27,6 +27,10 @@ interface TelegramWebApp {
   // close-кнопкой). Используется для форм с unsaved-данными. Bot API 6.2+.
   enableClosingConfirmation?: () => void
   disableClosingConfirmation?: () => void
+  // Цвет шапки/фона miniapp в Telegram-клиенте. Принимает hex (#aabbcc),
+  // 'bg_color' или 'secondary_bg_color'. Bot API 6.1+ / 6.9+.
+  setHeaderColor?: (color: string) => void
+  setBackgroundColor?: (color: string) => void
   onEvent?: (eventType: string, eventHandler: () => void) => void
   offEvent?: (eventType: string, eventHandler: () => void) => void
 }
@@ -65,6 +69,36 @@ function syncViewportCssVar(tg: TelegramWebApp) {
   }
 }
 
+const RGB_RE = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i
+
+// rgbToHex — Telegram.setHeaderColor принимает только hex (#rrggbb), а
+// computed-style браузер отдаёт rgb(r, g, b). Конвертим. На неожиданных
+// форматах (transparent, hsl) возвращаем null — не вызываем сеттер.
+function rgbToHex(rgb: string): string | null {
+  const m = RGB_RE.exec(rgb)
+  if (!m)
+    return null
+  const [, r, g, b] = m
+  return `#${[r, g, b].map(n => Number(n).toString(16).padStart(2, '0')).join('')}`
+}
+
+// syncTelegramColors — приводим цвет шапки и фона Telegram-клиента к фону
+// нашего приложения, чтобы между body и шапкой/нижней полосой Телеги не
+// было контрастной полоски. Берём фактический backgroundColor у body после
+// рендера темы (учитывает класс dark).
+function syncTelegramColors(tg: TelegramWebApp) {
+  const hex = rgbToHex(getComputedStyle(document.body).backgroundColor)
+  if (!hex)
+    return
+  try {
+    tg.setHeaderColor?.(hex)
+    tg.setBackgroundColor?.(hex)
+  }
+  catch {
+    // Старый клиент без поддержки — игнорируем.
+  }
+}
+
 // initTelegramWebApp — вызвать один раз при старте приложения, если мы
 // внутри Telegram. ready() сообщает клиенту, что UI готов отрисоваться (без
 // этого мобильный TG показывает чёрный экран до первого fetch). expand()
@@ -75,6 +109,8 @@ function syncViewportCssVar(tg: TelegramWebApp) {
 // miniapp на каждой второй прокрутке.
 // viewportChanged — слушаем изменения видимой области (клавиатура, ресайз
 // окна на desktop TG) и держим CSS-переменную в актуальном состоянии.
+// setHeaderColor/setBackgroundColor — синхронизируем с фоном приложения
+// сразу и при каждом изменении класса dark/light на <html>.
 export function initTelegramWebApp() {
   const tg = getTelegramWebApp()
   if (!tg)
@@ -85,6 +121,9 @@ export function initTelegramWebApp() {
     tg.disableVerticalSwipes?.()
     syncViewportCssVar(tg)
     tg.onEvent?.('viewportChanged', () => syncViewportCssVar(tg))
+    syncTelegramColors(tg)
+    new MutationObserver(() => syncTelegramColors(tg))
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
   }
   catch {
     // SDK странно повёл себя в старом TG-клиенте — не критично, дальше идём.
@@ -116,6 +155,46 @@ export function openLink(url: string) {
     }
   }
   window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+// installMockTelegram — для локальной разработки без реального TG-клиента.
+// Вызывать ОДИН раз в main.ts при VITE_MOCK_TELEGRAM=true до createApp(),
+// чтобы getTelegramWebApp() в App.vue setup увидел мок. initData оставляем
+// пустым — тогда isMiniApp() возвращает false и App.vue не пытается обмен-
+// ять (заведомо невалидную) подпись на сессию через /api/auth/telegram-
+// webapp. Все методы стабают console.info + window.open для openLink, чтобы
+// в DevTools было видно, что клиентский код их вызывает.
+export function installMockTelegram() {
+  if (window.Telegram?.WebApp)
+    return
+  // eslint-disable-next-line no-console
+  const log = (msg: string, ...args: unknown[]) => console.info(`[tg-mock] ${msg}`, ...args)
+  const mock: TelegramWebApp = {
+    initData: '',
+    ready: () => log('ready'),
+    expand: () => log('expand'),
+    close: () => log('close'),
+    isExpanded: true,
+    viewportHeight: window.innerHeight,
+    viewportStableHeight: window.innerHeight,
+    disableVerticalSwipes: () => log('disableVerticalSwipes'),
+    openTelegramLink: (url) => {
+      log('openTelegramLink', url)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    openLink: (url, opts) => {
+      log('openLink', url, opts)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    enableClosingConfirmation: () => log('enableClosingConfirmation'),
+    disableClosingConfirmation: () => log('disableClosingConfirmation'),
+    setHeaderColor: color => log('setHeaderColor', color),
+    setBackgroundColor: color => log('setBackgroundColor', color),
+    onEvent: (eventType, handler) => log('onEvent', eventType, handler),
+    offEvent: (eventType, handler) => log('offEvent', eventType, handler),
+  }
+  window.Telegram = { WebApp: mock }
+  log('installed (VITE_MOCK_TELEGRAM=true)')
 }
 
 // useClosingConfirmation — на формах с unsaved-данными. Пока dirty=true,
