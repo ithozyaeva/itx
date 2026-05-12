@@ -43,28 +43,6 @@ func (s *ReferralCreditService) formatRefereeLabel(refereeId int64) string {
 	return fmt.Sprintf("#%d", refereeId)
 }
 
-// AwardForConversion идемпотентно начисляет credits автору ссылки за
-// конверсию. Сумма из app_settings.referral_conversion_credits (default 30).
-// Идемпотентность: повторная конверсия по той же ссылке — no-op (защищена
-// уникальным индексом в БД).
-func (s *ReferralCreditService) AwardForConversion(memberId int64, linkId int64) {
-	amount := s.settings.GetInt("referral_conversion_credits", 30)
-	if amount <= 0 {
-		return
-	}
-	err := s.repo.AwardIdempotent(&models.ReferralCreditTransaction{
-		MemberId:    memberId,
-		Amount:      amount,
-		Reason:      models.CreditReasonReferalConversion,
-		SourceType:  "referal_conversion",
-		SourceId:    linkId,
-		Description: "Конверсия по реферальной ссылке",
-	})
-	if err != nil {
-		log.Printf("AwardForConversion error (member=%d, link=%d): %v", memberId, linkId, err)
-	}
-}
-
 // AwardForCommunityReferral — награда инвайтеру за привлечение нового юзера
 // в сообщество через персональный deeplink (ref_<code> в боте). Сумма —
 // app_settings.community_referral_credits, default 30.
