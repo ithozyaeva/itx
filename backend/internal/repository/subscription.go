@@ -268,9 +268,14 @@ func (r *SubscriptionRepository) EnsureUser(userID int64, username *string, full
 
 // GetSweepUserIDs — все telegram_user_id, которых имеет смысл прогонять
 // через sweep: записи в subscription_users (is_active=true) ∪ авторы
-// сообщений из chat_messages. Второе нужно, чтобы покрыть людей, которые
-// сидят в чатах сообщества, но никогда не открывали бота — без этого
-// sweep игнорирует их и из контент-чатов их никто не вычистит.
+// сообщений из chat_messages ∪ зарегистрированные на платформе members.
+//
+// chat_messages нужен, чтобы покрыть людей, которые сидят в чатах сообщества,
+// но никогда не открывали бота. members.telegram_id — чтобы покрыть silent
+// readers: участники подписочных чатов, которые зарегистрировались на
+// платформе, но ни разу не написали в подписочных чатах и которых бот
+// не видел в join-event (например, попали в чат до того, как туда зашёл
+// бот). Без этого их PeriodicCheck не видит и из контент-чатов не вычищает.
 func (r *SubscriptionRepository) GetSweepUserIDs() ([]int64, error) {
 	var ids []int64
 	err := r.db.Raw(`
@@ -278,6 +283,8 @@ func (r *SubscriptionRepository) GetSweepUserIDs() ([]int64, error) {
 		UNION
 		SELECT DISTINCT telegram_user_id FROM chat_messages
 		WHERE telegram_user_id IS NOT NULL
+		UNION
+		SELECT telegram_id FROM members WHERE telegram_id > 0
 	`).Scan(&ids).Error
 	return ids, err
 }
