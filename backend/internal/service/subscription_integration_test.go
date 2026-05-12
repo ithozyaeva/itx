@@ -613,6 +613,11 @@ func TestPeriodicCheckSkipsUserOnTelegramError(t *testing.T) {
 func TestSweepRealMembershipCountsFailures(t *testing.T) {
 	db := testutil.EnsureTestDB(t)
 	subTablesTruncate(t, db)
+	// GetSweepUserIDs объединяет subscription_users + chat_messages + members.
+	// Если в testdb остались members от других тестов (CASCADE-truncate их не
+	// трогает), sweep подцепит их telegram_id и сделает лишние getChatMember-
+	// вызовы — счётчики поедут. Локально изолируем тест от чужих данных.
+	testutil.TruncateAll(t, db, "chat_messages", "members")
 
 	master := mustTier(t, db, "master")
 
