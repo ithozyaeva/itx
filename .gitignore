@@ -39,3 +39,5 @@ pgdata
 autoresearch-results.tsv
 seo-score.sh
 learn/
+debug/
+fix/
