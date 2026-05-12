@@ -114,10 +114,20 @@ func (s *ChatQuestService) processDailyStreak(quest models.ChatQuest, memberID i
 	}
 }
 
-// completeQuest завершает квест, начисляет баллы и отправляет уведомления
+// completeQuest завершает квест, начисляет баллы и отправляет уведомления.
+// MarkCompleted возвращает rowsAffected: 1 — первый, кто перевёл FALSE→TRUE,
+// 0 — гонка проиграна (параллельная goroutine уже наградила). Награждаем
+// и шлём уведомления только если переход случился именно в этом вызове,
+// иначе под нагрузкой два сообщения от одного юзера в одно окно дублировали
+// бы points (GiveCustomPoints — обычный INSERT, не идемпотентный).
 func (s *ChatQuestService) completeQuest(quest models.ChatQuest, memberID int64) {
-	if err := s.repo.MarkCompleted(quest.Id, memberID); err != nil {
+	rows, err := s.repo.MarkCompleted(quest.Id, memberID)
+	if err != nil {
 		log.Printf("Error marking quest completed (quest=%d, member=%d): %v", quest.Id, memberID, err)
+		return
+	}
+	if rows == 0 {
+		// Уже completed (race лост), награды и уведомления не дублируем.
 		return
 	}
 

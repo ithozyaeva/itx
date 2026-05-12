@@ -75,36 +75,37 @@ func (r *ChatQuestRepository) GetQuestByID(id int64) (*models.ChatQuest, error) 
 	return &quest, err
 }
 
-// IncrementProgress увеличивает прогресс на 1, возвращает новый счётчик и признак завершения
+// IncrementProgress атомарно увеличивает прогресс на 1 и возвращает новый
+// счётчик. До этой правки последовательность First → ++ → Save теряла
+// инкременты при двух параллельных goroutines на одно сообщение (lost-update
+// под READ COMMITTED). Теперь UPSERT + RETURNING сериализуется самой БД.
+//
+// alreadyCompleted=true возвращается, если прогресс уже был помечен Completed
+// до инкремента — тогда новые инкременты не нужны, и newCount равен сохранённому.
 func (r *ChatQuestRepository) IncrementProgress(questID int64, memberID int64) (newCount int, targetCount int, alreadyCompleted bool, err error) {
-	// Проверяем, есть ли уже прогресс
-	var progress models.ChatQuestProgress
-	result := database.DB.Where("quest_id = ? AND member_id = ?", questID, memberID).First(&progress)
-
-	if result.Error != nil {
-		// Создаём новый прогресс
-		progress = models.ChatQuestProgress{
-			QuestID:      questID,
-			MemberID:     memberID,
-			CurrentCount: 1,
-		}
-		if err = database.DB.Create(&progress).Error; err != nil {
-			return
-		}
-		newCount = 1
-	} else {
-		if progress.Completed {
-			alreadyCompleted = true
-			newCount = progress.CurrentCount
-			return
-		}
-		// Инкрементируем
-		progress.CurrentCount++
-		if err = database.DB.Save(&progress).Error; err != nil {
-			return
-		}
-		newCount = progress.CurrentCount
+	var result struct {
+		CurrentCount int  `gorm:"column:current_count"`
+		Completed    bool `gorm:"column:completed"`
 	}
+	// INSERT … ON CONFLICT (quest_id, member_id) DO UPDATE: атомарный
+	// upsert, RETURNING отдаёт пост-операционные значения. completed
+	// сохраняем как есть (если уже true — current_count не меняется
+	// благодаря WHERE-фильтру в expression).
+	err = database.DB.Raw(`
+		INSERT INTO chat_quest_progress (quest_id, member_id, current_count, completed)
+		VALUES (?, ?, 1, FALSE)
+		ON CONFLICT (quest_id, member_id) DO UPDATE
+			SET current_count = CASE
+				WHEN chat_quest_progress.completed THEN chat_quest_progress.current_count
+				ELSE chat_quest_progress.current_count + 1
+			END
+		RETURNING current_count, completed
+	`, questID, memberID).Scan(&result).Error
+	if err != nil {
+		return
+	}
+	newCount = result.CurrentCount
+	alreadyCompleted = result.Completed
 
 	// Получаем target_count из квеста
 	var quest models.ChatQuest
@@ -115,15 +116,19 @@ func (r *ChatQuestRepository) IncrementProgress(questID int64, memberID int64) (
 	return
 }
 
-// MarkCompleted помечает квест выполненным для участника
-func (r *ChatQuestRepository) MarkCompleted(questID int64, memberID int64) error {
+// MarkCompleted помечает квест выполненным для участника. Возвращает
+// rowsAffected: 1 — переход FALSE→TRUE состоялся (caller обязан наградить
+// points), 0 — уже completed (две параллельные completeQuest гонки
+// натыкаются на этот guard, дабл-нагрды не происходит).
+func (r *ChatQuestRepository) MarkCompleted(questID int64, memberID int64) (int64, error) {
 	now := time.Now()
-	return database.DB.Model(&models.ChatQuestProgress{}).
-		Where("quest_id = ? AND member_id = ?", questID, memberID).
+	result := database.DB.Model(&models.ChatQuestProgress{}).
+		Where("quest_id = ? AND member_id = ? AND completed = ?", questID, memberID, false).
 		Updates(map[string]interface{}{
 			"completed":    true,
 			"completed_at": now,
-		}).Error
+		})
+	return result.RowsAffected, result.Error
 }
 
 // GetAllQuestsForMember возвращает все квесты (активные + завершённые) с прогрессом для участника

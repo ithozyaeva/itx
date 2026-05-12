@@ -28,17 +28,34 @@ func (r *ReferralCreditRepository) GetBalance(memberId int64) (int, error) {
 	return balance, err
 }
 
-// GetTotalEarned — сумма всех ПОЛОЖИТЕЛЬНЫХ community-начислений юзера за всю
-// историю. Не учитывает списания (subscription_purchase) и legacy
-// referal_conversion (рефералки на вакансии больше не дают кредитов, см.
-// миграцию 20260512000000_writeoff_referal_conversion_credits), чтобы
-// «Заработано всего» в рефкабинете совпадало с реальным вкладом community-
-// приглашений.
+// GetTotalEarned — «легитимные» community-кредиты, заработанные юзером
+// за всю историю. Формула:
+//
+//	(положительные начисления, кроме legacy referal_conversion)
+//	+ (отрицательные admin_manual записи — security_reset, writeoff и т.п.)
+//
+// Subscription_purchase (трата на подписку) НЕ учитывается — это покупка,
+// а не отъём кредитов. А вот admin_manual-корректировки (миграции
+// security_reset и referal_conversion_writeoff) уменьшают totalEarned,
+// чтобы признанные нелегитимными начисления не висели в «Заработано всего»
+// после обнуления баланса.
+//
+// Для юзера, у которого все credits пришли через баг и были сброшены:
+// positive = X, admin_manual_neg = -X → итог 0. Для легитимного earner:
+// positive = X, admin_manual_neg = 0 → итог X. Для смешанного случая:
+// positive = X, admin_manual_neg = -Y → X-Y (то, что осталось «легитимным»).
 func (r *ReferralCreditRepository) GetTotalEarned(memberId int64) (int, error) {
 	var total int
 	err := database.DB.Raw(
-		`SELECT COALESCE(SUM(amount), 0) FROM referral_credit_transactions
-		 WHERE member_id = ? AND amount > 0 AND reason != 'referal_conversion'`,
+		`SELECT COALESCE(SUM(
+		    CASE
+		        WHEN amount > 0 AND reason != 'referal_conversion' THEN amount
+		        WHEN amount < 0 AND reason = 'admin_manual' THEN amount
+		        ELSE 0
+		    END
+		), 0)
+		 FROM referral_credit_transactions
+		 WHERE member_id = ?`,
 		memberId,
 	).Scan(&total).Error
 	return total, err
@@ -82,9 +99,12 @@ func (r *ReferralCreditRepository) AwardIdempotent(tx *models.ReferralCreditTran
 // возвращает ID созданной transaction-записи (для idempotency-key
 // последующих наград, например AwardForReferralPurchase).
 //
-// Использует SELECT … FOR UPDATE по строкам member_id, чтобы между
-// проверкой баланса и INSERT'ом отрицательного списания не вклинилась
-// параллельная покупка с тем же балансом.
+// Сериализуем параллельные Spend'ы одного юзера через pg_advisory_xact_lock —
+// нельзя использовать SELECT … FOR UPDATE поверх SUM(amount), потому что
+// PostgreSQL отвергает «FOR UPDATE с агрегатной функцией» (parse-error,
+// до этой правки Spend всегда падал в проде с PR #347). Advisory-lock
+// дешевле, держится до конца внешней транзакции и не зависит от наличия
+// строк в referral_credit_transactions.
 //
 // Возвращает ErrInsufficientCredits, если баланс < amount, без записи
 // транзакции — вся внешняя БД-транзакция должна откатиться.
@@ -101,10 +121,14 @@ func (r *ReferralCreditRepository) Spend(
 		return 0, errors.New("spend amount must be positive")
 	}
 
+	if err := db.Exec(`SELECT pg_advisory_xact_lock(?)`, memberId).Error; err != nil {
+		return 0, err
+	}
+
 	var balance int
 	if err := db.Raw(
 		`SELECT COALESCE(SUM(amount), 0) FROM referral_credit_transactions
-		 WHERE member_id = ? FOR UPDATE`,
+		 WHERE member_id = ?`,
 		memberId,
 	).Scan(&balance).Error; err != nil {
 		return 0, err

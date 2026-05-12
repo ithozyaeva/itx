@@ -3,8 +3,7 @@ package handler
 import (
 	"io"
 	"log"
-	"mime"
-	"path/filepath"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -15,6 +14,18 @@ import (
 )
 
 const maxResumeSize = 10 * 1024 * 1024 // 10 MB
+
+// allowedResumeContentTypes — MIME-типы, которые DetectContentType реально
+// возвращает для PDF/DOC/DOCX. Расширения уже отрезаны в Upload, но без
+// валидации по содержимому атакующий мог положить .pdf-файл с произвольным
+// Content-Type (включая text/html для stored-content-spoofing через
+// presigned S3 URL).
+var allowedResumeContentTypes = map[string]bool{
+	"application/pdf":          true,
+	"application/msword":       true, // .doc
+	"application/octet-stream": true, // DetectContentType так возвращает для .docx — ZIP-контейнер
+	"application/zip":          true, // .docx — это zip, на некоторых стэках детектится как application/zip
+}
 
 type ResumeHandler struct {
 	svc       *service.ResumeService
@@ -57,13 +68,26 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Ошибка чтения файла")
 	}
 
-	contentType := fileHeader.Header.Get("Content-Type")
-	if contentType == "" {
-		if guessed := mime.TypeByExtension(filepath.Ext(fileHeader.Filename)); guessed != "" {
-			contentType = guessed
-		} else {
-			contentType = "application/octet-stream"
+	// Content-Type определяем по содержимому, не из клиентского заголовка —
+	// иначе атакующий мог положить text/html под видом resume.pdf, и
+	// браузер админа при открытии presigned S3 URL рендерил бы HTML inline
+	// (content-spoofing для phishing). Расширение проверяется ниже в
+	// сервисе (.pdf/.doc/.docx), но extension-check не защищает от
+	// произвольного Content-Type в multipart-форме.
+	detected := http.DetectContentType(data)
+	if !allowedResumeContentTypes[detected] {
+		// Для .doc/.docx старых форматов sniff иногда возвращает специфичные
+		// варианты — допускаем по совпадению префикса с msword/wordprocessingml.
+		if !strings.HasPrefix(detected, "application/vnd.openxmlformats") &&
+			!strings.HasPrefix(detected, "application/vnd.ms-word") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Допустимые форматы: pdf, doc, docx",
+			})
 		}
+	}
+	contentType := detected
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 
 	req := &models.CreateResumeRequest{
