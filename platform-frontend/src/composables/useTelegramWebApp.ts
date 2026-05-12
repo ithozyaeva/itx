@@ -58,17 +58,6 @@ export function isMiniApp(): boolean {
   return !!tg && typeof tg.initData === 'string' && tg.initData.length > 0
 }
 
-// syncViewportCssVar — копируем viewportStableHeight (или viewportHeight как
-// fallback) в CSS-переменную --tg-viewport-stable-height. Стабильная высота
-// — это viewport БЕЗ учёта клавиатуры/выезжающего header'а; полезно для
-// модалок и фиксированных оверлеев, которым 100dvh даёт прыгающую высоту.
-function syncViewportCssVar(tg: TelegramWebApp) {
-  const h = tg.viewportStableHeight ?? tg.viewportHeight
-  if (typeof h === 'number') {
-    document.documentElement.style.setProperty('--tg-viewport-stable-height', `${h}px`)
-  }
-}
-
 const RGB_RE = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i
 
 // rgbToHex — Telegram.setHeaderColor принимает только hex (#rrggbb), а
@@ -107,10 +96,13 @@ function syncTelegramColors(tg: TelegramWebApp) {
 // disableVerticalSwipes выключает свайп-вниз-чтобы-закрыть: внутри прило-
 // жения постоянно скроллят вертикально, и без этого юзер случайно гасит
 // miniapp на каждой второй прокрутке.
-// viewportChanged — слушаем изменения видимой области (клавиатура, ресайз
-// окна на desktop TG) и держим CSS-переменную в актуальном состоянии.
 // setHeaderColor/setBackgroundColor — синхронизируем с фоном приложения
 // сразу и при каждом изменении класса dark/light на <html>.
+//
+// TODO: переподключить viewportChanged → --tg-viewport-stable-height,
+// когда понадобится корректная высота модалок при выезде клавиатуры в
+// iOS Mini App (#354 завёл setter, но консьюмеров так и не написали —
+// модалки всё ещё на inset-0 / 100dvh).
 export function initTelegramWebApp() {
   const tg = getTelegramWebApp()
   if (!tg)
@@ -119,8 +111,6 @@ export function initTelegramWebApp() {
     tg.ready()
     tg.expand()
     tg.disableVerticalSwipes?.()
-    syncViewportCssVar(tg)
-    tg.onEvent?.('viewportChanged', () => syncViewportCssVar(tg))
     syncTelegramColors(tg)
     new MutationObserver(() => syncTelegramColors(tg))
       .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
