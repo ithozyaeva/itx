@@ -2,6 +2,7 @@
 import type { AIMaterial } from '@/models/aiMaterial'
 import { Check, Copy, ExternalLink } from 'lucide-vue-next'
 import { ref } from 'vue'
+import { openLink } from '@/composables/useTelegramWebApp'
 
 const props = defineProps<{ item: AIMaterial }>()
 
@@ -53,6 +54,7 @@ async function copyContent() {
       target="_blank"
       rel="noopener noreferrer"
       class="inline-flex items-center gap-2 rounded-sm border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors break-all"
+      @click.prevent="openLink(item.externalUrl)"
     >
       <ExternalLink class="h-4 w-4 shrink-0" />
       <span class="truncate">{{ item.externalUrl }}</span>

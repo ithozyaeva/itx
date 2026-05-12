@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Typography } from '@/components/ui/typography'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { formatShortDate } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
 import { resumeService } from '@/services/resume'
@@ -111,7 +112,7 @@ async function downloadResume(resume: Resume) {
       handleError(new Error('Ссылка для скачивания недоступна'))
       return
     }
-    window.open(data.url, '_blank')
+    openLink(data.url)
   }
   catch (error) {
     handleError(error)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ExternalLink, Play } from 'lucide-vue-next'
 import { ref } from 'vue'
+import { openLink } from '@/composables/useTelegramWebApp'
 
 interface Video {
   id: string
@@ -42,6 +43,7 @@ function formatDate(dateStr: string) {
         target="_blank"
         rel="noopener noreferrer"
         class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        @click.prevent="openLink('https://www.youtube.com/@joindev')"
       >
         YouTube канал
         <ExternalLink :size="14" />

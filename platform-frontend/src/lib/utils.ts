@@ -23,10 +23,15 @@ function escapeHtml(str: string): string {
 
 const RE_URL = /(https?:\/\/\S+)/g
 
+// data-external-link — маркер для глобального делегата клика в App.vue:
+// внутри Telegram Mini App клик уходит в openLink() → openTelegramLink/
+// openLink Telegram-клиента, и юзер не вываливается во внешний браузер.
+// В обычном браузере делегат не вмешивается — отрабатывает обычный
+// target="_blank".
 export function wrapLinks(text: string): string {
   const escaped = escapeHtml(text)
 
-  return escaped.replace(RE_URL, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" >$1</a>')
+  return escaped.replace(RE_URL, '<br /> <a href="$1" target="_blank" rel="noopener noreferrer" class="underline" data-external-link >$1</a>')
 }
 
 export const dateFormatter = new Intl.DateTimeFormat('ru-RU', {

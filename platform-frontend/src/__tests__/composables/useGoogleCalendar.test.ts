@@ -167,7 +167,7 @@ describe('useGoogleCalendar', () => {
   })
 
   describe('openInGoogleCalendar', () => {
-    it('calls window.open with the correct URL', () => {
+    it('opens the calendar URL via openLink (fallback to window.open в браузере)', () => {
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
       const { openInGoogleCalendar, buildGoogleCalendarUrl } = useGoogleCalendar()
       const event = createEvent()
@@ -175,7 +175,7 @@ describe('useGoogleCalendar', () => {
       openInGoogleCalendar(event, 90)
 
       const expectedUrl = buildGoogleCalendarUrl(event, 90)
-      expect(openSpy).toHaveBeenCalledWith(expectedUrl, '_blank')
+      expect(openSpy).toHaveBeenCalledWith(expectedUrl, '_blank', 'noopener,noreferrer')
 
       openSpy.mockRestore()
     })

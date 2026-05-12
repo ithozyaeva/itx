@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next'
-import { onBeforeMount, ref } from 'vue'
+import { onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue'
 import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import NpsWidget from '@/components/NpsWidget.vue'
 import ReferralWelcome from '@/components/ReferralWelcome.vue'
 import { Toaster } from '@/components/ui/toast'
 import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE, stopSSE } from '@/composables/useSSE'
-import { getTelegramWebApp, initTelegramWebApp, isMiniApp } from '@/composables/useTelegramWebApp'
+import { getTelegramWebApp, initTelegramWebApp, isMiniApp, openLink } from '@/composables/useTelegramWebApp'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { startProactiveRefresh, stopProactiveRefresh } from '@/services/api'
@@ -58,6 +58,29 @@ async function loginViaMiniApp(): Promise<boolean> {
     return false
   }
 }
+
+// Делегат клика для UGC-ссылок, отрендеренных через v-html в wrapLinks
+// (комментарии, описания мероприятий, отзывы и т.п.). Vue-уровень @click
+// поставить туда нельзя — innerHTML обходит реактивность. Внутри Mini App
+// уводим клик в openLink (openTelegramLink/openLink Telegram-клиента),
+// чтобы юзер не вываливался во внешний браузер. В обычном браузере
+// preventDefault + window.open сохраняет тот же UX, что target="_blank".
+function handleExternalLinkClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const link = target?.closest('a[data-external-link]') as HTMLAnchorElement | null
+  if (!link || !link.href)
+    return
+  event.preventDefault()
+  openLink(link.href)
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleExternalLinkClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleExternalLinkClick)
+})
 
 onBeforeMount(async () => {
   // Инициализация темы при запуске приложения
