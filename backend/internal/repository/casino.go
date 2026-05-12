@@ -21,6 +21,16 @@ func (r *CasinoRepository) PlaceBet(memberId int64, bet *models.CasinoBet, won b
 	var balance int
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// Сериализуем PlaceBet того же юзера через advisory-lock: без него
+		// два параллельных coin-flip/dice/wheel читают одинаковый SUM (READ
+		// COMMITTED), оба проходят balance-check и оба INSERT-ят debit
+		// (INSERT'ы не конфликтуют сериализуемо). Юзер мог уйти в минус
+		// при череде проигрышей или эффективно ставить 2× своего баланса
+		// в надежде на выигрыш.
+		if err := tx.Exec(`SELECT pg_advisory_xact_lock(?)`, memberId).Error; err != nil {
+			return err
+		}
+
 		// Check balance
 		if err := tx.Raw(
 			`SELECT COALESCE(SUM(amount), 0) FROM point_transactions WHERE member_id = ?`,
