@@ -1,5 +1,6 @@
 import type { TelegramUser } from '@/models/profile'
 import ky from 'ky'
+import { getTelegramWebApp } from '@/composables/useTelegramWebApp'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { handleError } from './errorService'
@@ -10,18 +11,40 @@ const localStorageToken = useToken()
 let isRefreshing = false
 let refreshPromise: Promise<{ token: string, user: TelegramUser }> | null = null
 
+function doMiniAppReauth(): Promise<{ token: string, user: TelegramUser }> {
+  const tg = getTelegramWebApp()
+  if (!tg || !tg.initData) {
+    return Promise.reject(new Error('Not in miniapp'))
+  }
+  return ky.post('/api/auth/telegram-webapp', {
+    json: { init_data: tg.initData },
+  }).json<{ token: string, user: TelegramUser }>()
+}
+
 function doRefresh(): Promise<{ token: string, user: TelegramUser }> {
   // Refresh опирается ТОЛЬКО на текущий X-Telegram-User-Token: знание
-  // Telegram-ID не должно давать продлить чужую сессию.
+  // Telegram-ID не должно давать продлить чужую сессию. Внутри miniapp
+  // на провал отката есть второй путь — initData всегда свежий и подписан
+  // bot-token'ом, поэтому Telegram-клиент может восстановить сессию без
+  // редиректа на лендинг и без тоста «Unauthorized» (раньше юзер видел его
+  // на полсекунды между неудачным refresh и тихим re-auth в App.vue).
   const token = localStorageToken.value
   if (!token) {
-    return Promise.reject(new Error('No token'))
+    return doMiniAppReauth()
   }
   return ky.post('/api/auth/telegram/refresh', {
     headers: {
       'X-Telegram-User-Token': token,
     },
-  }).json<{ token: string, user: TelegramUser }>()
+  }).json<{ token: string, user: TelegramUser }>().catch((refreshErr) => {
+    const tg = getTelegramWebApp()
+    if (tg && tg.initData) {
+      return doMiniAppReauth().catch(() => {
+        throw refreshErr
+      })
+    }
+    throw refreshErr
+  })
 }
 
 export const apiClient = ky.create({
