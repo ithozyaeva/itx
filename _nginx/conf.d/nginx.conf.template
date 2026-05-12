@@ -49,7 +49,12 @@ server {
     proxy_pass http://${BACKEND_CONTAINER}:3000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    client_max_body_size 10m;
+    # Должен совпадать с Fiber BodyLimit в backend/cmd/main.go (12 MB =
+    # 10 MB файл + накладные поля multipart). До PR #342 здесь и Fiber
+    # стояли по 4 MB, потом Fiber подняли до 12, а nginx остался 10 — на
+    # boundary-кейсе (картинка marketplace ~9.9 MB) nginx отдавал 413
+    # раньше, чем backend успевал отработать свою валидацию.
+    client_max_body_size 12m;
   }
 
   location / {
