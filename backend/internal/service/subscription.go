@@ -36,7 +36,6 @@ type NewChatAccessEvent struct {
 type SubscriptionService struct {
 	repo        *repository.SubscriptionRepository
 	creditsRepo *repository.ReferralCreditRepository
-	referalRepo *repository.ReferalLinkRepository
 	memberRepo  *repository.MemberRepository
 	creditsSvc  *ReferralCreditService
 	settings    *AppSettingsService
@@ -47,7 +46,6 @@ func NewSubscriptionService(redisClient *redis.Client) *SubscriptionService {
 	return &SubscriptionService{
 		repo:        repository.NewSubscriptionRepository(),
 		creditsRepo: repository.NewReferralCreditRepository(),
-		referalRepo: repository.NewReferalLinkRepository(),
 		memberRepo:  repository.NewMemberRepository(),
 		creditsSvc:  NewReferralCreditService(),
 		settings:    NewAppSettingsService(),
@@ -218,21 +216,20 @@ func (s *SubscriptionService) awardReferralRewardsFor(user *models.SubscriptionU
 	s.creditsSvc.AwardForRecurringPurchase(referrerID, refereeMemberID, *tier.PriceCents, period)
 }
 
-// findReferrerForMember — единая точка поиска инвайтера для credits-наград.
-// Приоритет:
-//  1. members.referred_by_member_id (community-программа, deeplink ref_<code>)
-//  2. Latest referral_conversions JOIN referal_links (legacy, по вакансии)
+// findReferrerForMember — единая точка поиска инвайтера для credits-наград
+// за покупку подписки реферала. Только строгая community-атрибуция через
+// members.referred_by_member_id (личный deeplink ref_<code> в боте).
 //
-// Возвращает 0 если ни одного источника не нашлось.
+// Legacy fallback на referral_conversions JOIN referal_links удалён: job-
+// referral ссылки на вакансии и community-программа — две разные продуктовые
+// сущности, и покупка подписки человеком, прошедшим когда-то по чужой job-
+// ссылке, не должна давать кредиты автору этой ссылки. См. также удалённый
+// AwardForConversion в PR #359 — это та же изоляция, в другой точке кода.
+//
+// Возвращает 0 если у юзера нет явного community-инвайтера.
 func (s *SubscriptionService) findReferrerForMember(memberID int64) int64 {
-	// Приоритет — community attribution.
 	if referredBy, err := s.memberRepo.GetReferredByMemberID(memberID); err == nil && referredBy != nil && *referredBy > 0 {
 		return *referredBy
-	}
-	// Fallback на старую schema по вакансиям.
-	id, err := s.referalRepo.GetReferrerForMember(memberID)
-	if err == nil && id > 0 {
-		return id
 	}
 	return 0
 }
