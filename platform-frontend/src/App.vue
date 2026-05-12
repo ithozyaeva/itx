@@ -83,15 +83,22 @@ onBeforeUnmount(() => {
 })
 
 onBeforeMount(async () => {
-  // Инициализация темы при запуске приложения
-  const savedTheme = localStorage.getItem('theme')
+  // Инициализация темы при запуске приложения — синхронно до createApp.mount
+  // продолжается отрисовка, чтобы не было FOUC. theme-toggle через
+  // useColorMode из @vueuse/core хранит выбор пользователя под ключом
+  // vueuse-color-scheme (light/dark/auto); раньше тут читали ключ 'theme',
+  // которого никто не пишет — bootstrap всегда падал в OS-fallback и при
+  // конфликте OS-предпочтения с сохранённым выбором юзера давал короткое
+  // мерцание темы при загрузке.
+  const savedScheme = localStorage.getItem('vueuse-color-scheme')
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const isDark = savedScheme === 'dark'
+    || ((savedScheme === null || savedScheme === 'auto') && prefersDark)
 
-  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  if (isDark)
     document.documentElement.classList.add('dark')
-  }
-  else {
+  else
     document.documentElement.classList.remove('dark')
-  }
 
   // Внутри Telegram сразу даём знать клиенту, что мы готовы (иначе чёрный
   // экран до первой отрисовки) и разворачиваемся на полный viewport.
