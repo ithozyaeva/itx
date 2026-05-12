@@ -58,16 +58,21 @@ export function isMiniApp(): boolean {
   return !!tg && typeof tg.initData === 'string' && tg.initData.length > 0
 }
 
-const RGB_RE = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i
+const RGB_RE = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\s*\)/i
 
 // rgbToHex — Telegram.setHeaderColor принимает только hex (#rrggbb), а
-// computed-style браузер отдаёт rgb(r, g, b). Конвертим. На неожиданных
-// форматах (transparent, hsl) возвращаем null — не вызываем сеттер.
+// computed-style браузер отдаёт rgb(r, g, b) или rgba(r, g, b, a). Если
+// alpha < 0.5 — body фактически прозрачный (бывает при первой отрисовке
+// до применения bg-background), считаем цвет неопределённым и возвращаем
+// null, иначе шлём в setHeaderColor #000000 и поверх светлой темы юзер
+// видит контрастную чёрную полосу.
 function rgbToHex(rgb: string): string | null {
   const m = RGB_RE.exec(rgb)
   if (!m)
     return null
-  const [, r, g, b] = m
+  const [, r, g, b, a] = m
+  if (a !== undefined && Number(a) < 0.5)
+    return null
   return `#${[r, g, b].map(n => Number(n).toString(16).padStart(2, '0')).join('')}`
 }
 
