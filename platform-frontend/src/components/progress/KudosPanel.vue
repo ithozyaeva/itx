@@ -246,7 +246,7 @@ onMounted(() => {
           <textarea
             v-model="message"
             required
-            class="w-full rounded-sm border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
+            class="w-full rounded-sm border border-border bg-background px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-20 resize-none"
             placeholder="За что вы хотите поблагодарить?"
           />
         </div>

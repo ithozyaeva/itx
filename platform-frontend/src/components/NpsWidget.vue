@@ -144,7 +144,7 @@ async function submit() {
               id="nps-comment"
               v-model="comment"
               rows="3"
-              class="w-full px-3 py-2 border border-input rounded-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full px-3 py-2 border border-input rounded-sm bg-transparent text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Что можно улучшить?"
             />
           </div>
