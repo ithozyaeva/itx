@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SubscriptionChatDetail } from '@/services/subscriptionService'
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import Loader2 from '~icons/lucide/loader-2'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -116,6 +116,15 @@ function fillForm(detail: SubscriptionChatDetail) {
 function handleClose() {
   emit('update:isOpen', false)
 }
+
+// Чистим pending debounce при unmount — иначе закрытие модалки за 500ms
+// до выстрела resolveChat-таймера всё равно отправляет запрос на сервер.
+onUnmounted(() => {
+  if (resolveTimeout) {
+    clearTimeout(resolveTimeout)
+    resolveTimeout = null
+  }
+})
 
 function toggleTier(tierId: number) {
   const idx = formTierIDs.value.indexOf(tierId)
