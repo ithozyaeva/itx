@@ -130,13 +130,19 @@ func main() {
 			ticker := time.NewTicker(24 * time.Hour)
 			defer ticker.Stop()
 
-			// При старте — если сегодня понедельник, запускаем сразу
-			if time.Now().UTC().Weekday() == time.Monday {
+			// Weekday сравниваем в МСК, иначе для контейнера, стартанувшего
+			// в окно 21:00–23:59 MSK, ticker фиксируется на этот же
+			// момент суток (UTC-вечер воскресенья = MSK-начало понедельника),
+			// и UTC().Weekday() возвращает Sunday — award пропускается
+			// на «настоящий» MSK-понедельник и срабатывает во вторник
+			// в восприятии юзера. Симметрично с birthday-checker (PR #341)
+			// и morning/evening push-ом ниже (nowMSK).
+			if time.Now().In(utils.MSKLocation()).Weekday() == time.Monday {
 				pointsSvc.AwardWeeklyChatter()
 			}
 
 			for range ticker.C {
-				if time.Now().UTC().Weekday() == time.Monday {
+				if time.Now().In(utils.MSKLocation()).Weekday() == time.Monday {
 					pointsSvc.AwardWeeklyChatter()
 				}
 			}
