@@ -72,15 +72,28 @@ func (s *AuthTokenService) CreateNewMember(user *models.Member, token string) (*
 	return createdUser, nil
 }
 
+// CreateOrUpdateToken создаёт новую запись auth_tokens либо продляет
+// существующую для данного telegramID. Возвращает результирующий токен
+// и любую ошибку Create/Update — раньше эти ошибки молча терялись
+// (возврат был always (authToken, nil) с authToken=pre-write значение),
+// и хендлеры (AuthenticateWebApp/HandleBotMessage/RefreshToken) на DB-сбое
+// отвечали юзеру 200 со свежим token-стрингом, который в БД не был
+// сохранён → следующий запрос middleware-401 → пользователь застревал
+// между «логин ок» и «токен невалиден».
 func (s *AuthTokenService) CreateOrUpdateToken(telegramID int64, token string) (*models.AuthToken, error) {
 	authToken, err := s.authRepo.GetByTelegramID(telegramID)
 	if err != nil {
-		s.authRepo.Create(&models.AuthToken{TelegramID: telegramID, Token: token, ExpiredAt: time.Now().AddDate(0, 1, 0)})
-	} else {
-		s.authRepo.Update(&models.AuthToken{ID: authToken.ID, TelegramID: telegramID, Token: token, ExpiredAt: time.Now().AddDate(0, 1, 0)})
+		created, cerr := s.authRepo.Create(&models.AuthToken{TelegramID: telegramID, Token: token, ExpiredAt: time.Now().AddDate(0, 1, 0)})
+		if cerr != nil {
+			return nil, cerr
+		}
+		return created, nil
 	}
-
-	return authToken, nil
+	updated, uerr := s.authRepo.Update(&models.AuthToken{ID: authToken.ID, TelegramID: telegramID, Token: token, ExpiredAt: time.Now().AddDate(0, 1, 0)})
+	if uerr != nil {
+		return nil, uerr
+	}
+	return updated, nil
 }
 
 func (s *AuthTokenService) GetTokenByTelegramID(telegramID int64) (*models.AuthToken, error) {

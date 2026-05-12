@@ -1,0 +1,9 @@
+iteration	category	target	delta	guard	status	description
+0	-	-	-	pass	baseline	0 errors (go vet/build/test, vue-tsc × 3, eslint × 3)
+1	bug	_nginx/conf.d/*.conf*	-1	pass	fixed	H1: client_max_body_size 10m → 12m (sync with Fiber)
+2	bug	handler/auth_token.go:184	-1	pass	fixed	H2: Authenticate проверяет expiry (logout-bypass)
+3	bug	cmd/main.go:134,139	-1	pass	fixed	M1: weekly chatter Weekday по MSK
+4	bug	repository/{feedback,kudos,chat_quest}.go + service/chat_quest.go	-1	pass	fixed	M2: дневные лимиты по MSK
+5	bug	service/auth_token.go:75-84	-1	pass	fixed	M3: CreateOrUpdateToken пробрасывает ошибки
+6	bug	service/safego.go (new) + 8 файлов	-1	pass	fixed	L1+L3+L4: SafeGo + конверсия 15 fire-and-forget goroutines (auth/bulk/events/marketplace/task_exchange/referal_link/bot)
+7	bug	admin-frontend/src/components/modals/*Modal.vue	-1	pass	fixed	L2: debounce timeouts onUnmounted cleanup

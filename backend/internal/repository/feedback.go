@@ -3,6 +3,7 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/utils"
 )
 
 type FeedbackRepository struct{}
@@ -17,8 +18,12 @@ func (r *FeedbackRepository) Create(feedback *models.Feedback) error {
 
 func (r *FeedbackRepository) CountTodayByMember(memberId int64) (int64, error) {
 	var count int64
+	// «Сегодня» считаем по МСК-полночи, а не по CURRENT_DATE (UTC session TZ):
+	// иначе дневной лимит сбрасывается в 03:00 MSK, а не в 00:00 как ожидает
+	// юзер. Симметрично с birthday-checker и daily_task (см. utils/msktime.go).
+	since := utils.MSKToday()
 	err := database.DB.Model(&models.Feedback{}).
-		Where("user_id = ? AND created_at >= CURRENT_DATE", memberId).
+		Where("user_id = ? AND created_at >= ?", memberId, since).
 		Count(&count).Error
 	return count, err
 }

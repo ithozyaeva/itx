@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Member } from '@/models/members'
 import type { Registry } from '@/models/registry'
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -72,6 +72,15 @@ function selectMember(member: Member) {
 function handleClose() {
   emit('update:isOpen', false)
 }
+
+// Чистим pending debounce при unmount — иначе закрытие модалки за 300ms
+// до выстрела таймера всё равно дёргает api.get(members) на сервере.
+onUnmounted(() => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+    searchTimeout = null
+  }
+})
 
 async function handleSubmit() {
   if (!selectedMemberId.value || amount.value <= 0)

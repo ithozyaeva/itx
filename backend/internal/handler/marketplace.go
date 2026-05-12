@@ -199,12 +199,12 @@ func (h *MarketplaceHandler) RequestPurchase(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Не удалось оформить заявку на покупку"})
 	}
 
-	go func() {
+	service.SafeGo("marketplace purchase notification", func() {
 		if err := CreateNotification(item.SellerId, "marketplace", "Новая заявка на покупку",
 			fmt.Sprintf("На ваше объявление «%s» поступила заявка на покупку", item.Title)); err != nil {
 			log.Printf("Error creating notification: %v", err)
 		}
-	}()
+	})
 
 	return c.JSON(item)
 }

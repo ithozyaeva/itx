@@ -1175,15 +1175,16 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 
 	b.sendMessage(message.Chat.ID, "Запуск полной проверки подписок...")
 
-	go func() {
+	chatID := message.Chat.ID
+	service.SafeGo("bot subcheckall", func() {
 		results := b.subscriptionService.PeriodicCheck(
 			b.botCheckFunc(),
 			b.createInviteLinkFunc(),
 			b.kickUserFunc(),
 			50*time.Millisecond,
 		)
-		b.sendPeriodicCheckReport(message.Chat.ID, "Полная проверка подписок", results)
-	}()
+		b.sendPeriodicCheckReport(chatID, "Полная проверка подписок", results)
+	})
 }
 
 // sendPeriodicCheckReport форматирует и шлёт админу сводку по результату
@@ -1312,10 +1313,11 @@ func (b *TelegramBot) handleSubMemberSweepCommand(message *tgbotapi.Message) {
 
 	b.sendMessage(message.Chat.ID, "Запуск sweep реального членства... это займёт несколько минут.")
 
-	go func() {
+	chatID := message.Chat.ID
+	service.SafeGo("bot member-sweep", func() {
 		stats, err := b.subscriptionService.SweepRealMembership(b.uncachedCheckFunc(), 50*time.Millisecond)
 		if err != nil {
-			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Sweep упал: %v", err))
+			b.SendDirectMessage(chatID, fmt.Sprintf("Sweep упал: %v", err))
 			return
 		}
 		failedNote := ""
@@ -1323,7 +1325,7 @@ func (b *TelegramBot) handleSubMemberSweepCommand(message *tgbotapi.Message) {
 			failedNote = fmt.Sprintf("\n⚠️ Упало getChatMember: %d (см. логи — обычно rate-limit или бот без прав)",
 				stats.ChecksFailed)
 		}
-		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
+		b.SendDirectMessage(chatID, fmt.Sprintf(
 			"<b>Sweep завершён</b>\n\n"+
 				"Просканировано юзеров: %d\n"+
 				"Заведено новых в subscription_users: %d\n"+
@@ -1333,7 +1335,7 @@ func (b *TelegramBot) handleSubMemberSweepCommand(message *tgbotapi.Message) {
 			stats.UsersScanned, stats.UsersCreated, stats.ChecksPerformed,
 			stats.AccessGranted, stats.AccessRevoked, failedNote,
 		))
-	}()
+	})
 }
 
 // handleSubKickDryCommand — прогон PeriodicCheck в режиме «без действий».
@@ -1347,10 +1349,11 @@ func (b *TelegramBot) handleSubKickDryCommand(message *tgbotapi.Message) {
 
 	b.sendMessage(message.Chat.ID, "Запуск dry-run проверки... ничего реально не кикается.")
 
-	go func() {
+	chatID := message.Chat.ID
+	service.SafeGo("bot kick-dry-run", func() {
 		results, err := b.subscriptionService.DryRunPeriodicCheck(b.uncachedCheckFunc(), 50*time.Millisecond)
 		if err != nil {
-			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf("Dry-run упал: %v", err))
+			b.SendDirectMessage(chatID, fmt.Sprintf("Dry-run упал: %v", err))
 			return
 		}
 
@@ -1404,14 +1407,14 @@ func (b *TelegramBot) handleSubKickDryCommand(message *tgbotapi.Message) {
 		body := strings.Join(lines, "\n\n")
 		const maxLen = 3500
 		if len(body) <= maxLen {
-			b.SendDirectMessage(message.Chat.ID, header+body)
+			b.SendDirectMessage(chatID, header+body)
 			return
 		}
-		b.SendDirectMessage(message.Chat.ID, header+"(полный отчёт ниже частями)")
+		b.SendDirectMessage(chatID, header+"(полный отчёт ниже частями)")
 		var buf strings.Builder
 		for _, l := range lines {
 			if buf.Len()+len(l)+2 > maxLen {
-				b.SendDirectMessage(message.Chat.ID, buf.String())
+				b.SendDirectMessage(chatID, buf.String())
 				buf.Reset()
 			}
 			if buf.Len() > 0 {
@@ -1420,9 +1423,9 @@ func (b *TelegramBot) handleSubKickDryCommand(message *tgbotapi.Message) {
 			buf.WriteString(l)
 		}
 		if buf.Len() > 0 {
-			b.SendDirectMessage(message.Chat.ID, buf.String())
+			b.SendDirectMessage(chatID, buf.String())
 		}
-	}()
+	})
 }
 
 func (b *TelegramBot) handleSubStatsCommand(message *tgbotapi.Message) {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"ithozyeva/internal/models"
 	"ithozyeva/internal/repository"
+	"ithozyeva/internal/utils"
 	"log"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -78,7 +78,11 @@ func (s *ChatQuestService) processMessageCount(quest models.ChatQuest, memberID 
 
 // processDailyStreak обрабатывает квест типа daily_streak
 func (s *ChatQuestService) processDailyStreak(quest models.ChatQuest, memberID int64) {
-	today := time.Now().Truncate(24 * time.Hour)
+	// «Сегодня» — МСК-полночь, иначе активность юзера в 02:00 MSK
+	// (= 23:00 UTC прошлого дня) запишется в streak за «вчерашний» MSK-день,
+	// а GetCurrentStreak (репо) сравнивает с MSK-today — streak ломается
+	// в окне 00:00–03:00 MSK.
+	today := utils.MSKToday()
 
 	// Записываем день активности
 	if err := s.repo.RecordStreakDay(quest.Id, memberID, today); err != nil {

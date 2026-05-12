@@ -232,7 +232,7 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 	// Отправляем инициализирующие алерты в фоне.
 	// При APP_MODE=api бот в этом процессе nil — алерт отправит бот на NL
 	// по флагу initial_alerts_sent_at через свой шедулер.
-	go func() {
+	service.SafeGo("event create initial alerts", func() {
 		telegramBot := bot.GetGlobalBot()
 		if telegramBot == nil {
 			log.Printf("Telegram bot is not initialized, skipping alerts for event %d", result.Id)
@@ -249,7 +249,7 @@ func (h *EventsHandler) Create(c *fiber.Ctx) error {
 			Update("initial_alerts_sent_at", now).Error; err != nil {
 			log.Printf("Error marking initial_alerts_sent_at for event %d: %v", result.Id, err)
 		}
-	}()
+	})
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionCreate, "event", result.Id, result.Title)
 
@@ -281,7 +281,7 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 	}
 
 	// Отправляем уведомления об изменении события в фоне
-	go func() {
+	service.SafeGo("event update alerts", func() {
 		telegramBot := bot.GetGlobalBot()
 		if telegramBot == nil {
 			log.Printf("Telegram bot is not initialized, skipping update alerts for event %d", result.Id)
@@ -292,7 +292,7 @@ func (h *EventsHandler) Update(c *fiber.Ctx) error {
 		} else {
 			log.Printf("Successfully sent update alerts for event %d to all subscribed members", result.Id)
 		}
-	}()
+	})
 
 	go h.auditSvc.Log(getActorId(c), getActorName(c), getActorType(c), models.AuditActionUpdate, "event", result.Id, result.Title)
 
@@ -320,7 +320,7 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	// Send notifications after delete using pre-snapshotted member IDs
-	go func() {
+	service.SafeGo("event cancel alerts", func() {
 		telegramBot := bot.GetGlobalBot()
 		if telegramBot == nil {
 			log.Printf("Telegram bot is not initialized, skipping cancel alerts for event %d", entity.Id)
@@ -329,7 +329,7 @@ func (h *EventsHandler) Delete(c *fiber.Ctx) error {
 		if err := telegramBot.SendEventCancelAlert(entity); err != nil {
 			log.Printf("Error sending event cancel alerts: %v", err)
 		}
-	}()
+	})
 
 	notifBody := fmt.Sprintf("Событие \"%s\" было отменено.", entity.Title)
 	go CreateNotificationsForMembers(memberIds, "event_cancel", "Событие отменено", notifBody)

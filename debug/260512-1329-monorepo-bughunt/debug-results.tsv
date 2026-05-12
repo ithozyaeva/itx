@@ -1,0 +1,27 @@
+iteration	type	hypothesis	result	severity	location	description
+1	scan	go vet ./...	clean	-	backend	0 signals
+2	scan	go build ./...	clean	-	backend	0 signals
+3	scan	vue-tsc --noEmit × 3	clean	-	platform/admin/landing	0 errors
+4	scan	eslint × 3	clean	-	platform/admin/landing	0 errors
+5	hypothesis	nginx body_size mismatch with backend BodyLimit	confirmed	HIGH	_nginx/conf.d/nginx.conf.template:52	10m nginx < 12MB backend, marketplace 10MB+form blocked
+6	hypothesis	Authenticate() no expiry check after Logout	confirmed	HIGH	handler/auth_token.go:184-213	Logout-bypass UX, expired token re-issued
+7	hypothesis	UTC().Weekday() for weekly award	confirmed	MEDIUM	cmd/main.go:134,139	off-by-day for MSK midnight ticker drift
+8	hypothesis	CURRENT_DATE (UTC) for daily limits	confirmed	MEDIUM	repository/feedback.go:21 + kudos/chat_quest/chat_activity	3h MSK skew
+9	hypothesis	CreateOrUpdateToken swallows DB errors	confirmed	MEDIUM	service/auth_token.go:75-84	silent ghost-token under DB flap
+10	hypothesis	Authenticate goroutine race on user.Roles	confirmed	LOW	handler/auth_token.go:192-204	JSON-serialize race + no recover
+11	hypothesis	admin modal debounce timeouts not cleared	confirmed	LOW	admin-frontend/src/components/modals/*Modal.vue	wasted API calls post-close
+12	hypothesis	bot admin-command goroutines no recover	confirmed	LOW	bot/subscription.go:1178,1315,1350	panic kills bot process
+13	hypothesis	handler fire-and-forget goroutines no recover	confirmed	LOW	handler/{auth_token,bulk,events,marketplace,task_exchange,referal_link}.go	systemic, 15+ sites
+14	hypothesis	SSE Publish send-on-closed	disproven	-	-	PR #341 already fixed
+15	hypothesis	target=_blank without openLink in Mini App	disproven	-	-	PR #355 added @click.prevent + global delegate
+16	hypothesis	casino dice over off-by-one	disproven	-	-	PR #341 fixed (roll >= target)
+17	hypothesis	roles slice override	disproven	-	-	PR #341 fixed via mergeSubscriptionRole
+18	hypothesis	self-referral abuse	disproven	-	-	PR #342 fixed (authorId == member.id check)
+19	hypothesis	avatar S3 path with TG ID	disproven	-	-	PR #342 fixed (UUID keys + backfill)
+20	hypothesis	username takeover via PATCH /me	disproven	-	-	PR #342 fixed (UNIQUE index + claim semantics)
+21	hypothesis	Telegram initData HMAC bypass	disproven	-	-	implementation correct, subtle.ConstantTimeCompare + maxAge
+22	hypothesis	admin-frontend privilege escalation	disproven	-	-	PR #342 fixed (ensureAdminAccess)
+23	hypothesis	landing addEventListener leaks	disproven	-	-	all 6 sites have onUnmounted cleanup
+24	hypothesis	subscription tier purchase atomicity	disproven	-	-	single DB.Transaction + Spend FOR UPDATE
+25	hypothesis	raffle BuyTickets double-spend	disproven	-	-	transactional + UNIQUE constraints
+26	hypothesis	bot HandleBotMessage shared-secret timing leak	disproven	-	-	subtle.ConstantTimeCompare in place
