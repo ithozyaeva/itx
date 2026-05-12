@@ -189,6 +189,19 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 		})
 	}
 
+	// Истёкший токен не должен здесь выпускать новую сессию: иначе
+	// серверный /logout (который двигает expired_at в прошлое — см. PR
+	// #341) обходится повторным открытием старой бот-ссылки `?token=T`.
+	// До этой проверки Authenticate отвечал 200 с тем же expired T в
+	// X-Telegram-User-Token, а middleware затем бил 401 на следующий /me —
+	// фронт мерцал «логин ок → сессия истекла». Симметрично с
+	// RefreshToken (ниже) и middleware.RequireTGAuth.
+	if utils.CheckExpirationDate(existingToken.ExpiredAt) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid token",
+		})
+	}
+
 	go func(user *models.Member) {
 		isSubscriber, err := bot.CheckUserInChat(user.TelegramID)
 		if err != nil {
