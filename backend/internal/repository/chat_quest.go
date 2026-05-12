@@ -3,6 +3,7 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/utils"
 	"time"
 )
 
@@ -181,9 +182,13 @@ func (r *ChatQuestRepository) RecordStreakDay(questID int64, memberID int64, day
 	`, questID, memberID, day.Format("2006-01-02")).Error
 }
 
-// GetCurrentStreak считает текущую серию последовательных дней от сегодня назад
+// GetCurrentStreak считает текущую серию последовательных дней от сегодня назад.
+// «Сегодня» — МСК-сегодня (см. service/chat_quest.go processDailyStreak,
+// который пишет день через utils.MSKToday()), иначе сравнение day = CURRENT_DATE
+// расходится с MSK-днём, записанным на write-стороне, в окне 00:00–03:00 MSK.
 func (r *ChatQuestRepository) GetCurrentStreak(questID int64, memberID int64) (int, error) {
 	var streak int
+	mskToday := utils.MSKToday().Format("2006-01-02")
 	err := database.DB.Raw(`
 		WITH days AS (
 			SELECT day, ROW_NUMBER() OVER (ORDER BY day DESC) as rn
@@ -192,8 +197,8 @@ func (r *ChatQuestRepository) GetCurrentStreak(questID int64, memberID int64) (i
 			ORDER BY day DESC
 		)
 		SELECT COUNT(*) FROM days
-		WHERE day = CURRENT_DATE - (rn - 1) * INTERVAL '1 day'
-	`, questID, memberID).Scan(&streak).Error
+		WHERE day = ?::date - (rn - 1) * INTERVAL '1 day'
+	`, questID, memberID, mskToday).Scan(&streak).Error
 	return streak, err
 }
 

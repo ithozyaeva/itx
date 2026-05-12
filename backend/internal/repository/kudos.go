@@ -3,6 +3,7 @@ package repository
 import (
 	"ithozyeva/database"
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/utils"
 )
 
 type KudosRepository struct{}
@@ -40,8 +41,10 @@ func (r *KudosRepository) GetRecent(limit, offset int) ([]models.KudosPublic, in
 
 func (r *KudosRepository) CountTodayByFrom(fromId int64) (int64, error) {
 	var count int64
+	// МСК-сегодня — см. комментарий в feedback.go.CountTodayByMember.
+	since := utils.MSKToday()
 	err := database.DB.Model(&models.Kudos{}).
-		Where("from_id = ? AND created_at >= CURRENT_DATE", fromId).
+		Where("from_id = ? AND created_at >= ?", fromId, since).
 		Count(&count).Error
 	return count, err
 }
