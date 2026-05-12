@@ -82,9 +82,12 @@ func (r *ReferralCreditRepository) AwardIdempotent(tx *models.ReferralCreditTran
 // возвращает ID созданной transaction-записи (для idempotency-key
 // последующих наград, например AwardForReferralPurchase).
 //
-// Использует SELECT … FOR UPDATE по строкам member_id, чтобы между
-// проверкой баланса и INSERT'ом отрицательного списания не вклинилась
-// параллельная покупка с тем же балансом.
+// Сериализуем параллельные Spend'ы одного юзера через pg_advisory_xact_lock —
+// нельзя использовать SELECT … FOR UPDATE поверх SUM(amount), потому что
+// PostgreSQL отвергает «FOR UPDATE с агрегатной функцией» (parse-error,
+// до этой правки Spend всегда падал в проде с PR #347). Advisory-lock
+// дешевле, держится до конца внешней транзакции и не зависит от наличия
+// строк в referral_credit_transactions.
 //
 // Возвращает ErrInsufficientCredits, если баланс < amount, без записи
 // транзакции — вся внешняя БД-транзакция должна откатиться.
@@ -101,10 +104,14 @@ func (r *ReferralCreditRepository) Spend(
 		return 0, errors.New("spend amount must be positive")
 	}
 
+	if err := db.Exec(`SELECT pg_advisory_xact_lock(?)`, memberId).Error; err != nil {
+		return 0, err
+	}
+
 	var balance int
 	if err := db.Raw(
 		`SELECT COALESCE(SUM(amount), 0) FROM referral_credit_transactions
-		 WHERE member_id = ? FOR UPDATE`,
+		 WHERE member_id = ?`,
 		memberId,
 	).Scan(&balance).Error; err != nil {
 		return 0, err
