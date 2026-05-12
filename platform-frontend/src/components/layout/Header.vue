@@ -4,6 +4,7 @@ import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import ThemeToggle from '@/components/ui/theme-toggle.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { stopSSE } from '@/composables/useSSE'
+import { getTelegramWebApp, isMiniApp } from '@/composables/useTelegramWebApp'
 import { useUser } from '@/composables/useUser'
 import { stopProactiveRefresh } from '@/services/api'
 import { authService } from '@/services/auth'
@@ -14,11 +15,19 @@ const { toggleSidebar } = useSidebar()
 // authService.logout инвалидирует токен серверно; stopSSE/stopProactiveRefresh
 // гасят фоновые соединения, чтобы не дёргали мёртвый токен в окно между
 // инвалидацией и навигацией на лендинг.
+// Внутри Mini App навигация на '/' триггерит auto-relogin: App.vue видит
+// insideMiniApp + !tg_token и молча обменивает (всё ещё валидный) initData
+// на новый токен — кнопка «Выйти» становится no-op. В Mini App закрываем
+// окно через tg.close(); из браузера — редирект на лендинг как раньше.
 async function logout() {
   stopProactiveRefresh()
   stopSSE()
   await authService.logout()
   user.value = null
+  if (isMiniApp()) {
+    getTelegramWebApp()?.close?.()
+    return
+  }
   window.location.pathname = '/'
 }
 </script>
