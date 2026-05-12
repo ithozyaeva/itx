@@ -234,7 +234,7 @@ defineExpose({ refresh: () => fetchComments(false) })
       <textarea
         v-model="newBody"
         :maxlength="COMMENT_MAX_LEN"
-        class="w-full bg-transparent text-sm focus:outline-none resize-none min-h-16"
+        class="w-full bg-transparent text-base sm:text-sm focus:outline-none resize-none min-h-16"
         placeholder="Поделитесь мнением, спросите автора, оставьте свой опыт..."
       />
       <div class="flex items-center justify-between">
@@ -354,7 +354,7 @@ defineExpose({ refresh: () => fetchComments(false) })
           <textarea
             v-model="editingBody"
             :maxlength="COMMENT_MAX_LEN"
-            class="w-full rounded-sm border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
+            class="w-full rounded-sm border border-border bg-background px-2 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-16 resize-none"
           />
           <div class="flex items-center gap-2">
             <button

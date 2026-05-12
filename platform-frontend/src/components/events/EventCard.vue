@@ -9,6 +9,7 @@ import { Typography } from '@/components/ui/typography'
 import { useDictionary } from '@/composables/useDictionary'
 import { getNextOccurrenceDate } from '@/composables/useEventOccurrence'
 import { useGoogleCalendar } from '@/composables/useGoogleCalendar'
+import { openLink } from '@/composables/useTelegramWebApp'
 import { useUser } from '@/composables/useUser'
 import { dateFormatter, wrapLinks } from '@/lib/utils'
 import { handleError } from '@/services/errorService'
@@ -260,13 +261,25 @@ const { openInGoogleCalendar } = useGoogleCalendar()
     <!-- Video/recording links -->
     <div v-if="event.videoLink" class="flex items-center gap-2 text-sm">
       <span class="shrink-0">Трансляция:</span>
-      <a :href="event.videoLink" target="_blank" rel="noopener noreferrer" class="underline break-all line-clamp-1">
+      <a
+        :href="event.videoLink"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline break-all line-clamp-1"
+        @click.prevent="openLink(event.videoLink!)"
+      >
         {{ event.videoLink }}
       </a>
     </div>
     <div v-if="event.recordingUrl" class="flex items-center gap-2 text-sm">
       <span class="shrink-0">Запись:</span>
-      <a :href="event.recordingUrl" target="_blank" rel="noopener noreferrer" class="underline break-all text-accent line-clamp-1">
+      <a
+        :href="event.recordingUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline break-all text-accent line-clamp-1"
+        @click.prevent="openLink(event.recordingUrl!)"
+      >
         {{ event.recordingUrl }}
       </a>
     </div>

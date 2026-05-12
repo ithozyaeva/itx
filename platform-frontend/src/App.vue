@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next'
-import { onBeforeMount, ref } from 'vue'
+import { onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue'
 import OnboardingOverlay from '@/components/common/OnboardingOverlay.vue'
 import NpsWidget from '@/components/NpsWidget.vue'
 import ReferralWelcome from '@/components/ReferralWelcome.vue'
 import { Toaster } from '@/components/ui/toast'
 import { useOnboarding } from '@/composables/useOnboarding'
 import { startSSE, stopSSE } from '@/composables/useSSE'
-import { getTelegramWebApp, initTelegramWebApp, isMiniApp } from '@/composables/useTelegramWebApp'
+import { getTelegramWebApp, initTelegramWebApp, isMiniApp, openLink } from '@/composables/useTelegramWebApp'
 import { useToken } from '@/composables/useToken'
 import { useUser } from '@/composables/useUser'
 import { startProactiveRefresh, stopProactiveRefresh } from '@/services/api'
@@ -59,16 +59,46 @@ async function loginViaMiniApp(): Promise<boolean> {
   }
 }
 
-onBeforeMount(async () => {
-  // Инициализация темы при запуске приложения
-  const savedTheme = localStorage.getItem('theme')
+// Делегат клика для UGC-ссылок, отрендеренных через v-html в wrapLinks
+// (комментарии, описания мероприятий, отзывы и т.п.). Vue-уровень @click
+// поставить туда нельзя — innerHTML обходит реактивность. Внутри Mini App
+// уводим клик в openLink (openTelegramLink/openLink Telegram-клиента),
+// чтобы юзер не вываливался во внешний браузер. В обычном браузере
+// preventDefault + window.open сохраняет тот же UX, что target="_blank".
+function handleExternalLinkClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const link = target?.closest('a[data-external-link]') as HTMLAnchorElement | null
+  if (!link || !link.href)
+    return
+  event.preventDefault()
+  openLink(link.href)
+}
 
-  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+onMounted(() => {
+  document.addEventListener('click', handleExternalLinkClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleExternalLinkClick)
+})
+
+onBeforeMount(async () => {
+  // Инициализация темы при запуске приложения — синхронно до createApp.mount
+  // продолжается отрисовка, чтобы не было FOUC. theme-toggle через
+  // useColorMode из @vueuse/core хранит выбор пользователя под ключом
+  // vueuse-color-scheme (light/dark/auto); раньше тут читали ключ 'theme',
+  // которого никто не пишет — bootstrap всегда падал в OS-fallback и при
+  // конфликте OS-предпочтения с сохранённым выбором юзера давал короткое
+  // мерцание темы при загрузке.
+  const savedScheme = localStorage.getItem('vueuse-color-scheme')
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const isDark = savedScheme === 'dark'
+    || ((savedScheme === null || savedScheme === 'auto') && prefersDark)
+
+  if (isDark)
     document.documentElement.classList.add('dark')
-  }
-  else {
+  else
     document.documentElement.classList.remove('dark')
-  }
 
   // Внутри Telegram сразу даём знать клиенту, что мы готовы (иначе чёрный
   // экран до первой отрисовки) и разворачиваемся на полный viewport.
@@ -153,7 +183,7 @@ onBeforeMount(async () => {
 <template>
   <Toaster />
   <OnboardingOverlay />
-  <div v-if="sessionExpired" class="min-h-screen flex items-center justify-center px-6">
+  <div v-if="sessionExpired" class="min-h-[calc(100dvh-var(--safe-y))] flex items-center justify-center px-6">
     <div class="max-w-md w-full text-center space-y-6">
       <h1 class="text-2xl font-semibold">
         Сессия истекла
@@ -174,11 +204,11 @@ onBeforeMount(async () => {
       </div>
     </div>
   </div>
-  <div v-else-if="isLoading" class="min-h-[100dvh] flex items-center justify-center" aria-live="polite" aria-busy="true">
+  <div v-else-if="isLoading" class="min-h-[calc(100dvh-var(--safe-y))] flex items-center justify-center" aria-live="polite" aria-busy="true">
     <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     <span class="sr-only">Загрузка…</span>
   </div>
-  <div v-else class="min-h-screen flex flex-col">
+  <div v-else class="min-h-[calc(100dvh-var(--safe-y))] flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">
         <Transition name="page-fade" mode="out-in">

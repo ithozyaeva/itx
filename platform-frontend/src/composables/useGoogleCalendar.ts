@@ -1,4 +1,5 @@
 import type { CommunityEvent } from '@/models/event'
+import { openLink } from '@/composables/useTelegramWebApp'
 
 const RE_DATE_SEPARATORS = /[-:]/g
 
@@ -43,7 +44,7 @@ export function useGoogleCalendar() {
 
   const openInGoogleCalendar = (event: CommunityEvent, durationMinutes: number = 60) => {
     const link = buildGoogleCalendarUrl(event, durationMinutes)
-    window.open(link, '_blank')
+    openLink(link)
   }
 
   return {
