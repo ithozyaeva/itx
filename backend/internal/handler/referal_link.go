@@ -167,14 +167,15 @@ func (h *ReferalLinkHandler) TrackConversion(c *fiber.Ctx) error {
 	// Начисляем реферальные кредиты автору ссылки за конверсию и отправляем
 	// уведомление. Игровые points за конверсию больше не начисляем — вместо
 	// них юзер получает credits, которые тратятся на покупку подписки.
-	go func(authorID, linkID int64) {
+	authorID, linkID := link.AuthorId, req.ReferralLinkId
+	service.SafeGo("referral conversion award", func() {
 		if authorID == 0 {
 			return
 		}
 		h.creditsSvc.AwardForConversion(authorID, linkID)
 		CreateNotification(authorID, "referal_conversion", "Конверсия реферала", "По вашей реферальной ссылке произошла конверсия")
 		service.TrackChallengeMetric(authorID, "referal_conversions", 1)
-	}(link.AuthorId, req.ReferralLinkId)
+	})
 
 	return c.SendStatus(fiber.StatusOK)
 }

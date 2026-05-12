@@ -223,12 +223,12 @@ func (h *TaskExchangeHandler) MarkDone(c *fiber.Ctx) error {
 	}
 
 	// Notify creator that task is done
-	go func() {
+	service.SafeGo("task markDone notification", func() {
 		if err := CreateNotification(task.CreatorId, "task", "Задание выполнено",
 			fmt.Sprintf("Задание «%s» помечено как выполненное и ожидает проверки", task.Title)); err != nil {
 			log.Printf("Error creating notification: %v", err)
 		}
-	}()
+	})
 
 	BroadcastEvent("tasks")
 	return c.JSON(task)
@@ -247,7 +247,7 @@ func (h *TaskExchangeHandler) Approve(c *fiber.Ctx) error {
 	}
 
 	// Award points
-	go func() {
+	service.SafeGo("task approve award", func() {
 		h.pointSvc.GiveForAction(task.CreatorId, models.PointReasonTaskCreate, "task_exchange", task.Id,
 			fmt.Sprintf("Создание задания: %s", task.Title))
 
@@ -266,7 +266,7 @@ func (h *TaskExchangeHandler) Approve(c *fiber.Ctx) error {
 			fmt.Sprintf("Задание «%s» одобрено! Вам начислено %d баллов", task.Title, models.PointValues[models.PointReasonTaskCreate])); err != nil {
 			log.Printf("Error creating notification: %v", err)
 		}
-	}()
+	})
 
 	BroadcastEvent("tasks")
 	return c.JSON(task)
@@ -292,14 +292,14 @@ func (h *TaskExchangeHandler) Reject(c *fiber.Ctx) error {
 	}
 
 	// Notify assignees about rejection
-	go func() {
+	service.SafeGo("task reject notifications", func() {
 		for _, assignee := range assignees {
 			if err := CreateNotification(assignee.Id, "task", "Задание отклонено",
 				fmt.Sprintf("Выполнение задания «%s» отклонено. Задание возвращено в открытые", task.Title)); err != nil {
 				log.Printf("Error creating notification: %v", err)
 			}
 		}
-	}()
+	})
 
 	BroadcastEvent("tasks")
 	return c.JSON(task)

@@ -202,19 +202,29 @@ func (h *TelegramAuthHandler) Authenticate(c *fiber.Ctx) error {
 		})
 	}
 
-	go func(user *models.Member) {
-		isSubscriber, err := bot.CheckUserInChat(user.TelegramID)
+	// Передаём в goroutine deep-copy member'а, а не указатель на existingUser,
+	// который сейчас параллельно сериализуется JSON-енкодером в ответ. До
+	// фикса было `func(user *models.Member)` с прямой мутацией user.Roles —
+	// гонка по полю под -race: сериализация могла поймать частичный slice
+	// или dirty state в момент realloc.
+	//
+	// SafeGo дополнительно ловит panic из bot.CheckUserInChat / Update —
+	// раньше любой nil-deref в этих ветках валил весь backend-процесс.
+	userCopy := *existingUser
+	userCopy.Roles = append([]models.Role(nil), existingUser.Roles...)
+	service.SafeGo("auth role-sync", func() {
+		isSubscriber, err := bot.CheckUserInChat(userCopy.TelegramID)
 		if err != nil {
-			log.Printf("failed to check user %d in chat (skipping role update): %v", user.TelegramID, err)
+			log.Printf("failed to check user %d in chat (skipping role update): %v", userCopy.TelegramID, err)
 			return
 		}
-		newRoles, changed := mergeSubscriptionRole(user.Roles, isSubscriber)
+		newRoles, changed := mergeSubscriptionRole(userCopy.Roles, isSubscriber)
 		if !changed {
 			return
 		}
-		user.Roles = newRoles
-		h.memberService.Update(user)
-	}(existingUser)
+		userCopy.Roles = newRoles
+		h.memberService.Update(&userCopy)
+	})
 
 	// Добавляем заголовок
 	c.Response().Header.Add("X-Telegram-User-Token", existingToken.Token)
