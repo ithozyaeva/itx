@@ -153,7 +153,7 @@ onBeforeMount(async () => {
 <template>
   <Toaster />
   <OnboardingOverlay />
-  <div v-if="sessionExpired" class="min-h-screen flex items-center justify-center px-6">
+  <div v-if="sessionExpired" class="min-h-[calc(100dvh-var(--safe-y))] flex items-center justify-center px-6">
     <div class="max-w-md w-full text-center space-y-6">
       <h1 class="text-2xl font-semibold">
         Сессия истекла
@@ -174,11 +174,11 @@ onBeforeMount(async () => {
       </div>
     </div>
   </div>
-  <div v-else-if="isLoading" class="min-h-[100dvh] flex items-center justify-center" aria-live="polite" aria-busy="true">
+  <div v-else-if="isLoading" class="min-h-[calc(100dvh-var(--safe-y))] flex items-center justify-center" aria-live="polite" aria-busy="true">
     <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     <span class="sr-only">Загрузка…</span>
   </div>
-  <div v-else class="min-h-screen flex flex-col">
+  <div v-else class="min-h-[calc(100dvh-var(--safe-y))] flex flex-col">
     <Layout>
       <router-view v-if="tg_user" v-slot="{ Component }">
         <Transition name="page-fade" mode="out-in">

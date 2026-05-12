@@ -6,6 +6,11 @@
 
 @layer base {
   :root {
+    /* Сумма верхнего и нижнего safe-area insets — нужна для контейнеров
+       с фиксированной высотой 100dvh: чистый 100dvh плюс body-padding =
+       overflow на величину safe-area. Используем как `h-[calc(100dvh-var(--safe-y))]`. */
+    --safe-y: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+
     --background: 0 0% 97%;
     --foreground: 150 6% 12%;
 
