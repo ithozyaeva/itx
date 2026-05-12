@@ -76,19 +76,11 @@ func (h *ResumeHandler) Upload(c *fiber.Ctx) error {
 	// произвольного Content-Type в multipart-форме.
 	detected := http.DetectContentType(data)
 	if !allowedResumeContentTypes[detected] {
-		// Для .doc/.docx старых форматов sniff иногда возвращает специфичные
-		// варианты — допускаем по совпадению префикса с msword/wordprocessingml.
-		if !strings.HasPrefix(detected, "application/vnd.openxmlformats") &&
-			!strings.HasPrefix(detected, "application/vnd.ms-word") {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Допустимые форматы: pdf, doc, docx",
-			})
-		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Допустимые форматы: pdf, doc, docx",
+		})
 	}
 	contentType := detected
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
 
 	req := &models.CreateResumeRequest{
 		WorkExperience:  c.FormValue("workExperience"),
