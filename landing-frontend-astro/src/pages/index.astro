@@ -2,7 +2,12 @@
 import MinimalFooter from '@/components/MinimalFooter.astro'
 import MinimalHeader from '@/components/MinimalHeader.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import { SITE, TARIFFS } from '@/lib/site'
+import { SITE } from '@/lib/site'
+import CalendarSection from '@/sections/CalendarSection.astro'
+import FAQSection from '@/sections/FAQSection.astro'
+import PromoteSection from '@/sections/PromoteSection.astro'
+import TariffSection from '@/sections/TariffSection.astro'
+import WhySection from '@/sections/WhySection.astro'
 
 const jsonLd = [
   {
@@ -10,55 +15,75 @@ const jsonLd = [
     '@type': 'WebSite',
     'name': SITE.name,
     'url': SITE.url,
-    'description': SITE.baseDescription,
+    'description': 'ИТ-сообщество на стыке технологий и искусственного интеллекта: менторство, вайбкодинг, нетворкинг',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    'serviceType': 'ИТ-сообщество с ИИ и менторством',
+    'provider': { '@type': 'Organization', 'name': SITE.name },
+    'areaServed': { '@type': 'Country', 'name': 'Россия' },
+    'description': 'ИТ-сообщество: менторство, вайбкодинг (vibe coding), нетворкинг, ИИ-практики, подготовка к собеседованиям',
+    'offers': {
+      '@type': 'Offer',
+      'priceCurrency': 'RUB',
+      'price': '520',
+      'description': 'Тарифы от 520₽ в месяц',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    'mainEntity': [
+      {
+        '@type': 'Question',
+        'name': 'Как вступить в сообщество IT-ХОЗЯЕВА?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Выберите тариф (Бригадир, ХОЗЯИН или МАСТЕР), оформите подписку на Boosty и получите доступ к закрытой платформе, чатам, базе менторов и всем материалам вашего тарифа. Подписка от 520 ₽/мес.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Можно ли сменить тариф или отменить подписку?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Да. Тарифный план можно повысить или понизить в любой момент через Boosty. При повышении доплата рассчитывается пропорционально, при понижении — изменения вступают со следующего периода оплаты.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Какие активности проходят в сообществе?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Еженедельные онлайн-встречи: английский клуб, технический книжный клуб, лекции по архитектуре, ИИ и вайбкодингу. Практические занятия по искусственному интеллекту, нетворкинг-сессии, тренировочные собеседования, разбор резюме, обмен вакансиями и реферальными ссылками.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Для кого подходит IT-ХОЗЯЕВА?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Для ИТ-специалистов любого уровня и направления: разработчики, ИИ-инженеры, тестировщики, аналитики, DevOps-инженеры. Для тех, кто интересуется искусственным интеллектом, вайбкодингом и хочет расти через менторство и нетворкинг в ИТ-сообществе.',
+        },
+      },
+    ],
   },
 ]
 ---
 <BaseLayout
-  title="IT-ХОЗЯЕВА — ИТ-сообщество с ИИ, менторством и вайбкодингом"
-  description={SITE.baseDescription}
+  title="IT-ХОЗЯЕВА — закрытое сообщество ИТ-специалистов с менторами"
+  description="Закрытое сообщество ИТ-специалистов с базой менторов. Помогаем с карьерой, поиском работы и собеседованиями. Регулярные встречи, тренинги и менторство от опытных ИТ-профессионалов."
   url={SITE.url}
   jsonLd={jsonLd}
 >
   <MinimalHeader />
   <main>
-    <section class="w-full pt-16 md:pt-24 pb-16">
-      <div class="container px-6 md:px-10 max-w-4xl">
-        <p class="font-mono text-xs text-foreground/40 mb-6 uppercase tracking-widest">
-          ⚠️ wip: astro port — основной лендинг ещё переносится из vue
-        </p>
-        <h1 class="font-display uppercase text-[40px] md:text-[72px] lg:text-[88px] leading-[0.9] tracking-tight text-accent">
-          IT-ХОЗЯЕВА
-        </h1>
-        <p class="mt-6 md:mt-8 text-base md:text-lg text-foreground/75 leading-relaxed">
-          Закрытое ИТ-сообщество 250+ специалистов на стыке технологий и ИИ. Менторство, вайбкодинг,
-          нетворкинг, подготовка к собеседованиям, еженедельные онлайн-встречи.
-        </p>
-
-        <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-px bg-accent/15 border border-accent/15">
-          {Object.values(TARIFFS).map(t => (
-            <div class="bg-background/95 p-6 md:p-7">
-              <h2 class="font-display uppercase text-lg md:text-xl text-accent mb-2">{t.name}</h2>
-              <p class="font-mono text-sm text-foreground/60 mb-3">{t.price} ₽/мес</p>
-              <p class="text-sm text-foreground/70 leading-relaxed mb-4">{t.description}</p>
-              <a
-                href={t.boostyUrl}
-                rel="noopener"
-                class="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:underline underline-offset-4"
-              >
-                оформить на boosty →
-              </a>
-            </div>
-          ))}
-        </div>
-
-        <div class="mt-12 flex flex-wrap gap-4 font-mono text-sm">
-          <a href="/articles" class="text-accent hover:underline underline-offset-4">→ Статьи</a>
-          <a href="/mentors" class="text-accent hover:underline underline-offset-4">→ База менторов</a>
-          <a href="/vibe-coding" class="text-accent hover:underline underline-offset-4">→ Что такое вайбкодинг</a>
-        </div>
-      </div>
-    </section>
+    <PromoteSection />
+    <WhySection />
+    <TariffSection />
+    <CalendarSection />
+    <FAQSection />
   </main>
   <MinimalFooter />
 </BaseLayout>

@@ -1,0 +1,32 @@
+---
+// Декоративный canvas с нодами/линиями. Грузим лениво через requestIdleCallback,
+// чтобы не конкурировать с LCP. Скрыт до lg-брейкпойнта.
+---
+<div
+  aria-hidden="true"
+  class="pointer-events-none absolute top-[18%] right-[6%] hidden lg:block"
+>
+  <canvas
+    id="hero-constellation"
+    class="block"
+    width="520"
+    height="520"
+    style="width: 520px; height: 520px;"
+  ></canvas>
+</div>
+
+<script>
+import { initHeroConstellation } from '@/scripts/heroConstellation'
+
+function boot() {
+  const canvas = document.getElementById('hero-constellation') as HTMLCanvasElement | null
+  if (!canvas)
+    return
+  initHeroConstellation(canvas)
+}
+
+if ('requestIdleCallback' in window)
+  (window as any).requestIdleCallback(boot, { timeout: 2000 })
+else
+  setTimeout(boot, 300)
+</script>

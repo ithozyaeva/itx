@@ -1,0 +1,148 @@
+---
+// Модалка согласия с политикой. Открытие/закрытие — через data-attribute
+// `data-open-privacy-modal` на любом триггере. Логика — вверху страницы один раз.
+---
+<div
+  id="privacy-modal"
+  class="privacy-modal-backdrop fixed inset-0 z-50 bg-black/50 flex items-center justify-center backdrop-blur-sm p-4 sm:p-6"
+  data-open="false"
+  aria-hidden="true"
+>
+  <div
+    class="privacy-modal-card bg-[#1D2723] rounded-3xl border-2 border-[#2B3D36] p-5 sm:p-9 w-full max-w-3xl relative shadow-xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto"
+    role="dialog"
+    aria-labelledby="privacy-modal-title"
+    aria-modal="true"
+  >
+    <button
+      type="button"
+      class="absolute right-3 top-3 cursor-pointer hover:opacity-75 transition-opacity"
+      data-close-privacy-modal
+      aria-label="Закрыть"
+    >
+      <svg viewBox="0 0 24 24" class="h-6 w-6 sm:h-8 sm:w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <p
+      id="privacy-modal-title"
+      class="mb-3 pr-8 text-accent font-display uppercase font-semibold tracking-[0.04em] leading-tight text-lg sm:text-2xl"
+    >
+      Согласие на обработку персональных данных
+    </p>
+
+    <div class="mb-5 sm:mb-7">
+      <p class="font-sans font-medium leading-[1.4] text-sm sm:text-base md:text-lg">
+        Нажимая на кнопку «Принять», Вы соглашаетесь с
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-accent underline cursor-pointer hover:text-accent/75 transition-colors"
+        >
+          политикой конфиденциальности
+        </a>
+        и даёте согласие на обработку персональных данных согласно Федеральному закону №152-ФЗ.
+      </p>
+    </div>
+
+    <div class="flex flex-col-reverse sm:flex-row justify-start gap-3 sm:gap-5">
+      <button
+        type="button"
+        data-close-privacy-modal
+        class="ui-button stroke"
+      >
+        <span class="ui-button-text">Отклонить</span>
+      </button>
+      <button
+        type="button"
+        data-accept-privacy
+        class="ui-button filled"
+      >
+        <span class="ui-button-text">Принять</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+import { extLink, getBotUrl, openTelegramBot, reachGoal, setPrivacyConfirmed } from '@/scripts/auth'
+
+function getModal() {
+  return document.getElementById('privacy-modal')
+}
+
+function openModal() {
+  const modal = getModal()
+  if (!modal)
+    return
+  modal.dataset.open = 'true'
+  modal.setAttribute('aria-hidden', 'false')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeModal() {
+  const modal = getModal()
+  if (!modal)
+    return
+  modal.dataset.open = 'false'
+  modal.setAttribute('aria-hidden', 'true')
+  document.body.style.overflow = ''
+}
+
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement
+
+  if (target.closest('[data-open-privacy-modal]')) {
+    e.preventDefault()
+    openModal()
+    return
+  }
+
+  if (target.closest('[data-close-privacy-modal]')) {
+    closeModal()
+    return
+  }
+
+  if (target.closest('[data-accept-privacy]')) {
+    setPrivacyConfirmed()
+    reachGoal('privacy_modal_accept', { action: 'accept' })
+    extLink(getBotUrl(), { title: 'Стать IT-Хозяином (после модалки)' })
+    closeModal()
+    openTelegramBot()
+    return
+  }
+
+  const modal = getModal()
+  if (modal?.dataset.open === 'true' && target === modal)
+    closeModal()
+})
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape')
+    closeModal()
+})
+</script>
+
+<style>
+.privacy-modal-backdrop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.privacy-modal-backdrop[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.privacy-modal-card {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.privacy-modal-backdrop[data-open="true"] .privacy-modal-card {
+  transform: scale(1);
+  opacity: 1;
+}
+</style>

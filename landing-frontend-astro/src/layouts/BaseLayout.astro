@@ -1,4 +1,5 @@
 ---
+import ConfirmServiceModal from '@/components/ConfirmServiceModal.astro'
 import JsonLd from '@/components/JsonLd.astro'
 import MetaTags from '@/components/MetaTags.astro'
 import YandexMetrika from '@/components/YandexMetrika.astro'
@@ -95,6 +96,7 @@ const allJsonLd = [...sitewideJsonLd, ...jsonLd]
   <div class="flex min-h-screen flex-col">
     <slot />
   </div>
+  <ConfirmServiceModal />
   <YandexMetrika />
 </body>
 </html>
