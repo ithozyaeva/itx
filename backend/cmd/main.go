@@ -214,6 +214,35 @@ func main() {
 			}
 		}()
 
+		// Автогенерация чат-квестов для оживления тихих чатов. Часовой
+		// watchdog; реально запускает генерацию только в 11:00 MSK
+		// (после утреннего пуша, чтобы свежий квест успел попасть в чат
+		// до пика активности). Идемпотентен через unique partial index
+		// (chat_id, DATE(starts_at)) WHERE auto_generated — повторный
+		// запуск в тот же день no-op.
+		go func() {
+			gen := service.NewChatQuestGenerator()
+			ticker := time.NewTicker(time.Hour)
+			defer ticker.Stop()
+
+			runOnce := func() {
+				nowMSK := time.Now().In(utils.MSKLocation())
+				if nowMSK.Hour() != 11 {
+					return
+				}
+				if n, err := gen.GenerateDailyChatQuests(); err != nil {
+					log.Printf("auto chat quests generate: %v", err)
+				} else if n > 0 {
+					log.Printf("auto chat quests: created %d quests", n)
+				}
+			}
+
+			runOnce()
+			for range ticker.C {
+				runOnce()
+			}
+		}()
+
 		// Запускаем сервер
 		go func() {
 			log.Printf("Server starting on port %s", config.CFG.Port)

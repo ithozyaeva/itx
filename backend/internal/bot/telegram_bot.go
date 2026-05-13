@@ -202,6 +202,11 @@ func (b *TelegramBot) Start() {
 	// Финализация протёкших voteban-голосований.
 	go b.startVotebanWatcher()
 
+	// Публикация авто-сгенерированных чат-квестов: API создаёт квесты для
+	// «тихих» чатов, бот постит их в эти чаты (Telegram API доступен только
+	// с NL, не с РФ-сервера).
+	go b.startAutoQuestPoster()
+
 	// Подписка на канал moderation:revoke — backend (RU) кладёт команды
 	// «снять санкцию» из админки, бот выполняет в Telegram.
 	b.moderationService.SubscribeRevoke(context.Background(), b.handleRevokeEvent)
