@@ -10,6 +10,10 @@ const checkingIn = ref(false)
 const error = ref<string | null>(null)
 
 async function fetchToday() {
+  // Сбрасываем error при любой попытке: после первого fail SSE-триггер
+  // молча перетягивает свежие данные, но error.value оставался выставленным
+  // — UI продолжал показывать «не удалось» рядом с актуальным today.
+  error.value = null
   try {
     today.value = await dailiesService.getToday()
   }
@@ -20,6 +24,7 @@ async function fetchToday() {
 }
 
 async function fetchStreak() {
+  error.value = null
   try {
     streak.value = await dailiesService.getStreak()
   }
