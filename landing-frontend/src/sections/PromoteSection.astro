@@ -1,0 +1,343 @@
+---
+import HeroConstellation from '@/components/HeroConstellation.astro'
+import TelegramAuth from '@/components/TelegramAuth.astro'
+
+const companies = [
+  'Яндекс',
+'Tinkoff',
+'VK',
+'Ozon',
+'Wildberries',
+'Авито',
+  'X5',
+'Сбер',
+'Kaspersky',
+'JetBrains',
+'Selectel',
+'Тинькофф',
+'Альфа',
+'МТС',
+]
+
+// Дублируем массив для плавной marquee-ленты (CSS translate -50%).
+const companiesLoop = [...companies, ...companies]
+---
+<section
+  class="relative w-full md:min-h-[calc(100svh-var(--header-height))] flex flex-col md:justify-between overflow-hidden hero-section"
+>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-0 opacity-[0.12]"
+    style="background-image: radial-gradient(circle at 80% 30%, hsl(var(--accent)) 0, transparent 55%), radial-gradient(circle at 20% 80%, #ffb547 0, transparent 45%);"
+  ></div>
+
+  <HeroConstellation />
+
+  <!-- Terminal status bar -->
+  <div class="container px-6 md:px-10 pt-8 md:pt-12 relative z-10 hero-row hero-row-1">
+    <div class="flex items-center justify-between font-mono text-[11px] md:text-xs tracking-[0.08em] text-foreground/50">
+      <div class="flex items-center gap-3 md:gap-6">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] animate-pulse"></span>
+          <span class="text-accent">ОНЛАЙН</span>
+        </div>
+        <span class="flex items-center gap-1">
+          <span class="text-accent/40">↑</span>
+          <span class="text-foreground/70 tabular-nums" data-uptime>00:00:00</span>
+        </span>
+        <span class="hidden md:inline">v4.2.1</span>
+      </div>
+      <div class="flex items-center gap-3 md:gap-6">
+        <span class="hidden sm:inline">250+ участников</span>
+        <span class="flex items-center gap-1.5">
+          <span aria-hidden="true" class="signal-bars">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <span>msk/ru</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main hero content -->
+  <div class="container px-6 md:px-10 md:flex-1 md:flex md:items-center pt-10 pb-10 md:py-16 relative z-10">
+    <div class="w-full max-w-5xl">
+      <div class="font-mono text-xs md:text-sm text-foreground/50 mb-5 md:mb-6 hero-row hero-row-2">
+        <div>
+          <span class="text-accent">community@ithozyaeva</span>:<span class="text-term-amber">~</span>$
+          <span class="text-foreground/80">./добро_пожаловать<span class="hidden md:inline"> --новый пользователь</span><span class="md:hidden text-foreground/30"> \</span></span>
+        </div>
+        <div class="md:hidden mt-1 text-foreground/80">
+          <span class="text-foreground/30">&gt;</span> --новый пользователь
+        </div>
+      </div>
+
+      <div class="flex items-baseline gap-2 md:gap-3 mb-1 hero-row hero-row-3">
+        <span class="font-mono text-accent/60 text-sm md:text-base">&gt;</span>
+        <h1
+          class="glitch-hover font-display uppercase text-[38px] xs:text-[46px] sm:text-[68px] md:text-[96px] lg:text-[130px] leading-[0.85] tracking-tight text-accent"
+          data-text="IT-ХОЗЯЕВА"
+        >
+          IT-ХОЗЯЕВА
+        </h1>
+      </div>
+
+      <div class="pl-4 md:pl-6 border-l border-accent/30 mt-6 md:mt-8 max-w-3xl hero-row hero-row-4">
+        <h2 class="font-display uppercase text-[22px] sm:text-[32px] md:text-[42px] leading-[1.05] text-foreground">
+          Закрытое сообщество<br />
+          <span class="text-foreground/40">IT-специалистов</span>
+        </h2>
+
+        <div class="mt-5 md:mt-7 font-mono text-sm md:text-base text-foreground/75 flex flex-wrap items-center gap-x-2">
+          <span class="text-accent/60">&gt;&gt;</span>
+          <span class="text-foreground/60">запуск:</span>
+          <span class="text-term-amber min-w-[1ch]" data-typed></span>
+          <span class="inline-block w-[0.6ch] h-[1.1em] bg-term-amber align-middle animate-type-caret"></span>
+        </div>
+
+        <p class="mt-4 md:mt-5 text-base md:text-lg text-foreground/70 leading-relaxed max-w-2xl">
+          250+ специалистов из Яндекса, Тинькофф, VK и стартапов.
+          Менторство, ИИ, нетворкинг и подготовка к собеседованиям.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mt-8 md:mt-12 hero-row hero-row-5">
+        <div class="cta-glow rounded-[50px]">
+          <TelegramAuth location="promote_section" />
+        </div>
+        <a
+          href="#tariffs"
+          data-track-goal="pricing_teaser_click"
+          data-track-params='{"location":"hero"}'
+          class="font-mono text-xs md:text-sm text-foreground/60 hover:text-accent transition-colors flex items-center gap-2 group"
+        >
+          <span class="text-accent group-hover:animate-pulse">$</span>
+          <span>./тарифы --от_520₽</span>
+          <span class="inline-block transition-transform group-hover:translate-x-0.5">→</span>
+        </a>
+      </div>
+
+      <div class="mt-10 md:mt-16 grid grid-cols-3 max-w-2xl divide-x divide-accent/15 border-t border-b border-accent/15 hero-row hero-row-6">
+        <div class="py-4 pr-4">
+          <div class="font-display text-2xl md:text-4xl text-accent tabular-nums" data-countup data-target="250" data-suffix="+">0+</div>
+          <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
+            участников
+          </div>
+        </div>
+        <div class="py-4 px-4">
+          <div class="font-display text-2xl md:text-4xl text-accent tabular-nums" data-countup data-target="60" data-suffix="+">0+</div>
+          <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
+            менторов
+          </div>
+        </div>
+        <div class="py-4 pl-4">
+          <div class="font-display text-2xl md:text-4xl text-accent tabular-nums" data-countup data-target="7" data-suffix="×">0×</div>
+          <div class="font-mono text-[10px] md:text-xs text-foreground/50 uppercase mt-1 tracking-widest">
+            встреч в месяц.
+          </div>
+        </div>
+      </div>
+
+      <a
+        href="#why"
+        class="md:hidden mt-7 flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/40 group"
+      >
+        <span class="text-accent/60">$</span>
+        <span class="text-foreground/60">./след_секция</span>
+        <span class="text-accent inline-block animate-bounce-soft">↓</span>
+        <span class="flex-1 border-t border-dashed border-accent/15 ml-1"></span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Companies marquee -->
+  <div class="relative z-10 border-t border-accent/15 bg-background/40 backdrop-blur-sm overflow-hidden py-4 group/marquee">
+    <div class="flex items-center gap-3 font-mono text-[10px] md:text-xs tracking-[0.2em] uppercase">
+      <div class="px-4 md:px-10 shrink-0 text-accent/70">
+        // команды из:
+      </div>
+      <div class="flex-1 overflow-hidden" style="mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);">
+        <div class="flex gap-10 animate-marquee whitespace-nowrap will-change-transform">
+          {companiesLoop.map(c => (
+            <span class="text-foreground/60 hover:text-accent transition-colors cursor-default">
+              {c} <span class="text-accent/30 ml-10">◇</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+import { reachGoal } from '@/scripts/auth'
+
+const phrases = [
+  'менторство_',
+  'вайбкодинг_',
+  'ИИ-практики_',
+  'нетворкинг_',
+  'собеседования_',
+]
+
+function startTyping() {
+  const el = document.querySelector<HTMLElement>('[data-typed]')
+  if (!el)
+    return
+  let phraseIdx = 0
+  let typed = ''
+  let deleting = false
+
+  function tick() {
+    const current = phrases[phraseIdx]
+    if (!deleting) {
+      typed = current.slice(0, typed.length + 1)
+      el!.textContent = typed
+      if (typed === current) {
+        deleting = true
+        setTimeout(tick, 1600)
+        return
+      }
+      setTimeout(tick, 65 + Math.random() * 40)
+    }
+    else {
+      typed = current.slice(0, typed.length - 1)
+      el!.textContent = typed
+      if (typed === '') {
+        deleting = false
+        phraseIdx = (phraseIdx + 1) % phrases.length
+        setTimeout(tick, 180)
+        return
+      }
+      setTimeout(tick, 35)
+    }
+  }
+  tick()
+}
+
+function startUptime() {
+  const el = document.querySelector<HTMLElement>('[data-uptime]')
+  if (!el)
+    return
+  const start = Date.now()
+  function update() {
+    const sec = Math.floor((Date.now() - start) / 1000)
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0')
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0')
+    const s = String(sec % 60).padStart(2, '0')
+    el!.textContent = `${h}:${m}:${s}`
+  }
+  update()
+  setInterval(update, 1000)
+}
+
+function startCountUps() {
+  const els = document.querySelectorAll<HTMLElement>('[data-countup]')
+  els.forEach((el) => {
+    const target = Number(el.dataset.target ?? '0')
+    const suffix = el.dataset.suffix ?? ''
+    const duration = 1800
+    const startTs = performance.now()
+
+    function tick(now: number) {
+      const elapsed = now - startTs
+      const progress = Math.min(1, elapsed / duration)
+      const eased = 1 - (1 - progress) ** 3
+      const value = Math.floor(target * eased)
+      el.textContent = `${value}${suffix}`
+      if (progress < 1)
+        requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+function startHeroEntrance() {
+  document.querySelectorAll<HTMLElement>('.hero-row').forEach((el) => {
+    requestAnimationFrame(() => el.classList.add('hero-ready'))
+  })
+}
+
+document.addEventListener('click', (e) => {
+  const target = (e.target as HTMLElement).closest<HTMLElement>('[data-track-goal]')
+  if (!target)
+    return
+  const goal = target.dataset.trackGoal!
+  let params: Record<string, unknown> | undefined
+  try {
+    params = target.dataset.trackParams ? JSON.parse(target.dataset.trackParams) : undefined
+  }
+  catch {
+    params = undefined
+  }
+  reachGoal(goal, params)
+})
+
+startHeroEntrance()
+startTyping()
+startUptime()
+setTimeout(startCountUps, 600)
+</script>
+
+<style>
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered hero entrance via CSS — no JS frameworks. */
+.hero-row {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hero-row.hero-ready {
+  opacity: 1;
+  transform: translateY(0);
+}
+.hero-row-1.hero-ready { transition-delay: 0ms; }
+.hero-row-2.hero-ready { transition-delay: 100ms; }
+.hero-row-3.hero-ready { transition-delay: 200ms; }
+.hero-row-4.hero-ready { transition-delay: 300ms; }
+.hero-row-5.hero-ready { transition-delay: 400ms; }
+.hero-row-6.hero-ready { transition-delay: 500ms; }
+
+.signal-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 0.7em;
+}
+.signal-bars > span {
+  display: block;
+  width: 2px;
+  background: hsl(var(--accent));
+  opacity: 0.85;
+  border-radius: 1px;
+}
+.signal-bars > span:nth-child(1) { height: 25%; }
+.signal-bars > span:nth-child(2) { height: 50%; }
+.signal-bars > span:nth-child(3) { height: 75%; }
+.signal-bars > span:nth-child(4) { height: 100%; opacity: 0.35; animation: signal-pulse 2.4s ease-in-out infinite; }
+@keyframes signal-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+.animate-bounce-soft {
+  animation: bounce-soft 1.8s ease-in-out infinite;
+}
+
+@media (min-width: 420px) {
+  .xs\:text-\[46px\] {
+    font-size: 46px;
+  }
+}
+
+.hero-section :global(.group\/marquee:hover) .animate-marquee {
+  animation-play-state: paused;
+}
+</style>

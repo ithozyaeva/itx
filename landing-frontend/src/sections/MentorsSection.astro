@@ -1,0 +1,203 @@
+---
+import MentorCard from '@/components/ui/MentorCard.astro'
+import SectionHeader from '@/components/ui/SectionHeader.astro'
+import UiButton from '@/components/ui/UiButton.astro'
+import { collectTags, getMentors } from '@/lib/mentors'
+
+interface Props {
+  /** На /mentors показываем всех; на главной — ограничиваем 4 и даём кнопку «Все менторы». */
+  preview?: boolean
+  /** Показ SectionHeader/breadcrumb — на отдельной /mentors уже есть свой H1. */
+  showHeader?: boolean
+}
+
+const { preview = false, showHeader = true } = Astro.props
+
+const mentors = await getMentors()
+const tags = collectTags(mentors)
+const previewLimit = 4
+const visibleInitially = preview ? mentors.slice(0, previewLimit) : mentors
+const showMoreButton = preview && mentors.length > previewLimit
+---
+{mentors.length > 0 && (
+  <section id="mentors" class="w-full pt-20 md:pt-32 lg:pt-40">
+    <div class="container px-6 md:px-10">
+      <div class="flex flex-col gap-10 md:gap-14">
+        {showHeader && (
+          <div class="reveal">
+            <SectionHeader
+              index="02"
+              path="~/community/mentors.db"
+              title="База менторов"
+              subtitle="Эксперты сообщества, готовые поделиться опытом. Фильтруй по направлению — найди своего."
+            />
+          </div>
+        )}
+
+        <div class="flex flex-col gap-3 items-start">
+          <div class="font-mono text-[11px] text-foreground/40 tracking-[0.1em] uppercase">
+            $ grep --filter=specialization
+          </div>
+          <div class="flex flex-wrap gap-2" data-mentor-filters>
+            <button
+              type="button"
+              class="mentor-tag-btn active"
+              data-tag="__all__"
+            >Все</button>
+            {tags.map(tag => (
+              <button
+                type="button"
+                class="mentor-tag-btn"
+                data-tag={tag.toLowerCase()}
+              >{tag}</button>
+            ))}
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center gap-9 lg:gap-12">
+          <div class="grid w-full grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" data-mentor-grid>
+            {visibleInitially.map(mentor => (
+              <MentorCard mentor={mentor} />
+            ))}
+          </div>
+          <p
+            class="hidden font-mono text-sm text-foreground/50 py-8"
+            data-mentor-empty
+          >
+            &gt; ничего не найдено для выбранных тегов
+          </p>
+          {showMoreButton && (
+            <UiButton as="a" href="/platform/mentors" class="w-fit self-center">
+              Все менторы
+            </UiButton>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+.mentor-tag-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border: 1px solid hsl(var(--accent) / 0.3);
+  color: hsl(var(--foreground) / 0.7);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.mentor-tag-btn:hover {
+  border-color: hsl(var(--accent) / 0.7);
+  color: hsl(var(--accent));
+}
+.mentor-tag-btn.active {
+  background: hsl(var(--accent));
+  color: #0b0d0c;
+  border-color: hsl(var(--accent));
+}
+</style>
+
+<script>
+import { extLink, reachGoal } from '@/scripts/auth'
+
+const WHITESPACE_RE = /\s+/
+
+function setupMentorsFilter() {
+  const filters = document.querySelector<HTMLElement>('[data-mentor-filters]')
+  const grid = document.querySelector<HTMLElement>('[data-mentor-grid]')
+  const empty = document.querySelector<HTMLElement>('[data-mentor-empty]')
+  if (!filters || !grid)
+    return
+
+  const buttons = filters.querySelectorAll<HTMLButtonElement>('.mentor-tag-btn')
+  const cards = grid.querySelectorAll<HTMLElement>('.mentor-card')
+  const selected = new Set<string>(['__all__'])
+
+  function apply() {
+    let visibleCount = 0
+    cards.forEach((card) => {
+      const cardTags = (card.dataset.tags ?? '').split(WHITESPACE_RE).filter(Boolean)
+      const isVisible
+        = selected.has('__all__') || cardTags.some(t => selected.has(t))
+      if (isVisible) {
+        card.classList.remove('hidden-mentor')
+        visibleCount++
+      }
+      else {
+        card.classList.add('hidden-mentor')
+      }
+    })
+    if (empty)
+      empty.classList.toggle('hidden', visibleCount > 0)
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag!
+      if (tag === '__all__') {
+        selected.clear()
+        selected.add('__all__')
+      }
+      else {
+        selected.delete('__all__')
+        if (selected.has(tag))
+          selected.delete(tag)
+        else
+          selected.add(tag)
+        if (selected.size === 0)
+          selected.add('__all__')
+      }
+
+      buttons.forEach((b) => {
+        const t = b.dataset.tag!
+        b.classList.toggle('active', selected.has(t))
+      })
+      apply()
+    })
+  })
+}
+
+function setupMentorLinks() {
+  const grid = document.querySelector<HTMLElement>('[data-mentor-grid]')
+  if (!grid)
+    return
+  grid.addEventListener('click', (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>('[data-mentor-link]')
+    if (!link)
+      return
+    const name = link.dataset.mentorName ?? ''
+    const href = link.href
+    reachGoal('mentor_details_click', { mentor: name })
+    extLink(href, { title: `Ментор ${name}` })
+  })
+}
+
+function setupAvatarFallback() {
+  document.querySelectorAll<HTMLImageElement>('.mentor-avatar').forEach((img) => {
+    img.addEventListener('error', () => replace(img))
+    img.addEventListener('load', () => {
+      if (img.naturalWidth <= 1 && img.naturalHeight <= 1)
+        replace(img)
+    })
+  })
+
+  function replace(img: HTMLImageElement) {
+    const initials = img.dataset.fallback ?? '?'
+    const parent = img.parentElement!
+    const fallback = document.createElement('div')
+    fallback.className = 'mentor-avatar-fallback'
+    fallback.textContent = initials
+    fallback.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display, sans-serif);font-size:32px;color:hsl(var(--accent));background:hsl(var(--accent)/0.1);'
+    img.replaceWith(fallback)
+    parent.classList.add('mentor-avatar-replaced')
+  }
+}
+
+setupMentorsFilter()
+setupMentorLinks()
+setupAvatarFallback()
+</script>
