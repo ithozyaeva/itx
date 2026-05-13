@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -128,7 +129,7 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 
 	remaining := getRemainingLimit(message.From.ID)
 	b.SendDirectMessage(message.From.ID, fmt.Sprintf("⏳ Суммаризирую %d сообщений (%s) из чата <b>%s</b>...\nОсталось запросов: %d/%d",
-		len(messages), label, message.Chat.Title, remaining, summarizeDailyLimit))
+		len(messages), label, html.EscapeString(message.Chat.Title), remaining, summarizeDailyLimit))
 
 	var sb strings.Builder
 	for i := len(messages) - 1; i >= 0; i-- {
@@ -148,7 +149,7 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 	}
 
 	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений, %s, модель: %s)\n\n%s",
-		message.Chat.Title, len(messages), label, usedModel, summary)
+		html.EscapeString(message.Chat.Title), len(messages), label, usedModel, html.EscapeString(summary))
 	b.SendDirectMessage(message.From.ID, result)
 }
 
