@@ -1,6 +1,8 @@
 // Build-time fetch менторов. Поверх — статичная карточная сетка с фильтрацией
 // по тегам через классы и data-атрибуты (без рантайм-фреймворков).
 
+import process from 'node:process'
+
 export interface ProfTag {
   id: number
   title: string
@@ -49,6 +51,16 @@ export interface MentorView {
 }
 
 const API_BASE = (import.meta.env.PUBLIC_API_BASE as string | undefined) ?? 'https://ithozyaeva.ru'
+
+// На прод-деплое (CI=true) пустой ответ от /api/mentors означает, что страница
+// уйдёт без секции менторов — это catastrophic для главной. Падаем сборкой,
+// чтобы алертнуть деплой-workflow. В dev — graceful fallback (можно билдить
+// без сети).
+function failBuildIfEmptyInCi(name: string, count: number): void {
+  if (count === 0 && process.env.CI === 'true') {
+    throw new Error(`[${name}] API returned 0 items during CI build — refusing to deploy with empty section. Check API_BASE=${API_BASE} reachability.`)
+  }
+}
 
 // Приоритет контактов: Telegram(1) > LinkedIn(5) > GitHub(6) > Email(2) > VK(7) > Сайт(8) > Телефон(3) > Другое(4)
 const CONTACT_PRIORITY = [1, 5, 6, 2, 7, 8, 3, 4]
@@ -99,22 +111,24 @@ function toView(m: MentorRaw): MentorView {
 }
 
 export async function getMentors(): Promise<MentorView[]> {
+  let items: MentorRaw[] = []
   try {
     const res = await fetch(`${API_BASE}/api/mentors`, {
       headers: { Accept: 'application/json' },
     })
     if (!res.ok) {
       console.warn(`[mentors] api returned ${res.status}, skipping`)
-      return []
     }
-    const data = await res.json() as { items?: MentorRaw[] }
-    const items = data.items ?? []
-    return deterministicShuffle(items.map(toView), Date.now() & 0xFFFF)
+    else {
+      const data = await res.json() as { items?: MentorRaw[] }
+      items = data.items ?? []
+    }
   }
   catch (e) {
     console.warn('[mentors] fetch failed:', e)
-    return []
   }
+  failBuildIfEmptyInCi('mentors', items.length)
+  return deterministicShuffle(items.map(toView), Date.now() & 0xFFFF)
 }
 
 export function collectTags(mentors: MentorView[]): string[] {

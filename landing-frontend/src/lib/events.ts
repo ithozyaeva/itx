@@ -2,6 +2,8 @@
 // На билде запрашиваем next/old, обрабатываем и возвращаем массив для рендера.
 // Не падаем — если API недоступен, возвращаем пустой массив.
 
+import process from 'node:process'
+
 export interface EventTag {
   id: number
   name: string
@@ -39,6 +41,14 @@ export interface CommunityEvent {
 
 const API_BASE = (import.meta.env.PUBLIC_API_BASE as string | undefined) ?? 'https://ithozyaeva.ru'
 
+// См. lib/mentors.ts — на прод-деплое (CI=true) пустой /api/events/next
+// означает потерю секции расписания на главной. Падаем сборкой.
+function failBuildIfEmptyInCi(name: string, count: number): void {
+  if (count === 0 && process.env.CI === 'true') {
+    throw new Error(`[${name}] API returned 0 items during CI build — refusing to deploy with empty section. Check API_BASE=${API_BASE} reachability.`)
+  }
+}
+
 async function fetchEvents(path: string): Promise<CommunityEvent[]> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -58,7 +68,9 @@ async function fetchEvents(path: string): Promise<CommunityEvent[]> {
 }
 
 export async function getNextEvents(): Promise<CommunityEvent[]> {
-  return fetchEvents('/api/events/next')
+  const events = await fetchEvents('/api/events/next')
+  failBuildIfEmptyInCi('events/next', events.length)
+  return events
 }
 
 export async function getOldEvents(): Promise<CommunityEvent[]> {

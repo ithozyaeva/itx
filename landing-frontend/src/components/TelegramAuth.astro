@@ -22,7 +22,7 @@ const { variant = 'filled', label = 'Стать Хозяином', location = 'd
 </div>
 
 <script>
-import { authenticate, extLink, getToken, getUser, isPrivacyConfirmed, openTelegramBot, reachGoal, setToken, setUser } from '@/scripts/auth'
+import { authenticate, extLink, getBotUrl, getToken, getUser, isPrivacyConfirmed, openTelegramBot, reachGoal, setToken, setUser } from '@/scripts/auth'
 
 function renderLoggedIn(slot: HTMLElement) {
   const variant = slot.querySelector<HTMLElement>('.ui-button')?.classList.contains('dark-filled')
@@ -79,7 +79,7 @@ document.addEventListener('click', (e) => {
       }
     }
     reachGoal('become_itx_owner_click', { location })
-    extLink('https://t.me/it_hozyaeva_bot', { title: 'Стать IT-Хозяином' })
+    extLink(getBotUrl(), { title: 'Стать IT-Хозяином' })
     openTelegramBot()
     return
   }

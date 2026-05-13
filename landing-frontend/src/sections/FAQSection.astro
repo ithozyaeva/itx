@@ -55,7 +55,10 @@ const questions: Question[] = [
                   {q.title}
                 </h3>
               </div>
-              <span class="faq-marker font-mono text-xs shrink-0 mt-1 text-foreground/40">[+]</span>
+              <span
+                class="faq-marker font-mono text-xs shrink-0 mt-1 text-foreground/40"
+                aria-hidden="true"
+              ></span>
             </div>
           </summary>
           <div class="px-5 md:px-8 pb-6 md:pb-8 pl-14 md:pl-[66px]">
@@ -80,17 +83,16 @@ const questions: Question[] = [
   color: hsl(var(--accent));
   transform: rotate(90deg);
 }
+/* Маркер живёт целиком в ::before, чтобы screen reader не зачитывал
+   и закрытое, и открытое состояние одновременно (aria-hidden на span). */
+.faq-marker::before {
+  content: '[+]';
+}
 .faq-item[open] .faq-marker {
   color: hsl(var(--accent));
 }
 .faq-item[open] .faq-marker::before {
   content: '[−]';
-}
-.faq-item[open] .faq-marker {
-  font-size: 0;
-}
-.faq-item[open] .faq-marker::before {
-  font-size: 0.75rem;
 }
 .faq-item[open] .faq-title {
   color: hsl(var(--accent));
