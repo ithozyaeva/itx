@@ -6,9 +6,17 @@ import (
 	"ithozyeva/internal/repository"
 	"ithozyeva/internal/utils"
 	"log"
+	"strings"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+// minQuestMessageRunes — минимальная длина содержательного сообщения для
+// прогресса квестов. "ок", "+1", "да", стикеры и фото без caption отсекаются,
+// иначе квест закрывается мусором за минуту. Дейлики/челленджи не фильтруем —
+// меняем поведение только новых и ручных квестов.
+const minQuestMessageRunes = 5
 
 // SendTelegramDMFunc — функция для отправки Telegram DM, устанавливается извне (из bot пакета) для избежания circular import
 var SendTelegramDMFunc func(chatID int64, text string)
@@ -37,6 +45,13 @@ func (s *ChatQuestService) ProcessMessage(message *tgbotapi.Message, memberID *i
 	// и метрику недельного челленджа «Болтун недели».
 	TrackDailyTrigger(*memberID, "chat_message", 1)
 	TrackChallengeMetric(*memberID, "chat_messages", 1)
+
+	// Антиспам для квестов: "+1", "ок", стикеры (Text=""), фото без caption
+	// не должны закрывать квест на N сообщений — иначе авто-квесты в тихих
+	// чатах выполняются за минуту шумом.
+	if utf8.RuneCountInString(strings.TrimSpace(message.Text)) < minQuestMessageRunes {
+		return
+	}
 
 	quests, err := s.repo.GetActiveQuests()
 	if err != nil {
