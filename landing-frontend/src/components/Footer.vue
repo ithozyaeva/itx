@@ -114,6 +114,13 @@ function trackJointimerClick() {
             </a>
             <span class="text-foreground/25">|</span>
             <a
+              href="/articles"
+              class="hover:text-accent transition-colors underline underline-offset-4"
+            >
+              articles
+            </a>
+            <span class="text-foreground/25">|</span>
+            <a
               href="/privacy"
               class="hover:text-accent transition-colors underline underline-offset-4"
             >
