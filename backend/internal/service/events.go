@@ -7,6 +7,8 @@ import (
 	"ithozyeva/internal/repository"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 var ErrParticipantLimitReached = errors.New("достигнут лимит участников")
@@ -38,16 +40,47 @@ func EventVisibilityChecker(s *EventsService) func(entityID int64, member *model
 }
 
 func (s *EventsService) AddMember(eventId int, memberId int) (*models.Event, error) {
-	event, err := s.repo.GetById(int64(eventId))
+	// Capacity check + INSERT под pg_advisory_xact_lock(eventId): без него
+	// две параллельные регистрации на ивент с capacity=10 (заполнен 9/10)
+	// оба читают len(Members)=9 < 10, оба INSERT'ят в event_members,
+	// итог 11/10. ON CONFLICT DO NOTHING обрабатывает повторную регистрацию
+	// того же юзера как идемпотентный no-op (раньше Association.Append
+	// возвращал ошибку на duplicate → 500).
+	var capacityExceeded bool
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`SELECT pg_advisory_xact_lock(?)`, int64(eventId)).Error; err != nil {
+			return err
+		}
+		var maxParticipants int
+		if err := tx.Raw(`SELECT max_participants FROM events WHERE id = ?`, eventId).
+			Scan(&maxParticipants).Error; err != nil {
+			return err
+		}
+		if maxParticipants > 0 {
+			var current int64
+			if err := tx.Raw(
+				`SELECT COUNT(*) FROM event_members WHERE event_id = ? AND member_id != ?`,
+				eventId, memberId,
+			).Scan(&current).Error; err != nil {
+				return err
+			}
+			if current >= int64(maxParticipants) {
+				capacityExceeded = true
+				return nil
+			}
+		}
+		return tx.Exec(
+			`INSERT INTO event_members (event_id, member_id) VALUES (?, ?) ON CONFLICT DO NOTHING`,
+			eventId, memberId,
+		).Error
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if event.MaxParticipants > 0 && len(event.Members) >= event.MaxParticipants {
+	if capacityExceeded {
 		return nil, ErrParticipantLimitReached
 	}
-
-	return s.repo.AddMember(eventId, memberId)
+	return s.repo.GetById(int64(eventId))
 }
 
 func (s *EventsService) RemoveMember(eventId int, memberId int) (*models.Event, error) {

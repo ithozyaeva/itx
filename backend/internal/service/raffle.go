@@ -78,17 +78,26 @@ func (s *RaffleService) BuyTickets(raffleId, memberId int64, count int) error {
 	}
 
 	totalCost := raffle.TicketCost * count
-	balance, err := s.pointRepo.GetBalance(memberId)
-	if err != nil {
-		return err
-	}
-	if balance < totalCost {
-		return fmt.Errorf("недостаточно баллов (нужно %d, доступно %d)", totalCost, balance)
-	}
 
-	// Списание баллов и создание билетов — в одной транзакции, чтобы при
-	// падении INSERT-а не оставлять списанный баланс без билетов (и наоборот).
+	// Балансовая проверка ВНУТРИ tx с pg_advisory_xact_lock(memberId) —
+	// иначе параллельные BuyTickets читают одинаковый SUM (READ COMMITTED),
+	// оба проходят check и оба INSERT'ят дебит, юзер уходит в минус
+	// (INSERT'ы дебитов не конфликтуют сериализуемо). Mirroring casino.go
+	// PlaceBet, где тот же класс гонки уже починен advisory-lock'ом.
 	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`SELECT pg_advisory_xact_lock(?)`, memberId).Error; err != nil {
+			return err
+		}
+		var balance int
+		if err := tx.Raw(
+			`SELECT COALESCE(SUM(amount), 0) FROM point_transactions WHERE member_id = ?`,
+			memberId,
+		).Scan(&balance).Error; err != nil {
+			return err
+		}
+		if balance < totalCost {
+			return fmt.Errorf("недостаточно баллов (нужно %d, доступно %d)", totalCost, balance)
+		}
 		pt := &models.PointTransaction{
 			MemberId:    memberId,
 			Amount:      -totalCost,
