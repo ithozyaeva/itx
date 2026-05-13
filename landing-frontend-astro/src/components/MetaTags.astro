@@ -1,0 +1,59 @@
+---
+import { SITE } from '@/lib/site'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  url?: string
+  type?: 'website' | 'article'
+  noindex?: boolean
+  nofollow?: boolean
+  publishedAt?: string
+  updatedAt?: string
+}
+
+const {
+  title,
+  description = SITE.baseDescription,
+  image = SITE.ogImage,
+  url = SITE.url,
+  type = 'website',
+  noindex = false,
+  nofollow = false,
+  publishedAt,
+  updatedAt,
+} = Astro.props
+
+const fullTitle = title
+  ? `${title} | ${SITE.name}`
+  : SITE.name
+
+const robots = noindex || nofollow
+  ? `${noindex ? 'noindex' : 'index'}, ${nofollow ? 'nofollow' : 'follow'}`
+  : 'index, follow'
+---
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<meta name="author" content={SITE.name} />
+<meta name="robots" content={robots} />
+<meta name="theme-color" content="#000000" />
+<link rel="canonical" href={url} />
+
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content={SITE.locale} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={image} />
+<meta property="og:url" content={url} />
+
+{publishedAt && <meta property="article:published_time" content={publishedAt} />}
+{updatedAt && <meta property="article:modified_time" content={updatedAt} />}
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={image} />
+
+<meta name="apple-mobile-web-app-title" content={SITE.name} />

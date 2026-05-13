@@ -1,0 +1,160 @@
+/* UI Kit design tokens — extracted from itx-ui-kit */
+
+/* Fallback @font-face с подгонкой метрик под Inter Variable —
+   уменьшает FOUT-сдвиг (CLS) пока подгружается основной шрифт.
+   Метрики измерены утилитой fontpie для Arial → Inter. Цепочка
+   local() покрывает Linux/Android (где Arial может отсутствовать). */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Helvetica'), local('Roboto'), local('sans-serif');
+  size-adjust: 107.4%;
+  ascent-override: 90.20%;
+  descent-override: 22.48%;
+  line-gap-override: 0%;
+}
+
+:root {
+  /* Colors */
+  --color-total-black: #000;
+  --color-green-black-700: #141615;
+  --color-green-black-600: #1d211f;
+  --color-green-black-500: #1d2723;
+  --color-green-black-400: #2b3d36;
+  --color-green-700: #43d18c;
+  --color-green-500: #5fa181;
+  --color-grey: #a2b0a9;
+  --color-light-grey: #e4e4e4;
+  --color-white: #fff;
+  --color-green-500-rgb: 95, 161, 129;
+
+  /* Radii */
+  --radius-default: 50px;
+  --radius-button: 50px;
+  --radius-card: 25px;
+  --radius-circle: 50%;
+  --radius-accordion: 10px;
+
+  /* Transitions */
+  --transition-default: all 0.3s ease-in-out;
+  --transition-fast: all 0.15s ease-in-out;
+  --transition-popover: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Fonts */
+  --font-unbounded: 'Unbounded', 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
+  --font-inter: 'Inter Variable', 'Inter Fallback', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+
+  /* Terminal accent */
+  --color-terminal-amber: #ffb547;
+  --color-terminal-magenta: #ff4d8b;
+  --color-terminal-cyan: #5eead4;
+
+  /* Typography: h1 */
+  --h1-font: var(--font-unbounded);
+  --h1-weight: 600;
+  --h1-size: 48px;
+  --h1-line-height: 1.25;
+  --h1-letter-spacing: 0.04em;
+  --h1-transform: uppercase;
+
+  /* Typography: h2 */
+  --h2-font: var(--font-unbounded);
+  --h2-weight: 600;
+  --h2-size: 36px;
+  --h2-line-height: 1.4;
+  --h2-letter-spacing: 0.04em;
+  --h2-transform: uppercase;
+
+  /* Typography: h3 */
+  --h3-font: var(--font-unbounded);
+  --h3-weight: 600;
+  --h3-size: 24px;
+  --h3-line-height: 1.4;
+  --h3-letter-spacing: 0.04em;
+  --h3-transform: uppercase;
+
+  /* Typography: h4 */
+  --h4-font: var(--font-unbounded);
+  --h4-weight: 600;
+  --h4-size: 20px;
+  --h4-line-height: 1.4;
+  --h4-letter-spacing: 0;
+
+  /* Typography: price */
+  --price-font: var(--font-unbounded);
+  --price-weight: 400;
+  --price-size: 28px;
+  --price-line-height: 1;
+  --price-letter-spacing: 0;
+
+  /* Typography: body-xl */
+  --body-xl-font: var(--font-inter);
+  --body-xl-weight: 500;
+  --body-xl-size: 24px;
+  --body-xl-line-height: 1.4;
+  --body-xl-letter-spacing: 0;
+
+  /* Typography: body-l */
+  --body-l-font: var(--font-inter);
+  --body-l-weight: 500;
+  --body-l-size: 20px;
+  --body-l-line-height: 1.4;
+  --body-l-letter-spacing: 0;
+
+  /* Typography: body-m */
+  --body-m-font: var(--font-inter);
+  --body-m-weight: 500;
+  --body-m-size: 18px;
+  --body-m-line-height: 1.4;
+  --body-m-letter-spacing: 0;
+
+  /* Typography: body-s */
+  --body-s-font: var(--font-inter);
+  --body-s-weight: 500;
+  --body-s-size: 16px;
+  --body-s-line-height: 1.25;
+  --body-s-letter-spacing: 0;
+
+  /* Typography: body-xs */
+  --body-xs-font: var(--font-inter);
+  --body-xs-weight: 500;
+  --body-xs-size: 14px;
+  --body-xs-line-height: 1.4;
+  --body-xs-letter-spacing: 0;
+
+  /* Typography: title */
+  --title-font: var(--font-unbounded);
+  --title-weight: 400;
+  --title-size: 14px;
+  --title-line-height: 1.25;
+  --title-letter-spacing: 0;
+
+  /* Typography: label */
+  --label-font: var(--font-inter);
+  --label-weight: 500;
+  --label-size: 14px;
+  --label-line-height: 1;
+  --label-letter-spacing: 0;
+
+  /* Typography: button-text */
+  --button-font: var(--font-unbounded);
+  --button-weight: 600;
+  --button-size: 18px;
+  --button-line-height: 1.2;
+  --button-letter-spacing: 0.04em;
+  --button-transform: uppercase;
+
+  /* Typography: name-text */
+  --name-text-font: var(--font-unbounded);
+  --name-text-weight: 600;
+  --name-text-size: 14px;
+  --name-text-line-height: 1.4;
+  --name-text-letter-spacing: 0;
+
+  /* Typography: date */
+  --date-font: var(--font-unbounded);
+  --date-weight: 400;
+  --date-size: 16px;
+  --date-line-height: 1;
+  --date-letter-spacing: 0;
+}

@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin
+Disallow: /platform
+Allow: /
+
+Sitemap: https://ithozyaeva.ru/sitemap-index.xml

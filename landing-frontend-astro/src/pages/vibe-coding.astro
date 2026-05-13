@@ -1,0 +1,113 @@
+---
+import Breadcrumb from '@/components/Breadcrumb.astro'
+import MinimalFooter from '@/components/MinimalFooter.astro'
+import MinimalHeader from '@/components/MinimalHeader.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { SITE } from '@/lib/site'
+
+const url = `${SITE.url}/vibe-coding`
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${SITE.url}/` },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Вайбкодинг', 'item': url },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    'headline': 'Вайбкодинг (vibe coding) — что это, как научиться и где практиковать',
+    'description': 'Разбор термина «вайбкодинг» (vibe coding), инструменты и практики разработки в паре с ИИ.',
+    'author': { '@type': 'Organization', 'name': SITE.name, 'url': SITE.url },
+    'publisher': {
+      '@type': 'Organization',
+      'name': SITE.name,
+      'url': SITE.url,
+      'logo': { '@type': 'ImageObject', 'url': SITE.ogImage },
+    },
+    'mainEntityOfPage': url,
+    'inLanguage': 'ru',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    'mainEntity': [
+      {
+        '@type': 'Question',
+        'name': 'Что такое вайбкодинг (vibe coding)?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Вайбкодинг — стиль разработки, при котором программист описывает намерение и результат естественным языком, а большую часть кода пишет и правит LLM (Claude, GPT). Термин ввёл Андрей Карпаты в 2025 — «ты не столько пишешь код, сколько задаёшь вайб».',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Какие инструменты используют для вайбкодинга?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Cursor, Claude Code, Windsurf, GitHub Copilot, Aider — IDE-агенты с автономной правкой файлов, запуском тестов и разрешением ошибок.',
+        },
+      },
+    ],
+  },
+]
+---
+<BaseLayout
+  title="Вайбкодинг (vibe coding) — что это, как научиться и где практиковать"
+  description="Вайбкодинг — разработка в паре с языковой ИИ-моделью (LLM), где программист описывает результат, а код пишет и правит ИИ. Разбираем термин, инструменты (Cursor, Claude Code, Windsurf), практики и где освоить в ИТ-сообществе."
+  url={url}
+  type="article"
+  jsonLd={jsonLd}
+>
+  <MinimalHeader />
+  <main>
+    <article class="w-full pt-10 md:pt-16 lg:pt-20 pb-20 md:pb-32">
+      <div class="container px-6 md:px-10">
+        <Breadcrumb items={[{ label: 'vibe-coding' }]} />
+
+        <header class="max-w-3xl">
+          <h1 class="font-display uppercase text-[28px] sm:text-[40px] md:text-[56px] lg:text-[64px] leading-[0.95] tracking-tight text-accent">
+            Вайбкодинг: что это и как научиться
+          </h1>
+          <p class="mt-6 md:mt-8 text-base md:text-lg text-foreground/75 leading-relaxed">
+            Вайбкодинг (от англ. <em>vibe coding</em>) — стиль разработки, при котором программист описывает намерение
+            и результат естественным языком, а большую часть кода пишет и правит LLM. Термин ввёл Андрей Карпаты
+            в феврале 2025: «ты не столько пишешь код, сколько задаёшь вайб — говоришь, чего хочешь,
+            и смотришь, что получилось».
+          </p>
+        </header>
+
+        <p class="mt-6 max-w-3xl font-mono text-xs text-foreground/40 uppercase tracking-widest">
+          ⚠️ wip: astro port — расширенное описание и подборка кейсов перенесутся в следующем шаге.
+        </p>
+
+        <div class="mt-10 max-w-3xl text-base md:text-lg text-foreground/75 leading-relaxed space-y-6">
+          <p>
+            Подробнее о практике, инструментах и реальных кейсах — в статьях:
+          </p>
+          <ul class="space-y-3 list-disc pl-6">
+            <li>
+              <a href="/articles/cursor-vs-claude-code-vs-windsurf" class="text-accent hover:underline">
+                Cursor vs Claude Code vs Windsurf — какой AI-IDE выбрать
+              </a>
+            </li>
+            <li>
+              <a href="/articles/vaybkoding-na-praktike" class="text-accent hover:underline">
+                Вайбкодинг на практике — кейсы, ошибки и продуктивность
+              </a>
+            </li>
+            <li>
+              <a href="/articles/kak-stat-ai-inzhenerom" class="text-accent hover:underline">
+                AI-инженер: кто это и как стать
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </article>
+  </main>
+  <MinimalFooter />
+</BaseLayout>

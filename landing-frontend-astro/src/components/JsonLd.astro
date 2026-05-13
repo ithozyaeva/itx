@@ -1,0 +1,11 @@
+---
+interface Props {
+  data: object | object[]
+}
+
+const { data } = Astro.props
+const items = Array.isArray(data) ? data : [data]
+---
+{items.map(item => (
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(item)} />
+))}
