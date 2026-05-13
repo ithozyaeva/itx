@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createJiti } from 'jiti'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -8,7 +9,18 @@ const distDir = join(__dirname, '..', 'dist')
 const indexHtmlPath = join(distDir, 'index.html')
 const baseHtml = readFileSync(indexHtmlPath, 'utf-8')
 
-const SEO_SHELL_RE = /<div id="app">[\s\S]*?<\/div>\s*<script type="module"/
+const jiti = createJiti(import.meta.url, { interopDefault: true })
+const { articles, renderBlocksToHtml } = await jiti.import('../src/content/articles/index.ts')
+
+// SPA-shell в собранном index.html выглядит так:
+//   <div id="app">
+//     <style>...</style>
+//     <div class="seo-fallback">...</div>
+//   </div>
+// vite после билда переносит <script type="module"> в <head>, поэтому
+// исторический паттерн "<div id=\"app\">...<script type=\"module\"" перестал матчиться,
+// и на /mentors, /vibe-coding и т.д. оставался homepage-shell.
+const SEO_SHELL_RE = /<div id="app">[\s\S]*?<\/div>\s*<\/div>/
 
 const BASE_URL = 'https://ithozyaeva.ru'
 
@@ -19,10 +31,15 @@ const SHELL_STYLE = `<style>
         .seo-fallback h3 { font-size: 17px; margin: 16px 0 6px; }
         .seo-fallback a { color: #5eead4; }
         .seo-fallback nav { margin-bottom: 16px; font-size: 14px; color: #8a8a8a; }
+        .seo-fallback .article-meta { font-size: 12px; color: #8a8a8a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+        .seo-fallback .article-note { border-left: 2px solid #5eead4; padding: 12px 16px; background: rgba(94,234,212,0.05); margin: 16px 0; }
+        .seo-fallback .article-cta a { display: inline-block; padding: 10px 16px; background: #5eead4; color: #0b0d0c; text-decoration: none; font-weight: 700; text-transform: uppercase; }
+        .seo-fallback ul, .seo-fallback ol { padding-left: 24px; }
+        .seo-fallback li { margin: 6px 0; }
       </style>`
 
 /**
- * Каждый route — отдельный prerendered HTML.
+ * Базовые route — отдельные prerendered HTML.
  * title / description / canonical / og-теги подменяются в статическом HTML,
  * чтобы бот без JS видел правильную мету.
  * SEO-shell внутри #app — эквивалент реального контента страницы для JS-less ботов.
@@ -133,7 +150,7 @@ const routes = [
           <li>Каждый diff просматривать глазами.</li>
         </ol>
         <h2>Где практиковать в сообществе</h2>
-        <p>В <a href="/">IT-ХОЗЯЕВА</a> еженедельно проходят онлайн-воркшопы по vibe coding: разбор реальных задач участников в Cursor и Claude Code, обсуждение промптов, подход к ревью AI-кода. Доступ к воркшопам — по подписке от 520 ₽/мес.</p>
+        <p>В <a href="/">IT-ХОЗЯЕВА</a> еженедельно проходят онлайн-воркшопы по vibe coding: разбор реальных задач участников в Cursor и Claude Code, обсуждение промптов и проверка кода, написанного ИИ. Доступ к воркшопам — по подписке от 520 ₽/мес. Подробнее — в <a href="/articles">статьях</a>.</p>
         <p><a href="/">← Вернуться на главную</a></p>
       </div>`,
   },
@@ -150,25 +167,156 @@ const TWITTER_TITLE_RE = /<meta name="twitter:title" content="[^"]*">/
 const TWITTER_DESCRIPTION_RE = /<meta name="twitter:description" content="[^"]*">/
 const HEAD_CLOSE_RE = /<\/head>/
 
+const AMP_RE = /&/g
+const QUOT_RE = /"/g
+
+function escapeAttr(value) {
+  return value.replace(AMP_RE, '&amp;').replace(QUOT_RE, '&quot;')
+}
+
 function buildHtml({ canonical, title, description, ogType, jsonLd, shellHtml }) {
-  const jsonLdScript = `<script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 2)}\n    </script>\n  </head>`
+  const jsonLdScripts = Array.isArray(jsonLd) ? jsonLd : [jsonLd]
+  const jsonLdHtml = jsonLdScripts
+    .map(o => `<script type="application/ld+json">\n${JSON.stringify(o, null, 2)}\n    </script>`)
+    .join('\n    ')
 
   return baseHtml
     .replace(TITLE_RE, `<title>${title}</title>`)
-    .replace(DESCRIPTION_RE, `<meta name="description" content="${description}">`)
+    .replace(DESCRIPTION_RE, `<meta name="description" content="${escapeAttr(description)}">`)
     .replace(CANONICAL_RE, `<link rel="canonical" href="${canonical}">`)
     .replace(OG_TYPE_RE, `<meta property="og:type" content="${ogType}">`)
-    .replace(OG_TITLE_RE, `<meta property="og:title" content="${title}">`)
-    .replace(OG_DESCRIPTION_RE, `<meta property="og:description" content="${description}">`)
+    .replace(OG_TITLE_RE, `<meta property="og:title" content="${escapeAttr(title)}">`)
+    .replace(OG_DESCRIPTION_RE, `<meta property="og:description" content="${escapeAttr(description)}">`)
     .replace(OG_URL_RE, `<meta property="og:url" content="${canonical}">`)
-    .replace(TWITTER_TITLE_RE, `<meta name="twitter:title" content="${title}">`)
-    .replace(TWITTER_DESCRIPTION_RE, `<meta name="twitter:description" content="${description}">`)
-    .replace(HEAD_CLOSE_RE, jsonLdScript)
-    .replace(SEO_SHELL_RE, `<div id="app">\n      ${shellHtml}\n    </div>\n    <script type="module"`)
+    .replace(TWITTER_TITLE_RE, `<meta name="twitter:title" content="${escapeAttr(title)}">`)
+    .replace(TWITTER_DESCRIPTION_RE, `<meta name="twitter:description" content="${escapeAttr(description)}">`)
+    .replace(HEAD_CLOSE_RE, `${jsonLdHtml}\n  </head>`)
+    .replace(SEO_SHELL_RE, `<div id="app">\n      ${shellHtml}\n    </div>`)
 }
 
-for (const route of routes) {
+function buildArticlesIndexShell() {
+  const items = articles
+    .map(a => `<li><a href="/articles/${a.slug}"><strong>${a.h1}</strong></a> — ${a.excerpt}</li>`)
+    .join('\n          ')
+  return `${SHELL_STYLE}
+      <div class="seo-fallback">
+        <nav aria-label="breadcrumb"><a href="/">Главная</a> › Статьи</nav>
+        <h1>Статьи IT-ХОЗЯЕВА</h1>
+        <p>Практика vibe coding, путь в AI-инжиниринг, выбор ментора, подготовка к собеседованиям и обзор IT-сообществ России — статьи на стыке инструментов и карьеры.</p>
+        <ul>
+          ${items}
+        </ul>
+        <p><a href="/">← Вернуться на главную</a></p>
+      </div>`
+}
+
+function buildArticleShell(article) {
+  const body = renderBlocksToHtml(article.body)
+  const tagsLine = article.tags?.length ? ` · ${article.tags.join(' · ')}` : ''
+  const faqHtml = article.faq?.length
+    ? `<h2>Частые вопросы</h2>${article.faq.map(f => `<h3>${f.q}</h3><p>${f.a}</p>`).join('')}`
+    : ''
+  return `${SHELL_STYLE}
+      <div class="seo-fallback">
+        <nav aria-label="breadcrumb"><a href="/">Главная</a> › <a href="/articles">Статьи</a> › ${article.breadcrumb}</nav>
+        <div class="article-meta">${article.publishedAt}${tagsLine}</div>
+        <h1>${article.h1}</h1>
+        <p>${article.lead}</p>
+        ${body}
+        ${faqHtml}
+        <p><a href="/articles">← Все статьи</a></p>
+      </div>`
+}
+
+const articlesIndexRoute = {
+  path: 'articles.html',
+  canonical: `${BASE_URL}/articles`,
+  title: 'Статьи о вайбкодинге, менторстве и карьере в IT | IT-ХОЗЯЕВА',
+  description: 'Практические статьи о vibe coding, AI-инжиниринге, менторстве и подготовке к IT-собеседованиям. Опыт участников сообщества IT-ХОЗЯЕВА.',
+  ogType: 'website',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${BASE_URL}/` },
+        { '@type': 'ListItem', 'position': 2, 'name': 'Статьи', 'item': `${BASE_URL}/articles` },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': 'Статьи IT-ХОЗЯЕВА',
+      'url': `${BASE_URL}/articles`,
+      'description': 'Статьи о vibe coding, AI-инжиниринге, менторстве и подготовке к IT-собеседованиям.',
+      'isPartOf': { '@type': 'WebSite', 'name': 'IT-ХОЗЯЕВА', 'url': BASE_URL },
+      'mainEntity': {
+        '@type': 'ItemList',
+        'itemListElement': articles.map((a, i) => ({
+          '@type': 'ListItem',
+          'position': i + 1,
+          'url': `${BASE_URL}/articles/${a.slug}`,
+          'name': a.h1,
+        })),
+      },
+    },
+  ],
+  shellHtml: buildArticlesIndexShell(),
+}
+
+const articleRoutes = articles.map(article => ({
+  path: `articles/${article.slug}.html`,
+  canonical: `${BASE_URL}/articles/${article.slug}`,
+  title: `${article.title}`.includes('IT-ХОЗЯЕВА') ? article.title : `${article.title} | IT-ХОЗЯЕВА`,
+  description: article.description,
+  ogType: 'article',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${BASE_URL}/` },
+        { '@type': 'ListItem', 'position': 2, 'name': 'Статьи', 'item': `${BASE_URL}/articles` },
+        { '@type': 'ListItem', 'position': 3, 'name': article.breadcrumb, 'item': `${BASE_URL}/articles/${article.slug}` },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': article.h1,
+      'description': article.description,
+      'datePublished': article.publishedAt,
+      'dateModified': article.updatedAt ?? article.publishedAt,
+      'author': { '@type': 'Organization', 'name': 'IT-ХОЗЯЕВА', 'url': BASE_URL },
+      'publisher': {
+        '@type': 'Organization',
+        'name': 'IT-ХОЗЯЕВА',
+        'url': BASE_URL,
+        'logo': { '@type': 'ImageObject', 'url': `${BASE_URL}/og-image.png` },
+      },
+      'mainEntityOfPage': `${BASE_URL}/articles/${article.slug}`,
+      'inLanguage': 'ru',
+    },
+    ...(article.faq?.length
+      ? [{
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          'mainEntity': article.faq.map(f => ({
+            '@type': 'Question',
+            'name': f.q,
+            'acceptedAnswer': { '@type': 'Answer', 'text': f.a },
+          })),
+        }]
+      : []),
+  ],
+  shellHtml: buildArticleShell(article),
+}))
+
+const allRoutes = [...routes, articlesIndexRoute, ...articleRoutes]
+
+for (const route of allRoutes) {
   const outPath = join(distDir, route.path)
+  mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, buildHtml(route), 'utf-8')
   console.log(`✅ Generated: ${outPath}`)
 }

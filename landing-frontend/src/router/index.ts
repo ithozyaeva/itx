@@ -6,12 +6,21 @@ const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
   { path: '/mentors', component: () => import('../pages/Mentors.vue') },
   { path: '/vibe-coding', component: () => import('../pages/VibeCoding.vue') },
+  { path: '/articles', component: () => import('../pages/Articles.vue') },
+  { path: '/articles/:slug', component: () => import('../pages/Article.vue') },
   { path: '/privacy', component: () => import('../pages/Privacy.vue') },
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition)
+      return savedPosition
+    if (to.path !== from.path)
+      return { top: 0 }
+    return undefined
+  },
 })
 
 export default router
