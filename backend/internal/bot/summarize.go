@@ -148,8 +148,14 @@ func (b *TelegramBot) handleSummarizeCommand(message *tgbotapi.Message) {
 		return
 	}
 
+	// summary НЕ эскейпим: системный промпт OpenAI (см. callOpenAI выше)
+	// явно требует HTML-форматирование (<b>, <i>, <code>) для Telegram —
+	// эскейп превратил бы теги в литералы &lt;b&gt; и сломал отрисовку.
+	// Если модель вернёт битый HTML — Telegram отвергнет parse_mode, но это
+	// уже проблема модели, не bot-кода. chat.Title эскейпим — там HTML
+	// не предусмотрен.
 	result := fmt.Sprintf("📋 <b>Суммаризация чата %s</b>\n(%d сообщений, %s, модель: %s)\n\n%s",
-		html.EscapeString(message.Chat.Title), len(messages), label, usedModel, html.EscapeString(summary))
+		html.EscapeString(message.Chat.Title), len(messages), label, usedModel, summary)
 	b.SendDirectMessage(message.From.ID, result)
 }
 
