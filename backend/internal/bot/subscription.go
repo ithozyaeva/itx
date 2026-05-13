@@ -730,6 +730,16 @@ func isActiveMemberStatus(status string) bool {
 	return status == "creator" || status == "administrator" || status == "member" || status == "restricted"
 }
 
+func uintPtrEq(a, b *uint) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
 // --- Periodic subscription checker ---
 
 func (b *TelegramBot) startSubscriptionChecker() {
@@ -752,7 +762,7 @@ func (b *TelegramBot) startSubscriptionChecker() {
 				b.kickUserFunc(),
 				50*time.Millisecond,
 			)
-			b.sendPeriodicCheckReport(subscriptionAdminID(), "Периодическая проверка подписок", results)
+			b.sendPeriodicCheckReport(subscriptionAdminID(), "Периодическая проверка подписок", results, true)
 		case <-sweepTicker.C:
 			stats, err := b.subscriptionService.SweepRealMembership(b.uncachedCheckFunc(), 50*time.Millisecond)
 			if err != nil {
@@ -1183,7 +1193,7 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 			b.kickUserFunc(),
 			50*time.Millisecond,
 		)
-		b.sendPeriodicCheckReport(chatID, "Полная проверка подписок", results)
+		b.sendPeriodicCheckReport(chatID, "Полная проверка подписок", results, false)
 	})
 }
 
@@ -1196,7 +1206,14 @@ func (b *TelegramBot) handleSubCheckAllCommand(message *tgbotapi.Message) {
 // Skipped — юзеры, которых периодик пропустил из-за ошибок Telegram API
 // (rate-limit, таймаут, network). Раньше это терялось в логах и сводка
 // «Изменений нет» выглядела как success, хотя сервис мог быть деградирован.
-func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, report service.PeriodicReport) {
+//
+// onlyNotable=true — для авто-тикера: показываем только юзеров, у кого
+// сменился тир ИЛИ был реальный revoke (бот кого-то кикнул). Чистый
+// catch-up grant без смены тира (sweep почистил access — периодик дозабил)
+// отфильтровывается: это не «изменение подписки», это синк бэка, шум.
+// onlyNotable=false — для ручного /subcheckall, админ запросил полную
+// картину и хочет видеть всё.
+func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, report service.PeriodicReport, onlyNotable bool) {
 	skipNote := ""
 	if len(report.Skipped) > 0 {
 		// Показываем до 10 ID, чтобы не раздувать сообщение; полный список
@@ -1215,7 +1232,28 @@ func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, repor
 			len(report.Skipped), extra, strings.Join(ids, ", "))
 	}
 
-	if len(report.Changed) == 0 {
+	shown := report.Changed
+	if onlyNotable {
+		shown = make([]service.SyncResult, 0, len(report.Changed))
+		for _, r := range report.Changed {
+			tierChanged := !uintPtrEq(r.OldTierID, r.NewTierID)
+			if tierChanged || len(r.Revoked) > 0 {
+				shown = append(shown, r)
+			}
+		}
+	}
+
+	if len(shown) == 0 {
+		// Периодик: молчим, если значимых изменений нет — админу не нужны
+		// «всё ок»-сообщения каждые N часов. Skip-нотификации шлём только
+		// если реально были ошибки Telegram API.
+		if onlyNotable {
+			if len(report.Skipped) > 0 {
+				b.SendDirectMessage(adminID, fmt.Sprintf("<b>%s</b>%s",
+					html.EscapeString(title), skipNote))
+			}
+			return
+		}
 		summary := fmt.Sprintf("<b>%s</b>\n\nИзменений нет.", html.EscapeString(title))
 		if report.UsersTotal > 0 {
 			summary += fmt.Sprintf(" Просмотрено юзеров: %d.", report.UsersTotal)
@@ -1231,7 +1269,7 @@ func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, repor
 	}
 
 	var totalGrant, totalRevoke int
-	for _, r := range report.Changed {
+	for _, r := range shown {
 		totalGrant += len(r.Granted)
 		totalRevoke += len(r.Revoked)
 	}
@@ -1241,12 +1279,12 @@ func (b *TelegramBot) sendPeriodicCheckReport(adminID int64, title string, repor
 			"Юзеров с изменениями: %d (всего просмотрено: %d)\n"+
 			"Всего grant: %d\n"+
 			"Всего revoke: %d%s\n\n",
-		html.EscapeString(title), len(report.Changed), report.UsersTotal,
+		html.EscapeString(title), len(shown), report.UsersTotal,
 		totalGrant, totalRevoke, skipNote,
 	)
 
-	lines := make([]string, 0, len(report.Changed))
-	for _, r := range report.Changed {
+	lines := make([]string, 0, len(shown))
+	for _, r := range shown {
 		uname := ""
 		if u, err := b.subscriptionService.GetUser(r.UserID); err == nil && u.Username != nil && *u.Username != "" {
 			uname = "@" + *u.Username
