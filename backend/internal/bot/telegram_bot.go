@@ -981,9 +981,15 @@ func (b *TelegramBot) handleNewChatMember(chatID int64, user *tgbotapi.User) {
 		return
 	}
 
-	name := user.FirstName
+	// FirstName приходит из Telegram и может содержать <, >, & — без эскейпа
+	// Telegram при ParseMode=HTML отвергает parse_mode и welcome-сообщение
+	// не доставляется. Username всегда alphanumeric+underscore (Telegram
+	// constraint), но эскейпим симметрично — на случай будущих изменений.
+	var name string
 	if user.UserName != "" {
-		name = "@" + user.UserName
+		name = "@" + html.EscapeString(user.UserName)
+	} else {
+		name = html.EscapeString(user.FirstName)
 	}
 
 	text := fmt.Sprintf("👋 Приветствуем <b>%s</b> в IT-Хозяевах!\n\n"+
@@ -1060,7 +1066,8 @@ func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, time
 		if label == "" {
 			label = "Эксклюзив"
 		}
-		builder.WriteString(fmt.Sprintf("👑 <b>%s</b>\n", label))
+		// Title чата приходит от TG, может содержать <, &.
+		builder.WriteString(fmt.Sprintf("👑 <b>%s</b>\n", html.EscapeString(label)))
 	}
 
 	if isInitial {
@@ -1072,10 +1079,16 @@ func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, time
 		builder.WriteString(fmt.Sprintf("📌 <b>Напоминание о событии</b>%s\n\n", timeRemaining))
 	}
 
-	builder.WriteString(fmt.Sprintf("<b>%s</b>\n", event.Title))
+	// Admin-controlled поля Title/Description/Place прогоняем через
+	// sanitizeTelegramHTML — он экранирует «опасное» (`<`, `&`, ...) и
+	// сохраняет белый список TG-тегов (<b>, <i>, <a>, и т.д.), которые
+	// админ может добавлять для форматирования. Раньше event.Title с
+	// амперсандом («Q&A с CEO») или с `<` ронял parse_mode → алерт не
+	// доставлялся подписчикам.
+	builder.WriteString(fmt.Sprintf("<b>%s</b>\n", sanitizeTelegramHTML(event.Title)))
 
 	if event.Description != "" {
-		builder.WriteString(fmt.Sprintf("\n%s\n", event.Description))
+		builder.WriteString(fmt.Sprintf("\n%s\n", sanitizeTelegramHTML(event.Description)))
 	}
 
 	dateStr := formatEventDateStr(event.Date, event.Timezone)
@@ -1085,27 +1098,30 @@ func (b *TelegramBot) formatEventAlert(event *models.Event, isInitial bool, time
 	if len(event.Hosts) > 0 {
 		builder.WriteString("\n👥 <b>Спикеры:</b>\n")
 		for _, host := range event.Hosts {
+			// FirstName/LastName приходят из Telegram — экранируем как
+			// plain text, форматирования от юзера тут не ждём.
 			name := strings.TrimSpace(fmt.Sprintf("%s %s", host.FirstName, host.LastName))
 			if name == "" {
 				name = host.Username
 			}
+			nameEsc := html.EscapeString(name)
 
 			if host.Username != "" {
-				builder.WriteString(fmt.Sprintf("• %s (@%s)\n", name, host.Username))
+				builder.WriteString(fmt.Sprintf("• %s (@%s)\n", nameEsc, html.EscapeString(host.Username)))
 			} else {
-				builder.WriteString(fmt.Sprintf("• %s\n", name))
+				builder.WriteString(fmt.Sprintf("• %s\n", nameEsc))
 			}
 		}
 	}
 
 	if event.PlaceType == models.EventOnline {
-		builder.WriteString(fmt.Sprintf("\n🔗 <b>Ссылка:</b> %s\n", event.Place))
+		builder.WriteString(fmt.Sprintf("\n🔗 <b>Ссылка:</b> %s\n", sanitizeTelegramHTML(event.Place)))
 	} else {
 		place := event.Place
 		if event.CustomPlaceType != "" {
 			place = event.CustomPlaceType + ", " + event.Place
 		}
-		builder.WriteString(fmt.Sprintf("\n📍 <b>Место:</b> %s\n", place))
+		builder.WriteString(fmt.Sprintf("\n📍 <b>Место:</b> %s\n", sanitizeTelegramHTML(place)))
 	}
 
 	// Добавляем информацию о повторениях
@@ -1628,7 +1644,9 @@ func (b *TelegramBot) SendEventCancelAlert(event *models.Event) error {
 			continue
 		}
 
-		messageText := fmt.Sprintf("❌ <b>Событие отменено!</b>\n\n<b>%s</b>\n\nСобытие было отменено организаторами.", event.Title)
+		// Title — admin-controlled; sanitize, чтобы амперсанд или `<` не
+		// ронял parse_mode и алерт «событие отменено» доставлялся.
+		messageText := fmt.Sprintf("❌ <b>Событие отменено!</b>\n\n<b>%s</b>\n\nСобытие было отменено организаторами.", sanitizeTelegramHTML(event.Title))
 		msg := tgbotapi.NewMessage(member.TelegramID, messageText)
 		msg.ParseMode = "HTML"
 
@@ -1650,10 +1668,12 @@ func (b *TelegramBot) formatEventUpdateAlert(event *models.Event) string {
 	var builder strings.Builder
 
 	builder.WriteString("📝 <b>Событие изменено!</b>\n\n")
-	builder.WriteString(fmt.Sprintf("<b>%s</b>\n", event.Title))
+	// См. комментарий в formatEventAlert: admin-поля через sanitize,
+	// TG-юзер-поля (хосты) через html.EscapeString.
+	builder.WriteString(fmt.Sprintf("<b>%s</b>\n", sanitizeTelegramHTML(event.Title)))
 
 	if event.Description != "" {
-		builder.WriteString(fmt.Sprintf("\n%s\n", event.Description))
+		builder.WriteString(fmt.Sprintf("\n%s\n", sanitizeTelegramHTML(event.Description)))
 	}
 
 	dateStr := formatEventDateStr(event.Date, event.Timezone)
@@ -1667,23 +1687,24 @@ func (b *TelegramBot) formatEventUpdateAlert(event *models.Event) string {
 			if name == "" {
 				name = host.Username
 			}
+			nameEsc := html.EscapeString(name)
 
 			if host.Username != "" {
-				builder.WriteString(fmt.Sprintf("• %s (@%s)\n", name, host.Username))
+				builder.WriteString(fmt.Sprintf("• %s (@%s)\n", nameEsc, html.EscapeString(host.Username)))
 			} else {
-				builder.WriteString(fmt.Sprintf("• %s\n", name))
+				builder.WriteString(fmt.Sprintf("• %s\n", nameEsc))
 			}
 		}
 	}
 
 	if event.PlaceType == models.EventOnline {
-		builder.WriteString(fmt.Sprintf("\n🔗 <b>Ссылка:</b> %s\n", event.Place))
+		builder.WriteString(fmt.Sprintf("\n🔗 <b>Ссылка:</b> %s\n", sanitizeTelegramHTML(event.Place)))
 	} else {
 		place := event.Place
 		if event.CustomPlaceType != "" {
 			place = event.CustomPlaceType + ", " + event.Place
 		}
-		builder.WriteString(fmt.Sprintf("\n📍 <b>Место:</b> %s\n", place))
+		builder.WriteString(fmt.Sprintf("\n📍 <b>Место:</b> %s\n", sanitizeTelegramHTML(place)))
 	}
 
 	// Добавляем информацию о повторениях
