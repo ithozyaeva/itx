@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ReferralCabinet } from '@/services/referral'
-import { Check, Coins, Copy, Share2, TrendingUp, Users } from 'lucide-vue-next'
+import { Check, Coins, Copy, Share2, Sparkles, TrendingUp, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -133,6 +133,35 @@ onMounted(async () => {
           <Share2 class="w-4 h-4 mr-2" />
           Поделиться ссылкой
         </Button>
+      </div>
+
+      <!-- Объяснение, за что начисляются кредиты -->
+      <div class="rounded-sm border border-accent/30 bg-accent/[0.04] p-5 mb-6">
+        <div class="flex items-start gap-3 mb-3">
+          <Sparkles class="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <div>
+            <h3 class="font-medium mb-1">
+              Как зарабатывать кредиты
+            </h3>
+            <p class="text-sm text-muted-foreground">
+              Поделитесь личной ссылкой на бота — за каждого нового участника + за его покупку подписки вам начисляются кредиты, которыми можно оплатить свою подписку.
+            </p>
+          </div>
+        </div>
+        <ul class="space-y-2 text-sm pl-8">
+          <li class="flex items-center gap-2">
+            <Users class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>30 кр.</strong> — за каждого, кто пришёл по вашей ссылке</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <Coins class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>50%</strong> — разово, когда реферал оформил подписку</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <Coins class="w-4 h-4 text-muted-foreground shrink-0" />
+            <span><strong>20%</strong> — каждый месяц, пока реферал активен</span>
+          </li>
+        </ul>
       </div>
 
       <!-- Статистика -->
