@@ -180,7 +180,6 @@ func (s *DailyTaskService) GetMyToday(memberId int64) (models.DailyTodayResponse
 		tasksById[t.Id] = t
 	}
 	// Порядок — как в task_ids набора (стабильный для всех юзеров).
-	awarded := 0
 	bonusAwarded := false
 	for _, id := range set.TaskIds {
 		t, ok := tasksById[id]
@@ -188,9 +187,6 @@ func (s *DailyTaskService) GetMyToday(memberId int64) (models.DailyTodayResponse
 			continue
 		}
 		p := progressByTask[id]
-		if p.Awarded {
-			awarded++
-		}
 		if p.BonusAwarded {
 			bonusAwarded = true
 		}
@@ -207,7 +203,6 @@ func (s *DailyTaskService) GetMyToday(memberId int64) (models.DailyTodayResponse
 		Awarded: bonusAwarded,
 	}
 
-	_ = awarded
 	return resp, nil
 }
 

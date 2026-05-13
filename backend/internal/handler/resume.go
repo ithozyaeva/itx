@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"ithozyeva/internal/models"
+	"ithozyeva/internal/s3resolve"
 	"ithozyeva/internal/service"
 )
 
@@ -198,7 +199,7 @@ func (h *ResumeHandler) DownloadMy(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "Резюме не найдено")
 	}
 
-	return c.JSON(fiber.Map{"url": resume.FilePath})
+	return c.JSON(fiber.Map{"url": s3resolve.ResolveS3URL(resume.FilePath)})
 }
 
 func (h *ResumeHandler) AdminList(c *fiber.Ctx) error {
