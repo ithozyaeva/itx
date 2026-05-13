@@ -14,10 +14,13 @@ import {
 import { Calendar, ClipboardList, FileText, Folder, MessageSquare, Users } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Bar, Line } from 'vue-chartjs'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCardReveal } from '@/composables/useCardReveal'
 import { statsService } from '@/services/statsService'
+
+const router = useRouter()
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend)
 
@@ -42,19 +45,26 @@ onMounted(async () => {
 })
 
 const statCards = [
-  { key: 'totalMembers', label: 'Участники', icon: Users, color: 'accent' },
-  { key: 'totalMentors', label: 'Менторы', icon: Users, color: 'term-cyan' },
-  { key: 'upcomingEvents', label: 'Предстоящие события', icon: Calendar, color: 'term-amber' },
-  { key: 'pastEvents', label: 'Прошедшие события', icon: Calendar, color: 'muted-foreground' },
-  { key: 'pendingReviews', label: 'Ожидают публикации', icon: MessageSquare, color: 'term-magenta' },
-  { key: 'approvedReviews', label: 'Опубликованные', icon: MessageSquare, color: 'accent' },
-  { key: 'referralLinks', label: 'Реф. ссылки', icon: Folder, color: 'term-cyan' },
-  { key: 'resumes', label: 'Резюме', icon: FileText, color: 'term-amber' },
-  { key: 'openTasks', label: 'Открытые', icon: ClipboardList, color: 'accent' },
-  { key: 'inProgressTasks', label: 'В работе', icon: ClipboardList, color: 'term-amber' },
-  { key: 'doneTasks', label: 'Выполнены', icon: ClipboardList, color: 'term-cyan' },
-  { key: 'approvedTasks', label: 'Приняты', icon: ClipboardList, color: 'accent' },
+  { key: 'totalMembers', label: 'Участники', icon: Users, color: 'accent', to: '/members' },
+  { key: 'totalMentors', label: 'Менторы', icon: Users, color: 'term-cyan', to: '/mentors' },
+  { key: 'upcomingEvents', label: 'Предстоящие события', icon: Calendar, color: 'term-amber', to: '/events' },
+  { key: 'pastEvents', label: 'Прошедшие события', icon: Calendar, color: 'muted-foreground', to: '/events' },
+  { key: 'pendingReviews', label: 'Ожидают публикации', icon: MessageSquare, color: 'term-magenta', to: '/reviews' },
+  { key: 'approvedReviews', label: 'Опубликованные', icon: MessageSquare, color: 'accent', to: '/reviews' },
+  { key: 'referralLinks', label: 'Реф. ссылки', icon: Folder, color: 'term-cyan', to: '/referrals' },
+  { key: 'resumes', label: 'Резюме', icon: FileText, color: 'term-amber', to: '/resumes' },
+  { key: 'openTasks', label: 'Открытые', icon: ClipboardList, color: 'accent', to: '/platform/tasks' },
+  { key: 'inProgressTasks', label: 'В работе', icon: ClipboardList, color: 'term-amber', to: '/platform/tasks' },
+  { key: 'doneTasks', label: 'Выполнены', icon: ClipboardList, color: 'term-cyan', to: '/platform/tasks' },
+  { key: 'approvedTasks', label: 'Приняты', icon: ClipboardList, color: 'accent', to: '/platform/tasks' },
 ] as const
+
+function openCard(to: string) {
+  if (to.startsWith('/platform'))
+    window.open(to, '_blank', 'noopener')
+  else
+    router.push(to)
+}
 
 const memberGrowthData = computed(() => ({
   labels: chartStats.value?.memberGrowth.map(m => m.month) ?? [],
@@ -122,11 +132,13 @@ const chartOptions = {
       </div>
 
       <div v-if="stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <div
+        <button
           v-for="card in statCards"
           :key="card.key"
-          class="terminal-stat bg-card text-card-foreground p-3 lg:p-4"
+          type="button"
+          class="terminal-stat bg-card text-card-foreground p-3 lg:p-4 text-left cursor-pointer transition-colors hover:bg-accent/5 hover:border-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           data-reveal
+          @click="openCard(card.to)"
         >
           <div class="flex items-center justify-between mb-2">
             <span class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{{ card.label }}</span>
@@ -135,7 +147,7 @@ const chartOptions = {
           <p class="text-2xl lg:text-3xl font-bold font-mono tabular-nums">
             {{ stats[card.key] }}
           </p>
-        </div>
+        </button>
       </div>
 
       <div v-if="chartStats" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
