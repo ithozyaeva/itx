@@ -1,9 +1,10 @@
 ---
 import Breadcrumb from '@/components/Breadcrumb.astro'
-import MinimalFooter from '@/components/MinimalFooter.astro'
-import MinimalHeader from '@/components/MinimalHeader.astro'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import { SITE, TARIFFS } from '@/lib/site'
+import MentorsSection from '@/sections/MentorsSection.astro'
 
 const url = `${SITE.url}/mentors`
 
@@ -38,9 +39,9 @@ const jsonLd = [
   url={url}
   jsonLd={jsonLd}
 >
-  <MinimalHeader />
+  <Header alwaysScrolled navAsAnchor={false} />
   <main>
-    <section class="w-full pt-10 md:pt-16 lg:pt-20 pb-20 md:pb-32">
+    <section class="w-full pt-10 md:pt-16 lg:pt-20">
       <div class="container px-6 md:px-10">
         <Breadcrumb items={[{ label: 'mentors' }]} />
 
@@ -52,10 +53,6 @@ const jsonLd = [
             60+ ИТ-менторов: старшие разработчики, тимлиды, архитекторы и ИИ-инженеры из топовых российских ИТ-компаний —
             Яндекс, Тинькофф, VK, Ozon, Сбер, Kaspersky, JetBrains. Помогаем расти по уровням, сменить направление,
             подготовиться к собеседованию и разобраться в ИИ и вайбкодинге.
-          </p>
-
-          <p class="mt-6 font-mono text-xs text-foreground/40 uppercase tracking-widest">
-            ⚠️ wip: astro port — таблица менторов с интерактивом будет в следующем шаге.
           </p>
 
           <div class="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-3 gap-px bg-accent/15 border border-accent/15">
@@ -87,6 +84,8 @@ const jsonLd = [
         </div>
       </div>
     </section>
+
+    <MentorsSection showHeader={false} />
   </main>
-  <MinimalFooter />
+  <Footer />
 </BaseLayout>

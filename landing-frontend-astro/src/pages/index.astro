@@ -1,10 +1,11 @@
 ---
-import MinimalFooter from '@/components/MinimalFooter.astro'
-import MinimalHeader from '@/components/MinimalHeader.astro'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import { SITE } from '@/lib/site'
 import CalendarSection from '@/sections/CalendarSection.astro'
 import FAQSection from '@/sections/FAQSection.astro'
+import MentorsSection from '@/sections/MentorsSection.astro'
 import PromoteSection from '@/sections/PromoteSection.astro'
 import TariffSection from '@/sections/TariffSection.astro'
 import WhySection from '@/sections/WhySection.astro'
@@ -77,13 +78,14 @@ const jsonLd = [
   url={SITE.url}
   jsonLd={jsonLd}
 >
-  <MinimalHeader />
+  <Header />
   <main>
     <PromoteSection />
     <WhySection />
     <TariffSection />
+    <MentorsSection preview />
     <CalendarSection />
     <FAQSection />
   </main>
-  <MinimalFooter />
+  <Footer />
 </BaseLayout>

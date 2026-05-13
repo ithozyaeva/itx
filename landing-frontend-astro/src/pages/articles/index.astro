@@ -1,8 +1,8 @@
 ---
 import { getCollection } from 'astro:content'
 import Breadcrumb from '@/components/Breadcrumb.astro'
-import MinimalFooter from '@/components/MinimalFooter.astro'
-import MinimalHeader from '@/components/MinimalHeader.astro'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import { SITE } from '@/lib/site'
 
@@ -45,7 +45,7 @@ const jsonLd = [
   url={pageUrl}
   jsonLd={jsonLd}
 >
-  <MinimalHeader />
+  <Header alwaysScrolled navAsAnchor={false} />
   <main>
     <section class="w-full pt-10 md:pt-16 lg:pt-20 pb-20 md:pb-32">
       <div class="container px-6 md:px-10">
@@ -91,5 +91,5 @@ const jsonLd = [
       </div>
     </section>
   </main>
-  <MinimalFooter />
+  <Footer />
 </BaseLayout>
