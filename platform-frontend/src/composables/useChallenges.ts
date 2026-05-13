@@ -9,6 +9,11 @@ const error = ref<string | null>(null)
 
 async function fetchAll() {
   loading.value = true
+  // Сбрасываем прошлую ошибку в начале попытки: иначе после первого
+  // network glitch error.value остаётся выставленной навсегда — даже
+  // когда SSE-триггер перетянул свежие данные, UI продолжает показывать
+  // «не удалось загрузить» рядом с актуальным data.
+  error.value = null
   try {
     data.value = await challengesService.getMine()
   }
