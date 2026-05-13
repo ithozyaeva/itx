@@ -331,9 +331,12 @@ func (b *TelegramBot) handleSubStatusCommand(message *tgbotapi.Message) {
 		}
 	}
 
+	// tierName escape: handleMyGroupsCommand уже эскейпит, держим тот же
+	// инвариант — иначе админ назовёт тир со спецсимволом и /substatus
+	// перестаёт доставляться юзерам.
 	text := fmt.Sprintf("<b>Статус подписки</b>\n\n"+
 		"Тир: %s\n"+
-		"Доступных чатов: %d\n", tierName, len(unique))
+		"Доступных чатов: %d\n", html.EscapeString(tierName), len(unique))
 
 	if len(unique) > 0 {
 		items := make([]chatListItem, 0, len(unique))
@@ -791,7 +794,7 @@ func (b *TelegramBot) handleSubTiersCommand(message *tgbotapi.Message) {
 	tierCounts, _ := b.subscriptionService.CountAllUsersByTier()
 	text := "<b>Тиры подписок:</b>\n\n"
 	for _, t := range tiers {
-		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, t.Name, t.Slug, tierCounts[t.ID])
+		text += fmt.Sprintf("Level %d: <b>%s</b> (%s) — %d пользователей\n", t.Level, html.EscapeString(t.Name), html.EscapeString(t.Slug), tierCounts[t.ID])
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -813,10 +816,10 @@ func (b *TelegramBot) handleSubChatsCommand(message *tgbotapi.Message) {
 		if c.AnchorForTierID != nil {
 			tier, err := b.subscriptionService.GetTier(*c.AnchorForTierID)
 			if err == nil {
-				role = fmt.Sprintf(" [ANCHOR → %s]", tier.Name)
+				role = fmt.Sprintf(" [ANCHOR → %s]", html.EscapeString(tier.Name))
 			}
 		}
-		text += fmt.Sprintf("<code>%d</code> — %s%s\n", c.ID, c.Title, role)
+		text += fmt.Sprintf("<code>%d</code> — %s%s\n", c.ID, html.EscapeString(c.Title), role)
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -879,18 +882,18 @@ func (b *TelegramBot) handleSubAddChatCommand(message *tgbotapi.Message) {
 			log.Printf("subaddchat: failed to pin anchor welcome for chat %d: %v", chatID, err)
 			b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 				"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s, но закрепить welcome не удалось: %v.\n"+
-					"Вызовите /subpin %d вручную.", chatID, tier.Name, err, chatID))
+					"Вызовите /subpin %d вручную.", chatID, html.EscapeString(tier.Name), err, chatID))
 			return
 		}
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 			"Чат <code>%d</code> установлен как <b>anchor</b> для тира %s, welcome-сообщение закреплено.",
-			chatID, tier.Name))
+			chatID, html.EscapeString(tier.Name)))
 		return
 	}
 
 	b.subscriptionService.AddChatToTier(chatID, tier.ID)
 	b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
-		"Чат <code>%d</code> добавлен как <b>content</b> для тира %s.", chatID, tier.Name))
+		"Чат <code>%d</code> добавлен как <b>content</b> для тира %s.", chatID, html.EscapeString(tier.Name)))
 
 	// Рассылаем уведомления всем пользователям, у которых эффективный тир
 	// достаточного уровня и ещё нет доступа в этот чат. Делаем асинхронно,
@@ -996,12 +999,12 @@ func (b *TelegramBot) handleSubSetAnchorCommand(message *tgbotapi.Message) {
 		log.Printf("subsetanchor: failed to pin anchor welcome for chat %d: %v", chatID, err)
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 			"Чат <code>%d</code> теперь anchor для тира %s, но закрепить welcome не удалось: %v.\n"+
-				"Вызовите /subpin %d вручную.", chatID, tier.Name, err, chatID))
+				"Вызовите /subpin %d вручную.", chatID, html.EscapeString(tier.Name), err, chatID))
 		return
 	}
 	b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
 		"Чат <code>%d</code> теперь anchor для тира %s, welcome-сообщение закреплено.",
-		chatID, tier.Name))
+		chatID, html.EscapeString(tier.Name)))
 }
 
 func (b *TelegramBot) handleSubRemoveChatCommand(message *tgbotapi.Message) {
@@ -1062,7 +1065,7 @@ func (b *TelegramBot) handleSubUsersCommand(message *tgbotapi.Message) {
 		if u.Username != nil {
 			usernameStr = *u.Username
 		}
-		text += fmt.Sprintf("%s <code>%d</code> @%s%s\n", active, u.ID, usernameStr, tierInfo)
+		text += fmt.Sprintf("%s <code>%d</code> @%s%s\n", active, u.ID, html.EscapeString(usernameStr), tierInfo)
 	}
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -1109,6 +1112,10 @@ func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
 		lastCheck = user.LastCheckAt.Format("2006-01-02 15:04")
 	}
 
+	// user.FullName реально может содержать <, & (Telegram first/last name
+	// — произвольный Unicode); без эскейпа DM с инфой о таком юзере не
+	// доставляется. usernameStr из БД — alphanumeric+_ в норме, но
+	// эскейпим симметрично.
 	text := fmt.Sprintf("<b>Инфо о пользователе</b>\n\n"+
 		"ID: <code>%d</code>\n"+
 		"Username: @%s\n"+
@@ -1119,8 +1126,8 @@ func (b *TelegramBot) handleSubUserInfoCommand(message *tgbotapi.Message) {
 		"Effective tier: %s\n"+
 		"Последняя проверка: %s\n"+
 		"Активных чатов: %d\n",
-		user.ID, usernameStr, user.FullName, user.IsActive,
-		user.ResolvedTierID, user.ManualTierID, effTierName,
+		user.ID, html.EscapeString(usernameStr), html.EscapeString(user.FullName), user.IsActive,
+		user.ResolvedTierID, user.ManualTierID, html.EscapeString(effTierName),
 		lastCheck, len(access))
 
 	b.SendDirectMessage(message.Chat.ID, text)
@@ -1166,7 +1173,7 @@ func (b *TelegramBot) handleSubOverrideCommand(message *tgbotapi.Message) {
 			"tier_id": tier.ID, "tier_slug": tier.Slug, "by": message.From.ID,
 		})
 		b.SendDirectMessage(message.Chat.ID, fmt.Sprintf(
-			"Пользователь <code>%d</code> установлен на тир %s.", userID, tier.Name))
+			"Пользователь <code>%d</code> установлен на тир %s.", userID, html.EscapeString(tier.Name)))
 	}
 
 	// Re-sync
