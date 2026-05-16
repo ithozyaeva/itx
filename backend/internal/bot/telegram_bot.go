@@ -2014,8 +2014,12 @@ func (b *TelegramBot) checkReminderAlert(event *models.Event, now time.Time) {
 // 12:00 МСК ушёл second, в 18:00 МСК third был skipped). Упростили до 2
 // типов в разные временные окна — оба гарантированно проходят.
 //
-// Защита от дублирования теперь общая: 2-минутное окно на пред. отправку,
-// чего достаточно (third и start разнесены минимум на ~58 минут).
+// Защита от дублирования: проверяем, попадает ли время прошлой отправки в
+// то же окно типа ("third" или "start") относительно eventTime — если да,
+// этот тип уже отправляли, скипаем. Раньше тут было плоское «2 минуты с
+// прошлой отправки», но тикер раз в минуту внутри 59-минутного окна
+// "third" повторно стрелял каждые 2+ минуты (см. инцидент 2026-05-16:
+// напоминания на 8/5/2 минуты подряд).
 func (b *TelegramBot) checkRepeatingAlerts(event *models.Event, now time.Time) {
 	eventTime := event.Date
 	timeUntilEvent := eventTime.Sub(now)
@@ -2033,8 +2037,16 @@ func (b *TelegramBot) checkRepeatingAlerts(event *models.Event, now time.Time) {
 	}
 
 	if event.LastRepeatingAlertSentAt != nil {
-		if now.Sub(*event.LastRepeatingAlertSentAt) < 2*time.Minute {
-			return
+		lastSentBeforeEvent := eventTime.Sub(*event.LastRepeatingAlertSentAt)
+		switch alertType {
+		case "third":
+			if lastSentBeforeEvent <= alertThird && lastSentBeforeEvent > 1*time.Minute {
+				return
+			}
+		case "start":
+			if lastSentBeforeEvent <= 1*time.Minute && lastSentBeforeEvent > -2*time.Minute {
+				return
+			}
 		}
 	}
 
