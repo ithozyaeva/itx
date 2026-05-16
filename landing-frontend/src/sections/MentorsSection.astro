@@ -197,7 +197,42 @@ function setupAvatarFallback() {
   }
 }
 
+// Build-time fetch впекает avatarUrl c X-Amz-Expires=604800s (7 дней).
+// Без свежего деплоя через неделю signed-URL'ы 403'ят и аватары падают на
+// fallback-инициалы. Тихо обновляем src свежими URL после загрузки.
+async function refreshAvatars() {
+  const imgs = document.querySelectorAll<HTMLImageElement>('.mentor-card .mentor-avatar')
+  if (imgs.length === 0)
+    return
+  try {
+    const res = await fetch('/api/mentors', { headers: { Accept: 'application/json' } })
+    if (!res.ok)
+      return
+    const data = await res.json() as { items?: { id: number, avatarUrl?: string }[] }
+    const byId = new Map<number, string>()
+    for (const m of data.items ?? []) {
+      if (m.avatarUrl)
+        byId.set(m.id, m.avatarUrl)
+    }
+    imgs.forEach((img) => {
+      const card = img.closest<HTMLElement>('.mentor-card')
+      const id = Number(card?.dataset.mentorId)
+      const fresh = byId.get(id)
+      if (fresh && fresh !== img.src)
+        img.src = fresh
+    })
+  }
+  catch {
+    // Сеть/CORS/анти-DDoS — silently fail, fallback на инициалы покроет.
+  }
+}
+
 setupMentorsFilter()
 setupMentorLinks()
 setupAvatarFallback()
+// Стартуем рефреш с задержкой — не конкурируем с LCP и hero-анимацией.
+if ('requestIdleCallback' in window)
+  (window as any).requestIdleCallback(refreshAvatars, { timeout: 3000 })
+else
+  setTimeout(refreshAvatars, 800)
 </script>

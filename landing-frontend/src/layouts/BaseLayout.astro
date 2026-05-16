@@ -98,5 +98,42 @@ const allJsonLd = [...sitewideJsonLd, ...jsonLd]
   </div>
   <ConfirmServiceModal />
   <YandexMetrika />
+
+  <script>
+    // Scroll-reveal observer: добавляет класс `.revealed` элементам с .reveal /
+    // .reveal-stagger / .reveal-left / .reveal-right когда они входят в viewport.
+    // Без этого CSS-правила оставляют их opacity:0 — секции под hero были
+    // невидимы. В Vue это делал useRevealObserver-composable.
+    function setupReveal() {
+      const targets = document.querySelectorAll<HTMLElement>('.reveal, .reveal-stagger, .reveal-left, .reveal-right')
+      if (targets.length === 0)
+        return
+
+      // Если prefers-reduced-motion — сразу показываем всё, без анимации.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        targets.forEach(el => el.classList.add('revealed'))
+        return
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed')
+            observer.unobserve(entry.target)
+          }
+        }
+      }, {
+        rootMargin: '0px 0px -10% 0px',
+        threshold: 0.05,
+      })
+
+      targets.forEach(el => observer.observe(el))
+    }
+
+    if (document.readyState === 'loading')
+      document.addEventListener('DOMContentLoaded', setupReveal)
+    else
+      setupReveal()
+  </script>
 </body>
 </html>
