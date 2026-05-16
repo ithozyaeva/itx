@@ -63,6 +63,7 @@ export interface SubscriptionUser {
 export interface SubscriptionUserDetail extends SubscriptionUser {
   resolvedTierName?: string
   manualTierName?: string
+  manualTierExpiresAt?: string
   effectiveTierName?: string
   access: {
     chatID: number
@@ -150,9 +151,9 @@ class SubscriptionService {
     }
   }
 
-  setOverride = async (userId: number, tierSlug: string): Promise<boolean> => {
+  setOverride = async (userId: number, tierSlug: string, months = 0): Promise<boolean> => {
     try {
-      await api.put(`subscriptions/users/${userId}/override`, { json: { tierSlug } }).json()
+      await api.put(`subscriptions/users/${userId}/override`, { json: { tierSlug, months } }).json()
       this.toast.toast({ title: 'Успешно', description: 'Тир установлен' })
       return true
     }

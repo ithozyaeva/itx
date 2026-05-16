@@ -18,6 +18,7 @@ const emit = defineEmits(['update:isOpen', 'saved'])
 const user = ref<SubscriptionUserDetail | null>(null)
 const isLoading = ref(false)
 const selectedTierSlug = ref('')
+const selectedMonths = ref<number | null>(null)
 
 watch(() => props.isOpen, async (open) => {
   if (open && props.userId) {
@@ -32,6 +33,7 @@ watch(() => props.isOpen, async (open) => {
   else {
     user.value = null
     selectedTierSlug.value = ''
+    selectedMonths.value = null
   }
 })
 
@@ -43,9 +45,11 @@ async function handleSetOverride() {
   if (!user.value || !selectedTierSlug.value)
     return
 
-  const success = await subscriptionService.setOverride(user.value.id, selectedTierSlug.value)
+  const months = selectedMonths.value && selectedMonths.value > 0 ? selectedMonths.value : 0
+  const success = await subscriptionService.setOverride(user.value.id, selectedTierSlug.value, months)
   if (success) {
     user.value = await subscriptionService.getUser(user.value.id)
+    selectedMonths.value = null
     emit('saved')
   }
 }
@@ -151,6 +155,12 @@ function formatDate(dateStr?: string) {
                   &times;
                 </Button>
               </div>
+              <div
+                v-if="user.manualTierID"
+                class="text-muted-foreground text-xs mt-0.5"
+              >
+                {{ user.manualTierExpiresAt ? `до ${formatDate(user.manualTierExpiresAt)}` : 'бессрочно' }}
+              </div>
             </div>
             <div>
               <div class="text-muted-foreground text-xs">
@@ -185,6 +195,17 @@ function formatDate(dateStr?: string) {
                 {{ tier.name }} (level {{ tier.level }})
               </option>
             </select>
+          </div>
+          <div class="w-28">
+            <Label class="text-xs">Срок, мес.</Label>
+            <input
+              v-model.number="selectedMonths"
+              type="number"
+              min="0"
+              max="60"
+              placeholder="бессрочно"
+              class="w-full mt-1 h-9 rounded-sm border border-input bg-background px-3 text-sm"
+            >
           </div>
           <Button
             size="sm"

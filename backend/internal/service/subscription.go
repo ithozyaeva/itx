@@ -992,6 +992,10 @@ func (s *SubscriptionService) SetManualTier(userID int64, tierID *uint) error {
 	return s.repo.SetManualTier(userID, tierID)
 }
 
+func (s *SubscriptionService) SetManualTierWithExpiry(userID int64, tierID *uint, expiresAt *time.Time) error {
+	return s.repo.SetManualTierWithExpiry(userID, tierID, expiresAt)
+}
+
 func (s *SubscriptionService) AddAudit(userID int64, action string, details map[string]interface{}) error {
 	return s.repo.AddAudit(userID, action, details)
 }
