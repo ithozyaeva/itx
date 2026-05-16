@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -244,6 +245,9 @@ func (h *SubscriptionHandler) GetUser(c *fiber.Ctx) error {
 			result["manualTierName"] = tier.Name
 		}
 	}
+	if user.ManualTierExpiresAt != nil {
+		result["manualTierExpiresAt"] = user.ManualTierExpiresAt
+	}
 	if effTierID := user.EffectiveTierID(); effTierID != nil {
 		if tier, ok := tm[*effTierID]; ok {
 			result["effectiveTierName"] = tier.Name
@@ -287,9 +291,17 @@ func (h *SubscriptionHandler) SetOverride(c *fiber.Ctx) error {
 
 	var req struct {
 		TierSlug string `json:"tierSlug"`
+		// Months > 0 — выдать на N месяцев (как платная подписка в обход Boosty).
+		// 0 / отсутствует — бессрочный grant (триггерит ErrBessrochnyGrantExists
+		// и блокирует апгрейд за кредиты, см. service/subscription.go:1147).
+		Months int `json:"months"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Неверный формат запроса"})
+	}
+
+	if req.Months < 0 || req.Months > 60 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Срок должен быть от 0 до 60 месяцев"})
 	}
 
 	tier, err := h.svc.GetTierBySlug(req.TierSlug)
@@ -297,13 +309,24 @@ func (h *SubscriptionHandler) SetOverride(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Тир не найден"})
 	}
 
-	if err := h.svc.SetManualTier(userID, &tier.ID); err != nil {
+	var expiresAt *time.Time
+	if req.Months > 0 {
+		t := time.Now().AddDate(0, req.Months, 0)
+		expiresAt = &t
+	}
+
+	if err := h.svc.SetManualTierWithExpiry(userID, &tier.ID, expiresAt); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Не удалось установить тир"})
 	}
 
-	h.svc.AddAudit(userID, "manual_override", map[string]interface{}{
+	auditPayload := map[string]interface{}{
 		"tier_id": tier.ID, "tier_slug": tier.Slug, "source": "admin_panel",
-	})
+	}
+	if expiresAt != nil {
+		auditPayload["months"] = req.Months
+		auditPayload["expires_at"] = *expiresAt
+	}
+	h.svc.AddAudit(userID, "manual_override", auditPayload)
 
 	return c.JSON(fiber.Map{"success": true})
 }
