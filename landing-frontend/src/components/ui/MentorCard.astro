@@ -1,0 +1,140 @@
+---
+import type { MentorView } from '@/lib/mentors'
+import UiButton from './UiButton.astro'
+
+interface Props {
+  mentor: MentorView
+}
+
+const { mentor } = Astro.props
+// Ограничиваем тэги показом первых 6 для визуального баланса.
+const MAX_TAGS = 6
+const visibleTags = mentor.tags.slice(0, MAX_TAGS)
+const hasMore = mentor.tags.length > MAX_TAGS
+---
+<article
+  class="mentor-card group"
+  data-tags={mentor.tagsLower.join(' ')}
+  data-mentor-id={mentor.id}
+>
+  <div class="flex flex-col items-center gap-5 mb-5">
+    <div class="avatar-frame">
+      <img
+        src={mentor.avatar}
+        alt={`Аватар ментора ${mentor.name}`}
+        loading="lazy"
+        decoding="async"
+        width="160"
+        height="160"
+        class="mentor-avatar"
+        data-fallback={mentor.initials}
+      />
+    </div>
+    <div class="text-center">
+      <h3 class="font-display uppercase text-lg md:text-xl text-accent leading-tight mb-1.5">
+        {mentor.name}
+      </h3>
+      <p class="text-sm text-foreground/85 leading-snug">{mentor.position}</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-5 flex-1">
+    <div class="flex flex-wrap justify-center gap-1.5">
+      {visibleTags.map(t => (
+        <span class="font-mono text-[10px] uppercase tracking-wider px-2 py-1 border border-accent/30 text-accent/80">{t}</span>
+      ))}
+      {hasMore && (
+        <span class="font-mono text-[10px] uppercase tracking-wider px-2 py-1 border border-accent/20 text-accent/50">...</span>
+      )}
+    </div>
+    <p class="text-xs text-foreground/60 leading-relaxed text-center line-clamp-4">
+      {mentor.description}
+    </p>
+  </div>
+
+  <UiButton
+    as="a"
+    href={mentor.link}
+    target="_blank"
+    rel="noopener noreferrer"
+    variant="stroke"
+    class="w-full mt-5"
+    data-mentor-link
+    data-mentor-name={mentor.name}
+  >
+    Подробнее
+  </UiButton>
+</article>
+
+<style>
+.mentor-card {
+  display: flex;
+  flex-direction: column;
+  background-color: hsl(151 5% 10% / 0.85);
+  border: 1px solid hsl(151 5% 18%);
+  border-radius: 2px;
+  padding: 24px;
+  position: relative;
+  transition: border-color 250ms ease, background-color 250ms ease;
+  min-height: 480px;
+}
+.mentor-card::before,
+.mentor-card::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: hsl(var(--accent));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+.mentor-card::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+.mentor-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+.mentor-card:hover {
+  border-color: hsl(151 60% 54% / 0.5);
+  background-color: hsl(151 5% 12% / 0.95);
+}
+.mentor-card:hover::before,
+.mentor-card:hover::after {
+  opacity: 1;
+}
+
+.avatar-frame {
+  width: 106px;
+  height: 106px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid hsl(151 5% 22%);
+  outline: 1px solid hsl(151 60% 54% / 0.2);
+  outline-offset: 3px;
+  background: hsl(151 5% 12%);
+}
+.mentor-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mentor-card.hidden-mentor {
+  display: none;
+}
+</style>

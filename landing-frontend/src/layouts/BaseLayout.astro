@@ -1,0 +1,139 @@
+---
+import ConfirmServiceModal from '@/components/ConfirmServiceModal.astro'
+import JsonLd from '@/components/JsonLd.astro'
+import MetaTags from '@/components/MetaTags.astro'
+import YandexMetrika from '@/components/YandexMetrika.astro'
+import { SITE, TARIFFS } from '@/lib/site'
+
+import '@fontsource-variable/inter/wght.css'
+import '@fontsource-variable/jetbrains-mono/wght.css'
+import '@fontsource-variable/space-grotesk/wght.css'
+import '@/styles/uikit.css'
+import '@/styles/base.css'
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  url?: string
+  type?: 'website' | 'article'
+  noindex?: boolean
+  nofollow?: boolean
+  publishedAt?: string
+  updatedAt?: string
+  /** Extra JSON-LD блоки конкретной страницы (BreadcrumbList, Article, FAQPage и т.д.) */
+  jsonLd?: object[]
+}
+
+const {
+  title,
+  description,
+  image,
+  url,
+  type,
+  noindex,
+  nofollow,
+  publishedAt,
+  updatedAt,
+  jsonLd = [],
+} = Astro.props
+
+const sitewideJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    'name': SITE.name,
+    'url': SITE.url,
+    'description': SITE.baseDescription,
+    'foundingDate': '2023',
+    'memberOf': {
+      '@type': 'ProgramMembership',
+      'name': `Подписка ${SITE.name}`,
+      'offers': Object.values(TARIFFS).map(t => ({
+        '@type': 'Offer',
+        'name': t.name,
+        'price': String(t.price),
+        'priceCurrency': 'RUB',
+        'url': t.boostyUrl,
+        'description': t.description,
+      })),
+    },
+  },
+]
+
+const allJsonLd = [...sitewideJsonLd, ...jsonLd]
+---
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.svg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="preconnect" href="https://mc.yandex.ru" />
+  <link rel="dns-prefetch" href="https://mc.yandex.ru" />
+  <link rel="dns-prefetch" href="https://t.me" />
+
+  <MetaTags
+    title={title}
+    description={description}
+    image={image}
+    url={url}
+    type={type}
+    noindex={noindex}
+    nofollow={nofollow}
+    publishedAt={publishedAt}
+    updatedAt={updatedAt}
+  />
+
+  <JsonLd data={allJsonLd} />
+</head>
+<body>
+  <div class="flex min-h-screen flex-col">
+    <slot />
+  </div>
+  <ConfirmServiceModal />
+  <YandexMetrika />
+
+  <script>
+    // Scroll-reveal observer: добавляет класс `.revealed` элементам с .reveal /
+    // .reveal-stagger / .reveal-left / .reveal-right когда они входят в viewport.
+    // Без этого CSS-правила оставляют их opacity:0 — секции под hero были
+    // невидимы. В Vue это делал useRevealObserver-composable.
+    function setupReveal() {
+      const targets = document.querySelectorAll<HTMLElement>('.reveal, .reveal-stagger, .reveal-left, .reveal-right')
+      if (targets.length === 0)
+        return
+
+      // Если prefers-reduced-motion — сразу показываем всё, без анимации.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        targets.forEach(el => el.classList.add('revealed'))
+        return
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed')
+            observer.unobserve(entry.target)
+          }
+        }
+      }, {
+        rootMargin: '0px 0px -10% 0px',
+        threshold: 0.05,
+      })
+
+      targets.forEach(el => observer.observe(el))
+    }
+
+    if (document.readyState === 'loading')
+      document.addEventListener('DOMContentLoaded', setupReveal)
+    else
+      setupReveal()
+  </script>
+</body>
+</html>

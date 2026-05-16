@@ -1,0 +1,151 @@
+---
+import Navigation from '@/components/Navigation.astro'
+import TelegramAuth from '@/components/TelegramAuth.astro'
+
+interface Props {
+  /** Когда на странице нет hero — выключаем sticky-эффект, header всегда «прижатый». */
+  alwaysScrolled?: boolean
+  /** Якорные ссылки в Navigation указывают на главную; если страница не главная, использовать абсолютные ссылки. */
+  navAsAnchor?: boolean
+}
+
+const { alwaysScrolled = false, navAsAnchor = true } = Astro.props
+---
+<header
+  id="site-header"
+  class:list={[
+    'sticky top-0 z-50 w-full transition-all duration-500',
+    alwaysScrolled
+      ? 'bg-background/80 backdrop-blur-[25px] border-b border-accent/15'
+      : 'bg-transparent backdrop-blur-0 border-b border-transparent',
+  ]}
+  data-always-scrolled={alwaysScrolled ? 'true' : 'false'}
+>
+  <div class="container px-6 md:px-10 flex gap-5 h-[var(--header-height)] items-center justify-between md:justify-between">
+    <div class="flex items-center gap-3 lg:gap-8 min-w-0">
+      <a
+        href="/"
+        class="flex items-center gap-3 font-bold text-xl group"
+      >
+        <span class="font-display uppercase text-lg md:text-xl tracking-tight text-accent">IT-ХОЗЯЕВА</span>
+        <span class="hidden md:flex items-center gap-1.5 font-mono text-[10px] text-foreground/40 uppercase tracking-widest border-l border-accent/20 pl-3">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent))]"></span>
+          online
+        </span>
+      </a>
+      {navAsAnchor && (
+        <div class="hidden lg:block">
+          <Navigation />
+        </div>
+      )}
+    </div>
+
+    <div class="hidden lg:flex justify-end shrink-0">
+      <TelegramAuth location="header" />
+    </div>
+
+    <button
+      type="button"
+      class="lg:hidden"
+      aria-label="Открыть меню"
+      aria-expanded="false"
+      data-toggle-menu
+    >
+      <svg id="header-burger" class="cursor-pointer hover:opacity-75 transition-opacity" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+      <svg id="header-close" class="hidden cursor-pointer hover:opacity-75 transition-opacity" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</header>
+
+{navAsAnchor && (
+  <div
+    id="mobile-menu"
+    class="lg:hidden hidden inset-0 fixed bg-background z-40 flex-col justify-center items-center overflow-auto px-6 md:px-10"
+    aria-hidden="true"
+  >
+    <Navigation variant="mobile" />
+    <div class="absolute bottom-11 sm:bottom-16">
+      <TelegramAuth location="header_mobile" />
+    </div>
+  </div>
+)}
+
+<script>
+const ALWAYS_SCROLLED_ATTR = 'data-always-scrolled'
+
+function setupScrollHeader() {
+  const header = document.getElementById('site-header')
+  if (!header)
+    return
+  if (header.getAttribute(ALWAYS_SCROLLED_ATTR) === 'true')
+    return
+
+  const scrolledClasses = ['bg-background/80', 'backdrop-blur-[25px]', 'border-b', 'border-accent/15']
+  const transparentClasses = ['bg-transparent', 'backdrop-blur-0', 'border-b', 'border-transparent']
+
+  function apply() {
+    if (window.scrollY > 10) {
+      transparentClasses.forEach(c => header!.classList.remove(c))
+      scrolledClasses.forEach(c => header!.classList.add(c))
+    }
+    else {
+      scrolledClasses.forEach(c => header!.classList.remove(c))
+      transparentClasses.forEach(c => header!.classList.add(c))
+    }
+  }
+
+  apply()
+  window.addEventListener('scroll', apply, { passive: true })
+}
+
+function setupMobileMenu() {
+  const toggle = document.querySelector<HTMLButtonElement>('[data-toggle-menu]')
+  const menu = document.getElementById('mobile-menu')
+  const burger = document.getElementById('header-burger')
+  const close = document.getElementById('header-close')
+  if (!toggle || !menu || !burger || !close)
+    return
+
+  function setOpen(open: boolean) {
+    if (open) {
+      menu!.classList.remove('hidden')
+      menu!.classList.add('flex')
+      menu!.setAttribute('aria-hidden', 'false')
+      burger!.classList.add('hidden')
+      close!.classList.remove('hidden')
+      toggle!.setAttribute('aria-expanded', 'true')
+      document.body.style.overflow = 'hidden'
+    }
+    else {
+      menu!.classList.add('hidden')
+      menu!.classList.remove('flex')
+      menu!.setAttribute('aria-hidden', 'true')
+      burger!.classList.remove('hidden')
+      close!.classList.add('hidden')
+      toggle!.setAttribute('aria-expanded', 'false')
+      document.body.style.overflow = ''
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') === 'true'
+    setOpen(!open)
+  })
+
+  menu.addEventListener('click', (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLElement>('[data-close-menu]')
+    if (link)
+      setOpen(false)
+  })
+}
+
+setupScrollHeader()
+setupMobileMenu()
+</script>

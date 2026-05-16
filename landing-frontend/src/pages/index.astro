@@ -1,0 +1,91 @@
+---
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { SITE } from '@/lib/site'
+import CalendarSection from '@/sections/CalendarSection.astro'
+import FAQSection from '@/sections/FAQSection.astro'
+import MentorsSection from '@/sections/MentorsSection.astro'
+import PromoteSection from '@/sections/PromoteSection.astro'
+import TariffSection from '@/sections/TariffSection.astro'
+import WhySection from '@/sections/WhySection.astro'
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    'name': SITE.name,
+    'url': SITE.url,
+    'description': 'ИТ-сообщество на стыке технологий и искусственного интеллекта: менторство, вайбкодинг, нетворкинг',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    'serviceType': 'ИТ-сообщество с ИИ и менторством',
+    'provider': { '@type': 'Organization', 'name': SITE.name },
+    'areaServed': { '@type': 'Country', 'name': 'Россия' },
+    'description': 'ИТ-сообщество: менторство, вайбкодинг (vibe coding), нетворкинг, ИИ-практики, подготовка к собеседованиям',
+    'offers': {
+      '@type': 'Offer',
+      'priceCurrency': 'RUB',
+      'price': '520',
+      'description': 'Тарифы от 520₽ в месяц',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    'mainEntity': [
+      {
+        '@type': 'Question',
+        'name': 'Как вступить в сообщество IT-ХОЗЯЕВА?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Выберите тариф (Бригадир, ХОЗЯИН или МАСТЕР), оформите подписку на Boosty и получите доступ к закрытой платформе, чатам, базе менторов и всем материалам вашего тарифа. Подписка от 520 ₽/мес.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Можно ли сменить тариф или отменить подписку?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Да. Тарифный план можно повысить или понизить в любой момент через Boosty. При повышении доплата рассчитывается пропорционально, при понижении — изменения вступают со следующего периода оплаты.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Какие активности проходят в сообществе?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Еженедельные онлайн-встречи: английский клуб, технический книжный клуб, лекции по архитектуре, ИИ и вайбкодингу. Практические занятия по искусственному интеллекту, нетворкинг-сессии, тренировочные собеседования, разбор резюме, обмен вакансиями и реферальными ссылками.',
+        },
+      },
+      {
+        '@type': 'Question',
+        'name': 'Для кого подходит IT-ХОЗЯЕВА?',
+        'acceptedAnswer': {
+          '@type': 'Answer',
+          'text': 'Для ИТ-специалистов любого уровня и направления: разработчики, ИИ-инженеры, тестировщики, аналитики, DevOps-инженеры. Для тех, кто интересуется искусственным интеллектом, вайбкодингом и хочет расти через менторство и нетворкинг в ИТ-сообществе.',
+        },
+      },
+    ],
+  },
+]
+---
+<BaseLayout
+  title="IT-ХОЗЯЕВА — закрытое сообщество ИТ-специалистов с менторами"
+  description="Закрытое сообщество ИТ-специалистов с базой менторов. Помогаем с карьерой, поиском работы и собеседованиями. Регулярные встречи, тренинги и менторство от опытных ИТ-профессионалов."
+  url={SITE.url}
+  jsonLd={jsonLd}
+>
+  <Header />
+  <main>
+    <PromoteSection />
+    <WhySection />
+    <TariffSection />
+    <MentorsSection preview />
+    <CalendarSection />
+    <FAQSection />
+  </main>
+  <Footer />
+</BaseLayout>

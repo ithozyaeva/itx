@@ -1,0 +1,42 @@
+---
+// Декоративный canvas с нодами/линиями. Грузим лениво через requestIdleCallback,
+// чтобы не конкурировать с LCP. Скрыт до lg-брейкпойнта.
+---
+<div
+  aria-hidden="true"
+  class="pointer-events-none absolute top-[18%] right-[6%] hidden lg:block"
+>
+  <canvas
+    id="hero-constellation"
+    class="block"
+    width="520"
+    height="520"
+    style="width: 520px; height: 520px;"
+  ></canvas>
+</div>
+
+<script>
+import { initHeroConstellation } from '@/scripts/heroConstellation'
+
+// Canvas скрыт через Tailwind `hidden lg:block`. На <lg экранах ноды
+// невидимы, но RAF + mousemove listener всё равно крутятся и греют CPU.
+// Гейтим инициализацию по тому же breakpoint, чтобы на мобильных вообще
+// не стартовать. matchMedia переоценивается на resize → если юзер
+// раздвинет окно после загрузки, можно дозапустить (но это редко;
+// проще оставить как есть до следующего page-load).
+const LG_BREAKPOINT_QUERY = '(min-width: 1024px)'
+
+function boot() {
+  if (!window.matchMedia(LG_BREAKPOINT_QUERY).matches)
+    return
+  const canvas = document.getElementById('hero-constellation') as HTMLCanvasElement | null
+  if (!canvas)
+    return
+  initHeroConstellation(canvas)
+}
+
+if ('requestIdleCallback' in window)
+  (window as any).requestIdleCallback(boot, { timeout: 2000 })
+else
+  setTimeout(boot, 300)
+</script>

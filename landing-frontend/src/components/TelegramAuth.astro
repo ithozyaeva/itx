@@ -1,0 +1,97 @@
+---
+import UiButton from './ui/UiButton.astro'
+
+interface Props {
+  variant?: 'filled' | 'dark-filled'
+  label?: string
+  location?: string
+}
+
+const { variant = 'filled', label = 'Стать Хозяином', location = 'default' } = Astro.props
+---
+<div
+  class="telegram-auth-slot flex items-center h-full"
+  data-tg-auth
+  data-location={location}
+  data-label-loggedout={label}
+>
+  <!-- Render-time состояние: logged-out. Скрипт ниже переключит на "В платформу" если token уже в localStorage. -->
+  <UiButton variant={variant} data-action="open-bot">
+    {label}
+  </UiButton>
+</div>
+
+<script>
+import { authenticate, extLink, getBotUrl, getToken, getUser, isPrivacyConfirmed, openTelegramBot, reachGoal, setToken, setUser } from '@/scripts/auth'
+
+function renderLoggedIn(slot: HTMLElement) {
+  const variant = slot.querySelector<HTMLElement>('.ui-button')?.classList.contains('dark-filled')
+    ? 'dark-filled'
+    : 'filled'
+  slot.innerHTML = `
+    <a
+      href="/platform"
+      rel="noopener noreferrer"
+      class="ui-button ${variant}"
+      data-action="goto-platform"
+    >
+      <span class="ui-button-text">Перейти в платформу</span>
+    </a>
+  `
+}
+
+function refreshAuth() {
+  const token = getToken()
+  const user = getUser()
+  if (!token || !user)
+    return
+  document.querySelectorAll<HTMLElement>('[data-tg-auth]').forEach(renderLoggedIn)
+}
+
+async function handleTokenInUrl() {
+  const params = new URLSearchParams(window.location.search)
+  const urlToken = params.get('token')
+  if (!urlToken)
+    return
+  const result = await authenticate(urlToken)
+  if (result) {
+    setToken(result.token)
+    setUser(result.user)
+    window.history.replaceState({}, document.title, window.location.pathname)
+    refreshAuth()
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement
+
+  const openBot = target.closest<HTMLElement>('[data-action="open-bot"]')
+  if (openBot) {
+    const slot = openBot.closest<HTMLElement>('[data-tg-auth]')
+    const location = slot?.dataset.location ?? 'default'
+    if (!isPrivacyConfirmed()) {
+      const modal = document.getElementById('privacy-modal')
+      if (modal) {
+        modal.dataset.open = 'true'
+        modal.setAttribute('aria-hidden', 'false')
+        document.body.style.overflow = 'hidden'
+        return
+      }
+    }
+    reachGoal('become_itx_owner_click', { location })
+    extLink(getBotUrl(), { title: 'Стать IT-Хозяином' })
+    openTelegramBot()
+    return
+  }
+
+  const gotoPlatform = target.closest<HTMLElement>('[data-action="goto-platform"]')
+  if (gotoPlatform) {
+    const slot = gotoPlatform.closest<HTMLElement>('[data-tg-auth]')
+    const location = slot?.dataset.location ?? 'default'
+    reachGoal('platform_redirect_click', { location, isAuthenticated: true })
+  }
+})
+
+refreshAuth()
+handleTokenInUrl()
+</script>

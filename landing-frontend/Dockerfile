@@ -2,13 +2,16 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# CI всё ещё проксирует переменные окружения через VITE_* имена (из секретов GitHub
+# и серверного окружения). Astro читает PUBLIC_* — поэтому маппим внутри Dockerfile,
+# чтобы не править deploy-workflow и серверные .env при переезде с Vue.
 ARG VITE_YANDEX_METRIKA_ID
 ARG VITE_YANDEX_METRIKA_ENABLED
 ARG VITE_TELEGRAM_BOT_NAME
 
-ENV VITE_YANDEX_METRIKA_ID=${VITE_YANDEX_METRIKA_ID}
-ENV VITE_YANDEX_METRIKA_ENABLED=${VITE_YANDEX_METRIKA_ENABLED}
-ENV VITE_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
+ENV PUBLIC_YANDEX_METRIKA_ID=${VITE_YANDEX_METRIKA_ID}
+ENV PUBLIC_YANDEX_METRIKA_ENABLED=${VITE_YANDEX_METRIKA_ENABLED}
+ENV PUBLIC_TELEGRAM_BOT_NAME=${VITE_TELEGRAM_BOT_NAME}
 
 COPY package*.json ./
 

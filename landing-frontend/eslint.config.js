@@ -1,15 +1,21 @@
 import antfu from '@antfu/eslint-config'
+import astroPlugin from 'eslint-plugin-astro'
 
-export default antfu({
-  vue: true,
-  typescript: true,
-  ignores: ['.github/**', 'dist/**', 'node_modules/**', '**/__tests__/**', '.omc/**', '.claude/**'],
-}, {
-  files: ['**/*.vue'],
-  rules: {
-    'vue/max-attributes-per-line': ['error', {
-      singleline: 1,
-      multiline: 1,
-    }],
+export default antfu(
+  {
+    typescript: true,
+    astro: true,
+    formatters: false,
+    stylistic: {
+      indent: 2,
+      quotes: 'single',
+    },
+    ignores: [
+      'dist/**',
+      '.astro/**',
+      'node_modules/**',
+      'public/**',
+    ],
   },
-})
+  ...astroPlugin.configs.recommended,
+)

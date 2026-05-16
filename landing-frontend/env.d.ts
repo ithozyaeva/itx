@@ -1,9 +1,9 @@
-/// <reference types="vite/client" />
-import 'vite-svg-loader'
+/// <reference path="../.astro/types.d.ts" />
 
 interface ImportMetaEnv {
-  readonly VITE_YANDEX_METRIKA_ID?: string
-  readonly VITE_YANDEX_METRIKA_ENABLED?: string
+  readonly PUBLIC_YANDEX_METRIKA_ID?: string
+  readonly PUBLIC_YANDEX_METRIKA_ENABLED?: string
+  readonly PUBLIC_TELEGRAM_BOT_NAME?: string
 }
 
 interface ImportMeta {

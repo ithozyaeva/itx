@@ -1,0 +1,91 @@
+---
+import Breadcrumb from '@/components/Breadcrumb.astro'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { SITE, TARIFFS } from '@/lib/site'
+import MentorsSection from '@/sections/MentorsSection.astro'
+
+const url = `${SITE.url}/mentors`
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Главная', 'item': `${SITE.url}/` },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Менторы', 'item': url },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    'serviceType': 'Наставничество в ИТ',
+    'provider': { '@type': 'Organization', 'name': SITE.name, 'url': SITE.url },
+    'areaServed': { '@type': 'Country', 'name': 'Россия' },
+    'description': 'Индивидуальные консультации со старшими разработчиками, архитекторами и ИИ-инженерами. Карьерное менторство, разбор резюме, подготовка к собеседованиям, смена уровня, переход в ИИ.',
+    'offers': {
+      '@type': 'Offer',
+      'priceCurrency': 'RUB',
+      'price': String(TARIFFS.hozyain.price),
+      'description': `Доступ к базе менторов на тарифе ${TARIFFS.hozyain.name} от ${TARIFFS.hozyain.price} ₽/мес`,
+    },
+  },
+]
+---
+<BaseLayout
+  title="База менторов — senior-разработчики, AI-инженеры, тимлиды"
+  description="База из 60+ ИТ-менторов: старшие (senior) разработчики, тимлиды, архитекторы и ИИ-инженеры из Яндекса, Тинькофф, VK. Помогают с карьерой, сменой уровня, переходом в ИИ и подготовкой к собеседованиям."
+  url={url}
+  jsonLd={jsonLd}
+>
+  <Header alwaysScrolled navAsAnchor={false} />
+  <main>
+    <section class="w-full pt-10 md:pt-16 lg:pt-20">
+      <div class="container px-6 md:px-10">
+        <Breadcrumb items={[{ label: 'mentors' }]} />
+
+        <div class="max-w-4xl">
+          <h1 class="font-display uppercase text-[32px] sm:text-[48px] md:text-[64px] lg:text-[80px] leading-[0.9] tracking-tight text-accent">
+            База менторов
+          </h1>
+          <p class="mt-6 md:mt-8 text-base md:text-lg text-foreground/75 leading-relaxed max-w-3xl">
+            60+ ИТ-менторов: старшие разработчики, тимлиды, архитекторы и ИИ-инженеры из топовых российских ИТ-компаний —
+            Яндекс, Тинькофф, VK, Ozon, Сбер, Kaspersky, JetBrains. Помогаем расти по уровням, сменить направление,
+            подготовиться к собеседованию и разобраться в ИИ и вайбкодинге.
+          </p>
+
+          <div class="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-3 gap-px bg-accent/15 border border-accent/15">
+            <div class="bg-background/95 p-6 md:p-7">
+              <h2 class="font-display uppercase text-lg md:text-xl text-accent mb-2">Кто в базе</h2>
+              <p class="text-sm md:text-base text-foreground/70 leading-relaxed">
+                Старшие и ведущие разработчики, архитекторы, ИИ-инженеры, DevOps-инженеры, руководители тестирования.
+                Ребята, которые реально собеседуют и принимают в топовых командах.
+              </p>
+            </div>
+            <div class="bg-background/95 p-6 md:p-7">
+              <h2 class="font-display uppercase text-lg md:text-xl text-accent mb-2">С чем помогают</h2>
+              <p class="text-sm md:text-base text-foreground/70 leading-relaxed">
+                Карьерное планирование, разбор резюме, тренировочные собеседования, подготовка к системному дизайну,
+                разбор пул-реквестов, переход в ИИ-разработку, смена стека.
+              </p>
+            </div>
+            <div class="bg-background/95 p-6 md:p-7">
+              <h2 class="font-display uppercase text-lg md:text-xl text-accent mb-2">Как получить доступ</h2>
+              <p class="text-sm md:text-base text-foreground/70 leading-relaxed">
+                Оформить тариф
+                <a href={TARIFFS.hozyain.boostyUrl} rel="noopener" class="text-accent hover:underline">
+                  {TARIFFS.hozyain.name} на Boosty
+                </a>
+                — от {TARIFFS.hozyain.price} ₽/мес. Получаете полную таблицу контактов и расписание сессий.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <MentorsSection showHeader={false} />
+  </main>
+  <Footer />
+</BaseLayout>

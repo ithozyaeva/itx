@@ -1,0 +1,198 @@
+---
+import SectionHeader from '@/components/ui/SectionHeader.astro'
+import UiButton from '@/components/ui/UiButton.astro'
+import { buildGoogleCalendarUrl, formatEventDate, formatEventStamp, getNextEvents, getOldEvents } from '@/lib/events'
+
+const [nextEvents, oldEvents] = await Promise.all([getNextEvents(), getOldEvents()])
+const visibleEvents = nextEvents.slice(0, 2)
+const hasFutureEvents = nextEvents.length > 0
+const hasAnyEvents = nextEvents.length > 0 || oldEvents.length > 0
+const showAllButton = nextEvents.length > 2
+---
+{hasAnyEvents && (
+  <section id="meets" class="w-full pt-20 md:pt-32 lg:pt-40">
+    <div class="container px-6 md:px-10">
+      <div class="reveal">
+        <SectionHeader
+          index="03"
+          path="~/community/events.log"
+          title="Расписание"
+          subtitle="Еженедельные онлайн-встречи. Скачивай в календарь — пропустить будет нельзя."
+        />
+      </div>
+
+      {!hasFutureEvents && (
+        <p class="text-muted-foreground mt-12 font-mono text-sm">
+          &gt; no scheduled events — следите за обновлениями
+        </p>
+      )}
+
+      <div class="mt-12 md:mt-16">
+        <div class="border border-accent/20 bg-background/60 backdrop-blur-sm">
+          <div class="flex items-center gap-2 px-5 py-3 border-b border-accent/20 bg-accent/5">
+            <div class="flex gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-term-magenta/70"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-term-amber/70"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-accent/70"></span>
+            </div>
+            <span class="ml-3 font-mono text-[11px] text-foreground/50 tracking-wider">
+              tail -f /var/log/community/events.log
+            </span>
+          </div>
+
+          <ul>
+            {visibleEvents.map(event => (
+              <li class="group relative grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 md:gap-8 px-5 md:px-8 py-6 md:py-8 border-b border-accent/10 hover:bg-accent/[0.03] transition-colors last:border-b-0">
+                <div class="flex md:flex-col gap-3 md:gap-1 items-center md:items-start font-mono text-xs relative">
+                  <span class="text-accent">[{formatEventStamp(event.date)}]</span>
+                  <div class="calendar-popover-wrap relative">
+                    <button
+                      type="button"
+                      class="calendar-popover-trigger flex items-center gap-1.5 text-foreground/60 hover:text-accent transition-colors"
+                      aria-expanded="false"
+                      aria-haspopup="true"
+                    >
+                      <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <span>+add</span>
+                    </button>
+                    <ul class="calendar-popover-content hidden absolute top-full left-0 mt-2 z-20 min-w-[180px] border border-accent/30 bg-background/95 backdrop-blur-sm p-3 shadow-lg space-y-2 font-sans">
+                      <li>
+                        <a
+                          href={buildGoogleCalendarUrl(event)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-track-goal="calendar_google_add"
+                          data-track-params={JSON.stringify({ event: event.title })}
+                          class="block text-foreground/80 hover:text-accent transition-colors"
+                        >
+                          + Google Calendar
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href={`/api/events/ics?eventId=${event.id}`}
+                          data-track-goal="calendar_ics_add"
+                          data-track-params={JSON.stringify({ event: event.title })}
+                          class="block text-foreground/80 hover:text-accent transition-colors"
+                        >
+                          + iCalendar
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  {event.isRepeating && event.repeatPeriod && (
+                    <span class="text-term-amber/80 text-[10px] uppercase tracking-wider md:mt-1">
+                      recurring
+                    </span>
+                  )}
+                </div>
+
+                <div class="flex flex-col gap-3">
+                  <h3 class="font-display uppercase text-xl md:text-2xl leading-tight text-foreground group-hover:text-accent transition-colors">
+                    {event.title}
+                  </h3>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-foreground/50">
+                    <span class="text-accent/70">// tags:</span>
+                    {event.eventTags?.map(tag => (
+                      <span class="text-foreground/70">#{tag.name}</span>
+                    ))}
+                  </div>
+                  <div class="text-xs font-mono text-foreground/50 md:hidden">
+                    {formatEventDate(event.date)} МСК
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-2 md:min-w-[180px]">
+                  <span class="font-mono text-[10px] uppercase tracking-wider text-foreground/40">
+                    hosts
+                  </span>
+                  <div class="flex flex-col gap-2">
+                    {event.hosts?.map(host => (
+                      <div class="flex items-center gap-3">
+                        {host.avatarUrl
+                          ? (
+                              <img
+                                src={host.avatarUrl}
+                                alt={`${host.firstName} ${host.lastName}`}
+                                loading="lazy"
+                                width="36"
+                                height="36"
+                                class="w-9 h-9 shrink-0 rounded-full object-cover bg-accent/10"
+                              />
+                            )
+                          : (
+                              <div class="w-9 h-9 shrink-0 rounded-full bg-accent/15 flex items-center justify-center text-accent text-xs font-mono">
+                                {host.firstName?.[0]?.toUpperCase() ?? '?'}
+                              </div>
+                            )}
+                        <div class="flex flex-col">
+                          <span class="text-sm text-foreground">{host.firstName} {host.lastName}</span>
+                          <span class="font-mono text-[10px] text-foreground/50">@{host.tg}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {showAllButton && (
+        <div class="flex justify-center mt-12">
+          <UiButton as="a" href="/platform/events">Все события</UiButton>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+<script>
+import { reachGoal } from '@/scripts/auth'
+
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement
+
+  // Popover toggle
+  const trigger = target.closest<HTMLElement>('.calendar-popover-trigger')
+  if (trigger) {
+    e.preventDefault()
+    const wrap = trigger.closest('.calendar-popover-wrap')!
+    const content = wrap.querySelector<HTMLElement>('.calendar-popover-content')!
+    const opening = content.classList.contains('hidden')
+    document.querySelectorAll<HTMLElement>('.calendar-popover-content').forEach(c => c.classList.add('hidden'))
+    document.querySelectorAll<HTMLButtonElement>('.calendar-popover-trigger').forEach(b => b.setAttribute('aria-expanded', 'false'))
+    if (opening) {
+      content.classList.remove('hidden')
+      trigger.setAttribute('aria-expanded', 'true')
+    }
+    return
+  }
+
+  // Click outside — close
+  if (!target.closest('.calendar-popover-wrap')) {
+    document.querySelectorAll<HTMLElement>('.calendar-popover-content').forEach(c => c.classList.add('hidden'))
+    document.querySelectorAll<HTMLButtonElement>('.calendar-popover-trigger').forEach(b => b.setAttribute('aria-expanded', 'false'))
+  }
+
+  // Goal tracking on calendar links
+  const tracked = target.closest<HTMLElement>('[data-track-goal]')
+  if (tracked) {
+    const goal = tracked.dataset.trackGoal!
+    let params: Record<string, unknown> | undefined
+    try {
+      params = tracked.dataset.trackParams ? JSON.parse(tracked.dataset.trackParams) : undefined
+    }
+    catch {
+      params = undefined
+    }
+    reachGoal(goal, params)
+  }
+})
+</script>
